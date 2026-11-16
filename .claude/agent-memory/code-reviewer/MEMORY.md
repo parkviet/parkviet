@@ -1,1 +1,4 @@
 - [Spree core source location](reference_spree_core_source.md) — read core gem in container via `pnpm spree exec`; force/payment_pending semantics
+- [Kitchen send requires editing](project_kitchen_send_requires_editing.md) — completing with unsent dishes on a `manual` trigger branch loses the kitchen send
+- [Table orders outside register list](project_table_orders_outside_register_list.md) — `visible[0]` fallback picks the wrong order in table frames
+- [Tabs have no table](project_tabs_have_no_table.md) — real tabs never get a resource or payment request; fixtures can fake it
