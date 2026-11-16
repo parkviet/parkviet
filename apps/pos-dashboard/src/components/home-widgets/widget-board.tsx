@@ -20,9 +20,12 @@ import { WidgetBoundary } from './widget-card'
 // moved; a tablet beside the sidebar keeps the grid.
 const NARROW_WIDTH = 480
 const DRAG_HANDLE = 'home-widget-drag'
-// Items stay where they are stored, so a widget hidden at this branch keeps
-// its slot; a drag or resize into another item is refused.
-const freePlacement = getCompactor(null, false, true)
+// A drag or resize onto another widget pushes it down, and widgets float back
+// up once the dragged one passes. A widget hidden at this branch is a static
+// item while editing, so it keeps its slot. Refusing the collision instead
+// froze the dragged widget: the grid redraws it only when its cell changes,
+// and on a full board every neighbouring cell is taken.
+const freePlacement = getCompactor('vertical', false, false)
 
 type Shown = { item: DashboardLayoutItem; definition: WidgetDefinition }
 

@@ -10,7 +10,7 @@ Plan: `plans/261116-0856-pos-dashboard-home-widgets/plan.md`. Commits dc18a1a, 4
 
 ## Decisions worth remembering
 - Customer visits = distinct registered customers + every walk-in order. Daily counts do not add up to the period total.
-- Stored positions are not compacted (widgets hidden at a branch keep their slot while editing); view mode packs visible widgets upward for display only.
+- While editing, a drag onto another widget pushes it down and the grid floats widgets back up; widgets hidden at a branch are static items, so they keep their slot. View mode packs visible widgets upward for display only. Refusing collisions was tried first and froze the dragged widget on a full board: the grid redraws an item only when its cell changes.
 - A tab change on the default layout stays in memory, so users on the default keep following future default changes.
 - Previous period = the same number of days just before, labelled as such.
 

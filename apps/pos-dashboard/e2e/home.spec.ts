@@ -324,6 +324,32 @@ test('a widget moves by its grip and resizes from its corner, and the confirmed 
   expect(box(saved, 'kpi-sales-total')).toEqual({ x: 3, y: 0, w: 4, h: 3 });
 });
 
+test('a widget dragged onto its neighbour takes that spot and pushes the neighbour down', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile', 'a phone stacks the widgets in one column');
+  const requests = await install(page, ['pos.report.read'], { delivery: true }, {
+    layout: [
+      { id: 'kpi-orders', widget: 'kpi-orders', x: 0, y: 0, w: 4, h: 2 },
+      { id: 'kpi-sales-total', widget: 'kpi-sales-total', x: 4, y: 0, w: 4, h: 2 },
+      { id: 'kpi-net-sales', widget: 'kpi-net-sales', x: 8, y: 0, w: 4, h: 2 },
+    ],
+  });
+  await page.goto('/store_1?from=2026-11-10&to=2026-11-16');
+  await expect(card(page, 'Tổng đơn hàng').getByTestId('kpi-value')).toHaveText('12');
+  await page.getByRole('button', { name: 'Tùy chỉnh' }).click();
+  const width = (await page.getByRole('list', { name: 'Tổng quan' }).boundingBox())!.width;
+  const column = (width - 8 * 11) / 12 + 8;
+
+  // The row is full, so every step of the drag lands on the other widget.
+  await drag(page, page.getByTitle('Kéo để di chuyển Tổng đơn hàng'), 4 * column, 0);
+  await page.getByRole('button', { name: 'Xác nhận', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Tùy chỉnh' })).toBeVisible();
+
+  const [saved] = savedLayouts(requests);
+  expect(box(saved, 'kpi-orders')).toEqual({ x: 4, y: 0, w: 4, h: 2 });
+  expect(box(saved, 'kpi-sales-total')).toEqual({ x: 4, y: 2, w: 4, h: 2 });
+  expect(box(saved, 'kpi-net-sales')).toEqual({ x: 8, y: 0, w: 4, h: 2 });
+});
+
 test('cancelling drops the draft and nothing is saved', async ({ page }) => {
   const requests = await install(page, ['pos.report.read']);
   await page.goto('/store_1?from=2026-11-10&to=2026-11-16');

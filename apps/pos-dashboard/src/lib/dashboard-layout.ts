@@ -131,9 +131,9 @@ function belowCollisions(item: DashboardLayoutItem, placed: readonly Box[]): Das
 
 // Reads a stored layout against the widgets the page knows: entries of
 // unknown widgets, malformed entries and repeated ids are dropped, sizes are
-// clamped, and an item overlapping an earlier one is pushed down below it
-// (the grid places items as stored, without compaction). Returns null when the value is not a layout at all, so the caller
-// falls back to the default; an empty array is a layout with every widget off.
+// clamped, and an item overlapping an earlier one is pushed down below it.
+// Returns null when the value is not a layout at all, so the caller falls
+// back to the default; an empty array is a layout with every widget off.
 export function mergeLayout(
   saved: unknown,
   sizes: WidgetSizes,
