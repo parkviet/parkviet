@@ -1,20 +1,27 @@
+import { cutoffHour, type DayRange, overviewRequestRange } from '@parkviet/pos-shared/overview'
+import { businessDate } from '@parkviet/pos-shared/reports'
 import { describeFailure } from '@parkviet/pos-shared/request-failure'
 import { PageHeader, usePermissions } from '@spree/dashboard-core'
-import { Button, useConfirm } from '@spree/dashboard-ui'
+import { Button, toastManager, useConfirm } from '@spree/dashboard-ui'
 import { InfoIcon, PlusIcon, SlidersHorizontalIcon, XIcon } from '@spree/dashboard-ui/icons'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BranchPicker } from '../components/branch-picker'
 import { AddWidgetSheet } from '../components/home-widgets/add-widget-sheet'
+import { PeriodFilter } from '../components/home-widgets/period-filter'
 import {
+  HOME_DEFAULT_WIDGETS,
   HOME_WIDGET_SIZES,
   HOME_WIDGETS,
   homeWidget,
   type WidgetContext,
+  type WidgetDefinition,
 } from '../components/home-widgets/registry'
 import { WidgetBoard } from '../components/home-widgets/widget-board'
 import { PageSkeleton } from '../components/page-skeleton'
 import { useDashboardLayout } from '../hooks/use-dashboard-layout'
+import { type OverviewPeriod, useOverview } from '../hooks/use-overview'
 import { usePosSession } from '../hooks/use-pos-session'
 import { useSession } from '../hooks/use-session'
 import {
@@ -24,7 +31,11 @@ import {
   placeWidget,
   sameLayout,
 } from '../lib/dashboard-layout'
-import type { PosAccess } from '../lib/pos-access'
+import { branchTimeZone } from '../lib/format-time'
+import { canReadReports, type PosAccess } from '../lib/pos-access'
+import { homeSearchSchema } from '../schemas/home-search'
+
+const NO_OPTIONS: Record<string, Record<string, unknown>> = {}
 
 // The home page: widgets for the selected branch, limited to what the
 // reader's branch capabilities let them see. The reader arranges them;
@@ -41,7 +52,20 @@ export function HomePage() {
     () => ({ permissionKeys, context: data }),
     [permissionKeys, data],
   )
-  const stored = useDashboardLayout(storeId, HOME_WIDGET_SIZES)
+  const stored = useDashboardLayout(storeId, HOME_WIDGET_SIZES, HOME_DEFAULT_WIDGETS)
+  const navigate = useNavigate()
+  const search = homeSearchSchema.parse(useSearch({ strict: false }))
+  // Sales belong to business days: "today" is the branch's business day.
+  const branch = data?.branches.find((row) => row.id === branchId)
+  const cutoff = branch?.business_day_cutoff ?? '04:00'
+  const today = businessDate(branchTimeZone(data), cutoff)
+  const { range, valid: rangeValid } = overviewRequestRange(search, today)
+  const compare = search.compare !== false
+  const period = useMemo<OverviewPeriod | null>(
+    () => (rangeValid ? { from: range.from, to: range.to, compare } : null),
+    [rangeValid, range.from, range.to, compare],
+  )
+  const readsSales = canReadReports(access)
   // The draft belongs to the store it was made in; opening another store
   // drops it.
   const [edit, setEdit] = useState<{ storeId: string; layout: DashboardLayout } | null>(null)
@@ -53,34 +77,57 @@ export function HomePage() {
   const [hintOpen, setHintOpen] = useState(true)
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [failure, setFailure] = useState<string | null>(null)
-  const editing = draft !== null
-  const layout = draft ?? stored.layout
-
-  const available = useMemo(
-    () => HOME_WIDGETS.filter((definition) => definition.visible(access)),
-    [access],
+  // Choices made in widgets (a selected tab) while the reader follows the
+  // default layout: kept for this visit only, so storing them does not tie
+  // the reader to today's default.
+  const [visit, setVisit] = useState<{
+    storeId: string
+    options: Record<string, Record<string, unknown>>
+  }>({ storeId, options: {} })
+  const visitOptions = visit.storeId === storeId ? visit.options : NO_OPTIONS
+  const viewed = useMemo(
+    () =>
+      stored.layout.map((item) =>
+        visitOptions[item.id] ? { ...item, options: visitOptions[item.id] } : item,
+      ),
+    [stored.layout, visitOptions],
   )
+  const editing = draft !== null
+  const layout = draft ?? viewed
+  // The overview is asked for only while a widget on the page reads it; the
+  // same query feeds the widgets and tells which have nothing to show here.
+  const readsOverview = layout.some((item) => {
+    const definition = homeWidget(item.widget)
+    return Boolean(definition?.usesOverview && definition.visible(access))
+  })
+  const overview = useOverview(branchId ?? '', period, readsOverview && Boolean(branchId))
+
+  const loaded = overview.data
+  const applies = useCallback(
+    (definition: WidgetDefinition) =>
+      definition.visible(access) && !(loaded && definition.unavailable?.(loaded)),
+    [access, loaded],
+  )
+  const available = useMemo(() => HOME_WIDGETS.filter(applies), [applies])
   const definitionOf = useCallback(
     (item: DashboardLayoutItem) => {
       const definition = homeWidget(item.widget)
-      return definition?.visible(access) ? definition : undefined
+      return definition && applies(definition) ? definition : undefined
     },
-    [access],
+    [applies],
   )
   const placeholderOf = useCallback(
     (item: DashboardLayoutItem) => {
       const definition = homeWidget(item.widget)
-      return definition && !definition.visible(access) ? definition : undefined
+      return definition && !applies(definition) ? definition : undefined
     },
-    [access],
+    [applies],
   )
   const missing = new Set(missingWidgets(layout, HOME_WIDGET_SIZES))
   const addable = available.filter((definition) => missing.has(definition.widget))
   const shownCount = layout.filter((item) => definitionOf(item)).length
 
-  function startEditing(from: DashboardLayout = stored.layout) {
-    setFailure(null)
+  function startEditing(from: DashboardLayout = viewed) {
     setHintOpen(true)
     setDraft(from)
   }
@@ -104,23 +151,60 @@ export function HomePage() {
     })
     if (accepted) setDraft(stored.defaults)
   }
+  function changePeriod(patch: { from?: string; to?: string; compare?: boolean }) {
+    void navigate({
+      to: '.',
+      search: (previous: Record<string, unknown>) => ({ ...previous, ...patch }),
+      replace: true,
+    })
+  }
+  function changeRange(next: DayRange | null) {
+    changePeriod({ from: next?.from, to: next?.to })
+  }
+  const saveFailed = (error: unknown) =>
+    toastManager.add({
+      type: 'error',
+      title: t('homeWidgets.saveFailed'),
+      description: describeFailure(error, t),
+    })
+  // A widget's own choice (a selected tab) is part of its layout item: kept
+  // in the draft while editing, saved with a stored layout, and kept for the
+  // visit while the reader follows the default.
+  async function changeOptions(id: string, options: Record<string, unknown>) {
+    const withOptions = (from: DashboardLayout) =>
+      from.map((item) => (item.id === id ? { ...item, options } : item))
+    if (draft) {
+      setDraft(withOptions(draft))
+      return
+    }
+    setVisit({ storeId, options: { ...visitOptions, [id]: options } })
+    if (!stored.customized) return
+    try {
+      await stored.save(withOptions(stored.layout))
+    } catch (error) {
+      saveFailed(error)
+    }
+  }
   async function saveDraft() {
     if (!draft || saving) return
     setSaving(true)
-    setFailure(null)
     try {
       // The default layout is not stored, so later registry defaults reach it.
-      if (sameLayout(draft, stored.defaults)) await stored.reset()
-      else await stored.save(draft)
+      if (sameLayout(draft, stored.defaults)) {
+        await stored.reset()
+        setVisit({ storeId, options: {} })
+      } else await stored.save(draft)
       setDraft(null)
     } catch (error) {
-      setFailure(describeFailure(error, t, 'homeWidgets.saveFailed'))
+      // The draft stays open so the reader can try again.
+      saveFailed(error)
     } finally {
       setSaving(false)
     }
   }
 
-  const ready = !context.isPending && !context.isError && Boolean(branchId)
+  const ready =
+    !context.isPending && !context.isError && Boolean(branchId) && !stored.pending && !stored.error
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
       <BranchPicker />
@@ -146,6 +230,10 @@ export function HomePage() {
         branchId,
         staffId: data?.staff.id ?? null,
         shiftId: data?.shift?.id ?? null,
+        period,
+        today,
+        currency: data?.store.currency ?? 'VND',
+        dayStartHour: cutoffHour(cutoff),
       }
     : null
 
@@ -156,12 +244,22 @@ export function HomePage() {
         description={t('attention.hint')}
         actions={actions}
       />
-      {context.isPending ? (
+      {context.isPending || stored.pending ? (
+        // The reader's own layout is awaited, so the default never flashes first.
         <PageSkeleton variant="cards" />
       ) : context.isError ? (
         <div role="alert">
           {describeFailure(context.error, t)}
           <Button onClick={() => void context.refetch()}>{t('retry')}</Button>
+        </div>
+      ) : stored.error ? (
+        <div role="alert" className="flex flex-col items-start gap-2">
+          <p className="text-sm text-destructive">
+            {t('homeWidgets.loadFailed')} {describeFailure(stored.error, t)}
+          </p>
+          <Button variant="outline" onClick={stored.retry}>
+            {t('retry')}
+          </Button>
         </div>
       ) : !widgetContext ? (
         <p className="text-muted-foreground">{t('pageChooseBranchHint')}</p>
@@ -169,6 +267,23 @@ export function HomePage() {
         <p className="text-muted-foreground">{t('attention.nothing')}</p>
       ) : (
         <>
+          {readsSales && readsOverview && !editing && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <PeriodFilter
+                range={range}
+                today={today}
+                compare={compare}
+                invalid={!rangeValid}
+                onRangeChange={changeRange}
+                onCompareChange={(next) => changePeriod({ compare: next ? undefined : false })}
+              />
+              {overview.data?.scope === 'own' && (
+                <p role="status" className="text-sm text-muted-foreground">
+                  {t('reportScopeOwn')}
+                </p>
+              )}
+            </div>
+          )}
           {shownCount === 0 ? (
             <p className="text-muted-foreground">{t('homeWidgets.empty')}</p>
           ) : (
@@ -181,6 +296,7 @@ export function HomePage() {
               editing={editing}
               onLayoutChange={setDraft}
               onHide={(id) => setDraft(layout.filter((item) => item.id !== id))}
+              onOptionsChange={(id, options) => void changeOptions(id, options)}
               renderHint={(narrow) =>
                 editing &&
                 hintOpen && (
@@ -207,11 +323,6 @@ export function HomePage() {
           )}
           {editing && (
             <div className="sticky bottom-0 z-20 -mx-1 flex flex-wrap items-center gap-2 rounded-lg border bg-background/95 px-4 py-3 shadow-sm backdrop-blur">
-              {failure && (
-                <p role="alert" className="w-full text-sm text-destructive">
-                  {failure}
-                </p>
-              )}
               <Button
                 type="button"
                 variant="ghost"
@@ -225,10 +336,7 @@ export function HomePage() {
                   type="button"
                   variant="outline"
                   disabled={saving}
-                  onClick={() => {
-                    setFailure(null)
-                    setDraft(null)
-                  }}
+                  onClick={() => setDraft(null)}
                 >
                   {t('homeWidgets.cancel')}
                 </Button>

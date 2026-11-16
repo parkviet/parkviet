@@ -39,6 +39,7 @@ export function WidgetBoard({
   editing,
   onLayoutChange,
   onHide,
+  onOptionsChange,
   renderHint,
 }: {
   layout: DashboardLayout
@@ -51,6 +52,8 @@ export function WidgetBoard({
   editing: boolean
   onLayoutChange: (layout: DashboardLayout) => void
   onHide: (id: string) => void
+  // A widget changed its own choices (a selected tab).
+  onOptionsChange: (id: string, options: Record<string, unknown>) => void
   // Editing guidance above the widgets, worded for the grid or the column.
   renderHint?: (narrow: boolean) => ReactNode
 }) {
@@ -104,10 +107,15 @@ export function WidgetBoard({
       editing={editing}
       movable={editing && !narrow}
       onHide={onHide}
+      onOptionsChange={onOptionsChange}
     />
   )
   return (
-    <div ref={containerRef} className="home-widget-board flex flex-col gap-4">
+    <div
+      ref={containerRef}
+      className="home-widget-board flex flex-col gap-4"
+      data-editing={editing || undefined}
+    >
       {mounted && renderHint?.(narrow)}
       {!mounted ? null : narrow ? (
         <ul className="flex flex-col gap-4" aria-label={label}>
@@ -133,7 +141,12 @@ export function WidgetBoard({
               containerPadding: [0, 0],
             }}
             dragConfig={{ enabled: editing, handle: `.${DRAG_HANDLE}` }}
-            resizeConfig={{ enabled: editing, handles: ['se'], handleComponent: resizeHandle }}
+            resizeConfig={{
+              enabled: editing,
+              // No corner is drawn while reading.
+              handles: editing ? ['se'] : [],
+              handleComponent: resizeHandle,
+            }}
             onLayoutChange={(next) => {
               if (editing) onLayoutChange(applyPositions(layout, next))
             }}
@@ -175,12 +188,14 @@ function WidgetCell({
   editing,
   movable,
   onHide,
+  onOptionsChange,
 }: {
   entry: Shown
   context: WidgetContext
   editing: boolean
   movable: boolean
   onHide: (id: string) => void
+  onOptionsChange: (id: string, options: Record<string, unknown>) => void
 }) {
   const { t } = useTranslation()
   const name = t(definition.titleKey)
@@ -193,7 +208,12 @@ function WidgetCell({
           leave the page and lose the draft. */}
       <div className="h-full" inert={editing}>
         <WidgetBoundary key={context.branchId}>
-          {definition.render({ context, titleId: item.id })}
+          {definition.render({
+            context,
+            titleId: item.id,
+            options: item.options ?? {},
+            setOptions: (options) => onOptionsChange(item.id, options),
+          })}
         </WidgetBoundary>
       </div>
       {editing && (

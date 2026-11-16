@@ -1,7 +1,11 @@
 import { createFileRoute, Navigate } from '@tanstack/react-router'
 import { usePosSession } from '../../../hooks/use-pos-session'
 import { HomePage } from '../../../pages/home'
-export const Route = createFileRoute('/_authenticated/$storeId/')({ component: Overview })
+import { homeSearchSchema } from '../../../schemas/home-search'
+export const Route = createFileRoute('/_authenticated/$storeId/')({
+  validateSearch: homeSearchSchema,
+  component: Overview,
+})
 function Overview() {
   const { context } = usePosSession()
   // Only someone who can run setup is sent there; others keep the overview.

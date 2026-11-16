@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { readStoredLayout, writeStoredLayout } from './use-dashboard-layout'
+import { forgetStoredLayout, readStoredLayout } from './use-dashboard-layout'
 
 function memoryStorage() {
   const values = new Map<string, string>()
@@ -11,17 +11,17 @@ function memoryStorage() {
   }
 }
 
-describe('home layout storage', () => {
+describe('home layout kept on this device before the server', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  it('keeps one layout per store and forgets it on reset', () => {
+  it('reads the layout of one store and forgets it once uploaded', () => {
     const storage = memoryStorage()
     vi.stubGlobal('localStorage', storage)
     const layout = [{ id: 'funds', widget: 'funds', x: 0, y: 0, w: 4, h: 3 }]
-    writeStoredLayout('store_1', layout)
+    storage.setItem('parkviet-pos-dashboard-home-layout:store_1', JSON.stringify(layout))
     expect(readStoredLayout('store_1')).toEqual(layout)
     expect(readStoredLayout('store_2')).toBeNull()
-    writeStoredLayout('store_1', null)
+    forgetStoredLayout('store_1')
     expect(readStoredLayout('store_1')).toBeNull()
   })
 
@@ -32,16 +32,11 @@ describe('home layout storage', () => {
       getItem: () => {
         throw new Error('denied')
       },
-    })
-    expect(readStoredLayout('store_1')).toBeNull()
-  })
-
-  it('reports a write the device refuses', () => {
-    vi.stubGlobal('localStorage', {
-      setItem: () => {
-        throw new Error('quota')
+      removeItem: () => {
+        throw new Error('denied')
       },
     })
-    expect(() => writeStoredLayout('store_1', [])).toThrow('quota')
+    expect(readStoredLayout('store_1')).toBeNull()
+    expect(() => forgetStoredLayout('store_1')).not.toThrow()
   })
 })

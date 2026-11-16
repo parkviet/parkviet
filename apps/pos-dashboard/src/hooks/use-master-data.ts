@@ -160,3 +160,6 @@ export function masterFailure(error: unknown, t: (key: string) => string) {
     ? t(`masterData.failure_${reason}`)
     : describeFailure(error, t)
 }
+// The store's active units, under the key the recipe editor reads them by.
+export const useActiveUnits = (enabled: boolean) =>
+  useStoreQuery(['units', 'active'], enabled, () => readUnits(false))

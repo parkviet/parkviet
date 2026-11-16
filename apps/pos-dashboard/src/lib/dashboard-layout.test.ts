@@ -12,6 +12,7 @@ import {
   placeWidget,
   readingOrder,
   sameLayout,
+  toServerLayout,
   type WidgetSizes,
 } from './dashboard-layout'
 
@@ -26,6 +27,18 @@ describe('home widget layout', () => {
       { id: 'credit', widget: 'credit', x: 4, y: 0, w: 4, h: 3 },
       { id: 'cash', widget: 'cash', x: 8, y: 0, w: 4, h: 3 },
       { id: 'trend', widget: 'trend', x: 0, y: 3, w: 8, h: 7 },
+    ])
+  })
+
+  it('starts from the chosen widgets in their order, skipping unknown ones', () => {
+    expect(defaultLayout(sizes, ['trend', 'missing', 'cash'])).toEqual([
+      { id: 'trend', widget: 'trend', x: 0, y: 0, w: 8, h: 7 },
+      { id: 'cash', widget: 'cash', x: 8, y: 0, w: 4, h: 3 },
+    ])
+    expect(missingWidgets(defaultLayout(sizes, ['trend']), sizes)).toEqual([
+      'funds',
+      'credit',
+      'cash',
     ])
   })
 
@@ -188,5 +201,90 @@ describe('home widget layout', () => {
         { id: 'b', widget: 'b', x: 3, y: 9, w: 6, h: 2 },
       ]).map((item) => item.y),
     ).toEqual([0, 3])
+  })
+})
+
+// The server's rules for a stored item (Spree::Pos::DashboardLayout).
+function serverAccepts(layout: readonly Record<string, unknown>[]) {
+  const keys = new Set(['id', 'widget', 'x', 'y', 'w', 'h', 'options'])
+  const ids = layout.map((item) => item.id)
+  return (
+    layout.length <= 50 &&
+    new Set(ids).size === ids.length &&
+    layout.every((item) => {
+      const { x, y, w, h, id, widget, options } = item as Record<string, number & string>
+      return (
+        Object.keys(item).every((key) => keys.has(key)) &&
+        /^[A-Za-z0-9_:.-]{1,64}$/.test(id) &&
+        /^[a-z0-9_-]{1,64}$/.test(widget) &&
+        [x, y, w, h].every(Number.isInteger) &&
+        x >= 0 &&
+        x <= 11 &&
+        y >= 0 &&
+        y <= 1000 &&
+        w >= 1 &&
+        w <= 12 &&
+        h >= 1 &&
+        h <= 20 &&
+        x + w <= 12 &&
+        (options === undefined || JSON.stringify(options).length < 2048)
+      )
+    })
+  )
+}
+
+describe('layout sent to the server', () => {
+  it('keeps a well-formed layout as it is', () => {
+    const layout = [
+      { id: 'funds', widget: 'funds', x: 0, y: 0, w: 4, h: 3 },
+      { id: 'trend', widget: 'trend', x: 0, y: 3, w: 8, h: 7, options: { metric: 'orders' } },
+    ]
+    expect(toServerLayout(layout, sizes)).toEqual(layout)
+    expect(serverAccepts(toServerLayout(layout, sizes))).toBe(true)
+  })
+
+  it('clamps, drops what the server would refuse and strips stray keys', () => {
+    const tall = { ...wide, maxH: 40 }
+    const layout = [
+      { id: 'trend', widget: 'trend', x: 7.6, y: 5000.2, w: 30, h: 35 },
+      { id: 'bad id!', widget: 'funds', x: 0, y: 0, w: 4, h: 3 },
+      { id: 'funds', widget: 'Funds', x: 0, y: 0, w: 4, h: 3 },
+      { id: 'cash', widget: 'unknown', x: 0, y: 0, w: 4, h: 3 },
+      {
+        id: 'credit',
+        widget: 'credit',
+        x: 0,
+        y: 0,
+        w: 4,
+        h: 3,
+        options: { blob: 'x'.repeat(3000) },
+      },
+      { id: 'trend', widget: 'trend', x: 0, y: 0, w: 8, h: 7 },
+      { id: 'funds', widget: 'funds', x: 0, y: 0, w: 4, h: 3, extra: true } as never,
+    ]
+    const stored = toServerLayout(layout, { ...sizes, trend: tall })
+    expect(stored).toEqual([
+      { id: 'trend', widget: 'trend', x: 4, y: 1000, w: 8, h: 20 },
+      { id: 'credit', widget: 'credit', x: 0, y: 0, w: 4, h: 3 },
+      { id: 'funds', widget: 'funds', x: 0, y: 0, w: 4, h: 3 },
+    ])
+    expect(serverAccepts(stored)).toBe(true)
+  })
+
+  it('sends at most fifty items', () => {
+    const many = Array.from({ length: 70 }, (_, n) => ({
+      id: `funds-${n}`,
+      widget: 'funds',
+      x: 0,
+      y: n * 3,
+      w: 4,
+      h: 3,
+    }))
+    expect(toServerLayout(many, sizes)).toHaveLength(50)
+    expect(serverAccepts(toServerLayout(many, sizes))).toBe(true)
+  })
+
+  it('sends the default layout as the server accepts it', () => {
+    expect(serverAccepts(toServerLayout(defaultLayout(sizes), sizes))).toBe(true)
   })
 })

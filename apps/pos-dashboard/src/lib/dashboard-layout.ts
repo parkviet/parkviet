@@ -5,8 +5,15 @@
 export const GRID_COLUMNS = 12
 export const GRID_ROW_HEIGHT = 64
 export const GRID_MARGIN = 8
-// A stored layout longer than this is not something the page produced.
-export const MAX_LAYOUT_ITEMS = 60
+// The server's limits on a stored layout (Spree::Pos::DashboardLayout):
+// a longer layout, a taller widget or a lower row is not something the page
+// produced, and the server refuses it.
+export const MAX_LAYOUT_ITEMS = 50
+export const MAX_WIDGET_HEIGHT = 20
+export const MAX_LAYOUT_ROW = 1000
+export const MAX_OPTIONS_BYTES = 2048
+const ID_FORMAT = /^[A-Za-z0-9_:.-]{1,64}$/
+const WIDGET_FORMAT = /^[a-z0-9_-]{1,64}$/
 
 export type WidgetSize = {
   w: number
@@ -43,9 +50,13 @@ export function clampItem(
   cols = GRID_COLUMNS,
 ): DashboardLayoutItem {
   const w = clamp(Math.round(item.w), Math.min(size.minW, cols), Math.min(size.maxW, cols))
-  const h = clamp(Math.round(item.h), size.minH, size.maxH)
+  const h = clamp(
+    Math.round(item.h),
+    Math.min(size.minH, MAX_WIDGET_HEIGHT),
+    Math.min(size.maxH, MAX_WIDGET_HEIGHT),
+  )
   const x = clamp(Math.round(item.x), 0, cols - w)
-  const y = Math.max(0, Math.round(item.y))
+  const y = clamp(Math.round(item.y), 0, MAX_LAYOUT_ROW)
   return { ...item, x, y, w, h }
 }
 
@@ -88,9 +99,17 @@ export function placeWidget(
   return [...layout, { id, widget, ...spot, w, h: size.h }]
 }
 
-export function defaultLayout(sizes: WidgetSizes, cols = GRID_COLUMNS): DashboardLayout {
-  return Object.entries(sizes).reduce<DashboardLayout>(
-    (layout, [widget, size]) => placeWidget(layout, widget, size, cols),
+// The layout a reader starts from: the given widgets (every known one by
+// default), each placed in turn at the first free spot. Widgets left out are
+// offered by the "add widget" sheet.
+export function defaultLayout(
+  sizes: WidgetSizes,
+  widgets: readonly string[] = Object.keys(sizes),
+  cols = GRID_COLUMNS,
+): DashboardLayout {
+  return widgets.reduce<DashboardLayout>(
+    (layout, widget) =>
+      Object.hasOwn(sizes, widget) ? placeWidget(layout, widget, sizes[widget], cols) : layout,
     [],
   )
 }
@@ -126,7 +145,7 @@ export function mergeLayout(
   for (const entry of saved.slice(0, MAX_LAYOUT_ITEMS)) {
     if (!isRecord(entry)) continue
     const { id, widget, x, y, w, h, options } = entry
-    if (typeof id !== 'string' || id === '' || seen.has(id)) continue
+    if (typeof id !== 'string' || !ID_FORMAT.test(id) || seen.has(id)) continue
     if (typeof widget !== 'string' || !Object.hasOwn(sizes, widget)) continue
     if (![x, y, w, h].every(isCoordinate)) continue
     seen.add(id)
@@ -138,7 +157,7 @@ export function mergeLayout(
       w: w as number,
       h: h as number,
     }
-    if (isRecord(options)) item.options = options
+    if (isRecord(options) && fitsOptions(options)) item.options = options
     layout.push(belowCollisions(clampItem(item, sizes[widget], cols), layout))
   }
   return layout
@@ -200,4 +219,31 @@ export function sameLayout(a: DashboardLayout, b: DashboardLayout): boolean {
   const left = a.map(key).sort()
   const right = b.map(key).sort()
   return left.every((value, index) => value === right[index])
+}
+
+const fitsOptions = (options: Record<string, unknown>) =>
+  new TextEncoder().encode(JSON.stringify(options)).length <= MAX_OPTIONS_BYTES
+
+// The layout as the server stores it: known widgets with well-formed names,
+// whole grid units inside the grid and their size limits, options only when
+// small enough, at most MAX_LAYOUT_ITEMS items, nothing else on an item.
+// Every layout the page saves goes through here, so the server accepts it.
+export function toServerLayout(
+  layout: DashboardLayout,
+  sizes: WidgetSizes,
+  cols = GRID_COLUMNS,
+): DashboardLayoutItem[] {
+  const seen = new Set<string>()
+  const stored: DashboardLayoutItem[] = []
+  for (const item of layout) {
+    if (stored.length >= MAX_LAYOUT_ITEMS) break
+    if (!ID_FORMAT.test(item.id) || seen.has(item.id)) continue
+    if (!WIDGET_FORMAT.test(item.widget) || !Object.hasOwn(sizes, item.widget)) continue
+    seen.add(item.id)
+    const { id, widget, x, y, w, h } = clampItem(item, sizes[item.widget], cols)
+    const entry: DashboardLayoutItem = { id, widget, x, y, w, h }
+    if (item.options && fitsOptions(item.options)) entry.options = item.options
+    stored.push(entry)
+  }
+  return stored
 }
