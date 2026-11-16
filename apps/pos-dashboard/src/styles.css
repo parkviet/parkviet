@@ -1,3 +1,11 @@
 @import "@spree/dashboard-ui/styles.css";
 @source "../node_modules/@spree/dashboard-core/src/**/*.{ts,tsx}";
 @source "../node_modules/@spree/dashboard-ui/src/**/*.{ts,tsx}";
+
+/* Home widget grid: the drop preview follows the theme instead of the
+   library's red block. */
+.home-widget-board .react-grid-item.react-grid-placeholder {
+  background: var(--color-primary);
+  border-radius: var(--radius-card, 0.75rem);
+  opacity: 0.12;
+}
