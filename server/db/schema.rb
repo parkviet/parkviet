@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_13_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_16_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -2832,6 +2832,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_150000) do
     t.index ["store_id", "email"], name: "idx_pos_customers_store_email"
     t.index ["store_id", "normalized_phone"], name: "idx_pos_customers_store_phone"
     t.index ["store_id"], name: "index_spree_pos_customers_on_store_id"
+  end
+
+  create_table "spree_pos_dashboard_layouts", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.bigint "user_id", null: false
+    t.jsonb "layout", default: [], null: false
+    t.integer "version", default: 1, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["store_id", "user_id"], name: "idx_pos_dashboard_layouts_owner", unique: true
+    t.index ["user_id"], name: "index_spree_pos_dashboard_layouts_on_user_id"
+    t.check_constraint "jsonb_typeof(layout) = 'array'::text", name: "chk_pos_dashboard_layouts_array"
   end
 
   create_table "spree_pos_deliveries", force: :cascade do |t|
@@ -7026,6 +7038,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_150000) do
   add_foreign_key "spree_pos_customers", "spree_admin_users", column: "created_by_id"
   add_foreign_key "spree_pos_customers", "spree_customers", column: "customer_id"
   add_foreign_key "spree_pos_customers", "spree_stores", column: "store_id"
+  add_foreign_key "spree_pos_dashboard_layouts", "spree_admin_users", column: "user_id", on_delete: :cascade
+  add_foreign_key "spree_pos_dashboard_layouts", "spree_stores", column: "store_id", on_delete: :cascade
   add_foreign_key "spree_pos_deliveries", "spree_admin_users", column: "created_by_id"
   add_foreign_key "spree_pos_deliveries", "spree_admin_users", column: "delivered_by_id"
   add_foreign_key "spree_pos_deliveries", "spree_fees", column: "fee_id", on_delete: :nullify

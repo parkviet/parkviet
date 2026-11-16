@@ -90,6 +90,9 @@ Class | Method | HTTP request | Description
 [*DefaultApi*](doc/DefaultApi.md) | [**posCupLabelSettings**](doc/DefaultApi.md#poscuplabelsettings) | **GET** /api/v3/admin/pos/cup_label_settings | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posCupLabelSettingsUpdate**](doc/DefaultApi.md#poscuplabelsettingsupdate) | **PUT** /api/v3/admin/pos/cup_label_settings | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posCupLabelTest**](doc/DefaultApi.md#poscuplabeltest) | **POST** /api/v3/admin/pos/cup_label_settings/test | 
+[*DefaultApi*](doc/DefaultApi.md) | [**posDashboardLayout**](doc/DefaultApi.md#posdashboardlayout) | **GET** /api/v3/admin/pos/dashboard_layout | 
+[*DefaultApi*](doc/DefaultApi.md) | [**posDashboardLayoutReset**](doc/DefaultApi.md#posdashboardlayoutreset) | **DELETE** /api/v3/admin/pos/dashboard_layout | 
+[*DefaultApi*](doc/DefaultApi.md) | [**posDashboardLayoutSave**](doc/DefaultApi.md#posdashboardlayoutsave) | **PUT** /api/v3/admin/pos/dashboard_layout | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posDeviceCourseFire**](doc/DefaultApi.md#posdevicecoursefire) | **POST** /api/v3/pos_device/kitchen/workspaces/{workspace_id}/courses/{course}/fire | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posDeviceKitchenAllDayBump**](doc/DefaultApi.md#posdevicekitchenalldaybump) | **POST** /api/v3/pos_device/kitchen/all_day/bump | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posDeviceKitchenBoard**](doc/DefaultApi.md#posdevicekitchenboard) | **GET** /api/v3/pos_device/kitchen/board | 
@@ -328,6 +331,9 @@ Class | Method | HTTP request | Description
  - [ContextStore](doc/ContextStore.md)
  - [CourseLabel](doc/CourseLabel.md)
  - [CupLabelSettings](doc/CupLabelSettings.md)
+ - [DashboardLayout](doc/DashboardLayout.md)
+ - [DashboardLayoutItem](doc/DashboardLayoutItem.md)
+ - [DashboardLayoutResult](doc/DashboardLayoutResult.md)
  - [Device](doc/Device.md)
  - [DevicePairResult](doc/DevicePairResult.md)
  - [DevicePairing](doc/DevicePairing.md)
@@ -532,6 +538,7 @@ Class | Method | HTTP request | Description
  - [PosCupLabelSettings200Response](doc/PosCupLabelSettings200Response.md)
  - [PosCupLabelSettingsUpdateRequest](doc/PosCupLabelSettingsUpdateRequest.md)
  - [PosCupLabelTestRequest](doc/PosCupLabelTestRequest.md)
+ - [PosDashboardLayoutSaveRequest](doc/PosDashboardLayoutSaveRequest.md)
  - [PosDeviceKitchenMenuItems200Response](doc/PosDeviceKitchenMenuItems200Response.md)
  - [PosDeviceKitchenSelectStation200Response](doc/PosDeviceKitchenSelectStation200Response.md)
  - [PosDeviceKitchenSelectStationRequest](doc/PosDeviceKitchenSelectStationRequest.md)

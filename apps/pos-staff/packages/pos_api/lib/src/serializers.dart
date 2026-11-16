@@ -59,6 +59,9 @@ import 'package:pos_api/src/model/context_staff.dart';
 import 'package:pos_api/src/model/context_store.dart';
 import 'package:pos_api/src/model/course_label.dart';
 import 'package:pos_api/src/model/cup_label_settings.dart';
+import 'package:pos_api/src/model/dashboard_layout.dart';
+import 'package:pos_api/src/model/dashboard_layout_item.dart';
+import 'package:pos_api/src/model/dashboard_layout_result.dart';
 import 'package:pos_api/src/model/device.dart';
 import 'package:pos_api/src/model/device_pair_result.dart';
 import 'package:pos_api/src/model/device_pairing.dart';
@@ -263,6 +266,7 @@ import 'package:pos_api/src/model/pos_catalog200_response.dart';
 import 'package:pos_api/src/model/pos_cup_label_settings200_response.dart';
 import 'package:pos_api/src/model/pos_cup_label_settings_update_request.dart';
 import 'package:pos_api/src/model/pos_cup_label_test_request.dart';
+import 'package:pos_api/src/model/pos_dashboard_layout_save_request.dart';
 import 'package:pos_api/src/model/pos_device_kitchen_menu_items200_response.dart';
 import 'package:pos_api/src/model/pos_device_kitchen_select_station200_response.dart';
 import 'package:pos_api/src/model/pos_device_kitchen_select_station_request.dart';
@@ -542,6 +546,9 @@ part 'serializers.g.dart';
   ContextStore,
   CourseLabel,
   CupLabelSettings,
+  DashboardLayout,
+  DashboardLayoutItem,
+  DashboardLayoutResult,
   Device,
   DevicePairResult,
   DevicePairing,
@@ -749,6 +756,7 @@ part 'serializers.g.dart';
   PosCupLabelSettings200Response,
   PosCupLabelSettingsUpdateRequest,
   PosCupLabelTestRequest,
+  PosDashboardLayoutSaveRequest,
   PosDeviceKitchenMenuItems200Response,
   PosDeviceKitchenSelectStation200Response,
   PosDeviceKitchenSelectStationRequest,
@@ -998,6 +1006,10 @@ Serializers serializers = (_$serializers.toBuilder()
         const FullType(
             BuiltList, [FullType(PosPrinterStations200ResponseDataInner)]),
         () => ListBuilder<PosPrinterStations200ResponseDataInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DashboardLayoutItem)]),
+        () => ListBuilder<DashboardLayoutItem>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(OverviewItem)]),

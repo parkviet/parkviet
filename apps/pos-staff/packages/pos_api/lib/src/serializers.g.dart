@@ -66,6 +66,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(CupLabelSettings.serializer)
       ..add(CupLabelSettingsFieldsEnum.serializer)
       ..add(CupLabelSettingsSizeEnum.serializer)
+      ..add(DashboardLayout.serializer)
+      ..add(DashboardLayoutItem.serializer)
+      ..add(DashboardLayoutResult.serializer)
       ..add(Device.serializer)
       ..add(DeviceModeEnum.serializer)
       ..add(DevicePairResult.serializer)
@@ -330,6 +333,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(PosCupLabelSettingsUpdateRequestFieldsEnum.serializer)
       ..add(PosCupLabelSettingsUpdateRequestSizeEnum.serializer)
       ..add(PosCupLabelTestRequest.serializer)
+      ..add(PosDashboardLayoutSaveRequest.serializer)
       ..add(PosDeviceKitchenMenuItems200Response.serializer)
       ..add(PosDeviceKitchenSelectStation200Response.serializer)
       ..add(PosDeviceKitchenSelectStationRequest.serializer)
@@ -713,6 +717,14 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(String)]),
           () => ListBuilder<String>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(DashboardLayoutItem)]),
+          () => ListBuilder<DashboardLayoutItem>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(DashboardLayoutItem)]),
+          () => ListBuilder<DashboardLayoutItem>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(DeviceStaffMember)]),
           () => ListBuilder<DeviceStaffMember>())
@@ -1269,6 +1281,12 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(String)]),
           () => ListBuilder<String>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),

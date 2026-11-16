@@ -635,6 +635,78 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v3/admin/pos/dashboard_layout:
+    get:
+      operationId: posDashboardLayout
+      description: >
+        The signed-in user's own widget arrangement of the dashboard home page
+        in this store, or null when they never saved one (the dashboard then
+        uses its built-in layout). Anyone who may read the POS context may
+        keep one; nobody reads another user's.
+      responses:
+        '200':
+          description: The saved layout or null
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardLayoutResult'
+        '403':
+          description: No POS access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      operationId: posDashboardLayoutSave
+      description: >
+        Replaces the signed-in user's layout as a whole; the last write wins.
+        At most 50 cells on a 12-column grid (`x + w <= 12`, `w` 1-12, `h`
+        1-20), ids unique, widget names lowercase `[a-z0-9_-]` (the dashboard
+        skips names it does not know), `options` an object under 2 KB.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [layout]
+              properties:
+                layout:
+                  type: array
+                  maxItems: 50
+                  items:
+                    $ref: '#/components/schemas/DashboardLayoutItem'
+      responses:
+        '200':
+          description: The saved layout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardLayoutResult'
+        '403':
+          description: No POS access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: The layout is missing or invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      operationId: posDashboardLayoutReset
+      description: Forgets the signed-in user's layout, so the built-in one applies again.
+      responses:
+        '204':
+          description: Forgotten
+        '403':
+          description: No POS access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v3/admin/pos/einvoice_settings:
     get:
       operationId: posEinvoiceSettings
@@ -12161,6 +12233,60 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/Overview'
+    DashboardLayoutItem:
+      type: object
+      additionalProperties: false
+      required: [id, widget, x, y, w, h]
+      properties:
+        id:
+          type: string
+          pattern: '^[A-Za-z0-9_:.-]{1,64}$'
+        widget:
+          type: string
+          pattern: '^[a-z0-9_-]{1,64}$'
+        x:
+          type: integer
+          minimum: 0
+          maximum: 11
+        y:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        w:
+          type: integer
+          minimum: 1
+          maximum: 12
+        h:
+          type: integer
+          minimum: 1
+          maximum: 20
+        options:
+          type: object
+          additionalProperties: true
+          description: Widget settings, such as the selected tab; under 2 KB as JSON.
+    DashboardLayout:
+      type: object
+      additionalProperties: false
+      required: [layout, version, updated_at]
+      properties:
+        layout:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardLayoutItem'
+        version:
+          type: integer
+          description: Layout format version.
+        updated_at:
+          type: string
+          format: date-time
+    DashboardLayoutResult:
+      type: object
+      required: [data]
+      properties:
+        data:
+          oneOf:
+            - $ref: '#/components/schemas/DashboardLayout'
+            - type: 'null'
     OwnerOpenUnit:
       type: object
       additionalProperties: false

@@ -28,6 +28,7 @@ import 'package:pos_api/src/model/buffet_tier_list.dart';
 import 'package:pos_api/src/model/checklist_input.dart';
 import 'package:pos_api/src/model/checklist_result.dart';
 import 'package:pos_api/src/model/context.dart';
+import 'package:pos_api/src/model/dashboard_layout_result.dart';
 import 'package:pos_api/src/model/date.dart';
 import 'package:pos_api/src/model/edit_unsent_line_input.dart';
 import 'package:pos_api/src/model/error_response.dart';
@@ -89,6 +90,7 @@ import 'package:pos_api/src/model/pos_catalog200_response.dart';
 import 'package:pos_api/src/model/pos_cup_label_settings200_response.dart';
 import 'package:pos_api/src/model/pos_cup_label_settings_update_request.dart';
 import 'package:pos_api/src/model/pos_cup_label_test_request.dart';
+import 'package:pos_api/src/model/pos_dashboard_layout_save_request.dart';
 import 'package:pos_api/src/model/pos_device_kitchen_menu_items200_response.dart';
 import 'package:pos_api/src/model/pos_device_kitchen_select_station200_response.dart';
 import 'package:pos_api/src/model/pos_device_kitchen_select_station_request.dart';
@@ -2496,6 +2498,221 @@ class DefaultApi {
     }
 
     return Response<PosPrintJobCancel200Response>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// posDashboardLayout
+  /// The signed-in user&#39;s own widget arrangement of the dashboard home page in this store, or null when they never saved one (the dashboard then uses its built-in layout). Anyone who may read the POS context may keep one; nobody reads another user&#39;s.
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [DashboardLayoutResult] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<DashboardLayoutResult>> posDashboardLayout({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/api/v3/admin/pos/dashboard_layout';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    DashboardLayoutResult? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null
+          ? null
+          : _serializers.deserialize(
+              rawResponse,
+              specifiedType: const FullType(DashboardLayoutResult),
+            ) as DashboardLayoutResult;
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<DashboardLayoutResult>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// posDashboardLayoutReset
+  /// Forgets the signed-in user&#39;s layout, so the built-in one applies again.
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future]
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<void>> posDashboardLayoutReset({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/api/v3/admin/pos/dashboard_layout';
+    final _options = Options(
+      method: r'DELETE',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    return _response;
+  }
+
+  /// posDashboardLayoutSave
+  /// Replaces the signed-in user&#39;s layout as a whole; the last write wins. At most 50 cells on a 12-column grid (&#x60;x + w &lt;&#x3D; 12&#x60;, &#x60;w&#x60; 1-12, &#x60;h&#x60; 1-20), ids unique, widget names lowercase &#x60;[a-z0-9_-]&#x60; (the dashboard skips names it does not know), &#x60;options&#x60; an object under 2 KB.
+  ///
+  /// Parameters:
+  /// * [posDashboardLayoutSaveRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [DashboardLayoutResult] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<DashboardLayoutResult>> posDashboardLayoutSave({
+    required PosDashboardLayoutSaveRequest posDashboardLayoutSaveRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/api/v3/admin/pos/dashboard_layout';
+    final _options = Options(
+      method: r'PUT',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(PosDashboardLayoutSaveRequest);
+      _bodyData = _serializers.serialize(posDashboardLayoutSaveRequest,
+          specifiedType: _type);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    DashboardLayoutResult? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null
+          ? null
+          : _serializers.deserialize(
+              rawResponse,
+              specifiedType: const FullType(DashboardLayoutResult),
+            ) as DashboardLayoutResult;
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<DashboardLayoutResult>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

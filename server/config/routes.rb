@@ -177,6 +177,10 @@ Rails.application.routes.draw do
             resources :cash_reconciliations, only: [:index, :create]
             get 'reports/:report', to: 'reports#show', as: :report, constraints: { report: /sales|receipts|cashbook|receivables|closures|ingredient_usage|menu_margin|platforms|bar|meals|meal_statement|vehicle_commissions|attendants/ }
             get 'overview', to: 'overview#show'
+            # The signed-in user's own widget arrangement of the dashboard home.
+            get 'dashboard_layout', to: 'dashboard_layouts#show'
+            put 'dashboard_layout', to: 'dashboard_layouts#update'
+            delete 'dashboard_layout', to: 'dashboard_layouts#destroy'
             resources :exports, only: [:index, :show, :create] do
               member do
                 post :download_link
