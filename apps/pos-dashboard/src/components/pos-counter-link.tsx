@@ -8,7 +8,7 @@ import { posSellingConfigured, posSellingUrl } from '../lib/pos-selling-url'
 
 // The rail's nav registry only builds in-app links, and those links preload on
 // hover. The counter is another origin, so this control is a plain anchor at
-// the top of the nav list — above "Việc cần xử lý" — and it opens a new tab.
+// the top of the nav list — above "Tổng quan" — and it opens a new tab.
 // Administration stays where it is.
 const HOST_CLASS =
   'px-2 pb-3 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0'

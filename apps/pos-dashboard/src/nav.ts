@@ -4,7 +4,7 @@ import {
   ChartColumn,
   HandCoins,
   IdCard,
-  ListChecks,
+  LayoutDashboard,
   Package,
   ReceiptText,
   Server,
@@ -157,9 +157,9 @@ export function PosNavigation() {
     for (const key of keys) nav.remove(key)
     nav.add({
       key: 'home',
-      labelKey: 'attention.title',
+      labelKey: 'homeWidgets.title',
       path: '/',
-      icon: ListChecks,
+      icon: LayoutDashboard,
       position: 100,
     })
     groups.forEach((group, index) => {

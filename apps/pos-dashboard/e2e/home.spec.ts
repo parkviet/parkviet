@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { installDashboardShell } from './support/dashboard';
 import { pageMeta, posContext } from './support/pos-context';
 
@@ -98,12 +98,12 @@ async function install(
   await installDashboardShell(page, { authenticated: true, read: false, write: false });
   return requests;
 }
-const card = (page: Page, name: string) => page.getByRole('list', { name: 'Việc cần xử lý' }).getByLabel(name, { exact: true });
+const card = (page: Page, name: string) => page.getByRole('list', { name: 'Tổng quan' }).getByLabel(name, { exact: true });
 
 test('a branch manager sees every attention item with its count and links', async ({ page }, testInfo) => {
   const requests = await install(page, ['pos.payment.resolve', 'pos.approval.grant', 'pos.credit.manage', 'pos.topology.recover', 'pos.shift.open']);
   await page.goto('/store_1');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Việc cần xử lý');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tổng quan');
   await expect(card(page, 'Khoản thu cần chú ý').getByTestId('attention-count')).toHaveText('2');
   await expect(card(page, 'Duyệt ghi nợ').getByTestId('attention-count')).toHaveText('1');
   await expect(card(page, 'Thu/chi két chờ xác nhận').getByTestId('attention-count')).toHaveText('2');
@@ -121,12 +121,13 @@ test('a branch manager sees every attention item with its count and links', asyn
   if (testInfo.project.name === 'desktop') {
     const sidebar = page.locator('[data-sidebar="sidebar"]').first();
     const counter = sidebar.getByRole('link', { name: 'POS' });
-    const attention = sidebar.getByRole('link', { name: 'Việc cần xử lý' });
+    const home = sidebar.getByRole('link', { name: 'Tổng quan', exact: true });
     await expect(counter).toBeVisible();
     await expect(counter).toHaveAttribute('href', 'http://localhost:5175/?store=store_1&branch=branch_main');
     await expect(counter).toHaveAttribute('target', '_blank');
-    await expect(attention).toBeVisible();
-    expect((await counter.boundingBox())!.y).toBeLessThan((await attention.boundingBox())!.y);
+    await expect(home).toBeVisible();
+    await expect(home).toHaveAttribute('href', '/store_1');
+    expect((await counter.boundingBox())!.y).toBeLessThan((await home.boundingBox())!.y);
     await expect(sidebar.getByRole('link', { name: 'Bán hàng' })).toHaveAttribute('href', '/store_1/orders');
     await expect(sidebar.getByRole('link', { name: 'Tiền', exact: true })).toHaveAttribute('href', '/store_1/funds');
     await expect(sidebar.getByRole('link', { name: 'Thiết lập' })).toHaveAttribute('href', '/store_1/devices');
@@ -139,7 +140,7 @@ test('a branch manager sees every attention item with its count and links', asyn
 test('items follow the reader capabilities at the branch', async ({ page }) => {
   const requests = await install(page, ['pos.report.read']);
   await page.goto('/store_1');
-  const list = page.getByRole('list', { name: 'Việc cần xử lý' });
+  const list = page.getByRole('list', { name: 'Tổng quan' });
   await expect(card(page, 'Hoàn tiền chưa xong').getByTestId('attention-count')).toHaveText('1');
   // Report readers also see the sales headline figures, the trend and the best sellers.
   await expect(list.getByRole('listitem').filter({ has: page.getByRole('heading', { level: 2 }) })).toHaveCount(7);
@@ -266,4 +267,142 @@ test('a day of the trend opens from the keyboard and a status opens the orders o
     from: '2026-11-10',
     to: '2026-11-16',
   });
+});
+
+const savedLayouts = (requests: Awaited<ReturnType<typeof install>>) =>
+  requests
+    .filter((r) => r.path === '/pos/dashboard_layout' && r.method === 'PUT')
+    .map((r) => (r.body as { layout: Layout }).layout);
+const box = (layout: Layout | undefined, widget: string) => {
+  const item = layout?.find((entry) => entry.widget === widget);
+  return item && { x: item.x, y: item.y, w: item.w, h: item.h };
+};
+// The grid cell of a widget being edited, found by its hide button.
+const cell = (page: Page, name: string) =>
+  page.getByRole('listitem').filter({ has: page.getByRole('button', { name: `Ẩn ${name}`, exact: true }) });
+
+// Drags with the mouse in small steps, as a hand would, so the grid follows.
+async function drag(page: Page, handle: Locator, dx: number, dy: number) {
+  const rect = (await handle.boundingBox())!;
+  const from = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + dx / 2, from.y + dy / 2, { steps: 5 });
+  await page.mouse.move(from.x + dx, from.y + dy, { steps: 5 });
+  await page.mouse.up();
+}
+
+test('a widget moves by its grip and resizes from its corner, and the confirmed layout is saved', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile', 'a phone stacks the widgets in one column');
+  const requests = await install(page, ['pos.report.read'], { delivery: true }, {
+    layout: [
+      { id: 'kpi-orders', widget: 'kpi-orders', x: 0, y: 0, w: 3, h: 2 },
+      { id: 'kpi-sales-total', widget: 'kpi-sales-total', x: 3, y: 0, w: 3, h: 2 },
+    ],
+  });
+  await page.goto('/store_1?from=2026-11-10&to=2026-11-16');
+  await expect(card(page, 'Tổng đơn hàng').getByTestId('kpi-value')).toHaveText('12');
+  // Reading, the widgets have neither grips nor corners.
+  await expect(page.getByTitle(/^Kéo để di chuyển/)).toHaveCount(0);
+  await expect(page.getByTestId('widget-resize-handle')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Tùy chỉnh' }).click();
+  await expect(page.getByRole('note')).toContainText('kéo góc dưới bên phải');
+  const width = (await page.getByRole('list', { name: 'Tổng quan' }).boundingBox())!.width;
+  // One grid column with its gap, one grid row with its gap.
+  const column = (width - 8 * 11) / 12 + 8;
+  const row = 64 + 8;
+
+  await drag(page, page.getByTitle('Kéo để di chuyển Tổng đơn hàng'), 8 * column, 0);
+  await drag(page, cell(page, 'Tổng tiền đơn hàng').getByTestId('widget-resize-handle'), column, row);
+  expect(savedLayouts(requests)).toHaveLength(0);
+  await page.getByRole('button', { name: 'Xác nhận', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Tùy chỉnh' })).toBeVisible();
+
+  const [saved] = savedLayouts(requests);
+  expect(box(saved, 'kpi-orders')).toEqual({ x: 8, y: 0, w: 3, h: 2 });
+  expect(box(saved, 'kpi-sales-total')).toEqual({ x: 3, y: 0, w: 4, h: 3 });
+});
+
+test('cancelling drops the draft and nothing is saved', async ({ page }) => {
+  const requests = await install(page, ['pos.report.read']);
+  await page.goto('/store_1?from=2026-11-10&to=2026-11-16');
+  await expect(card(page, 'Tổng đơn hàng').getByTestId('kpi-value')).toHaveText('12');
+  await page.getByRole('button', { name: 'Tùy chỉnh' }).click();
+  await page.getByRole('button', { name: 'Ẩn Tổng đơn hàng' }).click();
+  await expect(card(page, 'Tổng đơn hàng')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Hủy', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Tùy chỉnh' })).toBeVisible();
+  await expect(card(page, 'Tổng đơn hàng').getByTestId('kpi-value')).toHaveText('12');
+  expect(requests.some((r) => r.path === '/pos/dashboard_layout' && r.method !== 'GET')).toBe(false);
+});
+
+test('a widget added from the sheet takes the first free spot once confirmed', async ({ page }) => {
+  const requests = await install(page, ['pos.report.read'], { delivery: true }, {
+    layout: [{ id: 'kpi-orders', widget: 'kpi-orders', x: 0, y: 0, w: 3, h: 2 }],
+  });
+  await page.goto('/store_1?from=2026-11-10&to=2026-11-16');
+  await expect(card(page, 'Tổng đơn hàng').getByTestId('kpi-value')).toHaveText('12');
+  await page.getByRole('button', { name: 'Thêm tiện ích' }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByRole('button', { name: 'Thêm Doanh thu theo giờ' })).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Thêm Tổng đơn hàng' })).toHaveCount(0);
+  await sheet.getByRole('button', { name: 'Thêm Doanh thu theo giờ' }).click();
+  await expect(sheet).toHaveCount(0);
+  // Adding opens the editor so the widget can be moved before confirming.
+  await expect(page.getByRole('button', { name: 'Xác nhận', exact: true })).toBeVisible();
+  expect(savedLayouts(requests)).toHaveLength(0);
+  await page.getByRole('button', { name: 'Xác nhận', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Tùy chỉnh' })).toBeVisible();
+  await expect(card(page, 'Doanh thu theo giờ')).toBeVisible();
+  const [saved] = savedLayouts(requests);
+  expect(box(saved, 'kpi-orders')).toEqual({ x: 0, y: 0, w: 3, h: 2 });
+  expect(box(saved, 'sales-by-hour')).toEqual({ x: 3, y: 0, w: 6, h: 5 });
+});
+
+test('a figure and an order source open the sales report of the same days', async ({ page }) => {
+  await install(page, ['pos.report.read'], { delivery: true }, {
+    layout: [
+      { id: 'kpi-sales-total', widget: 'kpi-sales-total', x: 0, y: 0, w: 3, h: 2 },
+      { id: 'sales-by-source', widget: 'sales-by-source', x: 3, y: 0, w: 6, h: 5 },
+    ],
+  });
+  await page.goto('/store_1?from=2026-11-10&to=2026-11-16');
+  const search = () => Object.fromEntries(new URL(page.url()).searchParams.entries());
+
+  const figure = card(page, 'Tổng tiền đơn hàng').getByRole('link', { name: 'Xem chi tiết Tổng tiền đơn hàng' });
+  await expect(figure).toHaveAttribute('href', '/store_1/reports?from=2026-11-10&to=2026-11-16');
+  await figure.click();
+  await expect(page).toHaveURL(/\/store_1\/reports\?/);
+  expect(search()).toMatchObject({ from: '2026-11-10', to: '2026-11-16' });
+  expect(search()).not.toHaveProperty('section');
+
+  await page.goBack();
+  const zalo = card(page, 'Doanh thu theo nguồn đơn').getByRole('link', { name: /Zalo/ });
+  await expect(zalo).toHaveAttribute('href', '/store_1/reports?from=2026-11-10&to=2026-11-16&orderSource=zalo');
+  await zalo.click();
+  await expect(page).toHaveURL(/\/store_1\/reports\?.*orderSource=zalo/);
+  expect(search()).toMatchObject({ from: '2026-11-10', to: '2026-11-16', orderSource: 'zalo' });
+});
+
+test('on a phone the widgets stack without grips, and hiding and adding still work', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'the stacked column is a phone layout');
+  const requests = await install(page, ['pos.report.read']);
+  await page.goto('/store_1?from=2026-11-10&to=2026-11-16');
+  await expect(card(page, 'Tổng đơn hàng').getByTestId('kpi-value')).toHaveText('12');
+  await page.getByRole('button', { name: 'Tùy chỉnh' }).click();
+  await expect(page.getByRole('note')).toContainText('Bấm dấu trừ để ẩn tiện ích');
+  await expect(page.getByTitle(/^Kéo để di chuyển/)).toHaveCount(0);
+  await expect(page.getByTestId('widget-resize-handle')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Ẩn Tổng đơn hàng' }).click();
+  await page.getByRole('button', { name: 'Thêm tiện ích' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Thêm Doanh thu theo giờ' }).click();
+  await page.getByRole('button', { name: 'Xác nhận', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Tùy chỉnh' })).toBeVisible();
+  await expect(card(page, 'Tổng đơn hàng')).toHaveCount(0);
+  await expect(card(page, 'Doanh thu theo giờ')).toBeVisible();
+  const [saved] = savedLayouts(requests);
+  expect(saved.map((item) => item.widget)).not.toContain('kpi-orders');
+  expect(saved.map((item) => item.widget)).toContain('sales-by-hour');
 });

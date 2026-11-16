@@ -1050,8 +1050,6 @@
   "ordersPhone": "Điện thoại",
   "ordersPlacedAt": "Thời gian",
   "attention": {
-    "title": "Việc cần xử lý",
-    "hint": "Những việc đang chờ bạn ở chi nhánh đang chọn, theo quyền của bạn tại chi nhánh.",
     "nothing": "Bạn không có việc nào cần xử lý ở chi nhánh này.",
     "open": "Xem",
     "waiting": "Cần xử lý",
@@ -1065,6 +1063,8 @@
     "refundsHint": "Đơn có khoản hoàn tiền chưa chi xong."
   },
   "homeWidgets": {
+    "title": "Tổng quan",
+    "hint": "Số liệu bán hàng và những việc đang chờ bạn ở chi nhánh đang chọn, theo quyền của bạn tại chi nhánh.",
     "customize": "Tùy chỉnh",
     "addWidget": "Thêm tiện ích",
     "editHint": "Nhấn giữ tay nắm ở giữa trên mỗi tiện ích để di chuyển, hoặc kéo góc dưới bên phải để đổi cỡ.",

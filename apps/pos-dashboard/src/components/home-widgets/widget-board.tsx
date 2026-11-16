@@ -177,6 +177,7 @@ function resizeHandle(_axis: string, ref: Ref<HTMLElement>) {
     <span
       ref={ref as Ref<HTMLSpanElement>}
       aria-hidden
+      data-testid="widget-resize-handle"
       className="absolute right-1 bottom-1 z-10 size-4 cursor-se-resize rounded-br-md border-r-2 border-b-2 border-muted-foreground/60 hover:border-primary"
     />
   )

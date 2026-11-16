@@ -1,6 +1,8 @@
 # Trang chủ POS dashboard dạng widget
 
-Trạng thái: đã chốt các quyết định chính, chờ duyệt để bắt đầu. Chưa viết code.
+Trạng thái: đã triển khai đủ 6 giai đoạn. Trang chủ đổi tên thành "Tổng quan" (en "Overview").
+Để sau: thẻ trạng thái đơn "chờ xác nhận" / "đang xử lý" (chờ kế hoạch mở rộng trạng thái đơn);
+báo cáo "Bán theo sản phẩm" và "Bán theo khách" (top 5 sản phẩm và tab Khách hàng của biểu đồ xu hướng tạm mở báo cáo Doanh số).
 
 ## Mục tiêu
 

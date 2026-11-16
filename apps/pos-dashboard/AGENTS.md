@@ -68,5 +68,34 @@ details so shared failure helpers and `mapSpreeErrorsToForm` still work. Destruc
 click actions need `useConfirm({variant:'destructive', ...})`. Invalidate the current
 store's POS keys after writes. Never embed SDK entity types inside form-value types.
 
+## Home widgets ("Tổng quan")
+
+The home page (`src/pages/home.tsx`) is a 12-column `react-grid-layout` board
+(64px rows, 8px gaps) of widgets registered in
+`src/components/home-widgets/registry.tsx` (`HOME_WIDGETS`, default order in
+`HOME_DEFAULT_WIDGETS`). To add a widget, add a `WidgetDefinition` there:
+
+- `widget`: a stable kebab-case id (`/^[a-z0-9_-]{1,64}$/`); it is stored in
+  layouts, so never rename it. `titleKey`/`hintKey` are i18n keys in both locales.
+- `size`: default `w`/`h` and `minW`/`minH`/`maxW`/`maxH` in grid units.
+- `visible(access)`: the branch capability gate; a widget that does not apply
+  keeps its slot but is not shown. `unavailable(overview)` hides it when the
+  loaded overview has nothing for it.
+- `usesOverview: true` when it reads `useOverview`; the page fetches the
+  overview only while such a widget is on it. Links go through `lib/home-links.ts`
+  so drill-downs carry the page's `from`/`to` with the target page's search keys.
+
+Placement rules are pure functions in `src/lib/dashboard-layout.ts`. Each user's
+layout is stored per store through `GET`/`PUT`/`DELETE /pos/dashboard_layout`
+(`hooks/use-dashboard-layout.ts`; no row means the registry default, and
+confirming the default deletes the row). The server checks shape only: at most
+50 items, `h` ≤ 20, row ≤ 1000, `options` ≤ 2 KB, id/widget formats; keep the
+client constants in `dashboard-layout.ts` in step with
+`Spree::Pos::DashboardLayout`. Sales widgets read
+`GET /pos/overview?branch_id&from&to&compare=1` (types in
+`@parkviet/pos-shared/overview`). Narrow screens stack the widgets in one column
+without grips or resize corners. `e2e/home.spec.ts` covers drag, resize, hide,
+add, cancel, reset and drill-downs with route mocks.
+
 Do not edit `apps/dashboard`. POS administration lives only here: do not add
 settings or setup screens back to `apps/pos`.

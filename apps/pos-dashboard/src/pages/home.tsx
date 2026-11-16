@@ -240,8 +240,8 @@ export function HomePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('attention.title')}
-        description={t('attention.hint')}
+        title={t('homeWidgets.title')}
+        description={t('homeWidgets.hint')}
         actions={actions}
       />
       {context.isPending || stored.pending ? (
@@ -292,7 +292,7 @@ export function HomePage() {
               definitionOf={definitionOf}
               placeholderOf={placeholderOf}
               context={widgetContext}
-              label={t('attention.title')}
+              label={t('homeWidgets.title')}
               editing={editing}
               onLayoutChange={setDraft}
               onHide={(id) => setDraft(layout.filter((item) => item.id !== id))}
