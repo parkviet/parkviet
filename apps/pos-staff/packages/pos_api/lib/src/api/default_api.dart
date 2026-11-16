@@ -65,6 +65,7 @@ import 'package:pos_api/src/model/offline_sale_input.dart';
 import 'package:pos_api/src/model/offline_sale_reject_input.dart';
 import 'package:pos_api/src/model/offline_sale_resolve_input.dart';
 import 'package:pos_api/src/model/offline_sale_result.dart';
+import 'package:pos_api/src/model/overview_result.dart';
 import 'package:pos_api/src/model/owner_alert_list.dart';
 import 'package:pos_api/src/model/owner_branch_list.dart';
 import 'package:pos_api/src/model/owner_open_order_result.dart';
@@ -9652,6 +9653,101 @@ class DefaultApi {
     );
   }
 
+  /// posOverview
+  /// The dashboard home page of a branch over a range of business dates: the sales report&#39;s summary with customer visits, sales by day, hour and source, best sellers, order status counts and stock alerts, and with compare&#x3D;1 the same figures for the equally long period just before. Access, scope and dates are those of the sales report.
+  ///
+  /// Parameters:
+  /// * [branchId]
+  /// * [from] - First business date, YYYY-MM-DD; today by default
+  /// * [to] - Last business date, YYYY-MM-DD; the start date by default
+  /// * [compare] - 1 to include the previous period
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [OverviewResult] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<OverviewResult>> posOverview({
+    required String branchId,
+    Date? from,
+    Date? to,
+    String? compare,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/api/v3/admin/pos/overview';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      r'branch_id':
+          encodeQueryParameter(_serializers, branchId, const FullType(String)),
+      if (from != null)
+        r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null)
+        r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
+      if (compare != null)
+        r'compare':
+            encodeQueryParameter(_serializers, compare, const FullType(String)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    OverviewResult? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null
+          ? null
+          : _serializers.deserialize(
+              rawResponse,
+              specifiedType: const FullType(OverviewResult),
+            ) as OverviewResult;
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<OverviewResult>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// posOwnerAlerts
   /// The branch&#39;s alerts of the last day, newest first. Needs &#x60;pos.report.read&#x60;.
   ///
@@ -18949,7 +19045,7 @@ class DefaultApi {
   }
 
   /// posWorkspaceList
-  /// Orders visible to the person. A bar&#39;s tab list asks for &#x60;service_mode&#x3D;tab&amp;status&#x3D;editing,parked&#x60; and finds tabs by guest name, table or call number with &#x60;q&#x60;.
+  /// Orders visible to the person. A bar&#39;s tab list asks for &#x60;service_mode&#x3D;tab&amp;status&#x3D;editing,parked&#x60; and finds tabs by guest name, table or call number with &#x60;q&#x60;; its rows also carry &#x60;unsent_kitchen_items&#x60;.
   ///
   /// Parameters:
   /// * [branchId]

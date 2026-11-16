@@ -36,20 +36,11 @@ module Spree
             private
 
             def read!(branch)
-              return if policy.permission?('read_pos_topology') || policy.permission?('write_pos_topology')
-              if [Spree::Pos::Capabilities::INVENTORY_MANAGE, Spree::Pos::Capabilities::REPORT_READ].any? { |capability| policy.allows?(branch, capability) }
-                return
-              end
-
-              raise CanCan::AccessDenied
+              raise CanCan::AccessDenied unless Spree::Pos::StockAlert.readable?(policy, branch)
             end
 
             def alerts(branch)
-              rows = Spree::Pos::StockAlert.where(branch_id: branch.id).includes(:branch, variant: %i[product option_values]).to_a
-              levels = Spree::StockLevel.where(stock_location_id: branch.stock_location_id, variant_id: rows.map(&:variant_id)).
-                       pluck(:variant_id, :count_on_hand).to_h
-              rows.map { |row| row.to_pos(on_hand: levels[row.variant_id] || 0) }.
-                sort_by { |row| [row[:low] ? 0 : 1, row[:on_hand] - row[:min_quantity], row[:name].to_s] }
+              Spree::Pos::StockAlert.board(branch)
             end
           end
         end

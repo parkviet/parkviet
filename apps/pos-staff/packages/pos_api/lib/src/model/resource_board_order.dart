@@ -24,6 +24,7 @@ part 'resource_board_order.g.dart';
 /// * [editedAfterPrebill]
 /// * [pendingKitchenItems] - Items sent to the kitchen and not ready yet.
 /// * [unsentKitchenItems] - Menu units on the order the kitchen has not been told about yet; a held course waits for its fire and is not counted.
+/// * [openedAt] - When the order was opened at the table.
 @BuiltValue()
 abstract class ResourceBoardOrder
     implements Built<ResourceBoardOrder, ResourceBoardOrderBuilder> {
@@ -67,6 +68,10 @@ abstract class ResourceBoardOrder
   /// Menu units on the order the kitchen has not been told about yet; a held course waits for its fire and is not counted.
   @BuiltValueField(wireName: r'unsent_kitchen_items')
   int get unsentKitchenItems;
+
+  /// When the order was opened at the table.
+  @BuiltValueField(wireName: r'opened_at')
+  DateTime? get openedAt;
 
   ResourceBoardOrder._();
 
@@ -160,6 +165,13 @@ class _$ResourceBoardOrderSerializer
       object.unsentKitchenItems,
       specifiedType: const FullType(int),
     );
+    if (object.openedAt != null) {
+      yield r'opened_at';
+      yield serializers.serialize(
+        object.openedAt,
+        specifiedType: const FullType.nullable(DateTime),
+      );
+    }
   }
 
   @override
@@ -272,6 +284,14 @@ class _$ResourceBoardOrderSerializer
             specifiedType: const FullType(int),
           ) as int;
           result.unsentKitchenItems = valueDes;
+          break;
+        case r'opened_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.openedAt = valueDes;
           break;
         default:
           unhandled.add(key);

@@ -172,6 +172,7 @@ Class | Method | HTTP request | Description
 [*DefaultApi*](doc/DefaultApi.md) | [**posOfflineSaleResolve**](doc/DefaultApi.md#posofflinesaleresolve) | **POST** /api/v3/admin/pos/offline_sales/{id}/resolve | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posOfflineSales**](doc/DefaultApi.md#posofflinesales) | **GET** /api/v3/admin/pos/offline_sales | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posOfflineSnapshot**](doc/DefaultApi.md#posofflinesnapshot) | **GET** /api/v3/admin/pos/offline_snapshot | 
+[*DefaultApi*](doc/DefaultApi.md) | [**posOverview**](doc/DefaultApi.md#posoverview) | **GET** /api/v3/admin/pos/overview | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posOwnerAlerts**](doc/DefaultApi.md#posowneralerts) | **GET** /api/v3/admin/pos/owner/alerts | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posOwnerBranches**](doc/DefaultApi.md#posownerbranches) | **GET** /api/v3/admin/pos/owner/branches | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posOwnerOpenUnitShow**](doc/DefaultApi.md#posowneropenunitshow) | **GET** /api/v3/admin/pos/owner/open_units/{workspace_id} | 
@@ -484,6 +485,14 @@ Class | Method | HTTP request | Description
  - [OfflineSnapshotShift](doc/OfflineSnapshotShift.md)
  - [OfflineSnapshotStaff](doc/OfflineSnapshotStaff.md)
  - [OfflineSnapshotStore](doc/OfflineSnapshotStore.md)
+ - [Overview](doc/Overview.md)
+ - [OverviewDay](doc/OverviewDay.md)
+ - [OverviewItem](doc/OverviewItem.md)
+ - [OverviewResult](doc/OverviewResult.md)
+ - [OverviewStatusCounts](doc/OverviewStatusCounts.md)
+ - [OverviewStockAlerts](doc/OverviewStockAlerts.md)
+ - [OverviewTopItems](doc/OverviewTopItems.md)
+ - [OverviewTotals](doc/OverviewTotals.md)
  - [OwnerAlert](doc/OwnerAlert.md)
  - [OwnerAlertList](doc/OwnerAlertList.md)
  - [OwnerBranch](doc/OwnerBranch.md)

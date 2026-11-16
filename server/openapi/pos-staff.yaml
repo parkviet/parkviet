@@ -602,6 +602,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlatformReportRows'
+  /api/v3/admin/pos/overview:
+    get:
+      operationId: posOverview
+      description: >
+        The dashboard home page of a branch over a range of business dates:
+        the sales report's summary with customer visits, sales by day, hour
+        and source, best sellers, order status counts and stock alerts, and
+        with compare=1 the same figures for the equally long period just
+        before. Access, scope and dates are those of the sales report.
+      parameters:
+        - $ref: '#/components/parameters/ReportBranch'
+        - $ref: '#/components/parameters/ReportFrom'
+        - $ref: '#/components/parameters/ReportTo'
+        - name: compare
+          in: query
+          required: false
+          description: 1 to include the previous period
+          schema:
+            type: string
+            enum: ['0', '1', 'true', 'false']
+      responses:
+        '200':
+          description: The overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverviewResult'
+        '422':
+          description: A filter is unknown or invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v3/admin/pos/einvoice_settings:
     get:
       operationId: posEinvoiceSettings
@@ -11969,6 +12002,165 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/OwnerToday'
+    OverviewTotals:
+      type: object
+      additionalProperties: false
+      required: [orders, sales_total, returns, returns_total, net_sales, offline_orders, offline_total, customers]
+      properties:
+        orders:
+          type: integer
+        sales_total:
+          type: string
+        returns:
+          type: integer
+        returns_total:
+          type: string
+        net_sales:
+          type: string
+        offline_orders:
+          type: integer
+        offline_total:
+          type: string
+        customers:
+          type: integer
+          description: Distinct registered customers plus every order without a linked customer.
+    OverviewDay:
+      type: object
+      additionalProperties: false
+      required: [date, orders, customers, sales_total, returns_total, net_sales]
+      properties:
+        date:
+          type: string
+          format: date
+        orders:
+          type: integer
+        customers:
+          type: integer
+        sales_total:
+          type: string
+        returns_total:
+          type: string
+        net_sales:
+          type: string
+    OverviewItem:
+      type: object
+      additionalProperties: false
+      required: [variant_id, name, sku, base_unit, quantity, revenue]
+      properties:
+        variant_id:
+          type: [string, 'null']
+        name:
+          type: string
+        sku:
+          type: [string, 'null']
+        base_unit:
+          type: [string, 'null']
+        quantity:
+          type: integer
+          description: Sold quantity in stock units; returns are not subtracted.
+        revenue:
+          type: string
+    OverviewStockAlerts:
+      type: object
+      additionalProperties: false
+      required: [out_of_stock, low_stock, expiring_soon, near_expiry_days]
+      properties:
+        out_of_stock:
+          type: integer
+        low_stock:
+          type: integer
+        expiring_soon:
+          type: integer
+        near_expiry_days:
+          type: integer
+    OverviewTopItems:
+      type: object
+      additionalProperties: false
+      required: [by_quantity, by_revenue]
+      properties:
+        by_quantity:
+          type: array
+          items:
+            $ref: '#/components/schemas/OverviewItem'
+        by_revenue:
+          type: array
+          items:
+            $ref: '#/components/schemas/OverviewItem'
+    OverviewStatusCounts:
+      type: object
+      additionalProperties: false
+      required: [all, debt, returned, refund_pending]
+      properties:
+        all:
+          type: integer
+        debt:
+          type: integer
+        returned:
+          type: integer
+        refund_pending:
+          type: integer
+    Overview:
+      type: object
+      additionalProperties: false
+      required: [branch_id, timezone, scope, from, to, previous_from, previous_to, totals, previous_totals, by_day, previous_by_day,
+                 by_hour, by_source, top_items, status_counts, stock_alerts]
+      properties:
+        branch_id:
+          type: string
+        timezone:
+          type: string
+        scope:
+          type: string
+          enum: [branch, own]
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        previous_from:
+          type: [string, 'null']
+          format: date
+        previous_to:
+          type: [string, 'null']
+          format: date
+        totals:
+          $ref: '#/components/schemas/OverviewTotals'
+        previous_totals:
+          oneOf:
+            - $ref: '#/components/schemas/OverviewTotals'
+            - type: 'null'
+        by_day:
+          type: array
+          items:
+            $ref: '#/components/schemas/OverviewDay'
+        previous_by_day:
+          type: [array, 'null']
+          items:
+            $ref: '#/components/schemas/OverviewDay'
+        by_hour:
+          type: array
+          items:
+            $ref: '#/components/schemas/OwnerHourRow'
+        by_source:
+          type: array
+          items:
+            $ref: '#/components/schemas/OwnerSourceRow'
+        top_items:
+          $ref: '#/components/schemas/OverviewTopItems'
+        status_counts:
+          $ref: '#/components/schemas/OverviewStatusCounts'
+        stock_alerts:
+          description: Null for readers who cannot see the branch's stock alerts.
+          oneOf:
+            - $ref: '#/components/schemas/OverviewStockAlerts'
+            - type: 'null'
+    OverviewResult:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Overview'
     OwnerOpenUnit:
       type: object
       additionalProperties: false

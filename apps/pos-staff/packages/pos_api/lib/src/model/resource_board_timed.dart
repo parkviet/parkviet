@@ -12,6 +12,7 @@ part 'resource_board_timed.g.dart';
 /// ResourceBoardTimed
 ///
 /// Properties:
+/// * [ratePerHour] - The hourly price the clock runs at now (the rate band of the time now, its day surcharge included); null once stopped, or while a package, minutes card or bonus covers the time now.
 /// * [pausedAt] - Server time the clock was paused; null unless paused.
 /// * [prepaidMinutes] - The minutes of the package the clock was sold with.
 /// * [playedSeconds] - Seconds played up to `server_now`, pauses not counted; null once stopped.
@@ -29,6 +30,10 @@ part 'resource_board_timed.g.dart';
 @BuiltValue()
 abstract class ResourceBoardTimed
     implements Built<ResourceBoardTimed, ResourceBoardTimedBuilder> {
+  /// The hourly price the clock runs at now (the rate band of the time now, its day surcharge included); null once stopped, or while a package, minutes card or bonus covers the time now.
+  @BuiltValueField(wireName: r'rate_per_hour')
+  String? get ratePerHour;
+
   /// Server time the clock was paused; null unless paused.
   @BuiltValueField(wireName: r'paused_at')
   DateTime? get pausedAt;
@@ -105,6 +110,13 @@ class _$ResourceBoardTimedSerializer
     ResourceBoardTimed object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    yield r'rate_per_hour';
+    yield object.ratePerHour == null
+        ? null
+        : serializers.serialize(
+            object.ratePerHour,
+            specifiedType: const FullType.nullable(String),
+          );
     yield r'paused_at';
     yield object.pausedAt == null
         ? null
@@ -212,6 +224,14 @@ class _$ResourceBoardTimedSerializer
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'rate_per_hour':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.ratePerHour = valueDes;
+          break;
         case r'paused_at':
           final valueDes = serializers.deserialize(
             value,

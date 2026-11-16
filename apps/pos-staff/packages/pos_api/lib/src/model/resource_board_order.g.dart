@@ -93,6 +93,8 @@ class _$ResourceBoardOrder extends ResourceBoardOrder {
   final int pendingKitchenItems;
   @override
   final int unsentKitchenItems;
+  @override
+  final DateTime? openedAt;
 
   factory _$ResourceBoardOrder(
           [void Function(ResourceBoardOrderBuilder)? updates]) =>
@@ -110,7 +112,8 @@ class _$ResourceBoardOrder extends ResourceBoardOrder {
       required this.prebilled,
       required this.editedAfterPrebill,
       required this.pendingKitchenItems,
-      required this.unsentKitchenItems})
+      required this.unsentKitchenItems,
+      this.openedAt})
       : super._();
   @override
   ResourceBoardOrder rebuild(
@@ -136,7 +139,8 @@ class _$ResourceBoardOrder extends ResourceBoardOrder {
         prebilled == other.prebilled &&
         editedAfterPrebill == other.editedAfterPrebill &&
         pendingKitchenItems == other.pendingKitchenItems &&
-        unsentKitchenItems == other.unsentKitchenItems;
+        unsentKitchenItems == other.unsentKitchenItems &&
+        openedAt == other.openedAt;
   }
 
   @override
@@ -154,6 +158,7 @@ class _$ResourceBoardOrder extends ResourceBoardOrder {
     _$hash = $jc(_$hash, editedAfterPrebill.hashCode);
     _$hash = $jc(_$hash, pendingKitchenItems.hashCode);
     _$hash = $jc(_$hash, unsentKitchenItems.hashCode);
+    _$hash = $jc(_$hash, openedAt.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -172,7 +177,8 @@ class _$ResourceBoardOrder extends ResourceBoardOrder {
           ..add('prebilled', prebilled)
           ..add('editedAfterPrebill', editedAfterPrebill)
           ..add('pendingKitchenItems', pendingKitchenItems)
-          ..add('unsentKitchenItems', unsentKitchenItems))
+          ..add('unsentKitchenItems', unsentKitchenItems)
+          ..add('openedAt', openedAt))
         .toString();
   }
 }
@@ -237,6 +243,10 @@ class ResourceBoardOrderBuilder
   set unsentKitchenItems(int? unsentKitchenItems) =>
       _$this._unsentKitchenItems = unsentKitchenItems;
 
+  DateTime? _openedAt;
+  DateTime? get openedAt => _$this._openedAt;
+  set openedAt(DateTime? openedAt) => _$this._openedAt = openedAt;
+
   ResourceBoardOrderBuilder() {
     ResourceBoardOrder._defaults(this);
   }
@@ -256,6 +266,7 @@ class ResourceBoardOrderBuilder
       _editedAfterPrebill = $v.editedAfterPrebill;
       _pendingKitchenItems = $v.pendingKitchenItems;
       _unsentKitchenItems = $v.unsentKitchenItems;
+      _openedAt = $v.openedAt;
       _$v = null;
     }
     return this;
@@ -300,6 +311,7 @@ class ResourceBoardOrderBuilder
               'pendingKitchenItems'),
           unsentKitchenItems: BuiltValueNullFieldError.checkNotNull(
               unsentKitchenItems, r'ResourceBoardOrder', 'unsentKitchenItems'),
+          openedAt: openedAt,
         );
     replace(_$result);
     return _$result;

@@ -33,6 +33,8 @@ class _$WorkspaceSummary extends WorkspaceSummary {
   final DateTime? openedAt;
   @override
   final String total;
+  @override
+  final int? unsentKitchenItems;
 
   factory _$WorkspaceSummary(
           [void Function(WorkspaceSummaryBuilder)? updates]) =>
@@ -51,7 +53,8 @@ class _$WorkspaceSummary extends WorkspaceSummary {
       this.vehicleVisitId,
       this.resource,
       this.openedAt,
-      required this.total})
+      required this.total,
+      this.unsentKitchenItems})
       : super._();
   @override
   WorkspaceSummary rebuild(void Function(WorkspaceSummaryBuilder) updates) =>
@@ -77,7 +80,8 @@ class _$WorkspaceSummary extends WorkspaceSummary {
         vehicleVisitId == other.vehicleVisitId &&
         resource == other.resource &&
         openedAt == other.openedAt &&
-        total == other.total;
+        total == other.total &&
+        unsentKitchenItems == other.unsentKitchenItems;
   }
 
   @override
@@ -96,6 +100,7 @@ class _$WorkspaceSummary extends WorkspaceSummary {
     _$hash = $jc(_$hash, resource.hashCode);
     _$hash = $jc(_$hash, openedAt.hashCode);
     _$hash = $jc(_$hash, total.hashCode);
+    _$hash = $jc(_$hash, unsentKitchenItems.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -115,7 +120,8 @@ class _$WorkspaceSummary extends WorkspaceSummary {
           ..add('vehicleVisitId', vehicleVisitId)
           ..add('resource', resource)
           ..add('openedAt', openedAt)
-          ..add('total', total))
+          ..add('total', total)
+          ..add('unsentKitchenItems', unsentKitchenItems))
         .toString();
   }
 }
@@ -178,6 +184,11 @@ class WorkspaceSummaryBuilder
   String? get total => _$this._total;
   set total(String? total) => _$this._total = total;
 
+  int? _unsentKitchenItems;
+  int? get unsentKitchenItems => _$this._unsentKitchenItems;
+  set unsentKitchenItems(int? unsentKitchenItems) =>
+      _$this._unsentKitchenItems = unsentKitchenItems;
+
   WorkspaceSummaryBuilder() {
     WorkspaceSummary._defaults(this);
   }
@@ -198,6 +209,7 @@ class WorkspaceSummaryBuilder
       _resource = $v.resource?.toBuilder();
       _openedAt = $v.openedAt;
       _total = $v.total;
+      _unsentKitchenItems = $v.unsentKitchenItems;
       _$v = null;
     }
     return this;
@@ -241,6 +253,7 @@ class WorkspaceSummaryBuilder
             openedAt: openedAt,
             total: BuiltValueNullFieldError.checkNotNull(
                 total, r'WorkspaceSummary', 'total'),
+            unsentKitchenItems: unsentKitchenItems,
           );
     } catch (_) {
       late String _$failedField;

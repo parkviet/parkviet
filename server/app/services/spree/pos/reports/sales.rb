@@ -12,14 +12,20 @@ module Spree
         # `sold_offline_at`: when the counter sold an order it replayed after selling offline.
         COLUMNS = %w[order_number sold_at business_date order_source register shift_id cashier item_total adjustment_total
                      total currency sold_offline_at].freeze
+        RETURN_COLUMNS = %w[return_id order_number returned_at sale_branch receiver entitlement_total credit_note_amount
+                            refund_entitlement currency].freeze
+        # Who a sale's customer is: the account of its POS customer profile,
+        # else the order's account, else the profile; NULL for a walk-in.
+        CUSTOMER_KEY_SQL = "COALESCE('a' || COALESCE(spree_pos_customers.customer_id, spree_orders.customer_id)::text, " \
+                           "'p' || spree_pos_workspaces.pos_customer_id::text)"
+        VISITS_SQL = "COUNT(DISTINCT #{CUSTOMER_KEY_SQL}) + COUNT(*) FILTER (WHERE #{CUSTOMER_KEY_SQL} IS NULL)".freeze
+        QUANTITY_SQL = 'SUM(spree_pos_sale_lines.base_quantity)'
 
         # Sales belong to the business date stamped on the workspace, not the
         # calendar day of completed_at. Returns stay on the time they were received.
         def self.business_dated?
           true
         end
-        RETURN_COLUMNS = %w[return_id order_number returned_at sale_branch receiver entitlement_total credit_note_amount
-                            refund_entitlement currency].freeze
 
         def returns?
           filters['section'] == 'returns'
@@ -67,14 +73,80 @@ module Spree
         # The same sales by the hour they completed, in the branch timezone:
         # [{ hour: 0..23, orders:, sales_total: }], only hours with sales.
         def by_hour
-          zone = ActiveRecord::Base.connection.quote(ActiveSupport::TimeZone[branch.timezone]&.tzinfo&.name || 'UTC')
-          hour = Arel.sql("EXTRACT(HOUR FROM spree_orders.completed_at AT TIME ZONE 'UTC' AT TIME ZONE #{zone})")
+          hour = Arel.sql("EXTRACT(HOUR FROM spree_orders.completed_at AT TIME ZONE 'UTC' AT TIME ZONE #{zone_sql})")
           sales.group(hour).order(hour).pluck(hour, Arel.sql('COUNT(*)'), Arel.sql('SUM(spree_orders.total)')).map do |at, orders, total|
             { hour: at.to_i, orders: orders.to_i, sales_total: money(total) }
           end
         end
 
+        # The same sales by business date, every day of the range listed
+        # (zeros on days without sales). Returns sit on the branch day they
+        # were received, as in the summary, so the days add up to it.
+        # Customers are counted per day as in #customers.
+        def by_day
+          return [] if filters.from.nil?
+
+          table = Workspace.table_name
+          joined = sales.joins("INNER JOIN #{table} ON #{table}.order_id = spree_orders.id").group("#{table}.business_date")
+          counts = joined.count
+          totals = joined.sum('spree_orders.total')
+          visits = with_customers.group("#{table}.business_date").pluck(Arel.sql("#{table}.business_date"), Arel.sql(VISITS_SQL)).to_h
+          day = Arel.sql("DATE(spree_pos_return_operations.received_at AT TIME ZONE 'UTC' AT TIME ZONE #{zone_sql})")
+          returned = returns.group(day).sum(:entitlement_total)
+          (filters.from..filters.to).map do |date|
+            sales_total = BigDecimal((totals[date] || 0).to_s)
+            returns_total = BigDecimal((returned[date] || 0).to_s)
+            { date: date.iso8601, orders: counts[date] || 0, customers: visits[date].to_i, sales_total: money(sales_total),
+              returns_total: money(returns_total), net_sales: money(sales_total - returns_total) }
+          end
+        end
+
+        # Customer visits of the same sales: each registered customer once
+        # however many orders they placed, plus every order without a linked
+        # customer as one walk-in visit. A customer is the account linked to
+        # the POS customer profile, else the order's account, else the
+        # profile itself.
+        def customers
+          with_customers.pick(Arel.sql(VISITS_SQL)).to_i
+        end
+
+        # The best sellers of the same sales, by quantity and by revenue.
+        # Quantities are in stock units and revenue is the line amount of
+        # MenuMargin; lines count as sold, returns never take them back.
+        def top_items(limit: 5)
+          lines = SaleLine.where(order_id: sales.select('spree_orders.id')).joins(:line_item).group('spree_pos_sale_lines.variant_id')
+          columns = ['spree_pos_sale_lines.variant_id', Arel.sql(QUANTITY_SQL), Arel.sql(MenuMargin::REVENUE_SQL)]
+          by_quantity = lines.order(Arel.sql("#{QUANTITY_SQL} DESC, spree_pos_sale_lines.variant_id")).limit(limit).pluck(*columns)
+          by_revenue = lines.order(Arel.sql("#{MenuMargin::REVENUE_SQL} DESC, spree_pos_sale_lines.variant_id")).limit(limit).
+                       pluck(*columns)
+          ids = (by_quantity + by_revenue).map(&:first).uniq
+          variants = Spree::Variant.with_deleted.includes(:product, :option_values).where(id: ids).index_by(&:id)
+          units = VariantUnit.where(variant_id: ids, status: 'active').includes(:base_unit).to_h { |unit| [unit.variant_id, unit.base_unit&.code] }
+          row = lambda do |(variant_id, quantity, revenue)|
+            variant = variants[variant_id]
+            { variant_id: variant&.prefixed_id, name: variant_label(variant), sku: variant&.sku.presence,
+              base_unit: units[variant_id] || 'item', quantity: quantity.to_i, revenue: money(revenue) }
+          end
+          { by_quantity: by_quantity.map(&row), by_revenue: by_revenue.map(&row) }
+        end
+
+        # The ids of the orders the report counts, for counts kept elsewhere.
+        def order_ids
+          sales.select('spree_orders.id')
+        end
+
         private
+
+        # The sales joined to their workspace and its customer profile.
+        def with_customers
+          sales.joins('INNER JOIN spree_pos_workspaces ON spree_pos_workspaces.order_id = spree_orders.id').
+            joins('LEFT JOIN spree_pos_customers ON spree_pos_customers.id = spree_pos_workspaces.pos_customer_id')
+        end
+
+        # The branch timezone as a quoted SQL literal.
+        def zone_sql
+          ActiveRecord::Base.connection.quote(ActiveSupport::TimeZone[branch.timezone]&.tzinfo&.name || 'UTC')
+        end
 
         # The sales that were made offline and replayed later.
         def offline_sales

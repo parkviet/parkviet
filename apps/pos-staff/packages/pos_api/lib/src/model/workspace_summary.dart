@@ -28,6 +28,7 @@ part 'workspace_summary.g.dart';
 /// * [resource]
 /// * [openedAt]
 /// * [total]
+/// * [unsentKitchenItems] - Tab list only (`service_mode=tab`): menu units the kitchen has not been told about yet, held courses not counted.
 @BuiltValue()
 abstract class WorkspaceSummary
     implements Built<WorkspaceSummary, WorkspaceSummaryBuilder> {
@@ -70,6 +71,10 @@ abstract class WorkspaceSummary
 
   @BuiltValueField(wireName: r'total')
   String get total;
+
+  /// Tab list only (`service_mode=tab`): menu units the kitchen has not been told about yet, held courses not counted.
+  @BuiltValueField(wireName: r'unsent_kitchen_items')
+  int? get unsentKitchenItems;
 
   WorkspaceSummary._();
 
@@ -174,6 +179,13 @@ class _$WorkspaceSummarySerializer
       object.total,
       specifiedType: const FullType(String),
     );
+    if (object.unsentKitchenItems != null) {
+      yield r'unsent_kitchen_items';
+      yield serializers.serialize(
+        object.unsentKitchenItems,
+        specifiedType: const FullType(int),
+      );
+    }
   }
 
   @override
@@ -295,6 +307,14 @@ class _$WorkspaceSummarySerializer
             specifiedType: const FullType(String),
           ) as String;
           result.total = valueDes;
+          break;
+        case r'unsent_kitchen_items':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.unsentKitchenItems = valueDes;
           break;
         default:
           unhandled.add(key);

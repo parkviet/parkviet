@@ -213,6 +213,14 @@ lib/src/model/offline_snapshot_register.dart
 lib/src/model/offline_snapshot_shift.dart
 lib/src/model/offline_snapshot_staff.dart
 lib/src/model/offline_snapshot_store.dart
+lib/src/model/overview.dart
+lib/src/model/overview_day.dart
+lib/src/model/overview_item.dart
+lib/src/model/overview_result.dart
+lib/src/model/overview_status_counts.dart
+lib/src/model/overview_stock_alerts.dart
+lib/src/model/overview_top_items.dart
+lib/src/model/overview_totals.dart
 lib/src/model/owner_alert.dart
 lib/src/model/owner_alert_list.dart
 lib/src/model/owner_branch.dart

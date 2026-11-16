@@ -72,6 +72,8 @@ class _$ResourceBoardTimedStatusEnumSerializer
 
 class _$ResourceBoardTimed extends ResourceBoardTimed {
   @override
+  final String? ratePerHour;
+  @override
   final DateTime? pausedAt;
   @override
   final int? prepaidMinutes;
@@ -105,7 +107,8 @@ class _$ResourceBoardTimed extends ResourceBoardTimed {
       (ResourceBoardTimedBuilder()..update(updates))._build();
 
   _$ResourceBoardTimed._(
-      {this.pausedAt,
+      {this.ratePerHour,
+      this.pausedAt,
       this.prepaidMinutes,
       this.playedSeconds,
       required this.packageEnded,
@@ -133,6 +136,7 @@ class _$ResourceBoardTimed extends ResourceBoardTimed {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ResourceBoardTimed &&
+        ratePerHour == other.ratePerHour &&
         pausedAt == other.pausedAt &&
         prepaidMinutes == other.prepaidMinutes &&
         playedSeconds == other.playedSeconds &&
@@ -152,6 +156,7 @@ class _$ResourceBoardTimed extends ResourceBoardTimed {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, ratePerHour.hashCode);
     _$hash = $jc(_$hash, pausedAt.hashCode);
     _$hash = $jc(_$hash, prepaidMinutes.hashCode);
     _$hash = $jc(_$hash, playedSeconds.hashCode);
@@ -173,6 +178,7 @@ class _$ResourceBoardTimed extends ResourceBoardTimed {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ResourceBoardTimed')
+          ..add('ratePerHour', ratePerHour)
           ..add('pausedAt', pausedAt)
           ..add('prepaidMinutes', prepaidMinutes)
           ..add('playedSeconds', playedSeconds)
@@ -194,6 +200,10 @@ class _$ResourceBoardTimed extends ResourceBoardTimed {
 class ResourceBoardTimedBuilder
     implements Builder<ResourceBoardTimed, ResourceBoardTimedBuilder> {
   _$ResourceBoardTimed? _$v;
+
+  String? _ratePerHour;
+  String? get ratePerHour => _$this._ratePerHour;
+  set ratePerHour(String? ratePerHour) => _$this._ratePerHour = ratePerHour;
 
   DateTime? _pausedAt;
   DateTime? get pausedAt => _$this._pausedAt;
@@ -262,6 +272,7 @@ class ResourceBoardTimedBuilder
   ResourceBoardTimedBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _ratePerHour = $v.ratePerHour;
       _pausedAt = $v.pausedAt;
       _prepaidMinutes = $v.prepaidMinutes;
       _playedSeconds = $v.playedSeconds;
@@ -297,6 +308,7 @@ class ResourceBoardTimedBuilder
   _$ResourceBoardTimed _build() {
     final _$result = _$v ??
         _$ResourceBoardTimed._(
+          ratePerHour: ratePerHour,
           pausedAt: pausedAt,
           prepaidMinutes: prepaidMinutes,
           playedSeconds: playedSeconds,

@@ -49,10 +49,6 @@ module Spree
         def consumptions
           RecipeConsumption.where(branch_id: branch.id, workspace_id: workspaces.select(:id))
         end
-
-        def variant_label(variant)
-          [variant&.product&.name, variant&.options_text.presence].compact.join(' · ')
-        end
       end
     end
   end

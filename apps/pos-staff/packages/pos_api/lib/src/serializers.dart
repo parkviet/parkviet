@@ -216,6 +216,14 @@ import 'package:pos_api/src/model/offline_snapshot_register.dart';
 import 'package:pos_api/src/model/offline_snapshot_shift.dart';
 import 'package:pos_api/src/model/offline_snapshot_staff.dart';
 import 'package:pos_api/src/model/offline_snapshot_store.dart';
+import 'package:pos_api/src/model/overview.dart';
+import 'package:pos_api/src/model/overview_day.dart';
+import 'package:pos_api/src/model/overview_item.dart';
+import 'package:pos_api/src/model/overview_result.dart';
+import 'package:pos_api/src/model/overview_status_counts.dart';
+import 'package:pos_api/src/model/overview_stock_alerts.dart';
+import 'package:pos_api/src/model/overview_top_items.dart';
+import 'package:pos_api/src/model/overview_totals.dart';
 import 'package:pos_api/src/model/owner_alert.dart';
 import 'package:pos_api/src/model/owner_alert_list.dart';
 import 'package:pos_api/src/model/owner_branch.dart';
@@ -694,6 +702,14 @@ part 'serializers.g.dart';
   OfflineSnapshotShift,
   OfflineSnapshotStaff,
   OfflineSnapshotStore,
+  Overview,
+  OverviewDay,
+  OverviewItem,
+  OverviewResult,
+  OverviewStatusCounts,
+  OverviewStockAlerts,
+  OverviewTopItems,
+  OverviewTotals,
   OwnerAlert,
   OwnerAlertList,
   OwnerBranch,
@@ -984,6 +1000,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<PosPrinterStations200ResponseDataInner>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OverviewItem)]),
+        () => ListBuilder<OverviewItem>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(KitchenHistoryEntry)]),
         () => ListBuilder<KitchenHistoryEntry>(),
       )
@@ -1028,6 +1048,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(OwnerHourRow)]),
         () => ListBuilder<OwnerHourRow>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OverviewDay)]),
+        () => ListBuilder<OverviewDay>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PrintBlockOneOf4PartiesInner)]),

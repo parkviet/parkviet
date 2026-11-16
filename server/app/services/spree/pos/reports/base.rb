@@ -85,6 +85,10 @@ module Spree
           BigDecimal((value || 0).to_s).to_s('F')
         end
 
+        def variant_label(variant)
+          [variant&.product&.name, variant&.options_text.presence].compact.join(' · ')
+        end
+
         def within_range(relation, column)
           range = filters.range
           range ? relation.where(column => range) : relation

@@ -266,6 +266,15 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(OfflineSnapshotShift.serializer)
       ..add(OfflineSnapshotStaff.serializer)
       ..add(OfflineSnapshotStore.serializer)
+      ..add(Overview.serializer)
+      ..add(OverviewDay.serializer)
+      ..add(OverviewItem.serializer)
+      ..add(OverviewResult.serializer)
+      ..add(OverviewScopeEnum.serializer)
+      ..add(OverviewStatusCounts.serializer)
+      ..add(OverviewStockAlerts.serializer)
+      ..add(OverviewTopItems.serializer)
+      ..add(OverviewTotals.serializer)
       ..add(OwnerAlert.serializer)
       ..add(OwnerAlertKindEnum.serializer)
       ..add(OwnerAlertList.serializer)
@@ -954,6 +963,24 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(
               BuiltList, const [const FullType(OfflineSaleLineModifiersInner)]),
           () => ListBuilder<OfflineSaleLineModifiersInner>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(OverviewDay)]),
+          () => ListBuilder<OverviewDay>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(OverviewDay)]),
+          () => ListBuilder<OverviewDay>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(OwnerHourRow)]),
+          () => ListBuilder<OwnerHourRow>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(OwnerSourceRow)]),
+          () => ListBuilder<OwnerSourceRow>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(OverviewItem)]),
+          () => ListBuilder<OverviewItem>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(OverviewItem)]),
+          () => ListBuilder<OverviewItem>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(OwnerAlert)]),
           () => ListBuilder<OwnerAlert>())

@@ -39,6 +39,24 @@ module Spree
         filter_status(relation, status.presence || 'all').order('spree_orders.completed_at DESC, spree_pos_workspaces.id DESC')
       end
 
+      # Completed workspaces narrowed to one order-list status. `candidates`
+      # (an order id subquery) bounds the ledgers read to those orders.
+      def filter_status(relation, status, candidates: nil)
+        raise Conflict, 'Status filter is invalid.' unless STATUSES.include?(status)
+
+        bound = ->(rows) { candidates ? rows.where(order_id: candidates) : rows }
+        case status
+        when 'debt'
+          open = bound.call(ReceivableEntry).group(:order_id).having(Arel.sql("SUM(#{ReceivableEntry::SIGNED_SQL}) > 0")).select(:order_id)
+          relation.where(order_id: open)
+        when 'returned'
+          relation.where(order_id: bound.call(ReturnOperation.where.not(status: 'canceled')).select(:order_id))
+        when 'refund_pending'
+          relation.where(order_id: bound.call(RefundRequest.reserving).select(:order_id))
+        else relation
+        end
+      end
+
       # List rows with every per-order figure loaded in a few batched queries.
       def rows(workspaces, mask:)
         lookups = lookups_for(workspaces.map(&:order_id))
@@ -108,21 +126,6 @@ module Spree
 
       def date?(value)
         value.to_s.match?(/\A\d{4}-\d{2}-\d{2}\z/) && Date.valid_date?(*value.to_s.split('-').map(&:to_i))
-      end
-
-      def filter_status(relation, status)
-        raise Conflict, 'Status filter is invalid.' unless STATUSES.include?(status)
-
-        case status
-        when 'debt'
-          open = ReceivableEntry.group(:order_id).having(Arel.sql("SUM(#{ReceivableEntry::SIGNED_SQL}) > 0")).select(:order_id)
-          relation.where(order_id: open)
-        when 'returned'
-          relation.where(order_id: ReturnOperation.where.not(status: 'canceled').select(:order_id))
-        when 'refund_pending'
-          relation.where(order_id: RefundRequest.reserving.select(:order_id))
-        else relation
-        end
       end
 
       def paid(order)
