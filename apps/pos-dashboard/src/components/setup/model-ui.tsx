@@ -37,18 +37,16 @@ export function modelDate(value: string | null | undefined, locale: string, time
 
 export function ModelPage({
   title,
-  description,
   actions,
   children,
 }: {
   title: string
-  description?: string
   actions?: ReactNode
   children: ReactNode
 }) {
   return (
     <div className="space-y-6">
-      <PageHeader title={title} description={description} actions={actions} />
+      <PageHeader title={title} actions={actions} />
       {children}
     </div>
   )

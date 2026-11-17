@@ -28,7 +28,6 @@ export function SystemStatusPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('systemStatus.title')}
-        description={t('systemStatus.intro')}
         actions={
           <Button
             variant="outline"

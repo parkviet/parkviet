@@ -92,11 +92,7 @@ export function ReportsPage({ type }: { type: PosReportType }) {
   }))
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('reportsTitle')}
-        description={t('reportsHint')}
-        actions={<BranchPicker />}
-      />
+      <PageHeader title={t('reportsTitle')} actions={<BranchPicker />} />
       <PillTabs tabs={tabs} />
       {branchId ? (
         <div key={branchId} className="space-y-6">

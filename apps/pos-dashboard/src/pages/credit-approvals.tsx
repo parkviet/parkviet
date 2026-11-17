@@ -73,11 +73,7 @@ export function CreditApprovalsPage() {
   const access: PosAccess = { permissionKeys, context: context.data }
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('approvalsTitle')}
-        description={t('approvalsHint')}
-        actions={<BranchPicker />}
-      />
+      <PageHeader title={t('approvalsTitle')} actions={<BranchPicker />} />
       {branchId ? (
         <div key={branchId} className="space-y-6">
           {canManageCredit(access) && <CreditRequests branchId={branchId} />}

@@ -84,11 +84,7 @@ export function MealAccountsPage() {
   const branchId = context.data?.selection.branch_id ?? null
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('mealAccounts.title')}
-        description={t('mealAccounts.intro')}
-        actions={<BranchPicker />}
-      />
+      <PageHeader title={t('mealAccounts.title')} actions={<BranchPicker />} />
       {branchId ? (
         <MealAccounts key={branchId} branchId={branchId} />
       ) : (

@@ -175,7 +175,6 @@ export function UnitsPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('units.title')}
-        description={t('units.intro')}
         actions={
           access.write ? (
             <Button disabled={write.isPending} onClick={() => edit()}>

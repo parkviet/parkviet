@@ -48,11 +48,7 @@ export function PlatformSettlementPage() {
   const { context } = usePosSession()
   const branchId = context.data?.selection.branch_id ?? null
   return (
-    <ModelPage
-      title={t('platformSettlement.title')}
-      description={t('platformSettlement.intro')}
-      actions={<BranchPicker />}
-    >
+    <ModelPage title={t('platformSettlement.title')} actions={<BranchPicker />}>
       {branchId ? (
         <Settlement key={branchId} branchId={branchId} />
       ) : (

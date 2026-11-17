@@ -64,7 +64,7 @@ export function DevicesPage() {
   const rows = pins.data?.data ?? []
   return (
     <div className="space-y-6">
-      <PageHeader title={t('devices.title')} subtitle={t('devices.intro')} />
+      <PageHeader title={t('devices.title')} />
       {!branchId ? <p>{t('devices.chooseBranch')}</p> : null}
       {manage && branchId ? (
         <DeviceList

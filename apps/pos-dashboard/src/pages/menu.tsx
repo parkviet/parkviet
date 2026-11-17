@@ -118,7 +118,6 @@ export function MenuPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('menuAdmin.title')}
-        description={t('menuAdmin.intro')}
         actions={
           <div className="flex items-center gap-2">
             <BranchPicker />

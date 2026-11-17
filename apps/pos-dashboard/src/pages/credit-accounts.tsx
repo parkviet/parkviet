@@ -45,11 +45,7 @@ export function CreditAccountsPage() {
   const branchId = context.data?.selection.branch_id ?? null
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('creditAccountsTitle')}
-        description={t('creditAccountsHint')}
-        actions={<BranchPicker />}
-      />
+      <PageHeader title={t('creditAccountsTitle')} actions={<BranchPicker />} />
       {branchId ? (
         <CreditAccounts key={branchId} branchId={branchId} />
       ) : (

@@ -225,7 +225,6 @@ export function ReceiptTemplatesPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('receiptTemplates.title')}
-        description={t('receiptTemplates.intro')}
         actions={
           access.read && access.write ? (
             <Button

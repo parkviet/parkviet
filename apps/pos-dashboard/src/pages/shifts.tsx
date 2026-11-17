@@ -61,11 +61,9 @@ type Notice = { text: string; failed: boolean } | null
 // Header and tabs of "Ca & két", shared by its three screens.
 export function ShiftsFrame({
   title,
-  description,
   children,
 }: {
   title: string
-  description: string
   children: (branchId: string) => ReactNode
 }) {
   const { t } = useTranslation()
@@ -82,7 +80,7 @@ export function ShiftsFrame({
   ]
   return (
     <div className="space-y-6">
-      <PageHeader title={title} description={description} actions={<BranchPicker />} />
+      <PageHeader title={title} actions={<BranchPicker />} />
       <PillTabs tabs={tabs} />
       {branchId ? (
         <div key={branchId}>{children(branchId)}</div>
@@ -135,7 +133,7 @@ export function ShiftsPage() {
     return () => window.clearInterval(timer)
   }, [storeId])
   return (
-    <ShiftsFrame title={t('shiftsManageTitle')} description={t('shiftsManageHint')}>
+    <ShiftsFrame title={t('shiftsManageTitle')}>
       {(branchId) => (
         <div className="space-y-6">
           {canConfirmCash(access) && <CashRequests branchId={branchId} />}

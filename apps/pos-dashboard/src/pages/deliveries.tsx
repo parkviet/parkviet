@@ -35,11 +35,7 @@ export function DeliveriesPage() {
   const branchId = context.data?.selection.branch_id ?? null
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('deliveriesTitle')}
-        description={t('deliveriesHint')}
-        actions={<BranchPicker />}
-      />
+      <PageHeader title={t('deliveriesTitle')} actions={<BranchPicker />} />
       {branchId ? (
         <Deliveries key={branchId} branchId={branchId} />
       ) : (

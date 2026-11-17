@@ -26,7 +26,7 @@ import { ShiftsFrame } from './shifts'
 export function ShiftClosuresPage() {
   const { t } = useTranslation()
   return (
-    <ShiftsFrame title={t('shiftClosuresTitle')} description={t('shiftClosuresHint')}>
+    <ShiftsFrame title={t('shiftClosuresTitle')}>
       {(branchId) => <Closures branchId={branchId} />}
     </ShiftsFrame>
   )

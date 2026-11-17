@@ -421,22 +421,15 @@ export function TopologyPage({
   return (
     <div className="space-y-6">
       {branchId ? (
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <SectionTitle>
-              {kind === 'registers' ? <TabletIcon /> : <UsersIcon />}
-              {t(`adminResource_${kind}`)}
-            </SectionTitle>
-            {headerActions}
-          </div>
-          <p className="text-base text-muted-foreground">{t(`adminHint_${kind}`)}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SectionTitle>
+            {kind === 'registers' ? <TabletIcon /> : <UsersIcon />}
+            {t(`adminResource_${kind}`)}
+          </SectionTitle>
+          {headerActions}
         </div>
       ) : (
-        <PageHeader
-          title={t(`adminResource_${kind}`)}
-          description={t(`adminHint_${kind}`)}
-          actions={headerActions}
-        />
+        <PageHeader title={t(`adminResource_${kind}`)} actions={headerActions} />
       )}
       {context.isPending ? (
         <PageSkeleton />

@@ -48,11 +48,7 @@ export function ReceivablesPage({ view }: { view: View }) {
   ]
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('receivablesTitle')}
-        description={t('receivablesHint')}
-        actions={<BranchPicker />}
-      />
+      <PageHeader title={t('receivablesTitle')} actions={<BranchPicker />} />
       {branchId ? (
         <Receivables key={`${branchId}:${view}`} branchId={branchId} view={view}>
           <PillTabs tabs={tabs} />

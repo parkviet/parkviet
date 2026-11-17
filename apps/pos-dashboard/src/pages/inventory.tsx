@@ -80,11 +80,7 @@ export function InventoryPage({ tab }: { tab: string }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('inventoryTitle')}
-        description={t('inventoryHint')}
-        actions={<BranchPicker />}
-      />
+      <PageHeader title={t('inventoryTitle')} actions={<BranchPicker />} />
       <PillTabs
         tabs={tabs.map((value) => ({
           key: value,

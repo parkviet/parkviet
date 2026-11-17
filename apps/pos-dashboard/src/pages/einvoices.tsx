@@ -143,7 +143,6 @@ export function EinvoicesPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('einvoices.title')}
-        description={t('einvoices.intro')}
         actions={
           <div className="flex items-center gap-2">
             <BranchPicker />

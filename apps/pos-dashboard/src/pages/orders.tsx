@@ -22,11 +22,7 @@ export function OrdersPage() {
   const branchId = context.data?.selection.branch_id ?? null
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('ordersTitle')}
-        description={t('ordersHint')}
-        actions={<BranchPicker />}
-      />
+      <PageHeader title={t('ordersTitle')} actions={<BranchPicker />} />
       {branchId ? (
         <OrdersTable key={branchId} branchId={branchId} />
       ) : (

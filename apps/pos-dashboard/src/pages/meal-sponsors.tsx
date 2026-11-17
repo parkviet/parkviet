@@ -89,11 +89,7 @@ export function MealSponsorsPage() {
   const exporting = canExportReports(context.data?.capabilities)
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('mealSponsors.title')}
-        description={t('mealSponsors.intro')}
-        actions={<BranchPicker />}
-      />
+      <PageHeader title={t('mealSponsors.title')} actions={<BranchPicker />} />
       {branchId ? (
         <div key={branchId} className="space-y-6">
           <MealSponsors branchId={branchId} />

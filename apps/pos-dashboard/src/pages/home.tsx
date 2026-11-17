@@ -239,11 +239,7 @@ export function HomePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('homeWidgets.title')}
-        description={t('homeWidgets.hint')}
-        actions={actions}
-      />
+      <PageHeader title={t('homeWidgets.title')} actions={actions} />
       {context.isPending || stored.pending ? (
         // The reader's own layout is awaited, so the default never flashes first.
         <PageSkeleton variant="cards" />

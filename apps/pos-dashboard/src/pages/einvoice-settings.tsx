@@ -122,7 +122,7 @@ export function EinvoiceSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('einvoiceSettings.title')} description={t('einvoiceSettings.intro')} />
+      <PageHeader title={t('einvoiceSettings.title')} />
       {notice && (
         <p
           role={notice.failed ? 'alert' : 'status'}

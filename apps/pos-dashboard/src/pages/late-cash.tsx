@@ -51,7 +51,7 @@ const ONE_PAGE = resourceSearchSchema.parse({ limit: 100 })
 export function LateCashPage() {
   const { t } = useTranslation()
   return (
-    <ShiftsFrame title={t('lateCashTitle')} description={t('lateCashHint')}>
+    <ShiftsFrame title={t('lateCashTitle')}>
       {(branchId) => (
         <div className="space-y-6">
           <LateCashForm branchId={branchId} />

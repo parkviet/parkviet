@@ -182,7 +182,6 @@ export function PaymentMethodsPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('paymentMethods.title')}
-        description={t('paymentMethods.intro')}
         actions={
           access.write ? (
             <Button disabled={write.isPending} onClick={() => edit()}>

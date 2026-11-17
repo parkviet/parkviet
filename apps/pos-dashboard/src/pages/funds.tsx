@@ -38,7 +38,6 @@ export function FundsPage({ attention }: { attention: boolean }) {
     <div className="space-y-6">
       <PageHeader
         title={t(attention ? 'fundsAttentionTitle' : 'fundsTitle')}
-        description={t(attention ? 'fundsAttentionHint' : 'fundsHint')}
         actions={<BranchPicker />}
       />
       {resolver && <PillTabs tabs={tabs} />}

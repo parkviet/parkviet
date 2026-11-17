@@ -187,7 +187,6 @@ export function StaffRolesPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('staffRoles.title')}
-        description={t('staffRoles.intro')}
         actions={
           access.write ? (
             <Button disabled={write.isPending} onClick={() => edit()}>

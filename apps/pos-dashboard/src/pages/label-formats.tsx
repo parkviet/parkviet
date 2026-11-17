@@ -188,7 +188,6 @@ export function LabelFormatsPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('labelFormatsTitle')}
-        description={t('labelFormatsIntro')}
         actions={
           access.write ? (
             <Button disabled={mutation.isPending} onClick={() => edit()}>

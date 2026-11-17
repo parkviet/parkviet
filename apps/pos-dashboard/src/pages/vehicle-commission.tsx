@@ -47,11 +47,7 @@ export function VehicleCommissionPage() {
   const branchId = context.data?.selection.branch_id ?? null
   const on = context.data?.modules?.[VEHICLE_COMMISSION_MODULE] === true
   return (
-    <ModelPage
-      title={t('vehicleCommission.title')}
-      description={t('vehicleCommission.intro')}
-      actions={<BranchPicker />}
-    >
+    <ModelPage title={t('vehicleCommission.title')} actions={<BranchPicker />}>
       {!branchId ? (
         <p className="text-muted-foreground">{t('pageChooseBranchHint')}</p>
       ) : !on ? (
