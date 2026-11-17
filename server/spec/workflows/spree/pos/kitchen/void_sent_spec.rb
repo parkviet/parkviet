@@ -65,10 +65,23 @@ RSpec.describe Spree::Pos::Kitchen::VoidSent do
     expect(tickets.first.items.sole).to have_attributes(quantity: 2, status: 'new')
     expect(tickets.last).to have_attributes(kitchen_station_id: station.id, kitchen_send_id: nil)
     expect(tickets.last.items.sole).to have_attributes(quantity: 1, status: 'voided', note: 'Khách đổi ý')
+    expect(Spree::Pos::SalesSettings.for(branch)['print_void_tickets']).to eq(true)
     job = Spree::Pos::PrintJob.find_by!(kind: 'void_ticket', source_id: tickets.last.id)
     expect(job.document['kind']).to eq('void_ticket')
     lines = job.document['header'].flat_map { |block| Array(block['lines']) }
     expect(lines).to include('HỦY MÓN', '-1 x Phở bò', 'Lý do: Khách đổi ý')
+  end
+
+  it 'does not queue a void ticket when the branch turned void printing off' do
+    branch.update!(sales_settings: { 'print_void_tickets' => false })
+    line = sent_line(1)
+    void(voider, line, 1)
+
+    ticket = Spree::Pos::KitchenTicket.find_by!(workspace_id: workspace.id, kind: 'void')
+    expect(Spree::Pos::PrintJob.where(kind: 'void_ticket', source_id: ticket.id)).to be_empty
+    expect(Spree::Pos::KitchenVoid.sole).to have_attributes(kitchen_ticket_id: ticket.id, quantity: 1)
+    expect(Spree::Pos::AuditEntry.find_by!(action: 'kitchen.void_sent', subject_id: workspace.id).metadata).
+      to include('kitchen_ticket_id' => ticket.prefixed_id)
   end
 
   it 'voids a whole line off the order and marks what the kitchen had made as waste' do

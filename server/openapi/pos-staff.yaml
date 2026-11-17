@@ -5868,6 +5868,8 @@ components:
           type: string
           enum: [none, cash_register, coded]
           description: E-invoice the store issues for completed orders; the counter offers buyer details unless it is none.
+        sales_settings:
+          $ref: '#/components/schemas/SalesSettings'
         modules:
           type: object
           nullable: true
@@ -5893,6 +5895,67 @@ components:
           description: Reasons a sent item may be voided for; `khac` with a note is always offered.
           items:
             type: string
+        sales_settings:
+          $ref: '#/components/schemas/SalesSettings'
+    SalesSettings:
+      type: object
+      additionalProperties: false
+      description: >
+        Per-branch selling options. A missing key reads as its default, so a
+        branch saved before a key existed stays usable.
+      properties:
+        allow_oversell:
+          type: boolean
+          default: true
+        warn_below_cost:
+          type: boolean
+          default: false
+        show_stock:
+          type: boolean
+          default: true
+        show_cost:
+          type: boolean
+          default: false
+        cart_order:
+          type: string
+          enum: [newest_first, oldest_first]
+          default: oldest_first
+        order_note:
+          type: boolean
+          default: true
+        coupons:
+          type: boolean
+          default: true
+        payment_chime:
+          type: string
+          enum: ['off', 'default']
+          default: 'default'
+        auto_print_receipt:
+          type: boolean
+          default: false
+        inline_variants:
+          type: boolean
+          default: false
+          description: Sizes, attributes and sale units show on each selling-list row.
+        scheduled_delivery:
+          type: boolean
+          default: false
+          description: >
+            Show a delivery date and time on a delivery order. The order's
+            business date stays the shift's date.
+        auto_print_prebill:
+          type: boolean
+          default: false
+          description: >
+            Print a pre-bill when an unpaid order is parked or sent to the
+            kitchen. A branch that records pre-bills prints automatically only
+            the first time.
+        print_void_tickets:
+          type: boolean
+          default: true
+          description: >
+            Queue a void ticket for the kitchen station printer. When false
+            the void still shows on the kitchen screen and stays on the order.
     CatalogItem:
       type: object
       additionalProperties: true
@@ -12513,7 +12576,7 @@ components:
     OfflineSnapshot:
       type: object
       additionalProperties: false
-      required: [store, branch, register, staff, shift, offline, menu, etag, generated_at, max_age_seconds]
+      required: [store, branch, register, staff, shift, offline, sales_settings, menu, etag, generated_at, max_age_seconds]
       properties:
         store:
           type: object
@@ -12579,6 +12642,8 @@ components:
             reason:
               type: [string, 'null']
               enum: [menu_disabled, register_not_counter, shift_closed, cash_unavailable, null]
+        sales_settings:
+          $ref: '#/components/schemas/SalesSettings'
         menu:
           oneOf:
             - type: 'null'

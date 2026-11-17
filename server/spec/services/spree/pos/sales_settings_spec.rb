@@ -23,5 +23,19 @@ RSpec.describe Spree::Pos::SalesSettings do
       merged = described_class.merge({ 'show_stock' => false }, 'payment_chime' => 'off')
       expect(merged).to include('show_stock' => false, 'payment_chime' => 'off', 'allow_oversell' => true)
     end
+
+    it 'accepts the four selling switches and rejects a value that is not boolean' do
+      expect(described_class.normalize(nil)).to include(
+        'inline_variants' => false, 'scheduled_delivery' => false, 'auto_print_prebill' => false, 'print_void_tickets' => true
+      )
+      merged = described_class.merge({}, 'inline_variants' => true, 'scheduled_delivery' => true,
+                                          'auto_print_prebill' => true, 'print_void_tickets' => false)
+      expect(merged).to include(
+        'inline_variants' => true, 'scheduled_delivery' => true, 'auto_print_prebill' => true, 'print_void_tickets' => false,
+        'allow_oversell' => true
+      )
+      expect { described_class.merge({}, 'print_void_tickets' => 'yes') }.to raise_error(described_class::Invalid)
+      expect { described_class.merge({}, 'inline_variants' => 1) }.to raise_error(described_class::Invalid)
+    end
   end
 end
