@@ -132,6 +132,11 @@ Rails.application.routes.draw do
             get 'command_receipts', to: 'command_receipts#index'
             resources :feature_flags, only: [:index, :update]
             get 'business_profiles', to: 'business_profiles#show'
+            get 'admin_units', to: 'admin_units#index'
+            resource :store_info, only: [:show, :update], controller: 'store_infos' do
+              post :logo
+              delete :logo, action: :destroy_logo
+            end
             resource :store_profile, only: [:show, :update]
             post 'onboarding', to: 'onboarding#create'
             get 'operations/metrics', to: 'operational_metrics#show'
@@ -146,6 +151,10 @@ Rails.application.routes.draw do
               end
               # Module keys contain a dot (retail.units), so the id takes any segment.
               resources :modules, only: [:index, :update], controller: 'branch_modules', constraints: { id: %r{[^/]+} }
+              resource :info, only: [:show, :update], controller: 'branch_infos' do
+                post :logo
+                delete :logo, action: :destroy_logo
+              end
             end
             resources :registers, only: [:index, :show, :create, :update] do
               member do

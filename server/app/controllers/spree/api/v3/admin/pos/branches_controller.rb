@@ -27,6 +27,7 @@ module Spree
 
               # Without profile_key the branch takes the store's main profile.
               branch = Spree::Pos::Branches::Create.call(store: current_store, actor: current_user, profile_key: params[:profile_key].presence,
+                                                         profile_keys: params.key?(:profile_keys) ? Array(params[:profile_keys]) : nil,
                                                          attributes: branch_attributes)
               render json: { data: branch.to_pos }, status: :created
             end
@@ -47,7 +48,8 @@ module Spree
               return if channel_rejected?
 
               branch = branch!(params[:id])
-              render json: { data: Spree::Pos::Profiles::Preview.call(branch: branch, profile_key: params[:profile_key]) }
+              render json: { data: Spree::Pos::Profiles::Preview.call(branch: branch, profile_key: params[:profile_key],
+                                                                     profile_keys: params.key?(:profile_keys) ? Array(params[:profile_keys]) : nil) }
             end
 
             # Moves the branch to another profile, applying only what was picked.
@@ -56,7 +58,10 @@ module Spree
 
               data = Spree::Pos::Profiles::Apply.call(
                 store: current_store, actor: current_user, branch: branch!(params[:id]), profile_key: params[:profile_key],
-                expected_profile_key: params[:expected_profile_key], reason: params[:reason],
+                profile_keys: params.key?(:profile_keys) ? Array(params[:profile_keys]) : nil,
+                expected_profile_key: params[:expected_profile_key],
+                expected_profile_keys: params.key?(:expected_profile_keys) ? Array(params[:expected_profile_keys]) : nil,
+                reason: params[:reason],
                 apply_modules: params[:apply_modules], apply_defaults: params.key?(:apply_defaults) ? params[:apply_defaults] : [],
                 has_tables: params[:has_tables], table_register_id: params[:table_register_id], apply_stations: params[:apply_stations]
               )

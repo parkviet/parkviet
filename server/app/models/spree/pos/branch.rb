@@ -39,6 +39,8 @@ module Spree
       # The industry profile the branch was set up with. Code never checks
       # it (modules decide behaviour), and a key the catalog no longer lists
       # is kept as it is.
+      include ProfileKeyList
+
       validates :profile_key, format: { with: PROFILE_KEY_FORMAT }
       validates :profile_version, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
       # Shift close: a count whose variance exceeds this needs a reason and an
@@ -48,7 +50,8 @@ module Spree
       # Must be accepted in device UAT before a branch relies on the display.
       validates :display_freshness_ttl_seconds, numericality: { only_integer: true, in: 5..120 }, allow_nil: true
       validates :timezone, format: { with: /\A[A-Za-z0-9_+\-\/]{1,64}\z/ }
-      validates :business_day_cutoff, presence: true
+      # Null inherits the store's cutoff. A stored time stays the branch's own.
+      validates :business_day_cutoff, presence: true, allow_nil: true
       validates :staff_session_idle_minutes, numericality: { only_integer: true, in: 5..240 }
       # When orders reach the kitchen: as the sale completes, or when the
       # cashier sends them (Kitchen::Send).
@@ -76,6 +79,21 @@ module Spree
         status == 'disabled'
       end
 
+      # The clock BusinessDay uses: the branch's own, else the store's, else 04:00.
+      def effective_business_day_cutoff
+        return business_day_cutoff if business_day_cutoff.present?
+
+        StoreInfo.for_store(store)&.business_day_cutoff || Time.zone.parse('2000-01-01 04:00:00')
+      end
+
+      def cutoff_clock
+        value = effective_business_day_cutoff
+        return '04:00' if value.blank?
+        return value.strftime('%H:%M') if value.respond_to?(:strftime)
+
+        value.to_s[/\d{2}:\d{2}/] || '04:00'
+      end
+
       # Returns stay off at a branch until a manager sets a window.
       def returns_enabled?
         !return_window_days.nil?
@@ -95,8 +113,8 @@ module Spree
           variance_threshold: variance_threshold&.to_s('F'),
           display_freshness_ttl_seconds: display_freshness_ttl_seconds,
           lot_selection: lot_selection, adjustment_approval_threshold: adjustment_approval_threshold,
-          profile_key: profile_key, profile_version: profile_version,
-          business_day_cutoff: cutoff_label,
+          profile_key: profile_key, profile_keys: resolved_keys, profile_version: profile_version,
+          business_day_cutoff: cutoff_clock, business_day_cutoff_inherited: business_day_cutoff.nil?,
           staff_session_idle_minutes: staff_session_idle_minutes,
           kitchen_send_trigger: kitchen_send_trigger,
           seated_alert_minutes: seated_alert_minutes,
@@ -105,14 +123,6 @@ module Spree
       end
 
       private
-
-      def cutoff_label
-        value = business_day_cutoff
-        return '04:00' if value.blank?
-        return value.strftime('%H:%M') if value.respond_to?(:strftime)
-
-        value.to_s[/\d{2}:\d{2}/] || '04:00'
-      end
 
       def keep_receiving_note
         source = receiving_config.is_a?(Hash) ? receiving_config : {}

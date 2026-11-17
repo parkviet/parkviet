@@ -3,13 +3,8 @@ import {
   profileDescriptionKey,
   profileLabelKey,
 } from '@parkviet/pos-shared/pos-modules'
-import {
-  isAvailable,
-  isComingSoon,
-  type SetupAction,
-  type SetupState,
-} from '@parkviet/pos-shared/setup-wizard'
-import { Badge, Button, RadioGroup, RadioGroupItem } from '@spree/dashboard-ui'
+import { isComingSoon, type SetupAction, type SetupState } from '@parkviet/pos-shared/setup-wizard'
+import { Badge, Button } from '@spree/dashboard-ui'
 import type { Dispatch } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -28,16 +23,10 @@ export function ProfilePicker({
   const pending = profiles.find((profile) => profile.key === state.choice)
   const waiting = isComingSoon(pending) && !state.declined
   const label = (key: string) => t(profileLabelKey(key), { defaultValue: key })
+  const selected = state.profileKeys
   return (
     <div className="space-y-6">
-      <RadioGroup
-        value={state.choice ?? ''}
-        onValueChange={(key) => {
-          if (typeof key === 'string') dispatch({ type: 'choose', key, profiles })
-        }}
-        aria-labelledby={headingId}
-        aria-required="true"
-      >
+      <fieldset aria-labelledby={headingId} className="min-w-0 space-y-6 border-0 p-0">
         {[
           {
             id: 'retail',
@@ -55,26 +44,61 @@ export function ProfilePicker({
               <legend className="mb-3 font-semibold">{section.title}</legend>
               <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-3">
                 {section.rows.map((profile) => {
-                  const soon = !isAvailable(profile)
+                  const soon = profile.status !== 'available'
                   const id = `setup-profile-${profile.key}`
+                  const on = selected.includes(profile.key)
+                  const primary = selected[0] === profile.key
                   return (
                     <label
                       key={profile.key}
                       htmlFor={id}
-                      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 ${state.choice === profile.key ? 'border-primary bg-muted' : 'hover:bg-muted/50'}`}
-                      data-selected={state.choice === profile.key}
+                      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 ${on || state.choice === profile.key ? 'border-primary bg-muted' : 'hover:bg-muted/50'}`}
+                      data-selected={on || state.choice === profile.key}
                       data-soon={soon}
                     >
-                      <RadioGroupItem
-                        id={id}
-                        value={profile.key}
-                        aria-labelledby={`${id}-name`}
-                        aria-describedby={`${id}-description${soon ? ` ${id}-soon` : ''}`}
-                      />
+                      {soon ? (
+                        <input
+                          id={id}
+                          type="checkbox"
+                          className="mt-1"
+                          checked={state.choice === profile.key}
+                          aria-labelledby={`${id}-name`}
+                          onChange={() => dispatch({ type: 'choose', key: profile.key, profiles })}
+                        />
+                      ) : (
+                        <input
+                          id={id}
+                          type="checkbox"
+                          className="mt-1"
+                          checked={on}
+                          aria-labelledby={`${id}-name`}
+                          onChange={() =>
+                            dispatch(
+                              on
+                                ? { type: 'remove-profile', key: profile.key, profiles }
+                                : { type: 'add-profile', key: profile.key, profiles },
+                            )
+                          }
+                        />
+                      )}
                       <div className="min-w-0 space-y-2">
                         <span id={`${id}-name`} className="text-base font-medium">
                           {label(profile.key)}
                         </span>
+                        {primary ? <Badge>{t('storeInfo.primary')}</Badge> : null}
+                        {on && !primary ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={(event) => {
+                              event.preventDefault()
+                              dispatch({ type: 'make-primary', key: profile.key, profiles })
+                            }}
+                          >
+                            {t('storeInfo.makePrimary')}
+                          </Button>
+                        ) : null}
                         {soon ? (
                           <Badge variant="outline" id={`${id}-soon`}>
                             {t('setup.comingSoon')}
@@ -91,7 +115,7 @@ export function ProfilePicker({
             </fieldset>
           ) : null,
         )}
-      </RadioGroup>
+      </fieldset>
       {waiting && pending ? (
         <fieldset className="space-y-3 rounded-md border bg-muted p-4">
           <legend>{t('setup.interestPrompt', { name: label(pending.key) })}</legend>

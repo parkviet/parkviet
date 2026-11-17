@@ -1,4 +1,9 @@
-import { profileLabelKey, profileModules, tablesOptional } from '@parkviet/pos-shared/pos-modules'
+import {
+  combineProfiles,
+  profileLabelKey,
+  profileModules,
+  tablesOptional,
+} from '@parkviet/pos-shared/pos-modules'
 import {
   conflictReason,
   describeFailure,
@@ -46,7 +51,7 @@ export function SetupPage() {
   const [done, setDone] = useState(false)
   const onboarding = context.data?.onboarding
   return (
-    <ModelPage title={t('setup.title')} description={t('setup.intro')}>
+    <ModelPage title={t('setup.title')}>
       {done ? (
         <ModelState title={t('setup.doneOpening')} />
       ) : context.isPending ? (
@@ -85,7 +90,10 @@ function SetupWizard({ onDone }: { onDone: () => void }) {
   const sending = useRef(false)
   const heading = useRef<HTMLHeadingElement>(null)
   const profiles = catalogue.data?.profiles ?? []
-  const profile = profiles.find((item) => item.key === state.profileKey)
+  const profile = combineProfiles(
+    profiles,
+    state.profileKeys.length ? state.profileKeys : state.profileKey ? [state.profileKey] : [],
+  )
   const taxes = catalogue.data?.tax_categories ?? []
   const routingProfile = profile
     ? {

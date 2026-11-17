@@ -1,5 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { BranchTabRedirect } from '../../../lib/route-access'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+
 export const Route = createFileRoute('/_authenticated/$storeId/business-model')({
-  component: () => <BranchTabRedirect tab="overview" />,
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: '/$storeId/settings/store-info', params, replace: true })
+  },
 })

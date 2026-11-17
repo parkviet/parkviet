@@ -58,7 +58,7 @@ module Spree
         def document(branch, resource, url)
           PrintDocuments.wrap('table_qr', {
                                 'documentType' => nil, 'page' => Kitchen::TicketDocument::PAGE, 'banners' => [],
-                                'header' => [{ 'kind' => 'title', 'title' => branch.store.name, 'number' => nil },
+                                'header' => [{ 'kind' => 'title', 'title' => StoreInfo.printable(branch)&.dig('name').presence || branch.store.name, 'number' => nil },
                                              { 'kind' => 'title', 'title' => resource.name, 'number' => nil }],
                                 'meta' => [{ 'label' => 'Chi nhánh', 'value' => branch.name }],
                                 'lines' => { 'layout' => 'stacked', 'items' => [] },

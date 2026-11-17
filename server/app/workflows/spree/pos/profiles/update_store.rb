@@ -14,10 +14,12 @@ module Spree
 
         module_function
 
-        def call(store:, actor:, profile_key:, reason:, wholesale: nil, interests: nil)
+        def call(store:, actor:, profile_key: nil, profile_keys: nil, reason:, wholesale: nil, interests: nil)
           raise CanCan::AccessDenied unless AccessPolicy.new(store: store, staff: actor).permission?(PERMISSION)
 
-          profile = Branches::Create.available!(BusinessProfiles.fetch!(profile_key))
+          keys = BusinessProfiles.keys_for(profile_key: profile_key, profile_keys: profile_keys) ||
+                 raise(Conflict.new('Choose at least one business type.', reason: BusinessProfiles::UNKNOWN))
+          profile = Branches::Create.available!(BusinessProfiles.combine(keys))
           note = BranchModules::Set.reason!(reason)
           unless wholesale.nil? || [true, false].include?(wholesale)
             raise Conflict.new('Wholesale must be true or false.', reason: 'parameter_invalid')
@@ -32,7 +34,8 @@ module Spree
 
             record ||= StoreProfile.new(store: store, onboarded_at: Time.current)
             before = record.persisted? ? snapshot(record) : nil
-            record.profile_key = profile.key
+            record.profile_keys = keys
+            record.profile_key = keys.first
             record.profile_version = BusinessProfiles.version
             record.wholesale = wholesale unless wholesale.nil?
             record.interests = Onboarding::Setup.interests!(Onboarding::Setup.strings(interests)) unless interests.nil?
@@ -47,8 +50,8 @@ module Spree
         end
 
         def snapshot(record)
-          { profile_key: record.profile_key, profile_version: record.profile_version, wholesale: record.wholesale,
-            interests: Array(record.interests) }
+          { profile_key: record.profile_key, profile_keys: record.resolved_keys, profile_version: record.profile_version,
+            wholesale: record.wholesale, interests: Array(record.interests) }
         end
       end
     end

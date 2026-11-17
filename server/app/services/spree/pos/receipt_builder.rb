@@ -24,11 +24,20 @@ module Spree
       STORE_PROFILE_FIELDS = %w[address contact_phone customer_support_email url facebook instagram].freeze
 
       # The store's printable details as they stand now, blank ones left out.
-      def self.store_profile(store)
-        STORE_PROFILE_FIELDS.each_with_object({}) do |field, profile|
+      def self.store_profile(store, branch: nil)
+        profile = STORE_PROFILE_FIELDS.each_with_object({}) do |field, fields|
           value = store.respond_to?(field) ? store.public_send(field).to_s.strip : ''
-          profile[field] = value if value.present?
+          fields[field] = value if value.present?
         end
+        printed = branch && StoreInfo.printable(branch)
+        return profile unless printed
+
+        %w[address contact_phone customer_support_email].each do |field|
+          value = printed[field].to_s.strip
+          value.present? ? profile[field] = value : profile.delete(field)
+        end
+        profile['tax_code'] = printed['tax_code'] if printed['tax_code'].present?
+        profile
       end
 
       def self.issue_safely!(source, actor:, type: nil)
@@ -98,9 +107,10 @@ module Spree
 
       def base(branch, register, number, title, at)
         store = branch.store
+        printed = StoreInfo.printable(branch)
         {
           'kind' => type, 'title' => title, 'number' => number,
-          'store' => { 'name' => store.name }.merge(self.class.store_profile(store)),
+          'store' => { 'name' => printed&.dig('name').presence || store.name }.merge(self.class.store_profile(store, branch: branch)),
           'branch' => { 'name' => branch.name, 'code' => branch.code, 'return_window_days' => branch.return_window_days },
           'register' => register&.name,
           'timezone' => branch.timezone, 'at' => at&.iso8601

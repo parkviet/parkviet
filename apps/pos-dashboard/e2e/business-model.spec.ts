@@ -27,6 +27,13 @@ async function install(page: Page, state: ReturnType<typeof world>, target = '/s
     if (path === '/pos/business_profiles') return ok(state.profiles);
     if (path === '/pos/branches' || path === '/pos/context/branches') return ok([branch]);
     if (path === '/pos/branches/branch_main/modules') return ok({ branch_id: branch.id, modules: state.modules, settings: [{ module: 'retail.units', enabled: true, reason: 'backfill', changed_at: '2026-11-08T12:00:00Z', changed_by_name: null }] });
+    if (path === '/pos/store_info') {
+      if (request.method() === 'PATCH') {
+        const keys = Array.isArray(body.profile_keys) ? body.profile_keys.map(String) : [state.stored.profile_key];
+        state.stored = { profile_key: keys[0] ?? state.stored.profile_key, wholesale: body.wholesale === true, interests: (body.interests as string[]) ?? [] };
+      }
+      return ok({ id: null, name: null, phone: null, profile_key: state.stored.profile_key, profile_keys: [state.stored.profile_key], wholesale: state.stored.wholesale, interests: state.stored.interests, business_day_cutoff: '04:00', filled: 2, filled_total: 11, open_shifts: 0, representative_id_set: false, fallback: { name: branch.name, phone: null, contact_email: null, address: null, logo_url: null } });
+    }
     if (path === '/pos/store_profile') {
       if (request.method() === 'PUT') state.stored = { profile_key: String(body.profile_key), wholesale: body.wholesale === true, interests: body.interests as string[] };
       return ok(state.stored);
@@ -118,17 +125,17 @@ test('module dependency is blocked, disable needs reason, enable confirms depend
   expect(state.modules['retail.units']).toBe(true);
 });
 
-test('store main profile stores wholesale and coming-soon interests without changing existing branch', async ({ page }) => {
-  // A profile not open yet is recorded as an interest.
-  const state = world(); state.profiles = withComingSoon('karaoke_bida'); await install(page, state, '/store_1/settings/business-model');
-  const section = page.getByRole('region', { name: 'Hồ sơ chính của cửa hàng' });
-  await choose(page, 'Ngành mặc định cho chi nhánh mới', 'Nhà thuốc');
+test('store info stores several business types, wholesale and interests without changing the branch', async ({ page }) => {
+  const state = world(); state.profiles = withComingSoon('karaoke_bida'); await install(page, state, '/store_1/settings/store-info');
+  const section = page.getByRole('region', { name: 'Thông tin chung & liên hệ' });
+  await section.getByRole('combobox', { name: 'Loại hình kinh doanh' }).click();
+  await page.getByRole('option', { name: 'Nhà thuốc', exact: true }).click();
+  await section.getByRole('button', { name: 'Đặt làm chính' }).click();
+  await section.getByRole('button', { name: 'Bỏ Khác' }).click();
   await section.getByRole('checkbox', { name: /Có bán sỉ/ }).check();
   await section.getByRole('checkbox', { name: 'Karaoke, Bida', exact: true }).check();
-  await expect(section.getByRole('button', { name: 'Lưu hồ sơ cửa hàng' })).toBeDisabled();
-  await section.getByLabel('Lý do (bắt buộc)').fill('Mở nhà thuốc');
-  await section.getByRole('button', { name: 'Lưu hồ sơ cửa hàng' }).click();
-  await expect(section.getByRole('status')).toBeVisible();
+  await page.getByRole('button', { name: 'Lưu thay đổi' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Đã lưu thông tin cửa hàng' })).toBeVisible();
   expect(state.stored).toEqual({ profile_key: 'nha_thuoc', wholesale: true, interests: ['karaoke_bida'] });
   expect(state.branch.profile_key).toBe('khac');
 });

@@ -264,6 +264,34 @@ export function profileModules(profile: BusinessProfile, hasTables: boolean): st
 export const tablesOptional = (profile: BusinessProfile) =>
   profile.optional_modules.includes(TABLES_MODULE);
 
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
+// Modules are the union. Defaults and the display come from the first key.
+export function combineProfiles(
+  profiles: BusinessProfile[],
+  keys: string[],
+): BusinessProfile | undefined {
+  const picked = keys.flatMap((key) => {
+    const profile = profiles.find((item) => item.key === key);
+    return profile ? [profile] : [];
+  });
+  const primary = picked[0];
+  if (!primary) return undefined;
+  const modules = unique(picked.flatMap((profile) => profile.modules));
+  return {
+    ...primary,
+    modules,
+    optional_modules: unique(picked.flatMap((profile) => profile.optional_modules)).filter(
+      (key) => !modules.includes(key),
+    ),
+    recommended_features: unique(picked.flatMap((profile) => profile.recommended_features)),
+    sample_units: unique(picked.flatMap((profile) => profile.sample_units)),
+    kitchen_stations: unique(picked.flatMap((profile) => profile.kitchen_stations)),
+  };
+}
+
 export type BusinessTaxCategory = { code: string; rate: string };
 
 export type BusinessProfiles = {

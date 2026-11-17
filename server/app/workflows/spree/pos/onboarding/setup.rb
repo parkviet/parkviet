@@ -30,15 +30,17 @@ module Spree
         BRANCH_FIELDS = %w[name code timezone stock_location_id receiving_stock_location_id receiving_note return_window_days
                            variance_threshold display_freshness_ttl_seconds lot_selection adjustment_approval_threshold].freeze
 
-        def self.call(store:, actor:, key:, profile_key:, branch:, wholesale: false, interests: [], register: nil, grant_self: false,
-                      features: [], disabled_modules: nil, fnb_setup: nil, answers: nil)
+        def self.call(store:, actor:, key:, profile_key:, branch:, profile_keys: nil, wholesale: false, interests: [], register: nil,
+                      grant_self: false, features: [], disabled_modules: nil, fnb_setup: nil, answers: nil)
           branch_params = slice(branch, BRANCH_FIELDS)
           register_params = register.nil? ? nil : slice(register, %w[name code])
+          keys = BusinessProfiles.keys_for(profile_key: profile_key, profile_keys: profile_keys) || [profile_key.to_s]
           payload = {
-            'command' => 'onboarding.setup', 'profile_key' => profile_key.to_s, 'wholesale' => wholesale == true,
+            'command' => 'onboarding.setup', 'profile_key' => keys.first.to_s, 'wholesale' => wholesale == true,
             'interests' => strings(interests), 'branch' => branch_params, 'register' => register_params,
             'grant_self' => grant_self == true, 'features' => strings(features)
           }
+          payload['profile_keys'] = keys if profile_keys
           payload['disabled_modules'] = strings(disabled_modules) unless disabled_modules.nil?
           payload['fnb_setup'] = fnb_params(fnb_setup) unless fnb_setup.nil?
           payload['answers'] = answer_params(answers) unless answers.nil?
@@ -47,7 +49,8 @@ module Spree
             # Two people setting up at once: the second waits, then sees the first.
             store.lock!
             already!(store)
-            profile = Branches::Create.available!(BusinessProfiles.fetch!(payload['profile_key']))
+            chosen = payload['profile_keys'] || [payload['profile_key']]
+            profile = Branches::Create.available!(BusinessProfiles.combine(chosen))
             fnb = payload['fnb_setup']
             fnb_valid!(profile, fnb) if fnb
             has_tables = tables_answer!(profile, payload.dig('answers', 'has_tables'))
@@ -55,14 +58,15 @@ module Spree
             tables = modules.include?(BusinessProfiles::TABLES_MODULE)
             raise Conflict.new('Table orders need a register to be booked on.', reason: REGISTER_MISSING) if tables && register_params.nil?
 
-            store_profile = StoreProfile.create!(store: store, profile_key: profile.key, profile_version: BusinessProfiles.version,
+            store_profile = StoreProfile.create!(store: store, profile_key: chosen.first, profile_keys: chosen,
+                                                 profile_version: BusinessProfiles.version,
                                                  wholesale: payload['wholesale'], interests: interests!(payload['interests']),
                                                  onboarded_at: Time.current, changed_by: actor)
             AuditEntry.record!(store: store, actor: actor, action: 'store_profile.change', subject: store_profile,
                                metadata: { from: nil, to: store_profile.slice(:profile_key, :wholesale, :interests), reason: 'onboarding' })
             attributes = Branches::Attributes.call(store: store, params: branch_params)
             attributes[:kitchen_send_trigger] = fnb['kitchen_send_trigger'] if fnb&.dig('kitchen_send_trigger')
-            created = Branches::Create.call(store: store, actor: actor, profile_key: profile.key, attributes: attributes)
+            created = Branches::Create.call(store: store, actor: actor, profile_keys: chosen, attributes: attributes)
             enable_optional!(created, profile, modules, actor) if has_tables
             disable_modules!(created, profile, modules, payload['disabled_modules'], actor)
             drawer = register_params && create_register!(store, actor, created, register_params)

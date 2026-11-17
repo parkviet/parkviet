@@ -40,8 +40,11 @@ function PosShell() {
   const { t } = useTranslation()
   const value = useCreatePosSession()
   const path = useRouterState({ select: (state) => state.location.pathname })
-  // Receipt templates keep their settings URL but belong to the main sidebar.
-  const inSettings = path.includes('/settings') && !path.includes('/settings/receipt-templates')
+  // These pages keep a /settings URL but belong to the main Thiết lập sidebar.
+  const inSettings =
+    path.includes('/settings') &&
+    !path.includes('/settings/receipt-templates') &&
+    !path.includes('/settings/store-info')
   return (
     <PosSessionContext.Provider value={value}>
       <PosNavigation />

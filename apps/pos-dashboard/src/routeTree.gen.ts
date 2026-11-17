@@ -72,6 +72,7 @@ import { Route as AuthenticatedStoreIdSettingsBusinessModelRouteImport } from '.
 import { Route as AuthenticatedStoreIdSettingsEinvoiceRouteImport } from './routes/_authenticated/$storeId/settings/einvoice'
 import { Route as AuthenticatedStoreIdSettingsReceiptTemplatesRouteImport } from './routes/_authenticated/$storeId/settings/receipt-templates'
 import { Route as AuthenticatedStoreIdSettingsSetupRouteImport } from './routes/_authenticated/$storeId/settings/setup'
+import { Route as AuthenticatedStoreIdSettingsStoreInfoRouteImport } from './routes/_authenticated/$storeId/settings/store-info'
 import { Route as AuthenticatedStoreIdSettingsSystemRouteImport } from './routes/_authenticated/$storeId/settings/system'
 import { Route as AuthenticatedStoreIdShiftsIndexRouteImport } from './routes/_authenticated/$storeId/shifts/index'
 import { Route as AuthenticatedStoreIdShiftsClosuresRouteImport } from './routes/_authenticated/$storeId/shifts/closures'
@@ -465,6 +466,12 @@ const AuthenticatedStoreIdSettingsSetupRoute =
     path: '/setup',
     getParentRoute: () => AuthenticatedStoreIdSettingsRoute,
   } as any)
+const AuthenticatedStoreIdSettingsStoreInfoRoute =
+  AuthenticatedStoreIdSettingsStoreInfoRouteImport.update({
+    id: '/store-info',
+    path: '/store-info',
+    getParentRoute: () => AuthenticatedStoreIdSettingsRoute,
+  } as any)
 const AuthenticatedStoreIdSettingsSystemRoute =
   AuthenticatedStoreIdSettingsSystemRouteImport.update({
     id: '/system',
@@ -642,6 +649,7 @@ export interface FileRoutesByFullPath {
   '/$storeId/settings/einvoice': typeof AuthenticatedStoreIdSettingsEinvoiceRoute
   '/$storeId/settings/receipt-templates': typeof AuthenticatedStoreIdSettingsReceiptTemplatesRouteWithChildren
   '/$storeId/settings/setup': typeof AuthenticatedStoreIdSettingsSetupRoute
+  '/$storeId/settings/store-info': typeof AuthenticatedStoreIdSettingsStoreInfoRoute
   '/$storeId/settings/system': typeof AuthenticatedStoreIdSettingsSystemRoute
   '/$storeId/shifts/closures': typeof AuthenticatedStoreIdShiftsClosuresRoute
   '/$storeId/shifts/late-cash': typeof AuthenticatedStoreIdShiftsLateCashRoute
@@ -715,6 +723,7 @@ export interface FileRoutesByTo {
   '/$storeId/settings/business-model': typeof AuthenticatedStoreIdSettingsBusinessModelRoute
   '/$storeId/settings/einvoice': typeof AuthenticatedStoreIdSettingsEinvoiceRoute
   '/$storeId/settings/setup': typeof AuthenticatedStoreIdSettingsSetupRoute
+  '/$storeId/settings/store-info': typeof AuthenticatedStoreIdSettingsStoreInfoRoute
   '/$storeId/settings/system': typeof AuthenticatedStoreIdSettingsSystemRoute
   '/$storeId/shifts/closures': typeof AuthenticatedStoreIdShiftsClosuresRoute
   '/$storeId/shifts/late-cash': typeof AuthenticatedStoreIdShiftsLateCashRoute
@@ -801,6 +810,7 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/settings/einvoice': typeof AuthenticatedStoreIdSettingsEinvoiceRoute
   '/_authenticated/$storeId/settings/receipt-templates': typeof AuthenticatedStoreIdSettingsReceiptTemplatesRouteWithChildren
   '/_authenticated/$storeId/settings/setup': typeof AuthenticatedStoreIdSettingsSetupRoute
+  '/_authenticated/$storeId/settings/store-info': typeof AuthenticatedStoreIdSettingsStoreInfoRoute
   '/_authenticated/$storeId/settings/system': typeof AuthenticatedStoreIdSettingsSystemRoute
   '/_authenticated/$storeId/shifts/closures': typeof AuthenticatedStoreIdShiftsClosuresRoute
   '/_authenticated/$storeId/shifts/late-cash': typeof AuthenticatedStoreIdShiftsLateCashRoute
@@ -887,6 +897,7 @@ export interface FileRouteTypes {
     | '/$storeId/settings/einvoice'
     | '/$storeId/settings/receipt-templates'
     | '/$storeId/settings/setup'
+    | '/$storeId/settings/store-info'
     | '/$storeId/settings/system'
     | '/$storeId/shifts/closures'
     | '/$storeId/shifts/late-cash'
@@ -960,6 +971,7 @@ export interface FileRouteTypes {
     | '/$storeId/settings/business-model'
     | '/$storeId/settings/einvoice'
     | '/$storeId/settings/setup'
+    | '/$storeId/settings/store-info'
     | '/$storeId/settings/system'
     | '/$storeId/shifts/closures'
     | '/$storeId/shifts/late-cash'
@@ -1045,6 +1057,7 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/settings/einvoice'
     | '/_authenticated/$storeId/settings/receipt-templates'
     | '/_authenticated/$storeId/settings/setup'
+    | '/_authenticated/$storeId/settings/store-info'
     | '/_authenticated/$storeId/settings/system'
     | '/_authenticated/$storeId/shifts/closures'
     | '/_authenticated/$storeId/shifts/late-cash'
@@ -1523,6 +1536,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoreIdSettingsSetupRouteImport
       parentRoute: typeof AuthenticatedStoreIdSettingsRoute
     }
+    '/_authenticated/$storeId/settings/store-info': {
+      id: '/_authenticated/$storeId/settings/store-info'
+      path: '/store-info'
+      fullPath: '/$storeId/settings/store-info'
+      preLoaderRoute: typeof AuthenticatedStoreIdSettingsStoreInfoRouteImport
+      parentRoute: typeof AuthenticatedStoreIdSettingsRoute
+    }
     '/_authenticated/$storeId/settings/system': {
       id: '/_authenticated/$storeId/settings/system'
       path: '/system'
@@ -1879,6 +1899,7 @@ interface AuthenticatedStoreIdSettingsRouteChildren {
   AuthenticatedStoreIdSettingsEinvoiceRoute: typeof AuthenticatedStoreIdSettingsEinvoiceRoute
   AuthenticatedStoreIdSettingsReceiptTemplatesRoute: typeof AuthenticatedStoreIdSettingsReceiptTemplatesRouteWithChildren
   AuthenticatedStoreIdSettingsSetupRoute: typeof AuthenticatedStoreIdSettingsSetupRoute
+  AuthenticatedStoreIdSettingsStoreInfoRoute: typeof AuthenticatedStoreIdSettingsStoreInfoRoute
   AuthenticatedStoreIdSettingsSystemRoute: typeof AuthenticatedStoreIdSettingsSystemRoute
   AuthenticatedStoreIdSettingsIndexRoute: typeof AuthenticatedStoreIdSettingsIndexRoute
 }
@@ -1893,6 +1914,8 @@ const AuthenticatedStoreIdSettingsRouteChildren: AuthenticatedStoreIdSettingsRou
       AuthenticatedStoreIdSettingsReceiptTemplatesRouteWithChildren,
     AuthenticatedStoreIdSettingsSetupRoute:
       AuthenticatedStoreIdSettingsSetupRoute,
+    AuthenticatedStoreIdSettingsStoreInfoRoute:
+      AuthenticatedStoreIdSettingsStoreInfoRoute,
     AuthenticatedStoreIdSettingsSystemRoute:
       AuthenticatedStoreIdSettingsSystemRoute,
     AuthenticatedStoreIdSettingsIndexRoute:

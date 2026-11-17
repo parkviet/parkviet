@@ -25,30 +25,29 @@ module Spree
 
         module_function
 
-        def call(store:, actor:, branch:, profile_key:, expected_profile_key:, reason:, apply_modules: false, apply_defaults: [],
-                 has_tables: false, table_register_id: nil, apply_stations: false)
+        def call(store:, actor:, branch:, profile_key: nil, profile_keys: nil, expected_profile_key: nil, expected_profile_keys: nil,
+                 reason:, apply_modules: false, apply_defaults: [], has_tables: false, table_register_id: nil, apply_stations: false)
           raise CanCan::AccessDenied unless AccessPolicy.new(store: store, staff: actor).permission?(PERMISSION)
 
-          profile = Branches::Create.available!(BusinessProfiles.fetch!(profile_key))
+          keys = BusinessProfiles.keys_for(profile_key: profile_key, profile_keys: profile_keys) ||
+                 raise(Conflict.new('Choose at least one business type.', reason: BusinessProfiles::UNKNOWN))
+          profile = Branches::Create.available!(BusinessProfiles.combine(keys))
           note = BranchModules::Set.reason!(reason)
           fields = picked_defaults!(profile, apply_defaults)
           has_tables = Onboarding::Setup.tables_answer!(profile, [true, 'true'].include?(has_tables))
           modules = profile.modules_for(has_tables: has_tables)
           ApplicationRecord.transaction do
             branch.lock!
-            if branch.profile_key != expected_profile_key.to_s
-              raise Conflict.new('The branch profile was changed meanwhile.',
-                                 reason: CONFLICT, details: { current_profile_key: branch.profile_key })
-            end
-
-            from = branch.profile_key
+            conflict!(branch, expected_profile_key, expected_profile_keys)
+            from = branch.resolved_keys
             switched = apply_modules == true ? switch_modules!(branch, profile, actor, note, modules) : { enabled: [], disabled: [] }
             table_register!(branch, table_register_id) if apply_modules == true && modules.include?(BusinessProfiles::TABLES_MODULE)
             applied = fields.map do |field|
               { field: field, from: Preview.present(field, branch.public_send(field)), to: Preview.present(field, profile.branch_defaults[field]) }
             end
             branch.assign_attributes(fields.index_with { |field| profile.branch_defaults[field] })
-            branch.profile_key = profile.key
+            branch.profile_keys = keys
+            branch.profile_key = keys.first
             branch.profile_version = BusinessProfiles.version
             branch.save!
             existing = UnitDefinition.for_store(store).where(code: profile.sample_units).pluck(:code)
@@ -56,7 +55,8 @@ module Spree
             added = profile.sample_units - existing
             kitchen = apply_stations == true && ModulePolicy.enabled?(branch, Kitchen::Send::MODULE) ? kitchen!(store, actor, branch, profile) : nil
             AuditEntry.record!(store: store, actor: actor, action: 'branch_profile.change', subject: branch,
-                               metadata: { branch_id: branch.prefixed_id, from: from, to: profile.key, profile_version: branch.profile_version,
+                               metadata: { branch_id: branch.prefixed_id, from: from.first, from_profile_keys: from, to: profile.key,
+                                           profile_keys: keys, profile_version: branch.profile_version,
                                            modules: switched, defaults: applied, sample_units: added, reason: note,
                                            table_register_id: branch.table_register&.prefixed_id,
                                            stations: kitchen&.dig(:stations)&.map { |row| row[:id] } })
@@ -64,6 +64,18 @@ module Spree
               applied: { modules: switched, defaults: applied, sample_units: added, kitchen: kitchen,
                          table_register_id: branch.table_register&.prefixed_id } }
           end
+        end
+
+        def conflict!(branch, expected_key, expected_keys)
+          current = branch.resolved_keys
+          if expected_keys
+            return if current == Array(expected_keys).map(&:to_s)
+          elsif branch.profile_key == expected_key.to_s
+            return
+          end
+
+          raise Conflict.new('The branch profile was changed meanwhile.',
+                             reason: CONFLICT, details: { current_profile_key: branch.profile_key, current_profile_keys: current })
         end
 
         # Fields must be defaults the profile offers.

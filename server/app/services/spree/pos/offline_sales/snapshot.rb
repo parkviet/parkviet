@@ -17,9 +17,10 @@ module Spree
         def call(store:, staff:, register:)
           branch = register.branch
           shift = Shift.for_store(store).open_now.find_by(register_id: register.id, owner_id: staff.id)
-          profile = ReceiptBuilder.store_profile(store)
+          profile = ReceiptBuilder.store_profile(store, branch: branch)
+          printed = StoreInfo.printable(branch)
           body = {
-            store: { id: store.prefixed_id, name: store.name, currency: store.default_currency,
+            store: { id: store.prefixed_id, name: printed&.dig('name').presence || store.name, currency: store.default_currency,
                      profile: ReceiptBuilder::STORE_PROFILE_FIELDS.index_with { |field| profile[field] } },
             branch: { id: branch.prefixed_id, name: branch.name, code: branch.code, timezone: branch.timezone },
             register: { id: register.prefixed_id, name: register.name, code: register.code },

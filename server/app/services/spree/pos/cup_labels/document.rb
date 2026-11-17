@@ -38,7 +38,8 @@ module Spree
           blocks << text([guest_name], bold: true, align: 'center') if fields.include?('guest_name') && guest_name
           footer = []
           footer << PrintDocuments::Text.document_time(at.iso8601, branch.timezone) if fields.include?('time')
-          footer << branch.store.name if fields.include?('store_name') && branch.store.name.present?
+          store_name = StoreInfo.printable(branch)&.dig('name').presence || branch.store.name
+          footer << store_name if fields.include?('store_name') && store_name.present?
           blocks << text([footer.join(' · ')], size: 's', align: 'center') if footer.any?
           PrintDocuments.wrap('cup_label', {
                                 'documentType' => nil, 'page' => PAGE.merge('label' => Settings.label_mm(settings)), 'banners' => [],

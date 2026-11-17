@@ -25,6 +25,8 @@ module Spree
       belongs_to :food_tax_category, class_name: 'Spree::TaxCategory', optional: true
       belongs_to :alcohol_tax_category, class_name: 'Spree::TaxCategory', optional: true
 
+      include ProfileKeyList
+
       validates :store_id, uniqueness: true
       validates :profile_key, format: { with: Branch::PROFILE_KEY_FORMAT }
       validates :profile_version, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
@@ -35,7 +37,7 @@ module Spree
       scope :for_store, ->(store) { where(store_id: store.id) }
 
       def to_pos
-        { id: prefixed_id, profile_key: profile_key, profile_version: profile_version, wholesale: wholesale,
+        { id: prefixed_id, profile_key: profile_key, profile_keys: resolved_keys, profile_version: profile_version, wholesale: wholesale,
           interests: Array(interests), onboarded_at: onboarded_at&.iso8601, changed_by_id: changed_by&.prefixed_id,
           changed_by_name: StaffName.call(changed_by), updated_at: updated_at&.iso8601,
           tax_defaults: tax_defaults }

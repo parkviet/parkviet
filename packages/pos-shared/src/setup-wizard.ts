@@ -103,8 +103,10 @@ export type SetupState = {
   // The card picked on step 1: an available profile, or a "coming soon" one
   // waiting for the owner's answer.
   choice: string | null;
-  // The available (retail) profile the branch is created with.
+  // The available profile the branch is created with. The first of profileKeys.
   profileKey: string | null;
+  // Every selected business type, primary first.
+  profileKeys: string[];
   // "Coming soon" profiles the owner asked for, in the order chosen.
   interests: string[];
   // The owner answered "no" to "do you also sell goods?" for the current choice.
@@ -144,6 +146,7 @@ export function initialSetup(timezone?: string | null): SetupState {
     step: 1,
     choice: null,
     profileKey: null,
+    profileKeys: [],
     interests: [],
     declined: false,
     wholesale: false,
@@ -248,6 +251,9 @@ export function validAmount(text: string): boolean {
 
 export type SetupAction =
   | { type: 'choose'; key: string; profiles: BusinessProfile[] }
+  | { type: 'add-profile'; key: string; profiles: BusinessProfile[] }
+  | { type: 'remove-profile'; key: string; profiles: BusinessProfile[] }
+  | { type: 'make-primary'; key: string; profiles: BusinessProfile[] }
   | { type: 'answer-interest'; sellsGoods: boolean; profiles: BusinessProfile[] }
   | { type: 'remove-interest'; key: string }
   | { type: 'wholesale'; value: boolean }
@@ -270,8 +276,13 @@ export type SetupAction =
   | { type: 'has-tables'; value: boolean }
   | { type: 'go'; step: SetupStep };
 
-function withProfile(state: SetupState, key: string, profiles: BusinessProfile[]): SetupState {
-  if (state.profileKey === key) return state;
+function withProfile(
+  state: SetupState,
+  key: string,
+  profiles: BusinessProfile[],
+  keys: string[] = [key],
+): SetupState {
+  if (state.profileKey === key && state.profileKeys.join() === keys.join()) return state;
   const profile = profiles.find((item) => item.key === key);
   // Another industry brings its own defaults; ticked features it does not
   // recommend are dropped so nothing is turned on unseen.
@@ -279,6 +290,7 @@ function withProfile(state: SetupState, key: string, profiles: BusinessProfile[]
   return {
     ...state,
     profileKey: key,
+    profileKeys: keys,
     defaults: defaultsFromProfile(profile),
     features: state.features.filter((feature) => recommended.includes(feature)),
     // A new industry starts from its own suggestions, all on.
@@ -314,6 +326,25 @@ export function setupReducer(state: SetupState, action: SetupAction): SetupState
         };
       if (isComingSoon(profile)) return { ...state, choice: action.key, declined: false };
       return state;
+    }
+    case 'add-profile': {
+      const profile = action.profiles.find((item) => item.key === action.key);
+      if (!isAvailable(profile) || state.profileKeys.includes(profile.key)) return state;
+      if (!state.profileKey)
+        return { ...withProfile(state, profile.key, action.profiles), choice: profile.key, declined: false };
+      return { ...state, profileKeys: [...state.profileKeys, profile.key], choice: profile.key, shop: null };
+    }
+    case 'remove-profile': {
+      const keys = state.profileKeys.filter((key) => key !== action.key);
+      if (!keys.length)
+        return { ...state, profileKey: null, profileKeys: [], choice: null, shop: null, disabledModules: [] };
+      if (keys[0] === state.profileKey) return { ...state, profileKeys: keys, shop: null };
+      return { ...withProfile(state, keys[0], action.profiles, keys), choice: keys[0], declined: false };
+    }
+    case 'make-primary': {
+      if (!state.profileKeys.includes(action.key) || state.profileKey === action.key) return state;
+      const keys = [action.key, ...state.profileKeys.filter((key) => key !== action.key)];
+      return { ...withProfile(state, action.key, action.profiles, keys), choice: action.key, declined: false };
     }
     case 'answer-interest': {
       const choice = state.choice;
@@ -492,6 +523,7 @@ export function editableDefaults(profile: BusinessProfile | undefined): (keyof S
 
 export type OnboardingPayload = {
   profile_key: string;
+  profile_keys?: string[];
   wholesale: boolean;
   interests: string[];
   branch: Record<string, string | number | null>;
@@ -532,6 +564,7 @@ export function onboardingPayload(state: SetupState, profile: BusinessProfile): 
   const disabledModules = state.disabledModules.filter((key) => profile.modules.includes(key));
   return {
     profile_key: profile.key,
+    ...(state.profileKeys.length > 1 ? { profile_keys: state.profileKeys } : {}),
     wholesale: state.wholesale,
     interests: [...state.interests],
     branch,

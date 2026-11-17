@@ -12,7 +12,7 @@ module Spree
         local = at.in_time_zone(zone)
         date = local.to_date
         minutes = (local.hour * 60) + local.min
-        minutes < cutoff_minutes(branch.business_day_cutoff) ? date - 1 : date
+        minutes < cutoff_minutes(branch.effective_business_day_cutoff) ? date - 1 : date
       end
 
       # Minutes from midnight. Accepts a time column, a Time, or "04:00".

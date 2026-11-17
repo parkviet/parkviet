@@ -302,6 +302,14 @@ RSpec.describe Spree::Pos::BusinessProfiles do
       expect { Spree::Pos::UnitDefinition.ensure_samples!(store, ['met']) }.to raise_error(ArgumentError, /met/)
     end
 
+    it 'unions modules and keeps the primary profile defaults' do
+      combined = described_class.combine(%w[cafe_tra_sua nha_hang])
+      expect(combined.key).to eq('cafe_tra_sua')
+      expect(combined.modules).to include('fnb.order_number', 'fnb.tables', 'fnb.reservations')
+      expect(combined.branch_defaults).to eq(described_class.fetch!('cafe_tra_sua').branch_defaults)
+      expect(combined.optional_modules).not_to include('fnb.tables')
+    end
+
     it 'keeps the store defaults unchanged' do
       Spree::Pos::UnitDefinition.ensure_defaults!(store)
       expect(Spree::Pos::UnitDefinition.for_store(store).order(:code).pluck(:code)).to eq(%w[case chai g item kg l ml pack])

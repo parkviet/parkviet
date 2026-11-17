@@ -82,8 +82,10 @@ module Spree
         end
 
         def seller(branch, setting)
-          { 'name' => setting.seller_name.presence || branch.store.name, 'tax_code' => setting.seller_tax_code,
-            'address' => setting.seller_address.presence || ReceiptBuilder.store_profile(branch.store)['address'],
+          { 'name' => setting.seller_name.presence || StoreInfo.printable(branch)&.dig('name').presence || branch.store.name,
+            'tax_code' => setting.seller_tax_code.presence || StoreInfo.printable(branch)&.dig('tax_code'),
+            'address' => setting.seller_address.presence || StoreInfo.printable(branch)&.dig('address').presence ||
+              ReceiptBuilder.store_profile(branch.store)['address'],
             'outlet_code' => branch.code, 'outlet_name' => branch.name }
         end
 

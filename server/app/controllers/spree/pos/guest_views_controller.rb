@@ -74,7 +74,8 @@ module Spree
         {
           id: session.prefixed_id, status: session.ordering? ? 'open' : 'table_closed', expires_at: session.expires_at.iso8601,
           table: { name: session.resource.name, kind: session.resource.kind },
-          branch: { name: branch.name, store_name: branch.store.name }, currency: branch.store.default_currency,
+          branch: { name: branch.name, store_name: Spree::Pos::StoreInfo.printable(branch)&.dig('name').presence || branch.store.name },
+          currency: branch.store.default_currency,
           approval: branch.qr_order_mode == 'direct_to_kitchen' ? 'direct_to_kitchen' : 'staff_approval',
           timed: session.workspace&.service_mode == 'timed'
         }

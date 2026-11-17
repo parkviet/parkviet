@@ -190,13 +190,14 @@ export function normalizePreview(value: unknown): ProfilePreview | null {
 }
 
 // What moving the branch to `profileKey` would change; changes nothing.
-export async function previewBranchProfile(branchId: string, profileKey: string) {
+export async function previewBranchProfile(branchId: string, profileKey: string | string[]) {
+  const keys = Array.isArray(profileKey) ? profileKey : [profileKey]
   const preview = normalizePreview(
     (
       await request<unknown>(
         'POST',
         `/pos/branches/${encodeURIComponent(branchId)}/profile/preview`,
-        { profile_key: profileKey },
+        keys.length > 1 ? { profile_key: keys[0], profile_keys: keys } : { profile_key: keys[0] },
       )
     ).data,
   )
@@ -211,6 +212,7 @@ export async function applyBranchProfile(
   branchId: string,
   body: {
     profile_key: string
+    profile_keys?: string[]
     expected_profile_key: string
     apply_modules: boolean
     apply_defaults: string[]

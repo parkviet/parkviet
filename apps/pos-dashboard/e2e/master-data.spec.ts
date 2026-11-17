@@ -53,7 +53,11 @@ test('the configuration group lists store master data and keeps branch settings 
   // The phone drawer is closed until opened; the tablet sidebar is already docked.
   if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
   const sidebar = page.locator('[data-sidebar="sidebar"]').first();
-  for (const name of ['Chi nhánh', 'Mẫu in', 'Phương thức thanh toán', 'Đơn vị tính', 'Nhóm quyền', 'Mẫu tem cân']) await expect(sidebar.getByRole('link', { name, exact: true })).toBeVisible();
+  for (const name of ['Thông tin cửa hàng', 'Chi nhánh', 'Mẫu in', 'Phương thức thanh toán', 'Đơn vị tính', 'Nhóm quyền', 'Mẫu tem cân']) await expect(sidebar.getByRole('link', { name, exact: true })).toBeVisible();
+  const storeInfo = sidebar.getByRole('link', { name: 'Thông tin cửa hàng', exact: true });
+  const branches = sidebar.getByRole('link', { name: 'Chi nhánh', exact: true });
+  await expect(storeInfo).toHaveAttribute('href', '/store_1/settings/store-info');
+  expect((await storeInfo.boundingBox())!.y).toBeLessThan((await branches.boundingBox())!.y);
   for (const name of ['Quầy bán hàng', 'Nhân viên & quyền', 'Hàng bán tại chi nhánh', 'Chức năng chi nhánh', 'Mô hình kinh doanh']) await expect(sidebar.getByRole('link', { name, exact: true })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Cài đặt cửa hàng', exact: true })).toBeVisible();
 });

@@ -2,6 +2,7 @@ import { InfoIcon } from '@spree/dashboard-ui/icons'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useBranchScope } from '../components/branch-detail'
+import { BranchInfoCard } from '../components/branch-info-card'
 import { ModelCard } from '../components/setup/model-ui'
 import { usePosSession } from '../hooks/use-pos-session'
 import { useLocationOptions } from '../hooks/use-topology'
@@ -35,6 +36,7 @@ export function BranchOverviewTab() {
   ]
   return (
     <div className="space-y-6">
+      <BranchInfoCard branchId={branch.id} write={branchWrite || access.write} />
       <ModelCard title={t('branchOverviewInfo')} id="branch-overview-info" icon={<InfoIcon />}>
         <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
           {rows.map(([label, value]) => (

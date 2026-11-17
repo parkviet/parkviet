@@ -97,5 +97,16 @@ client constants in `dashboard-layout.ts` in step with
 without grips or resize corners. `e2e/home.spec.ts` covers drag, resize, hide,
 add, cancel, reset and drill-downs with route mocks.
 
+Store information lives at `/settings/store-info` (`pages/store-info.tsx`) and is the
+first item of the Thiết lập sidebar, above Chi nhánh. Its path is store-root
+relative (`/settings/store-info`); settings-nav paths are relative to `/settings`
+and must not include that prefix. The page stays on the main sidebar, like
+receipt templates.
+It holds the POS name, contacts, logo, business types, opening hours, business-day
+cutoff and the two-level Vietnam address. `/settings/business-model` redirects
+there. A branch copies those values and overrides them on its Information tab
+(`components/branch-info-card.tsx`). New branches take the store's business types;
+the first selected type is the primary one.
+
 Do not edit `apps/dashboard`. POS administration lives only here: do not add
 settings or setup screens back to `apps/pos`.

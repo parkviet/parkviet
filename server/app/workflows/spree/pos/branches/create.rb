@@ -14,34 +14,34 @@ module Spree
         FALLBACK_PROFILE = 'khac'
         UNAVAILABLE = 'profile_unavailable'
 
-        def self.call(store:, actor:, attributes:, profile_key: nil)
-          profile = resolve_profile(store, profile_key)
+        def self.call(store:, actor:, attributes:, profile_key: nil, profile_keys: nil)
+          profile, keys = resolve_profile(store, profile_key, profile_keys)
           ApplicationRecord.transaction do
             defaults = profile.branch_defaults.reject { |field, _| attributes.key?(field.to_sym) }.transform_keys(&:to_sym)
-            branch = Branch.create!(defaults.merge(attributes).merge(store: store, status: 'active', profile_key: profile.key,
-                                                                     profile_version: BusinessProfiles.version))
+            branch = Branch.create!(defaults.merge(attributes).merge(store: store, status: 'active', profile_key: keys.first,
+                                                                     profile_keys: keys, profile_version: BusinessProfiles.version))
             profile.modules.each do |key|
               row = BranchModule.find_or_initialize_by(branch_id: branch.id, module_key: key)
               row.update!(store: store, enabled: true, reason: "profile:#{profile.key}", changed_by: actor)
             end
             UnitDefinition.ensure_samples!(store, profile.sample_units)
             AuditEntry.record!(store: store, actor: actor, action: 'branch.create', subject: branch,
-                               metadata: { profile_key: profile.key, profile_version: branch.profile_version, modules: profile.modules,
-                                           defaults: defaults.keys.map(&:to_s) })
+                               metadata: { profile_key: profile.key, profile_keys: keys, profile_version: branch.profile_version,
+                                           modules: profile.modules, defaults: defaults.keys.map(&:to_s) })
             branch
           end
         end
 
-        # A key the request names must be in the catalog and available; the
-        # store's own key falls back to `khac` once the catalog drops it.
-        def self.resolve_profile(store, profile_key)
-          profile = if profile_key.present?
-                      BusinessProfiles.fetch!(profile_key)
-                    else
-                      stored = StoreProfile.for_store(store).pick(:profile_key)
-                      (stored && BusinessProfiles.find(stored)) || BusinessProfiles.fetch!(FALLBACK_PROFILE)
-                    end
-          available!(profile)
+        # Keys the request names must be in the catalog and available; the
+        # store's own list falls back to `khac` once the catalog drops it.
+        # The first key is the primary. Modules are the union.
+        def self.resolve_profile(store, profile_key, profile_keys = nil)
+          keys = BusinessProfiles.keys_for(profile_key: profile_key, profile_keys: profile_keys)
+          keys ||= begin
+            stored = StoreProfile.for_store(store).first
+            stored&.resolved_keys.presence || [FALLBACK_PROFILE]
+          end
+          [available!(BusinessProfiles.combine(keys)), keys]
         end
 
         def self.available!(profile)

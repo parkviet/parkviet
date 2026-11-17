@@ -42,6 +42,7 @@ export type PosPage =
   | 'receipt-templates'
   | 'setup'
   | 'store-model'
+  | 'store-info'
   | 'devices'
   | 'menu'
   | 'stock-alerts'
@@ -217,6 +218,7 @@ export function visibleNav(page: PosPage, access: PosAccess) {
     )
   if (page === 'features' || page === 'business-model')
     return canAdminister(access) || canManageBranch(access)
+  if (page === 'store-info') return canAdminister(access)
   if (page === 'setup' || page === 'store-model') return canAdminister(access, true)
   if (page === 'devices')
     return (

@@ -24,7 +24,8 @@ module Spree
               return if channel_rejected?
 
               data = Spree::Pos::Profiles::UpdateStore.call(
-                store: current_store, actor: current_user, profile_key: params[:profile_key], reason: params[:reason],
+                store: current_store, actor: current_user, profile_key: params[:profile_key],
+                profile_keys: params.key?(:profile_keys) ? Array(params[:profile_keys]) : nil, reason: params[:reason],
                 wholesale: params.key?(:wholesale) ? params[:wholesale] : nil, interests: params.key?(:interests) ? Array(params[:interests]) : nil
               )
               render json: { data: data }

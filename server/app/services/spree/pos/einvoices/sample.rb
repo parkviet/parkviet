@@ -33,7 +33,8 @@ module Spree
           Einvoice.new(
             store: setting.store, invoice_type: type, relation: 'original', status: 'issuing', currency: 'VND',
             template_code: setting.template_code.presence || '1', symbol: setting.symbol.presence || 'C26MYY',
-            seller: { 'name' => setting.seller_name.presence || setting.store.name, 'tax_code' => setting.seller_tax_code,
+            seller: { 'name' => setting.seller_name.presence || StoreInfo.for_store(setting.store)&.name.presence || setting.store.name,
+                      'tax_code' => setting.seller_tax_code.presence || StoreInfo.for_store(setting.store)&.tax_code,
                       'address' => setting.seller_address, 'outlet_code' => seller_branch&.code, 'outlet_name' => seller_branch&.name },
             buyer: { 'label' => setting.consumer_label_text }, lines_snapshot: [line], payment_method: 'TM',
             totals_snapshot: { 'amount_before_tax' => '10000.0', 'tax_amount' => '800.0', 'discount_total' => '0.0', 'total' => '10800.0',

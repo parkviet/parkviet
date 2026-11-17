@@ -89,7 +89,7 @@ export function StoreBusinessModelPage() {
   const write = context.data?.administration?.write === true
   const catalogue = useBusinessProfiles(storeId, write)
   return (
-    <ModelPage title={t('businessModel.storeTitle')} description={t('businessModel.storeIntro')}>
+    <ModelPage title={t('businessModel.storeTitle')}>
       {context.isPending ? (
         <PageSkeleton />
       ) : context.isError ? (
@@ -197,6 +197,7 @@ function ChangeProfile({ branch, profiles }: { branch: PosBranch; profiles: Busi
     (profile) => profile.status === 'available' && profile.key !== branch.profile_key,
   )
   const [target, setTarget] = useState('')
+  const [extra, setExtra] = useState<string[]>([])
   const [preview, setPreview] = useState<ProfilePreview | null>(null)
   const [applyModules, setApplyModules] = useState(true)
   const [applyDefaults, setApplyDefaults] = useState<string[]>([])
@@ -213,7 +214,7 @@ function ChangeProfile({ branch, profiles }: { branch: PosBranch; profiles: Busi
   async function loadPreview(key: string) {
     setBusy(true)
     try {
-      setPreview(await previewBranchProfile(branch.id, key))
+      setPreview(await previewBranchProfile(branch.id, extra.length ? [key, ...extra] : key))
       setApplyModules(true)
       setApplyDefaults([])
       setHasTables(false)
@@ -242,6 +243,7 @@ function ChangeProfile({ branch, profiles }: { branch: PosBranch; profiles: Busi
     try {
       await mutation.mutateAsync({
         profile_key: preview.to,
+        ...(extra.length ? { profile_keys: [preview.to, ...extra] } : {}),
         expected_profile_key: preview.from,
         apply_modules: applyModules,
         apply_defaults: applyDefaults,
@@ -305,6 +307,28 @@ function ChangeProfile({ branch, profiles }: { branch: PosBranch; profiles: Busi
             setNotice(null)
           }}
         />
+        <div className="flex flex-wrap gap-2">
+          {choices
+            .filter((profile) => profile.key !== target)
+            .map((profile) => (
+              <label key={profile.key} className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={extra.includes(profile.key)}
+                  disabled={busy}
+                  onChange={() => {
+                    setExtra((keys) =>
+                      keys.includes(profile.key)
+                        ? keys.filter((key) => key !== profile.key)
+                        : [...keys, profile.key],
+                    )
+                    setPreview(null)
+                  }}
+                />
+                {t(profileLabelKey(profile.key), { defaultValue: profile.key })}
+              </label>
+            ))}
+        </div>
         <Button type="submit" variant="outline" disabled={busy || !target}>
           {t('businessModel.previewButton')}
         </Button>

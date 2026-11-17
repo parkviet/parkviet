@@ -11,7 +11,6 @@ import {
   Settings,
   Settings2,
   ShoppingCart,
-  Store,
   UtensilsCrossed,
   Wallet,
 } from 'lucide-react'
@@ -106,6 +105,7 @@ const groups: { key: string; labelKey: string; icon: NavEntry['icon']; children:
     labelKey: 'navConfiguration',
     icon: Settings2,
     children: [
+      { key: 'store-info', labelKey: 'storeInfo.title', path: '/settings/store-info' },
       { key: 'branches', labelKey: 'adminResource_branches', path: '/branches' },
       {
         key: 'branch',
@@ -128,12 +128,6 @@ const groups: { key: string; labelKey: string; icon: NavEntry['icon']; children:
 // Settings entries are relative to the store's /settings page.
 const settings = [
   { key: 'setup', labelKey: 'setup.title', path: '/setup', icon: Settings },
-  {
-    key: 'store-model',
-    labelKey: 'businessModel.storeTitle',
-    path: '/business-model',
-    icon: Store,
-  },
   {
     key: 'einvoice-settings',
     labelKey: 'einvoiceSettings.title',

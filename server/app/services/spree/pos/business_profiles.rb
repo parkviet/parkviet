@@ -148,6 +148,54 @@ module Spree
           find(key) || raise(Conflict.new('Unknown business profile.', reason: UNKNOWN, details: { profile: key.to_s }))
         end
 
+        # The catalog has no pair of modules that refuse to run together
+        # (an order number and table service may both be on). A pair added
+        # here is refused when a combined profile would turn both on.
+        EXCLUSIONS = [].freeze
+
+        # One profile whose modules are the union. Branch defaults and the
+        # display come from the first key, the primary type.
+        def combine(keys)
+          list = Array(keys).map { |key| fetch!(key) }
+          raise Conflict.new('Choose at least one business type.', reason: UNKNOWN) if list.empty?
+          if list.map(&:key).uniq.size != list.size
+            raise Conflict.new('Business types must not repeat.', reason: 'parameter_invalid')
+          end
+
+          primary = list.first
+          modules = list.flat_map(&:modules).uniq
+          blocked = EXCLUSIONS.select { |left, right| modules.include?(left) && modules.include?(right) }
+          if blocked.any?
+            raise Conflict.new('These business types turn on modules that cannot run together.',
+                               reason: 'profile_modules_conflict', details: { pairs: blocked })
+          end
+
+          Profile.new(key: primary.key, group: primary.group, order: primary.order, modules: modules.freeze,
+                      optional_modules: (list.flat_map(&:optional_modules).uniq - modules).freeze,
+                      branch_defaults: primary.branch_defaults,
+                      display: primary.display,
+                      recommended_features: list.flat_map(&:recommended_features).uniq.freeze,
+                      sample_units: list.flat_map(&:sample_units).uniq.freeze,
+                      kitchen_stations: list.flat_map(&:kitchen_stations).uniq.freeze)
+        end
+
+        # A list the client sent, or a one-element list from the old single key.
+        # Nil when the client named neither, so a new branch can inherit the store.
+        def keys_for(profile_key: nil, profile_keys: nil)
+          unless profile_keys.nil?
+            raise Conflict.new('Business types must be a list.', reason: 'parameter_invalid') unless profile_keys.is_a?(Array)
+
+            keys = profile_keys.map(&:to_s)
+            raise Conflict.new('Choose at least one business type.', reason: UNKNOWN) if keys.empty?
+            raise Conflict.new('Business types must not repeat.', reason: 'parameter_invalid') if keys.uniq.size != keys.size
+
+            return keys
+          end
+          return [profile_key.to_s] if profile_key.present?
+
+          nil
+        end
+
         def to_pos
           { version: version, modules: Modules.all.map(&:to_pos), profiles: all.map(&:to_pos),
             tax_categories: TaxCategories.options, menu_tax_defaults: TaxCategories::MENU_DEFAULTS }

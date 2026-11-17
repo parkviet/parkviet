@@ -46,6 +46,7 @@ export type PosBranch = {
   variance_threshold?: string | null;
   // Industry profile of the branch; absent on servers without profiles.
   profile_key?: string;
+  profile_keys?: string[];
   profile_version?: number;
   // Wall-clock time the business day rolls, HH:MM. Missing means 04:00.
   business_day_cutoff?: string;

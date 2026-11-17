@@ -26,6 +26,15 @@ RSpec.describe Spree::Pos::BusinessDay, type: :model do
     expect(Spree::Pos::Workspace.business_now).to eq(zone.local(2026, 11, 6, 1, 0))
   end
 
+  it 'inherits a null cutoff from the store and lets the branch override it' do
+    Spree::Pos::StoreInfo.create!(store: store, name: 'POS', phone: '0901111111', business_day_cutoff: '05:00')
+    branch.update!(business_day_cutoff: nil)
+    expect(described_class.for(branch, zone.local(2026, 11, 6, 4, 30))).to eq(Date.new(2026, 11, 5))
+    expect(described_class.for(branch, zone.local(2026, 11, 6, 5, 0))).to eq(Date.new(2026, 11, 6))
+    branch.update!(business_day_cutoff: '04:00')
+    expect(described_class.for(branch, zone.local(2026, 11, 6, 4, 30))).to eq(Date.new(2026, 11, 6))
+  end
+
   it 'uses the branch timezone, so the same instant can be a different business date' do
     instant = Time.utc(2026, 11, 5, 22, 0)
     expect(described_class.for(branch, instant)).to eq(Date.new(2026, 11, 6))

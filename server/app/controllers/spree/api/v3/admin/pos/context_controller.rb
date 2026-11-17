@@ -37,7 +37,8 @@ module Spree
                   currency: store.default_currency,
                   locale: store.default_locale,
                   timezone: store_timezone(store),
-                  profile: store_profile(store)
+                  profile: store_profile(store),
+                  info: store_info(store)
                 }
               }.merge(resolved)
             end
@@ -45,6 +46,23 @@ module Spree
             private
 
             # Every printable field, null when blank, so the client sees one shape.
+            # Effective POS details of the branch this session is using.
+            def store_info(store)
+              branch = Spree::Pos::Branch.locate(Spree::Pos::Branch.for_store(store), params[:branch_id])
+              return unless branch
+
+              view = Spree::Pos::StoreInfo.effective(branch)
+              {
+                name: view[:name][:value],
+                phone: view[:phone][:value],
+                email: view[:contact_email][:value],
+                address: view[:address][:value],
+                tax_code: view[:tax_code][:value],
+                logo_url: view[:logo][:value],
+                business_day_cutoff: view[:business_day_cutoff][:value]
+              }
+            end
+
             def store_profile(store)
               present = Spree::Pos::ReceiptBuilder.store_profile(store)
               Spree::Pos::ReceiptBuilder::STORE_PROFILE_FIELDS.index_with { |field| present[field] }.

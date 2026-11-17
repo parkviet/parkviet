@@ -12,15 +12,19 @@ module Spree
       module Preview
         module_function
 
-        def call(branch:, profile_key:)
-          profile = Branches::Create.available!(BusinessProfiles.fetch!(profile_key))
+        def call(branch:, profile_key: nil, profile_keys: nil)
+          keys = BusinessProfiles.keys_for(profile_key: profile_key, profile_keys: profile_keys) ||
+                 raise(Conflict.new('Choose at least one business type.', reason: BusinessProfiles::UNKNOWN))
+          profile = Branches::Create.available!(BusinessProfiles.combine(keys))
           on = ModulePolicy.for_branch(branch).select { |_, value| value }.keys
           disable = on - profile.modules
           features = FeaturePolicy.for_branch(branch.store, branch)
           {
             branch_id: branch.prefixed_id,
             from: branch.profile_key,
+            from_profile_keys: branch.resolved_keys,
             to: profile.key,
+            profile_keys: keys,
             profile_version: BusinessProfiles.version,
             modules: { enable: profile.modules - on, disable: disable, in_use: disable.index_with { |key| in_use(branch, key) } },
             defaults: defaults(branch, profile),
