@@ -9,7 +9,7 @@ module Spree
       MAX_LIMIT = 100
       MAX_QUERY_LENGTH = 200
 
-      def initialize(store:, products:, stock_location: nil, currency: nil)
+      def initialize(store:, products:, stock_location: nil, currency: nil, include_cost: false)
         raise ArgumentError, 'an authorized product relation is required' unless products.is_a?(ActiveRecord::Relation) && products.klass == Spree::Product
         raise ArgumentError, 'stock location must belong to the store' if stock_location && stock_location.store_id != store.id
 
@@ -17,6 +17,7 @@ module Spree
         @products = products.where(spree_products: { store_id: store.id })
         @stock_location = stock_location
         @currency = currency || store.default_currency
+        @include_cost = include_cost
       end
 
       def search(query:, page: 1, limit: 25, exact_barcode: false)
@@ -68,7 +69,7 @@ module Spree
               compare_at_price: price&.compare_at_amount&.to_s('F'),
               currency: @currency,
               stock_on_hand: levels[variant.id]&.count_on_hand
-            }
+            }.tap { |row| row[:cost_price] = variant.cost_price.to_s('F') if @include_cost && variant.cost_price }
           },
           meta: { page: page, limit: limit, count: count, pages: (count + limit - 1) / limit,
                   ambiguous: exact_barcode && count > 1 }

@@ -52,7 +52,6 @@ export function BranchOverviewTab() {
         branch={{ ...branch, profile_key: branch.profile_key ?? context.data?.profile?.key }}
         storeId={context.data?.store.id ?? null}
         storeWrite={access.write}
-        branchWrite={branchWrite}
       />
     </div>
   )

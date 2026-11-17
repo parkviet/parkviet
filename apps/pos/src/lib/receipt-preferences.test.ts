@@ -31,16 +31,20 @@ describe('device receipt preferences', () => {
     for (const key of LEGACY_PAPER_KEYS) expect(window.localStorage.getItem(key)).toBeNull();
   });
 
-  it('only enables auto-print for an explicit on preference, and removes it when disabled', () => {
+  it('follows the branch until this register chooses on or off', () => {
     expect(autoPrintEnabled()).toBe(false);
+    expect(autoPrintEnabled(true)).toBe(true);
     window.localStorage.setItem(AUTO_PRINT_KEY, 'true');
-    expect(autoPrintEnabled()).toBe(false);
+    expect(autoPrintEnabled(true)).toBe(true);
     setAutoPrint(true);
     expect(window.localStorage.getItem(AUTO_PRINT_KEY)).toBe('on');
-    expect(autoPrintEnabled()).toBe(true);
+    expect(autoPrintEnabled(false)).toBe(true);
     setAutoPrint(false);
+    expect(window.localStorage.getItem(AUTO_PRINT_KEY)).toBe('off');
+    expect(autoPrintEnabled(true)).toBe(false);
+    setAutoPrint(null);
     expect(window.localStorage.getItem(AUTO_PRINT_KEY)).toBeNull();
-    expect(autoPrintEnabled()).toBe(false);
+    expect(autoPrintEnabled(true)).toBe(true);
   });
 
   it('falls back to manual printing when storage access throws', () => {

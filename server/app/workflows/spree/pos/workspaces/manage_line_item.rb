@@ -81,6 +81,7 @@ module Spree
               SalesChannel.validate_order!(workspace)
               sellable_variant!(branch: workspace.branch, variant: sale_line.variant)
               SaleLineKinds::Menu.ensure_line_available!(workspace, sale_line) if sale_line.kind == SaleLineKinds::Menu::KIND
+              OnHandGuard.ensure_added!(workspace, sale_line.variant, base_quantity - sale_line.base_quantity, kind: sale_line.kind)
             end
             sale_line.line_item.update!(quantity: base_quantity)
             changed = sale_line.base_quantity != base_quantity

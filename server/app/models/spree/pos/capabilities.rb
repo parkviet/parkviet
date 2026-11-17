@@ -28,6 +28,9 @@ module Spree
       # shifts only), and exporting reports.
       REPORT_READ = 'pos.report.read'
       REPORT_EXPORT = 'pos.report.export'
+      # Seeing a variant's cost price on the selling screen. Reports that
+      # already show margin stay on their own permissions.
+      COST_VIEW = 'pos.cost.view'
       # Typed stock at a branch: opening balances, receipts, transfers,
       # counts and quarantine of serial/lot-tracked goods.
       INVENTORY_MANAGE = 'pos.inventory.manage'
@@ -83,7 +86,7 @@ module Spree
       # Accepting or rejecting what guests ordered from the table QR.
       GUEST_ORDER_DECIDE = 'pos.guest_order.decide'
       ASSIGNABLE = [MANAGE, OPEN_SHIFT, DISCOUNT, PRICE_OVERRIDE, CUSTOMER, PAYMENT, RESOLVE, RECOVER, APPROVE, TAKEOVER,
-                    CREDIT_MANAGE, CREDIT_SELL, RETURN, CASH_MOVE, REPORT_READ, REPORT_EXPORT,
+                    CREDIT_MANAGE, CREDIT_SELL, RETURN, CASH_MOVE, REPORT_READ, REPORT_EXPORT, COST_VIEW,
                     INVENTORY_MANAGE, INVENTORY_TRACE, DEVICE_MANAGE, PRINTER_MANAGE, MANAGE_MENU, SET_SOLD_OUT,
                     EINVOICE_MANAGE, OPERATE_KITCHEN, MANAGE_KITCHEN, TABLE_SERVE, RESOURCE_MANAGE, KITCHEN_VOID,
                     RESERVATION_MANAGE, EXPO_OPERATE, MEAL_ACCOUNT_MANAGE, VEHICLE_VISIT_OPERATE,

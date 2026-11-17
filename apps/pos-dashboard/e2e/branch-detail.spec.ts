@@ -56,6 +56,7 @@ test('a branch row opens its page with every tab and the selection follows the b
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Siêu thị Hiền');
   await expect(tabs(page)).toHaveText(['Tổng quan', 'Quầy', 'Nhân viên & quyền', 'Hàng bán', 'Chức năng', 'Thanh toán', 'In ấn', 'Bếp & bar', 'Nền tảng giao hàng', 'Phần cứng']);
   await expect(page.getByText('Kho hàng trung tâm', { exact: true })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Danh sách chức năng của chi nhánh' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Sửa thông tin', exact: true })).toBeEnabled();
   await page.screenshot({ path: testInfo.outputPath('branch-overview.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -63,10 +64,11 @@ test('a branch row opens its page with every tab and the selection follows the b
 
 test('old branch-setting URLs open the matching tab of the selected branch', async ({ page }) => {
   await install(page);
-  for (const [from, to] of [['registers', '/registers'], ['staff', '/staff'], ['products', '/products'], ['features', '/features'], ['label-formats', '/features'], ['business-model', '']]) {
+  for (const [from, to] of [['registers', '/registers'], ['staff', '/staff'], ['products', '/products'], ['features', '/features'], ['label-formats', '/features']]) {
     await page.goto(`/store_1/${from}`);
     await expect(page).toHaveURL(new RegExp(`/store_1/branches/branch_main${to}(?:\\?|$)`));
   }
+  await page.goto('/store_1/business-model'); await expect(page).toHaveURL(/\/store_1\/settings\/store-info(?:\?|$)/);
   await page.goto('/store_1/branches/branch_main/business-model'); await expect(page).toHaveURL(/\/store_1\/branches\/branch_main(?:\?|$)/);
   await page.goto('/store_1/branches/branch_main/label-formats'); await expect(page).toHaveURL(/\/store_1\/branches\/branch_main\/features(?:\?|$)/);
 });

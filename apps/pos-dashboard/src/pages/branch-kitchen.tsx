@@ -12,6 +12,7 @@ import {
   SendIcon,
   SplitIcon,
 } from '@spree/dashboard-ui/icons'
+import { Link } from '@tanstack/react-router'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useBranchScope } from '../components/branch-detail'
@@ -74,7 +75,7 @@ export function BranchKitchenTab() {
   const settings = useKitchenSettings(branch.id)
   return (
     <div className="space-y-6">
-      <TriggerCard settings={settings.data} loading={settings.isPending} write={write} />
+      <TriggerCard settings={settings.data} loading={settings.isPending} />
       {settings.data ? (
         <VoidReasonsCard
           key={settings.data.void_reasons.join()}
@@ -91,32 +92,9 @@ export function BranchKitchenTab() {
   )
 }
 
-function TriggerCard({
-  settings,
-  loading,
-  write,
-}: {
-  settings?: KitchenSettings
-  loading: boolean
-  write: boolean
-}) {
+function TriggerCard({ settings, loading }: { settings?: KitchenSettings; loading: boolean }) {
   const { t } = useTranslation()
-  const { branch } = useBranchScope()
-  const mutation = useKitchenWrite()
-  const [notice, setNotice] = useState<Notice>(null)
-  async function pick(value: string) {
-    setNotice(null)
-    try {
-      await mutation.mutateAsync({
-        method: 'PUT',
-        path: '/pos/kitchen_settings',
-        body: { branch_id: branch.id, kitchen_send_trigger: value },
-      })
-      setNotice({ text: t('saved'), failed: false })
-    } catch (failure) {
-      setNotice({ text: kitchenFailure(failure, t), failed: true })
-    }
-  }
+  const { branch, storeId } = useBranchScope()
   return (
     <ModelCard title={t('branchKitchen.title')} id="branch-kitchen" icon={<SendIcon />}>
       <p className="text-sm text-muted-foreground">{t('branchKitchen.intro')}</p>
@@ -129,18 +107,11 @@ function TriggerCard({
               {t('branchKitchen.moduleOff')}
             </p>
           )}
-          <ModelNotice notice={notice} />
-          <ModelSelect
-            label={t('branchKitchen.trigger')}
-            value={settings.kitchen_send_trigger}
-            disabled={!write || mutation.isPending}
-            hint={t(`branchKitchen.triggerHint_${settings.kitchen_send_trigger}`)}
-            options={[
-              { value: 'on_complete', label: t('branchKitchen.trigger_on_complete') },
-              { value: 'manual', label: t('branchKitchen.trigger_manual') },
-            ]}
-            onChange={(value) => void pick(value)}
-          />
+          <p className="text-sm">
+            <Link to={`/${storeId}/branches/${branch.id}/features` as string} className="underline">
+              {t('salesMoved')}
+            </Link>
+          </p>
         </>
       )}
     </ModelCard>

@@ -34,15 +34,15 @@ test('owner enables store default, disables branch, restores inheritance; every 
   const state = await install(page, 'owner');
   const row = credit(page);
   await expect(row).toContainText('Tắt (cửa hàng chưa bật)');
-  await row.getByRole('button', { name: 'Bật Bán ghi nợ cho cả cửa hàng' }).click();
+  await row.getByRole('switch', { name: 'Bật Bán ghi nợ cho cả cửa hàng' }).click();
   const save = row.getByRole('button', { name: 'Lưu thay đổi' });
   await expect(save).toBeDisabled(); await expect(row.getByLabel('Lý do (bắt buộc)')).toBeFocused();
   await row.getByLabel('Lý do (bắt buộc)').fill('Đã duyệt'); await save.click();
   await expect(row).toContainText('Đang bật');
-  await row.getByRole('button', { name: 'Tắt tại chi nhánh này' }).click();
+  await row.getByRole('switch', { name: 'Tắt tại chi nhánh này' }).click();
   await row.getByLabel('Lý do (bắt buộc)').fill('Kiểm kê'); await row.getByRole('button', { name: 'Lưu thay đổi' }).click();
   await expect(row).toContainText('Tắt tại chi nhánh');
-  await row.getByRole('button', { name: 'Bỏ tắt tại chi nhánh' }).click();
+  await row.getByRole('switch', { name: 'Bỏ tắt tại chi nhánh' }).click();
   await row.getByLabel('Lý do (bắt buộc)').fill('Kiểm kê xong'); await row.getByRole('button', { name: 'Lưu thay đổi' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'tại chi nhánh này đã theo cài đặt của cửa hàng' })).toBeVisible();
   expect(state.writes).toEqual([{ feature: 'credit', enabled: true, reason: 'Đã duyệt' }, { feature: 'credit', branch_id: 'br_1', enabled: false, reason: 'Kiểm kê' }, { feature: 'credit', branch_id: 'br_1', enabled: null, reason: 'Kiểm kê xong' }]);
@@ -51,8 +51,8 @@ test('owner enables store default, disables branch, restores inheritance; every 
 test('manager can only switch off own branch, cannot enable store or restore branch', async ({ page }) => {
   const state = await install(page, 'manager');
   const row = credit(page);
-  await expect(row.getByRole('button', { name: /cho cả cửa hàng/ })).toHaveCount(0);
-  await row.getByRole('button', { name: 'Tắt tại chi nhánh này' }).click();
+  await expect(row.getByRole('switch', { name: /cho cả cửa hàng/ })).toHaveCount(0);
+  await row.getByRole('switch', { name: 'Tắt tại chi nhánh này' }).click();
   await row.getByLabel('Lý do (bắt buộc)').fill('Chưa duyệt'); await row.getByRole('button', { name: 'Lưu thay đổi' }).click();
   await expect(row.getByRole('button')).toHaveCount(0);
   expect(state.writes).toEqual([{ feature: 'credit', branch_id: 'br_1', enabled: false, reason: 'Chưa duyệt' }]);
@@ -60,13 +60,13 @@ test('manager can only switch off own branch, cannot enable store or restore bra
 
 test('read-only administrator cannot write feature switches', async ({ page }) => {
   const state = await install(page, 'reader');
-  await expect(page.getByRole('list', { name: 'Danh sách chức năng' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Danh sách chức năng', exact: true })).toBeVisible();
   await expect(credit(page).getByRole('button')).toHaveCount(0);
   expect(state.writes).toEqual([]);
 });
 
 test('older API without feature settings reports unsupported instead of exposing switches', async ({ page }) => {
   const state = await install(page, 'owner', true);
-  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Quy tắc bán hàng' }).getByRole('alert')).toBeVisible();
   await expect(credit(page)).toHaveCount(0); expect(state.writes).toEqual([]);
 });

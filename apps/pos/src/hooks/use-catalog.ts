@@ -15,6 +15,7 @@ export type CatalogPage = {
     compare_at_price: string | null;
     currency: string;
     stock_on_hand: number | null;
+    cost_price?: string | null;
   }[];
   meta: { page: number; pages: number; count: number; ambiguous: boolean };
 };

@@ -23,7 +23,7 @@ module Spree
               return if key.nil?
 
               branch = guard.branch!(current_store, params[:branch_id])
-              attributes = params.permit(:printer_id, :size, :pickup_minutes, fields: []).to_h
+              attributes = params.permit(:printer_id, :size, :pickup_minutes, :auto_print, fields: []).to_h
               attributes['fields'] = [] if params.key?(:fields) && params[:fields].blank?
               result = Spree::Pos::CupLabels::Setup.update(store: current_store, staff: current_user, key: key, branch: branch,
                                                            attributes: attributes)

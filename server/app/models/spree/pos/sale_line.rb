@@ -74,12 +74,23 @@ module Spree
           buffet_tier_id: BuffetTier.prefixed_for(buffet_tier_id),
           buffet_cover_line_id: SaleLine.prefixed_for(buffet_cover_line_id),
           # The time-of-day price it was sold at, such as "Happy hour".
-          price_label: price_label
+          price_label: price_label,
+          below_cost: below_cost?
         }
       end
 
       # What the kitchen has not been told yet; only menu lines go to the
       # kitchen, and a held course waits for its fire.
+      # A warning only: the cost figure itself is never sent on the line.
+      def below_cost?
+        return false unless SalesSettings.for(workspace.branch)['warn_below_cost']
+
+        cost = variant&.cost_price
+        return false if cost.nil?
+
+        unit_price < cost
+      end
+
       def pending_kitchen_quantity
         return BigDecimal('0') unless kind == SaleLineKinds::Menu::KIND && course_status != 'held'
 

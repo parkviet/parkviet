@@ -8351,6 +8351,9 @@ components:
         pickup_minutes:
           type: integer
           description: How long a ready call number stays on the call board.
+        auto_print:
+          type: boolean
+          description: Print a cup label automatically when the order is sent to the kitchen or completed.
         module_enabled:
           type: boolean
           description: Whether `fnb.cup_label` is on at the branch.

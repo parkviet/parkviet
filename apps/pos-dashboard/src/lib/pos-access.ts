@@ -217,7 +217,12 @@ export function visibleNav(page: PosPage, access: PosAccess) {
       (canAdminister(access) || canManageResources(access) || canManageBranch(access))
     )
   if (page === 'features' || page === 'business-model')
-    return canAdminister(access) || canManageBranch(access)
+    return (
+      canAdminister(access) ||
+      canManageBranch(access) ||
+      canManageKitchen(access) ||
+      canManageResources(access)
+    )
   if (page === 'store-info') return canAdminister(access)
   if (page === 'setup' || page === 'store-model') return canAdminister(access, true)
   if (page === 'devices')

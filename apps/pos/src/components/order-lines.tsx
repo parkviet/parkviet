@@ -1,4 +1,5 @@
 import { formatMoney, parseVndAmount } from '@parkviet/pos-shared/money';
+import { normalizeSalesSettings } from '@parkviet/pos-shared/sales-settings';
 import {
   describeTraceFailure,
   formatExpiry,
@@ -18,6 +19,7 @@ import type {
   PosWorkspace,
 } from '../lib/pos-context';
 import { MAX_COUNT_QUANTITY, parseCountQuantity, parseMeasuredQuantity } from '../lib/quantity';
+import { usePosSelection } from './pos-selection';
 import { snapshotLocked } from '../lib/request-failure';
 import { lineChanged, lineSent } from '../lib/table-kitchen';
 import { ItemDiscountEditor } from './item-discount-editor';
@@ -100,6 +102,9 @@ export function OrderLines({
   const [notice, setNotice] = useState('');
   const reprint = useCupLabelReprint();
   const lines = workspace.line_items ?? [];
+  const cartNewest =
+    normalizeSalesSettings(usePosSelection().context.data?.sales_settings).cart_order ===
+    'newest_first';
   const currency = workspace.totals?.currency ?? 'VND';
 
   // Changing counts and taking lines off, which a table order allows without the lease.
@@ -159,7 +164,7 @@ export function OrderLines({
                 </td>
               </tr>
             ) : null}
-            {lines.map((line, index) => {
+            {(cartNewest ? [...lines].reverse() : lines).map((line, index) => {
               const measured = line.kind === 'measured';
               // A scale label fixes the package's quantity; the server refuses edits.
               const labelled = Boolean(line.label_barcode);
@@ -208,6 +213,7 @@ export function OrderLines({
                   <td>
                     <div className="basket-line-name">
                       <strong>{line.name}</strong>
+                      {line.below_cost ? <span className="stock-low">{t('belowCost')}</span> : null}
                       {line.price_label ? (
                         <span className="basket-line-price-label">{line.price_label}</span>
                       ) : null}

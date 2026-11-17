@@ -151,6 +151,7 @@ Rails.application.routes.draw do
               end
               # Module keys contain a dot (retail.units), so the id takes any segment.
               resources :modules, only: [:index, :update], controller: 'branch_modules', constraints: { id: %r{[^/]+} }
+              put 'sales_settings', to: 'branch_sales_settings#update'
               resource :info, only: [:show, :update], controller: 'branch_infos' do
                 post :logo
                 delete :logo, action: :destroy_logo

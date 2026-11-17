@@ -14,7 +14,7 @@ module Spree
         FIELDS = %w[call_number options note guest_name time store_name].freeze
         PICKUP_MINUTES = (1..120)
         DEFAULT_PICKUP_MINUTES = 15
-        KEYS = %w[size fields pickup_minutes].freeze
+        KEYS = %w[size fields pickup_minutes auto_print].freeze
 
         module_function
 
@@ -24,7 +24,8 @@ module Spree
           fields = stored['fields'].is_a?(Array) ? FIELDS & stored['fields'] : FIELDS
           minutes = stored['pickup_minutes']
           minutes = DEFAULT_PICKUP_MINUTES unless minutes.is_a?(Integer) && PICKUP_MINUTES.cover?(minutes)
-          { 'size' => size, 'fields' => fields, 'pickup_minutes' => minutes }
+          auto = [true, false].include?(stored['auto_print']) ? stored['auto_print'] : true
+          { 'size' => size, 'fields' => fields, 'pickup_minutes' => minutes, 'auto_print' => auto }
         end
 
         # The settings as stored after a change, or a Conflict naming the
@@ -36,7 +37,8 @@ module Spree
           invalid!('fields') unless fields.is_a?(Array) && fields.all? { |field| FIELDS.include?(field) }
           minutes = Integer(values['pickup_minutes'].to_s, exception: false)
           invalid!('pickup_minutes') unless minutes && PICKUP_MINUTES.cover?(minutes)
-          { 'size' => values['size'], 'fields' => FIELDS & fields, 'pickup_minutes' => minutes }
+          invalid!('auto_print') unless [true, false].include?(values['auto_print'])
+          { 'size' => values['size'], 'fields' => FIELDS & fields, 'pickup_minutes' => minutes, 'auto_print' => values['auto_print'] }
         end
 
         def label_mm(settings)

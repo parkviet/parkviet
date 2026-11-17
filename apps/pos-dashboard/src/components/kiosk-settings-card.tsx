@@ -13,7 +13,7 @@ import {
   useKioskWrite,
 } from '../hooks/use-kiosk-settings'
 import { useBranchScope } from './branch-detail'
-import { ModelCard, ModelCheck, ModelNotice, ModelState, modelDate } from './setup/model-ui'
+import { ModelCard, ModelNotice, ModelState, modelDate } from './setup/model-ui'
 
 type Notice = { text: string; failed: boolean } | null
 
@@ -54,7 +54,7 @@ function KioskSettingsForm({ settings }: { settings: KioskSettings }) {
   const qrId = useId()
   const [idle, setIdle] = useState(String(settings.kiosk_idle_seconds))
   const [qrTimeout, setQrTimeout] = useState(String(settings.kiosk_qr_timeout_seconds))
-  const [kitchen, setKitchen] = useState(settings.kiosk_kitchen_before_payment)
+  const [kitchen] = useState(settings.kiosk_kitchen_before_payment)
   const [notice, setNotice] = useState<Notice>(null)
   const idleSeconds = secondsWithin(idle, KIOSK_IDLE_RANGE)
   const qrSeconds = secondsWithin(qrTimeout, KIOSK_QR_TIMEOUT_RANGE)
@@ -139,13 +139,7 @@ function KioskSettingsForm({ settings }: { settings: KioskSettings }) {
             </p>
           </div>
         </div>
-        <ModelCheck
-          checked={kitchen}
-          onChange={setKitchen}
-          description={t('kiosk.kitchenBeforePaymentHint')}
-        >
-          {t('kiosk.kitchenBeforePayment')}
-        </ModelCheck>
+        <p className="text-sm text-muted-foreground">{t('salesMoved')}</p>
         <Button
           type="submit"
           disabled={busy || idleSeconds === null || qrSeconds === null}

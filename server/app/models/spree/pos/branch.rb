@@ -117,6 +117,7 @@ module Spree
           business_day_cutoff: cutoff_clock, business_day_cutoff_inherited: business_day_cutoff.nil?,
           staff_session_idle_minutes: staff_session_idle_minutes,
           kitchen_send_trigger: kitchen_send_trigger,
+          sales_settings: SalesSettings.for(self),
           seated_alert_minutes: seated_alert_minutes,
           void_reasons: void_reasons
         }

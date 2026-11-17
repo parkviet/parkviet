@@ -18,7 +18,7 @@ for (const enabled of [false, true]) test(`branch module settings render server 
     return route.fulfill({ json: { data: [], meta: { next: null } } });
   });
   await installDashboardShell(page, { authenticated: true, write: false });
-  await page.goto('/store_1/branches/branch_main');
+  await page.goto('/store_1/branches/branch_main/features');
   const list = page.getByRole('list', { name: 'Danh sách chức năng của chi nhánh' });
   // Every module the catalogue offers, plus the unknown server module.
   const offered = BUSINESS_PROFILES.modules.filter((item) => item.status === 'available').length;

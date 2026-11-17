@@ -152,6 +152,7 @@
   "capabilityCashMove": "Drawer cash in/out",
   "capabilityReportRead": "Branch-wide reports",
   "capabilityReportExport": "Export reports",
+  "capabilityCostView": "See cost while selling",
   "capabilityInventoryManage": "Manage traced stock",
   "capabilityInventoryTrace": "Trace lots and serials",
   "adminLotSelection": "Lot selection at sale",
@@ -249,7 +250,7 @@
     },
     "fnb_kitchen": {
       "label": "Kitchen and bar",
-      "description": "Send items to kitchen and bar stations; kitchen screens (KDS) and kitchen tickets.",
+      "description": "Send items to kitchen and bar stations; kitchen screens (KDS) and kitchen tickets. A cancelled item is still printed on a void ticket.",
       "off": "Kitchen and bar is off at this branch, so orders are not sent to the kitchen and no new station can be added. Items still sell as usual.",
       "disabled": "Kitchen and bar is off at this branch; the server records no new station or route. Selling is not affected."
     },

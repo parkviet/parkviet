@@ -152,6 +152,7 @@
   "capabilityCashMove": "Thu/chi tiền mặt trong két",
   "capabilityReportRead": "Xem báo cáo cả chi nhánh",
   "capabilityReportExport": "Xuất báo cáo",
+  "capabilityCostView": "Xem giá vốn khi bán",
   "capabilityInventoryManage": "Quản lý tồn truy xuất",
   "capabilityInventoryTrace": "Truy xuất lô/serial",
   "adminLotSelection": "Chọn lô khi bán",
@@ -249,7 +250,7 @@
     },
     "fnb_kitchen": {
       "label": "Bếp và bar",
-      "description": "Gửi món tới trạm bếp, bar; màn hình bếp (KDS) và phiếu in bếp.",
+      "description": "Gửi món tới trạm bếp, bar; màn hình bếp (KDS) và phiếu in bếp. Món đã huỷ vẫn được in trên phiếu huỷ.",
       "off": "Chi nhánh chưa bật chức năng Bếp và bar, nên đơn không gửi tới bếp và không thêm được trạm mới. Món vẫn bán bình thường.",
       "disabled": "Chi nhánh chưa bật chức năng Bếp và bar; máy chủ không ghi nhận trạm hay tuyến mới. Việc bán hàng không bị ảnh hưởng."
     },

@@ -46,7 +46,7 @@ const GROUPS: { key: string; capabilities: Capability[] }[] = [
       'pos.rate_plan.manage',
     ],
   },
-  { key: 'reports', capabilities: ['pos.report.read', 'pos.report.export'] },
+  { key: 'reports', capabilities: ['pos.report.read', 'pos.report.export', 'pos.cost.view'] },
   { key: 'stock', capabilities: ['pos.inventory.manage', 'pos.inventory.trace'] },
   {
     key: 'menu',

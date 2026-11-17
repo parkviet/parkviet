@@ -19,7 +19,10 @@ module Spree
 
               products = Spree::Pos::SalesChannel.sellable_products(current_store)
                 .where(id: Spree::Pos::BranchProduct.where(branch_id: branch.id).select(:product_id))
-              result = Spree::Pos::CatalogReader.new(store: current_store, products: products, stock_location: branch.stock_location).search(
+              settings = Spree::Pos::SalesSettings.for(branch)
+              include_cost = settings['show_cost'] && policy.allows?(branch, Spree::Pos::Capabilities::COST_VIEW)
+              result = Spree::Pos::CatalogReader.new(store: current_store, products: products, stock_location: branch.stock_location,
+                                                     include_cost: include_cost).search(
                 query: params.fetch(:q, ''), page: params.fetch(:page, 1), limit: params.fetch(:limit, 25),
                 exact_barcode: params[:barcode] == 'true'
               )

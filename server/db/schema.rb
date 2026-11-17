@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_17_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -2537,6 +2537,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_110000) do
     t.integer "kiosk_qr_timeout_seconds", default: 180, null: false
     t.boolean "kiosk_kitchen_before_payment", default: false, null: false
     t.integer "seated_alert_minutes"
+    t.jsonb "sales_settings", default: {}, null: false
     t.jsonb "profile_keys", default: [], null: false
     t.index ["cup_label_printer_id"], name: "index_spree_pos_branches_on_cup_label_printer_id"
     t.index ["service_charge_tax_category_id"], name: "index_spree_pos_branches_on_service_charge_tax_category_id"
@@ -2548,6 +2549,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_110000) do
     t.check_constraint "bottle_keep_days >= 1 AND bottle_keep_days <= 3650", name: "chk_pos_branches_bottle_keep_days"
     t.check_constraint "display_freshness_ttl_seconds IS NULL OR display_freshness_ttl_seconds >= 5 AND display_freshness_ttl_seconds <= 120", name: "chk_pos_branches_display_freshness"
     t.check_constraint "jsonb_typeof(operating_windows) = 'array'::text", name: "chk_pos_branches_operating_windows"
+    t.check_constraint "jsonb_typeof(sales_settings) = 'object'::text", name: "chk_pos_branches_sales_settings"
     t.check_constraint "jsonb_typeof(weekend_days) = 'array'::text", name: "chk_pos_branches_weekend_days"
     t.check_constraint "kiosk_idle_seconds >= 15 AND kiosk_idle_seconds <= 600", name: "chk_pos_branches_kiosk_idle"
     t.check_constraint "kiosk_qr_timeout_seconds >= 60 AND kiosk_qr_timeout_seconds <= 900", name: "chk_pos_branches_kiosk_qr_timeout"

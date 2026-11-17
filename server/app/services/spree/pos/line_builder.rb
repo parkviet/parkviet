@@ -39,6 +39,7 @@ module Spree
           serial_codes = trace_inputs!(workspace, variant, variant_unit, serial_codes)
           lot_code, expiry_on = traced_lot!(workspace, variant, lot_code) if variant_unit.tracked_mode == 'lot'
           sale_qty, base_quantity, kind = resolve_quantities(variant_unit, quantity, sale_quantity, lot_code, serial_codes)
+          OnHandGuard.ensure_added!(workspace, variant, base_quantity, kind: kind)
           raise Conflict, 'A scale label line takes no options.' if label && (!modifiers.nil? || note.present?)
 
           menu = label ? nil : SaleLineKinds::Menu.resolve(workspace: workspace, variant: variant, modifiers: modifiers, note: note)

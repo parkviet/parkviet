@@ -6,7 +6,8 @@ import {
 } from '@parkviet/pos-shared/pos-features'
 import { Button, Input, Label } from '@spree/dashboard-ui'
 import { useTranslation } from 'react-i18next'
-import { modelDate as formatInZone, ModelStatus } from './setup/model-ui'
+import { modelDate as formatInZone } from './setup/model-ui'
+import { ToggleRow } from './toggle-row'
 
 export type FeatureChange = {
   feature: PosFeature
@@ -62,93 +63,110 @@ export function FeatureSwitchRow({
     .filter((row) => row.feature === feature)
     .sort((a, b) => (b.changed_at ?? '').localeCompare(a.changed_at ?? ''))[0]
   const reasonId = `feature-reason-${feature}`
+  // One switch for the next change a person here is allowed to make.
+  // Store-wide off stays a quiet text action when the switch turns the branch off.
+  const next = !storeOn
+    ? storeWrite
+      ? { scope: 'store' as const, enabled: true, label: t('featureStoreTurnOn', { name }) }
+      : null
+    : !branchOff && branchWrite
+      ? { scope: 'branch' as const, enabled: false, label: t('featureBranchTurnOff', { name }) }
+      : branchOff && storeWrite
+        ? { scope: 'branch' as const, enabled: null, label: t('featureBranchRestore', { name }) }
+        : storeWrite
+          ? { scope: 'store' as const, enabled: false, label: t('featureStoreTurnOff', { name }) }
+          : null
+  const storeOff =
+    storeWrite && storeOn && next?.scope !== 'store'
+      ? { scope: 'store' as const, enabled: false, label: t('featureStoreTurnOff', { name }) }
+      : null
   return (
-    <li data-feature={feature} className="flex flex-wrap items-start gap-4 py-5">
-      <div className="min-w-0 flex-1 space-y-1">
-        <h3 className="text-base font-medium">{name}</h3>
-        <p className="text-sm text-muted-foreground">{t(`featureHint_${feature}`)}</p>
-        <p className="text-sm text-muted-foreground">
-          {t('featureStoreState', { state: t(storeOn ? 'featureStatusOn' : 'featureStatusOff') })}
-          {' · '}
-          {t(branchOff ? 'featureBranchOffState' : 'featureBranchFollows')}
-        </p>
-        {latest ? (
-          <p className="text-sm text-muted-foreground">
-            {t('featureLastChange', {
-              name: latest.changed_by_name ?? '—',
-              at: formatInZone(latest.changed_at, i18n.language, timeZone),
-              reason: latest.reason,
-            })}
-          </p>
+    <li data-feature={feature}>
+      <ToggleRow
+        checked={on}
+        disabled={busy || Boolean(change) || !next}
+        switchLabel={next?.label ?? name}
+        onChange={
+          next && !change
+            ? () => onStart({ feature, scope: next.scope, enabled: next.enabled })
+            : undefined
+        }
+        label={name}
+        description={
+          <>
+            <p>{t(`featureHint_${feature}`)}</p>
+            <p>
+              {on
+                ? t('featureStatusOn')
+                : t(why === 'branch' ? 'featureOffByBranch' : 'featureOffByStore')}
+              {' · '}
+              {t('featureStoreState', {
+                state: t(storeOn ? 'featureStatusOn' : 'featureStatusOff'),
+              })}
+              {' · '}
+              {t(branchOff ? 'featureBranchOffState' : 'featureBranchFollows')}
+            </p>
+            {latest ? (
+              <p>
+                {t('featureLastChange', {
+                  name: latest.changed_by_name ?? '—',
+                  at: formatInZone(latest.changed_at, i18n.language, timeZone),
+                  reason: latest.reason,
+                })}
+              </p>
+            ) : null}
+          </>
+        }
+        extra={
+          storeOff && !change ? (
+            <button
+              type="button"
+              className="text-sm text-muted-foreground underline"
+              disabled={busy}
+              onClick={() => onStart({ feature, scope: 'store', enabled: false })}
+            >
+              {storeOff.label}
+            </button>
+          ) : null
+        }
+      >
+        {change ? (
+          <form
+            className="flex w-full flex-col gap-3 rounded-md bg-muted p-4"
+            aria-label={t('featureChangeFor', { name })}
+            onSubmit={(event) => {
+              event.preventDefault()
+              onSave()
+            }}
+          >
+            <p id={`${reasonId}-hint`}>{t(featureChangeText(change, 'confirm'), { name })}</p>
+            <Label htmlFor={reasonId}>{t('featureReason')}</Label>
+            <Input
+              id={reasonId}
+              value={reason}
+              maxLength={200}
+              required
+              autoComplete="off"
+              aria-describedby={`${reasonId}-hint`}
+              disabled={busy}
+              autoFocus
+              onChange={(event) => onReason(event.target.value)}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="submit"
+                variant={change.enabled === false ? 'destructive' : 'default'}
+                disabled={busy || !reason.trim()}
+              >
+                {busy ? t('waiting') : t('featureSave')}
+              </Button>
+              <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>
+                {t('adminCancel')}
+              </Button>
+            </div>
+          </form>
         ) : null}
-      </div>
-      <ModelStatus on={on}>
-        {on
-          ? t('featureStatusOn')
-          : t(why === 'branch' ? 'featureOffByBranch' : 'featureOffByStore')}
-      </ModelStatus>
-      {!change && (storeWrite || branchWrite) ? (
-        <div className="flex w-full flex-wrap gap-2">
-          {storeWrite ? (
-            <Button
-              type="button"
-              variant={storeOn ? 'destructive' : 'outline'}
-              disabled={busy}
-              onClick={() => onStart({ feature, scope: 'store', enabled: !storeOn })}
-            >
-              {t(storeOn ? 'featureStoreTurnOff' : 'featureStoreTurnOn', { name })}
-            </Button>
-          ) : null}
-          {branchWrite && (!branchOff || storeWrite) ? (
-            <Button
-              type="button"
-              variant={branchOff ? 'outline' : 'destructive'}
-              disabled={busy}
-              onClick={() =>
-                onStart({ feature, scope: 'branch', enabled: branchOff ? null : false })
-              }
-            >
-              {t(branchOff ? 'featureBranchRestore' : 'featureBranchTurnOff', { name })}
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-      {change ? (
-        <form
-          className="flex w-full flex-col gap-3 rounded-md bg-muted p-4"
-          aria-label={t('featureChangeFor', { name })}
-          onSubmit={(event) => {
-            event.preventDefault()
-            onSave()
-          }}
-        >
-          <p id={`${reasonId}-hint`}>{t(featureChangeText(change, 'confirm'), { name })}</p>
-          <Label htmlFor={reasonId}>{t('featureReason')}</Label>
-          <Input
-            id={reasonId}
-            value={reason}
-            maxLength={200}
-            required
-            autoComplete="off"
-            aria-describedby={`${reasonId}-hint`}
-            disabled={busy}
-            autoFocus
-            onChange={(event) => onReason(event.target.value)}
-          />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="submit"
-              variant={change.enabled === false ? 'destructive' : 'default'}
-              disabled={busy || !reason.trim()}
-            >
-              {busy ? t('waiting') : t('featureSave')}
-            </Button>
-            <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>
-              {t('adminCancel')}
-            </Button>
-          </div>
-        </form>
-      ) : null}
+      </ToggleRow>
     </li>
   )
 }

@@ -47,6 +47,8 @@ module Spree
             Tenders::Guard.tracked_guard!(workspace)
             order = workspace.order
             raise Conflict, 'Order has no items.' if order.line_items.empty?
+
+            OnHandGuard.ensure_order!(workspace)
             if TenderAttempt.where(workspace: workspace, status: TenderAttempt::UNRESOLVED).exists?
               raise Conflict, 'Unresolved tender attempts block completion.'
             end

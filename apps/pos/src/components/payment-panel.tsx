@@ -7,6 +7,7 @@ import {
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { quickApproveCredit } from '../hooks/use-receivables';
+import { playScanTone } from '../lib/scan-sounds';
 import { lookupStoredValueCard } from '../hooks/use-stored-value';
 import {
   usePaymentMethods,
@@ -165,6 +166,8 @@ export function PaymentPanel({
   canSellCredit = false,
   creditEnabled = true,
   quickCredit = false,
+  paymentChime = true,
+  autoPrintDefault = false,
   drawerOpen = true,
   disabled,
   command,
@@ -221,6 +224,9 @@ export function PaymentPanel({
   creditEnabled?: boolean;
   // `quick_credit` on: the cashier approves their own credit sale, no manager.
   quickCredit?: boolean;
+  // Play a short tone when received money covers the order.
+  paymentChime?: boolean;
+  autoPrintDefault?: boolean;
   // The order's shift is open and this cashier owns it.
   drawerOpen?: boolean;
   disabled: boolean;
@@ -302,7 +308,7 @@ export function PaymentPanel({
       // to prints, so nothing prints from here.
       if (fullscreen)
         completedHandler.current?.(completedWorkspace.current, { print: printOnComplete.current });
-      else if (autoPrintEnabled()) setAutoPrint(true);
+      else if (autoPrintEnabled(autoPrintDefault)) setAutoPrint(true);
     }
     wasCompleted.current = completed;
   }, [completed, fullscreen]);
@@ -484,10 +490,12 @@ export function PaymentPanel({
       // "Finish" in the dialog finishes the sale: once the confirmed money
       // covers the order, complete it here instead of a second click. A
       // refusal (e.g. lost lease) leaves the "Complete order" button as before.
-      if (latest && paidInFull(latest, sponsorDue))
+      if (latest && paidInFull(latest, sponsorDue)) {
+        if (paymentChime !== false) playScanTone('ok');
         await command((current) =>
           tenders.complete(current, undefined, buyerDetails, completeOptions),
         );
+      }
     });
   }
 

@@ -27,6 +27,7 @@ module Spree
             staff: { id: staff.prefixed_id, name: StaffName.call(staff) },
             shift: shift && { id: shift.prefixed_id, opened_at: shift.opened_at&.iso8601 },
             offline: availability(branch, register, shift),
+            sales_settings: SalesSettings.for(branch),
             menu: ModulePolicy.enabled?(branch, SaleLineKinds::Menu::MODULE) ? Menu::Reader.call(branch: branch) : nil
           }
           body.merge(etag: Digest::SHA256.hexdigest(body.to_json)[0, 32], generated_at: Time.current.iso8601,

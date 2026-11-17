@@ -69,7 +69,7 @@ async function choose(page: Page, label: string, option: string) {
   await page.getByRole('combobox', { name: label, exact: true }).click();
   await page.getByRole('option', { name: option, exact: true }).click();
 }
-const row = (page: Page, key: string) => page.locator(`li[data-module="${key}"]`).filter({ has: page.getByRole('button') });
+const row = (page: Page, key: string) => page.locator(`li[data-module="${key}"]`);
 
 test('profile diff preserves in-use warnings, defaults opt-in, reason and expected profile', async ({ page }) => {
   const state = world(); await install(page, state);
@@ -108,16 +108,16 @@ test('profile conflict reloads diff and requires confirmation of freshly unticke
 });
 
 test('module dependency is blocked, disable needs reason, enable confirms dependent modules', async ({ page }) => {
-  const state = world(); await install(page, state);
-  await expect(row(page, 'retail.units').getByRole('button', { name: 'Tắt Quy đổi đơn vị', exact: true })).toBeDisabled();
+  const state = world(); await install(page, state, '/store_1/branches/branch_main/features');
+  await expect(row(page, 'retail.units').getByRole('switch', { name: 'Tắt Quy đổi đơn vị', exact: true })).toBeDisabled();
   for (const [key, name] of [['retail.measured', 'Hàng cân, tem cân'], ['retail.units', 'Quy đổi đơn vị']]) {
-    await row(page, key).getByRole('button', { name: `Tắt ${name}`, exact: true }).click();
+    await row(page, key).getByRole('switch', { name: `Tắt ${name}`, exact: true }).click();
     const form = page.getByRole('form', { name: `Đổi ${name}`, exact: true });
     await expect(form.getByRole('button', { name: 'Lưu thay đổi' })).toBeDisabled();
     await form.getByLabel('Lý do (bắt buộc)').fill('Tạm ngừng'); await form.getByRole('button', { name: 'Lưu thay đổi' }).click();
     await expect(row(page, key)).toContainText('Đang tắt');
   }
-  await row(page, 'retail.measured').getByRole('button', { name: 'Bật Hàng cân, tem cân', exact: true }).click();
+  await row(page, 'retail.measured').getByRole('switch', { name: 'Bật Hàng cân, tem cân', exact: true }).click();
   const form = page.getByRole('form', { name: 'Đổi Hàng cân, tem cân' });
   await expect(form).toContainText('Quy đổi đơn vị cũng sẽ được bật');
   await form.getByLabel('Lý do (bắt buộc)').fill('Bán lại hàng cân'); await form.getByRole('button', { name: 'Lưu thay đổi' }).click();
@@ -142,11 +142,13 @@ test('store info stores several business types, wholesale and interests without 
 
 for (const manager of [true, false]) test(manager ? 'branch manager can switch own modules but not industry/store profile' : 'read-only administrator sees no write actions', async ({ page }) => {
   const state = world(); state.write = false; state.read = !manager; state.manager = manager;
-  await install(page, state);
+  await install(page, state, '/store_1/branches/branch_main/features');
   await expect(page.getByRole('list', { name: 'Danh sách chức năng của chi nhánh' })).toBeVisible();
+  await page.goto('/store_1/branches/branch_main');
   await expect(page.getByRole('combobox', { name: 'Ngành mới' })).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Hồ sơ chính của cửa hàng' })).toHaveCount(0);
-  const off = row(page, 'retail.traceability').getByRole('button', { name: 'Tắt Serial, lô, hạn dùng', exact: true });
+  await page.goto('/store_1/branches/branch_main/features');
+  const off = row(page, 'retail.traceability').getByRole('switch', { name: 'Tắt Serial, lô, hạn dùng', exact: true });
   if (manager) { await off.click(); await page.getByLabel('Lý do (bắt buộc)').fill('Không bán hàng theo lô'); await page.getByRole('button', { name: 'Lưu thay đổi' }).click(); await expect(page.getByRole('status').filter({ hasText: 'Đã tắt Serial' })).toBeVisible(); }
-  else { await expect(off).toHaveCount(0); expect(state.writes).toEqual([]); }
+  else { await expect(off).toBeDisabled(); expect(state.writes).toEqual([]); }
 });

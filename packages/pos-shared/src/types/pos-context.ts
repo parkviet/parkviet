@@ -1,4 +1,5 @@
 import type { PosFeatureFlags } from '../pos-features';
+import type { SalesSettings } from '../sales-settings';
 import type { PosBranchProfile, PosModules, PosModuleUsage, PosOnboarding } from '../pos-modules';
 import type { LotSelection, SaleLineTrace, WorkspaceTrace } from '../traceability';
 
@@ -53,6 +54,7 @@ export type PosBranch = {
   staff_session_idle_minutes?: number;
   // When menu lines reach the kitchen: as the sale completes, or on "send".
   kitchen_send_trigger?: 'on_complete' | 'manual';
+  sales_settings?: SalesSettings;
   // Reasons a sent item may be voided for; `khac` (other) always needs a note.
   void_reasons?: string[];
   // Minutes a table may stay seated before the floor flags it; null turns the alert off.
@@ -109,6 +111,9 @@ export type PosContext = {
   administration?: { read: boolean; write: boolean };
   // Feature flags of the selected branch; absent on servers without them.
   features?: PosFeatureFlags | null;
+  // Selling options of the selected branch, with defaults filled in.
+  // Absent on servers that do not send them (read as the defaults).
+  sales_settings?: SalesSettings | null;
   // Modules on at the selected branch (`{}` without one); null on servers
   // without modules, which hides nothing.
   modules?: PosModules | null;
@@ -397,6 +402,7 @@ export type PosLineItem = {
   unit_price?: string;
   // The time-of-day menu the price came from ("Happy hour").
   price_label?: string | null;
+  below_cost?: boolean;
   lot_code?: string | null;
   expiry_on?: string | null;
   serial_codes?: string[];

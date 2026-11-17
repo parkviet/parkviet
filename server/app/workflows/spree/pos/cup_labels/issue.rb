@@ -21,6 +21,7 @@ module Spree
         # live station is logged and never undoes the sale.
         def after_commit(workspace:, actor:, upto:)
           return unless ModulePolicy.enabled?(workspace.branch, MODULE)
+          return unless Settings.for(workspace.branch)['auto_print']
 
           ActiveRecord.after_all_transactions_commit do
             call(workspace: Workspace.find(workspace.id), actor: actor, upto: upto)

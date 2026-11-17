@@ -1,6 +1,7 @@
 import { formatMoney } from '@parkviet/pos-shared/money';
 import type { Platform } from '@parkviet/pos-shared/platform-orders';
 import { contextFeature } from '@parkviet/pos-shared/pos-features';
+import { normalizeSalesSettings } from '@parkviet/pos-shared/sales-settings';
 import { rateLabel } from '@parkviet/pos-shared/receipt-template/data';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -1109,6 +1110,8 @@ export function activePaymentProps(selling: SellingWorkspace, active: PosWorkspa
     einvoiceType: data?.einvoice_type ?? 'none',
     // Only an explicit switch skips the second person.
     quickCredit: data?.features?.quick_credit === true,
+    paymentChime: normalizeSalesSettings(data?.sales_settings).payment_chime !== 'off',
+    autoPrintDefault: normalizeSalesSettings(data?.sales_settings).auto_print_receipt,
     // A table order without money yet moves to the shift of whoever
     // collects it, so the collector's own open drawer is enough.
     drawerOpen: Boolean(
@@ -1280,6 +1283,7 @@ export function ActiveDiscountForm({
       onClear={(approvalId) =>
         command(active, (current) => workspaces.clearDiscount(current, approvalId))
       }
+      showCoupon={normalizeSalesSettings(data?.sales_settings).coupons}
       onApplyCoupon={(code) => command(active, (current) => workspaces.applyCoupon(current, code))}
       onClearCoupon={() => command(active, (current) => workspaces.clearCoupon(current))}
       onClose={onClose}
@@ -1292,7 +1296,9 @@ export function ActiveNoteForm({
   active,
   onClose,
 }: ActiveProps & { onClose: () => void }) {
-  const { editDisabled, lockReason, workspaces, command } = selling;
+  const { data, editDisabled, lockReason, workspaces, command } = selling;
+  const noteOn = normalizeSalesSettings(data?.sales_settings).order_note;
+  if (!noteOn && !active.note?.trim()) return null;
   return (
     <NoteForm
       workspace={active}

@@ -19,6 +19,9 @@ module Spree
           end
           CommandExecutor.call(store: workspace.store, actor: staff, key: key, payload: payload, workspace: workspace, authorize: authorize) do
             ApplyDiscount.validate_command!(workspace, staff, revision, lease_generation, editor_id)
+            unless SalesSettings.for(workspace.branch)['coupons']
+              raise Conflict.new('Coupons are turned off at this branch.', reason: FeaturePolicy::DISABLED, details: { feature: 'coupons' })
+            end
             raise Conflict, 'Coupon code is required.' if code.blank?
 
             order = workspace.order

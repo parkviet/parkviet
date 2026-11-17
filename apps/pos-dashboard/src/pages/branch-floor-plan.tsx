@@ -999,17 +999,7 @@ function QrOrderSettings({
   return (
     <fieldset className="space-y-4">
       <legend className="text-sm font-medium">{t('floorPlan.qrOrder')}</legend>
-      <ModelSelect
-        label={t('floorPlan.qrOrderMode')}
-        value={draft.qrMode}
-        disabled={!write}
-        hint={t('floorPlan.qrOrderModeHint')}
-        options={QR_ORDER_MODES.map((mode) => ({
-          value: mode,
-          label: t(`floorPlan.qrMode_${mode}`),
-        }))}
-        onChange={(mode) => onChange({ qrMode: mode as QrOrderMode })}
-      />
+      <p className="text-sm text-muted-foreground">{t('salesMoved')}</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <Label htmlFor={limitId}>{t('floorPlan.qrOrderLimit')}</Label>

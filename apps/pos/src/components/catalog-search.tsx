@@ -1,5 +1,6 @@
 import { formatMoney } from '@parkviet/pos-shared/money';
 import { catalogViewOf, type PosCatalogView } from '@parkviet/pos-shared/pos-modules';
+import { normalizeSalesSettings } from '@parkviet/pos-shared/sales-settings';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCatalog } from '../hooks/use-catalog';
@@ -53,6 +54,8 @@ export function CatalogSearch({
   soldOutVariantIds?: ReadonlySet<string>;
 }) {
   const { t } = useTranslation();
+  const sales = normalizeSalesSettings(usePosSelection().context.data?.sales_settings);
+  const showStock = sales.show_stock;
   const [input, setInput] = useState('');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -187,6 +190,8 @@ export function CatalogSearch({
             >
               {result.data.data.map((item) => {
                 const soldOut = soldOutVariantIds?.has(item.id) === true;
+                const outOfStock =
+                  !sales.allow_oversell && item.stock_on_hand !== null && item.stock_on_hand <= 0;
                 return (
                   <li key={item.id} data-sold-out={soldOut}>
                     <button
@@ -200,7 +205,7 @@ export function CatalogSearch({
                             ? addDisabledReason
                             : item.name
                       }
-                      disabled={!onAdd || addDisabled || item.price === null || soldOut}
+                      disabled={!onAdd || addDisabled || item.price === null || soldOut || outOfStock}
                       onClick={() => onAdd?.(item.id)}
                     >
                       <div className="catalog-image" aria-hidden="true">
@@ -213,21 +218,32 @@ export function CatalogSearch({
                         ) : null}
                         <span className="catalog-meta">
                           <span className="catalog-sku">{item.sku}</span>
-                          <span className="catalog-meta-sep" aria-hidden="true">
-                            {' · '}
-                          </span>
-                          <span
-                            className={
-                              item.stock_on_hand === null
-                                ? 'stock-unknown'
-                                : item.stock_on_hand <= 3
-                                  ? 'stock-low'
-                                  : 'catalog-stock'
-                            }
-                          >
-                            {t('catalogOnHand')}: {item.stock_on_hand ?? t('catalogStockUnknown')}
-                          </span>
+                          {showStock || outOfStock ? (
+                            <>
+                              <span className="catalog-meta-sep" aria-hidden="true">
+                                {' · '}
+                              </span>
+                              <span
+                                className={
+                                  outOfStock
+                                    ? 'stock-low'
+                                    : item.stock_on_hand === null
+                                      ? 'stock-unknown'
+                                      : item.stock_on_hand <= 3
+                                        ? 'stock-low'
+                                        : 'catalog-stock'
+                                }
+                              >
+                                {outOfStock
+                                  ? t('catalogOutOfStock')
+                                  : `${t('catalogOnHand')}: ${item.stock_on_hand ?? t('catalogStockUnknown')}`}
+                              </span>
+                            </>
+                          ) : null}
                         </span>
+                        {item.cost_price ? (
+                          <span className="catalog-meta">{t('catalogCost', { amount: item.cost_price })}</span>
+                        ) : null}
                         <span className="catalog-price">
                           {item.price !== null
                             ? formatMoney(item.price, item.currency)

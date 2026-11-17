@@ -66,7 +66,7 @@ export type BranchModuleSetting = {
 export type BranchModuleDetail = { modules: PosModules; settings: BranchModuleSetting[] }
 
 // Module switches of a branch with who changed them last and why
-// (`GET /pos/branches/:id/modules`), for the business model page. Always asks
+// (`GET /pos/branches/:id/modules`), for the branch Features tab. Always asks
 // the server, also for the selected branch, so the rows are current.
 export function useBranchModuleDetail(branchId: string | null, enabled = true) {
   const snapshot = useSession()

@@ -150,6 +150,8 @@ export function describeFailure(
     ].includes(channelReason)
   )
     return translate(channelReason);
+  const stock = stockInsufficientText(error, translate);
+  if (stock) return stock;
   const disabled = featureDisabledText(error, translate) ?? moduleDisabledText(error, translate);
   if (disabled) return disabled;
   return serverFailureDetail(error) ?? translate(fallbackKey ?? posFailureKey(error));
@@ -157,6 +159,20 @@ export function describeFailure(
 
 // A manager switched the feature off for this branch: the server refused the
 // command before recording anything. Every describer of this app uses this text.
+// The shelf does not cover the quantity. `on_hand` and `needed` are base units.
+export function stockInsufficientText(
+  error: unknown,
+  translate: (key: string, options?: Record<string, unknown>) => string,
+): string | null {
+  if (conflictReason(error) !== 'stock_insufficient') return null;
+  const details = (error as { details?: { on_hand?: unknown; needed?: unknown } }).details;
+  const onHand = details?.on_hand;
+  const needed = details?.needed;
+  if (typeof onHand === 'number' && typeof needed === 'number')
+    return translate('stockInsufficient', { on_hand: onHand, needed });
+  return translate('stockInsufficientPlain');
+}
+
 export function featureDisabledText(
   error: unknown,
   translate: (key: string) => string,

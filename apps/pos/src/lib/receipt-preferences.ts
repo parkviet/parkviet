@@ -26,18 +26,23 @@ export function rememberTemplate(documentType: DocumentType, templateId: string)
 // device (its printer and driver), off until turned on here.
 export const AUTO_PRINT_KEY = 'parkviet-pos:auto-print:sale';
 
-export function autoPrintEnabled(): boolean {
+// A stored "on" or "off" is this register's choice. Nothing stored follows
+// the branch default (off when the caller does not pass one).
+export function autoPrintEnabled(branchDefault = false): boolean {
   try {
-    return window.localStorage.getItem(AUTO_PRINT_KEY) === 'on';
+    const stored = window.localStorage.getItem(AUTO_PRINT_KEY);
+    if (stored === 'on') return true;
+    if (stored === 'off') return false;
+    return branchDefault;
   } catch {
-    return false;
+    return branchDefault;
   }
 }
 
-export function setAutoPrint(on: boolean) {
+export function setAutoPrint(on: boolean | null) {
   try {
-    if (on) window.localStorage.setItem(AUTO_PRINT_KEY, 'on');
-    else window.localStorage.removeItem(AUTO_PRINT_KEY);
+    if (on === null) window.localStorage.removeItem(AUTO_PRINT_KEY);
+    else window.localStorage.setItem(AUTO_PRINT_KEY, on ? 'on' : 'off');
   } catch {
     // Storage unavailable: the cashier prints by hand.
   }

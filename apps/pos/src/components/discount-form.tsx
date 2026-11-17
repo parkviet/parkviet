@@ -29,6 +29,7 @@ export function DiscountForm({
   onClear,
   onApplyCoupon,
   onClearCoupon,
+  showCoupon = true,
   onClose,
 }: {
   workspace: PosWorkspace;
@@ -44,6 +45,7 @@ export function DiscountForm({
   onClear: (approvalId?: string) => Promise<PosWorkspace>;
   onApplyCoupon?: (couponCode: string) => Promise<PosWorkspace>;
   onClearCoupon?: () => Promise<PosWorkspace>;
+  showCoupon?: boolean;
   onClose?: () => void;
 }) {
   const { t } = useTranslation();
@@ -140,7 +142,7 @@ export function DiscountForm({
           </span>
         ) : null}
       </div>
-      {onApplyCoupon ? (
+      {onApplyCoupon && showCoupon !== false ? (
         <div className="coupon-section">
           <div className="clearable-field">
             <label htmlFor={couponId}>{t('couponLabel')}</label>

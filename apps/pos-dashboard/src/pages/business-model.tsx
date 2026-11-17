@@ -30,10 +30,10 @@ import {
   ModelPage,
   ModelSelect,
   ModelState,
-  ModelStatus,
   modelDate,
 } from '../components/setup/model-ui'
 import { ModuleDescription } from '../components/setup-preview-step'
+import { ToggleRow } from '../components/toggle-row'
 import {
   applyBranchProfile,
   type ProfilePreview,
@@ -115,74 +115,88 @@ export function StoreBusinessModelPage() {
   )
 }
 
-// The branch's business model: its profile (changed through a preview of
-// what moves) and its module switches. Store writers change the profile;
-// branch writers (store writers and the branch's managers) switch modules.
+// The branch's business: its profile, changed through a preview of what
+// moves. Store writers change it. The module switches live on the Features tab.
 export function BranchBusinessModel({
   branch,
   storeId,
   storeWrite,
-  branchWrite,
 }: {
   branch: PosBranch
   storeId: string | null
   storeWrite: boolean
-  branchWrite: boolean
 }) {
   const { t } = useTranslation()
   const catalogue = useBusinessProfiles(storeId)
-  const detail = useBranchModuleDetail(branch.id)
   const profiles = catalogue.data?.profiles ?? []
   return (
-    <>
-      <ModelCard
-        title={t('businessModel.currentTitle')}
-        id="business-model-current"
-        icon={<StoreIcon />}
-      >
-        {catalogue.isPending ? (
-          <ModelState title={t('waiting')} />
-        ) : catalogue.isError ? (
-          <ModelState
-            error
-            title={t(posFailureKey(catalogue.error))}
-            retry={() => void catalogue.refetch()}
-          />
-        ) : null}
-        {branch.profile_key ? (
-          <div data-profile={branch.profile_key}>
-            <strong>
-              {t(profileLabelKey(branch.profile_key), { defaultValue: branch.profile_key })}
-            </strong>
-            <p className="text-sm text-muted-foreground">
-              {t(profileDescriptionKey(branch.profile_key), { defaultValue: '' })}
-            </p>
-          </div>
-        ) : (
-          <p>{t('businessModel.profileUnknown')}</p>
-        )}
-        {storeId ? (
-          <p className="text-sm">
-            <Link
-              to={`/${storeId}/branches/${branch.id}/hardware` as string}
-              className="underline"
-              data-testid="business-model-hardware"
-            >
-              {t('businessModel.hardwareLink')}
-            </Link>
+    <ModelCard
+      title={t('businessModel.currentTitle')}
+      id="business-model-current"
+      icon={<StoreIcon />}
+    >
+      {catalogue.isPending ? (
+        <ModelState title={t('waiting')} />
+      ) : catalogue.isError ? (
+        <ModelState
+          error
+          title={t(posFailureKey(catalogue.error))}
+          retry={() => void catalogue.refetch()}
+        />
+      ) : null}
+      {branch.profile_key ? (
+        <div data-profile={branch.profile_key}>
+          <strong>
+            {t(profileLabelKey(branch.profile_key), { defaultValue: branch.profile_key })}
+          </strong>
+          <p className="text-sm text-muted-foreground">
+            {t(profileDescriptionKey(branch.profile_key), { defaultValue: '' })}
           </p>
-        ) : null}
-        {storeWrite && catalogue.data ? (
-          <ChangeProfile branch={branch} profiles={profiles} />
-        ) : null}
-      </ModelCard>
-      <ModuleSwitches
-        branch={branch}
-        catalogue={catalogue.data?.modules ?? []}
-        detail={detail}
-        write={branchWrite}
-      />
-    </>
+        </div>
+      ) : (
+        <p>{t('businessModel.profileUnknown')}</p>
+      )}
+      {storeId ? (
+        <p className="text-sm">
+          <Link
+            to={`/${storeId}/branches/${branch.id}/hardware` as string}
+            className="underline"
+            data-testid="business-model-hardware"
+          >
+            {t('businessModel.hardwareLink')}
+          </Link>
+        </p>
+      ) : null}
+      {storeWrite && catalogue.data ? <ChangeProfile branch={branch} profiles={profiles} /> : null}
+    </ModelCard>
+  )
+}
+
+// Industry modules of one branch: turning one off hides its setup screens and
+// refuses new setup. Branch writers (store writers and the branch's managers)
+// switch them; the list itself is on the Features tab.
+export function BranchModuleSwitches({
+  branch,
+  storeId,
+  write,
+  framed = true,
+}: {
+  branch: PosBranch
+  storeId: string | null
+  write: boolean
+  // The features tab supplies its own card; the list itself stays the same.
+  framed?: boolean
+}) {
+  const catalogue = useBusinessProfiles(storeId)
+  const detail = useBranchModuleDetail(branch.id)
+  return (
+    <ModuleSwitches
+      branch={branch}
+      catalogue={catalogue.data?.modules ?? []}
+      detail={detail}
+      write={write}
+      framed={framed}
+    />
   )
 }
 
@@ -444,11 +458,13 @@ function ModuleSwitches({
   catalogue,
   detail,
   write,
+  framed,
 }: {
   branch: PosBranch
   catalogue: BusinessModule[]
   detail: ReturnType<typeof useBranchModuleDetail>
   write: boolean
+  framed: boolean
 }) {
   const { t, i18n } = useTranslation()
   const { storeId } = useStore()
@@ -502,13 +518,11 @@ function ModuleSwitches({
       }
     }
   }
-  return (
-    <ModelCard
-      title={t('businessModel.modulesTitle')}
-      id="business-model-modules"
-      icon={<LayersIcon />}
-    >
-      <p className="text-sm text-muted-foreground">{t('businessModel.modulesIntro')}</p>
+  const body = (
+    <>
+      {framed ? (
+        <p className="text-sm text-muted-foreground">{t('businessModel.modulesIntro')}</p>
+      ) : null}
       {!write ? <p>{t('featureReadOnly')}</p> : null}
       <ModelNotice notice={notice} />
       {detail.isPending ? (
@@ -532,99 +546,114 @@ function ModuleSwitches({
             const reasonId = `module-reason-${key.replaceAll('.', '-')}`
             const blockedId = `module-blocked-${key.replaceAll('.', '-')}`
             return (
-              <li key={key} data-module={key} className="flex flex-wrap items-start gap-4 py-5">
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-medium">{name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    <ModuleDescription moduleKey={key} />
-                  </p>
-                  {latest?.changed_at ? (
-                    <p className="text-sm text-muted-foreground">
-                      {t('featureLastChange', {
-                        name: latest.changed_by_name ?? '—',
-                        at: modelDate(latest.changed_at, i18n.language, branch.timezone),
-                        reason: latest.reason,
-                      })}
-                    </p>
-                  ) : null}
-                  {requiredBy.length ? (
-                    <p id={blockedId} className="text-sm text-muted-foreground">
-                      {t('businessModel.requiredBy', {
-                        list: requiredBy.map((item) => moduleName(t, item)).join(', '),
-                      })}
-                    </p>
-                  ) : null}
-                </div>
-                <ModelStatus on={on}>{t(on ? 'featureStatusOn' : 'featureStatusOff')}</ModelStatus>
-                {write && !editing ? (
-                  <Button
-                    type="button"
-                    variant={on ? 'destructive' : 'outline'}
-                    disabled={busy || requiredBy.length > 0}
-                    aria-describedby={requiredBy.length ? blockedId : undefined}
-                    onClick={() => {
-                      setNotice(null)
-                      setReason('')
-                      setChange({ key, enabled: !on, alsoEnabled: enabledWith })
-                    }}
-                  >
-                    {t(on ? 'businessModel.moduleTurnOff' : 'businessModel.moduleTurnOn', { name })}
-                  </Button>
-                ) : null}
-                {write && editing && change ? (
-                  <form
-                    className="flex w-full flex-col gap-3 rounded-md bg-muted p-4"
-                    aria-label={t('featureChangeFor', { name })}
-                    onSubmit={(event) => void save(event)}
-                  >
-                    <p id={`${reasonId}-hint`}>
-                      {change.enabled
-                        ? change.alsoEnabled.length
-                          ? t('businessModel.moduleConfirmOnWith', {
-                              name,
-                              list: change.alsoEnabled
-                                .map((item) => moduleName(t, item))
-                                .join(', '),
-                            })
-                          : t('businessModel.moduleConfirmOn', { name })
-                        : t('businessModel.moduleConfirmOff', { name })}
-                    </p>
-                    <Label htmlFor={reasonId}>{t('featureReason')}</Label>
-                    <Input
-                      id={reasonId}
-                      value={reason}
-                      maxLength={200}
-                      required
-                      autoComplete="off"
-                      aria-describedby={`${reasonId}-hint`}
-                      disabled={busy}
-                      autoFocus
-                      onChange={(event) => setReason(event.target.value)}
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        type="submit"
-                        variant={change.enabled ? 'default' : 'destructive'}
-                        disabled={busy || !reason.trim()}
-                      >
-                        {busy ? t('waiting') : t('featureSave')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
+              <li key={key} data-module={key}>
+                <ToggleRow
+                  checked={on}
+                  disabled={!write || busy || requiredBy.length > 0 || editing}
+                  switchLabel={t(
+                    on ? 'businessModel.moduleTurnOff' : 'businessModel.moduleTurnOn',
+                    { name },
+                  )}
+                  onChange={
+                    write && !editing
+                      ? () => {
+                          setNotice(null)
+                          setReason('')
+                          setChange({ key, enabled: !on, alsoEnabled: enabledWith })
+                        }
+                      : undefined
+                  }
+                  label={name}
+                  description={
+                    <>
+                      <p>
+                        <ModuleDescription moduleKey={key} />
+                      </p>
+                      <p>{t(on ? 'featureStatusOn' : 'featureStatusOff')}</p>
+                      {latest?.changed_at ? (
+                        <p>
+                          {t('featureLastChange', {
+                            name: latest.changed_by_name ?? '—',
+                            at: modelDate(latest.changed_at, i18n.language, branch.timezone),
+                            reason: latest.reason,
+                          })}
+                        </p>
+                      ) : null}
+                      {requiredBy.length ? (
+                        <p id={blockedId}>
+                          {t('businessModel.requiredBy', {
+                            list: requiredBy.map((item) => moduleName(t, item)).join(', '),
+                          })}
+                        </p>
+                      ) : null}
+                    </>
+                  }
+                >
+                  {write && editing && change ? (
+                    <form
+                      className="flex w-full flex-col gap-3 rounded-md bg-muted p-4"
+                      aria-label={t('featureChangeFor', { name })}
+                      onSubmit={(event) => void save(event)}
+                    >
+                      <p id={`${reasonId}-hint`}>
+                        {change.enabled
+                          ? change.alsoEnabled.length
+                            ? t('businessModel.moduleConfirmOnWith', {
+                                name,
+                                list: change.alsoEnabled
+                                  .map((item) => moduleName(t, item))
+                                  .join(', '),
+                              })
+                            : t('businessModel.moduleConfirmOn', { name })
+                          : t('businessModel.moduleConfirmOff', { name })}
+                      </p>
+                      <Label htmlFor={reasonId}>{t('featureReason')}</Label>
+                      <Input
+                        id={reasonId}
+                        value={reason}
+                        maxLength={200}
+                        required
+                        autoComplete="off"
+                        aria-describedby={`${reasonId}-hint`}
                         disabled={busy}
-                        onClick={() => setChange(null)}
-                      >
-                        {t('adminCancel')}
-                      </Button>
-                    </div>
-                  </form>
-                ) : null}
+                        autoFocus
+                        onChange={(event) => setReason(event.target.value)}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          type="submit"
+                          variant={change.enabled ? 'default' : 'destructive'}
+                          disabled={busy || !reason.trim()}
+                        >
+                          {busy ? t('waiting') : t('featureSave')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() => setChange(null)}
+                        >
+                          {t('adminCancel')}
+                        </Button>
+                      </div>
+                    </form>
+                  ) : null}
+                </ToggleRow>
               </li>
             )
           })}
         </ul>
       ) : null}
+    </>
+  )
+  if (!framed) return body
+  return (
+    <ModelCard
+      title={t('businessModel.modulesTitle')}
+      id="business-model-modules"
+      icon={<LayersIcon />}
+    >
+      {body}
     </ModelCard>
   )
 }
