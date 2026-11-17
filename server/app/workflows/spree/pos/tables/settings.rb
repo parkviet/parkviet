@@ -9,6 +9,13 @@ module Spree
       # categories come along, so a branch manager without store permissions
       # can choose the service charge's.
       module Settings
+        RESERVATION_MINUTES = {
+          'reservation_grace_minutes' => [1, 1440], 'reservation_duration_minutes' => [1, 1440],
+          'reservation_open_buffer_minutes' => [0, 999], 'reservation_close_buffer_minutes' => [0, 999],
+          'reservation_min_lead_minutes' => [0, 999]
+        }.freeze
+        RESERVATION_WINDOW = %w[reservation_periods reservation_open_buffer_minutes reservation_close_buffer_minutes].freeze
+
         module_function
 
         def to_pos(branch)
@@ -18,6 +25,14 @@ module Spree
             service_charge_tax_category_id: branch.service_charge_tax_category&.prefixed_id,
             reservation_grace_minutes: branch.reservation_grace_minutes,
             reservation_duration_minutes: branch.reservation_duration_minutes,
+            reservation_periods: Array(branch.reservation_periods),
+            reservation_effective_periods: Reservations::Window.effective_periods(branch),
+            reservation_periods_source: Reservations::Window.source(branch),
+            reservation_open_buffer_minutes: branch.reservation_open_buffer_minutes,
+            reservation_close_buffer_minutes: branch.reservation_close_buffer_minutes,
+            reservation_min_lead_minutes: branch.reservation_min_lead_minutes,
+            business_day_cutoff: branch.cutoff_clock,
+            timezone: ActiveSupport::TimeZone[branch.timezone.to_s]&.tzinfo&.name || branch.timezone,
             reservation_fee_product_id: branch.reservation_fee_product&.prefixed_id,
             course_labels: CourseLabel.to_pos(branch),
             bottle_keep_days: branch.bottle_keep_days, tips_as_revenue: branch.tips_as_revenue,
@@ -41,16 +56,24 @@ module Spree
           branch.seated_alert_minutes = minutes
         end
 
-        # How long a booking holds a table, how late it may be, and the
-        # service sold when its deposit is kept.
+        # How long a booking holds a table, how late it may be, when bookings
+        # are taken (Reservations::Window), and the service sold when its
+        # deposit is kept.
         def reservations!(store, branch, values)
-          %w[reservation_grace_minutes reservation_duration_minutes].each do |field|
+          RESERVATION_MINUTES.each do |field, range|
             next unless values.key?(field)
 
-            minutes = Integer(values[field].to_s, 10) rescue nil # rubocop:disable Style/RescueModifier
-            raise Conflict.new('The minutes are invalid.', reason: 'reservation_settings_invalid') unless minutes&.between?(1, 1440)
+            minutes = Integer(values[field].to_s, 10, exception: false)
+            raise Conflict.new('The minutes are invalid.', reason: 'reservation_settings_invalid') unless minutes&.between?(range.first, range.last)
 
             branch[field] = minutes
+          end
+          if RESERVATION_WINDOW.intersect?(values.keys)
+            rows = values.key?('reservation_periods') ? Array(values['reservation_periods']) : Array(branch.reservation_periods)
+            branch.reservation_periods = Reservations::Window.normalize!(
+              rows, open_buffer: branch.reservation_open_buffer_minutes, close_buffer: branch.reservation_close_buffer_minutes,
+                    cutoff: branch.cutoff_clock
+            )
           end
           return unless values.key?('reservation_fee_product_id')
 
@@ -129,6 +152,8 @@ module Spree
           values = attributes.to_h.stringify_keys.slice('table_register_id', 'service_charge_rate', 'service_charge_applies_to',
                                                          'service_charge_tax_category_id', 'reservation_grace_minutes',
                                                          'reservation_duration_minutes', 'reservation_fee_product_id', 'course_labels',
+                                                         'reservation_periods', 'reservation_open_buffer_minutes',
+                                                         'reservation_close_buffer_minutes', 'reservation_min_lead_minutes',
                                                          'bottle_keep_days', 'tips_as_revenue', 'tip_split', 'qr_order_mode',
                                                          'qr_order_auto_limit', 'qr_order_auto_max_items',
                                                          'seated_alert_minutes')

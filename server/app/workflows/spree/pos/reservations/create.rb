@@ -31,9 +31,11 @@ module Spree
               note: Guard.text!(attrs['note'], 500, 'note'), customer_profile: Guard.customer!(store, attrs['customer_id'])
             )
             Guard.hold!(reservation, resources, starts_at, ends_at)
-            AuditEntry.record!(store: store, actor: staff, action: 'reservation.create', subject: reservation,
-                               metadata: { resource_ids: resources.map(&:prefixed_id), starts_at: starts_at.iso8601,
-                                           ends_at: ends_at.iso8601, party_size: party })
+            metadata = { resource_ids: resources.map(&:prefixed_id), starts_at: starts_at.iso8601,
+                         ends_at: ends_at.iso8601, party_size: party }
+            outside = Guard.outside_rules(branch, starts_at, reservation.source)
+            metadata[:outside_rules] = outside if outside.any?
+            AuditEntry.record!(store: store, actor: staff, action: 'reservation.create', subject: reservation, metadata: metadata)
             Guard.announce!(branch, reservation)
             reservation.reload.to_pos
           end

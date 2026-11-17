@@ -1,3 +1,4 @@
+import { type ReservationRules, rulesOf } from '@parkviet/pos-shared/reservation-window';
 import {
   type AvailableTable,
   normalizeAvailableTables,
@@ -81,6 +82,23 @@ export function useAvailability(
         },
       );
       return normalizeAvailableTables(result.data);
+    },
+  });
+}
+
+// When the branch takes bookings; a booking outside them is only warned about.
+export function useReservationRules(branchId: string | null, enabled: boolean) {
+  const snapshot = useSession();
+  return useQuery({
+    queryKey: ['pos', 'reservation-rules', snapshot.generation, branchId],
+    enabled: enabled && snapshot.status === 'authenticated' && Boolean(branchId),
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<ReservationRules> => {
+      const result = await session.request<{ data: unknown }>('GET', '/pos/table_settings', {
+        params: { branch_id: branchId ?? undefined },
+      });
+      const data = typeof result.data === 'object' && result.data ? result.data : {};
+      return rulesOf(data as Record<string, unknown>);
     },
   });
 }

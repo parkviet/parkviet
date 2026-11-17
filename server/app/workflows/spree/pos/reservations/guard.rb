@@ -68,6 +68,12 @@ module Spree
           [start, finish]
         end
 
+        # The branch's booking rules a staff booking breaks, for its audit
+        # entry; a walk-in has already arrived.
+        def outside_rules(branch, starts_at, source)
+          source == 'walk_in' ? [] : Window.reasons(branch, starts_at: starts_at)
+        end
+
         def parse!(value)
           Time.iso8601(value.to_s)
         rescue ArgumentError

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_17_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_17_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -2539,6 +2539,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_100000) do
     t.integer "seated_alert_minutes"
     t.jsonb "sales_settings", default: {}, null: false
     t.jsonb "profile_keys", default: [], null: false
+    t.jsonb "reservation_periods", default: [], null: false
+    t.integer "reservation_open_buffer_minutes", default: 0, null: false
+    t.integer "reservation_close_buffer_minutes", default: 0, null: false
+    t.integer "reservation_min_lead_minutes", default: 0, null: false
     t.index ["cup_label_printer_id"], name: "index_spree_pos_branches_on_cup_label_printer_id"
     t.index ["service_charge_tax_category_id"], name: "index_spree_pos_branches_on_service_charge_tax_category_id"
     t.index ["stock_location_id"], name: "index_spree_pos_branches_on_stock_location_id"
@@ -2560,6 +2564,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_100000) do
     t.check_constraint "qr_order_auto_limit IS NULL OR qr_order_auto_limit > 0::numeric", name: "chk_pos_branches_qr_order_limit"
     t.check_constraint "qr_order_auto_max_items >= 1 AND qr_order_auto_max_items <= 50", name: "chk_pos_branches_qr_order_max_items"
     t.check_constraint "qr_order_mode::text = ANY (ARRAY['staff_approval'::character varying::text, 'direct_to_kitchen'::character varying::text])", name: "chk_pos_branches_qr_order_mode"
+    t.check_constraint "reservation_open_buffer_minutes >= 0 AND reservation_open_buffer_minutes <= 999 AND reservation_close_buffer_minutes >= 0 AND reservation_close_buffer_minutes <= 999 AND reservation_min_lead_minutes >= 0 AND reservation_min_lead_minutes <= 999", name: "chk_pos_branches_reservation_rules"
     t.check_constraint "return_window_days IS NULL OR return_window_days >= 0 AND return_window_days <= 3650", name: "chk_pos_branches_return_window"
     t.check_constraint "seated_alert_minutes IS NULL OR seated_alert_minutes >= 10 AND seated_alert_minutes <= 600", name: "chk_pos_branches_seated_alert_minutes"
     t.check_constraint "service_charge_rate IS NULL OR service_charge_rate > 0::numeric AND service_charge_rate <= 50::numeric", name: "chk_pos_branches_service_charge_rate"

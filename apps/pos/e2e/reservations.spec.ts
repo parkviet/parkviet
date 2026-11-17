@@ -172,3 +172,83 @@ test('book, take a deposit, seat the guest and pay with the deposit taken off', 
     'deposits/apply',
   ]);
 });
+
+test.describe('booking rules', () => {
+  test.use({ timezoneId: 'Asia/Ho_Chi_Minh' });
+
+  // Outside the branch's service periods the form warns and asks again; the
+  // second press still books, since staff may book outside the rules.
+  test('warns about a time outside the service periods and books on the second press', async ({ context }) => {
+    const world = newWorld({
+      capabilities: [...FULL_CASHIER, 'pos.table.serve', 'pos.reservation.manage'],
+      modules: MODULES,
+    });
+    await installRetailApi(context, world);
+    await context.route('**/api/v3/admin/pos/resource_board**', (route) =>
+      route.fulfill({
+        json: { data: { branch_id: 'br_1', server_now: new Date().toISOString(), areas: [], resources: [] } },
+      }),
+    );
+    await context.route('**/api/v3/admin/pos/table_settings**', (route) =>
+      route.fulfill({
+        json: {
+          data: {
+            reservation_effective_periods: [
+              { start: '10:00', end: '14:00' },
+              { start: '17:00', end: '22:00' },
+            ],
+            reservation_open_buffer_minutes: 30,
+            reservation_close_buffer_minutes: 60,
+            reservation_min_lead_minutes: 0,
+            timezone: 'Asia/Ho_Chi_Minh',
+          },
+        },
+      }),
+    );
+    const posts: string[] = [];
+    await context.route('**/api/v3/admin/pos/reservations**', async (route) => {
+      const request = route.request();
+      const path = new URL(request.url()).pathname.replace(/^.*\/api\/v3\/admin/, '');
+      if (request.method() === 'GET' && path === '/pos/reservations/availability')
+        return route.fulfill({ json: { data: [{ ...TABLE, capacity: 4 }] } });
+      if (request.method() === 'GET') return route.fulfill({ json: { data: [], meta: { from: null } } });
+      posts.push(path);
+      const body = request.postDataJSON() as Record<string, unknown>;
+      return route.fulfill({
+        status: 201,
+        json: {
+          data: {
+            id: 'posresv_2', branch_id: 'br_1', status: 'booked', source: 'phone', guest_name: body.guest_name,
+            phone: null, party_size: body.party_size, note: null, starts_at: body.starts_at, ends_at: body.starts_at,
+            revision: 1, workspace_id: null, resources: [TABLE], deposits: [], deposit_held: '0.0',
+          },
+        },
+      });
+    });
+
+    const page = await context.newPage();
+    await login(page);
+    await page.goto('/reservations');
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60_000);
+    const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(tomorrow);
+    await page.getByLabel('Ngày').fill(date);
+
+    const form = page.getByRole('form', { name: 'Đặt bàn mới' });
+    await form.getByLabel('Tên khách').fill('Anh Khoa');
+    await expect(form.getByText('Nhận đặt 10:30–13:00, 17:30–21:00')).toBeVisible();
+    await form.getByLabel('Giờ đến').fill('15:00');
+    const warning = form.getByRole('alert', { name: 'Giờ này nằm ngoài quy tắc đặt bàn của chi nhánh' });
+    await expect(warning).toContainText('Ngoài khung giờ phục vụ');
+
+    await form.getByRole('button', { name: 'Vẫn giữ bàn' }).click();
+    await expect(warning).toBeFocused();
+    expect(posts).toEqual([]);
+    await form.getByRole('button', { name: 'Vẫn giữ bàn' }).click();
+    await expect(form.getByText('Đã giữ bàn cho khách.')).toBeVisible();
+    expect(posts).toEqual(['/pos/reservations']);
+
+    await form.getByLabel('Giờ đến').fill('18:00');
+    await expect(warning).toHaveCount(0);
+    await expect(form.getByRole('button', { name: 'Giữ bàn', exact: true })).toBeVisible();
+  });
+});

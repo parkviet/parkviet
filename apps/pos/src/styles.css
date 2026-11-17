@@ -957,6 +957,8 @@ kbd { padding: var(--pos-s1); border: 1px solid var(--pos-border); border-radius
 .vehicle-visit-calculation { display: grid; grid-template-columns: max-content 1fr; gap: var(--pos-s1, 4px) var(--pos-s3); margin: 0; }
 .vehicle-visit-calculation dd { margin: 0; }
 .reservation-form label, .reservation-deposit-form label, .reservation-approval-form label { display: grid; gap: 2px; min-width: 140px; font-size: var(--pos-small); }
+.reservation-rule-warning { flex-basis: 100%; padding: var(--pos-s2); color: var(--pos-warning); border: 1px solid currentColor; border-radius: var(--pos-radius); }
+.reservation-rule-warning ul { margin: 4px 0 0; padding-left: 1.2em; }
 .reservation-row { display: grid; gap: var(--pos-s2); }
 .reservation-row[data-status='canceled'], .reservation-row[data-status='no_show'] { opacity: 0.7; }
 .reservation-actions { flex-wrap: wrap; gap: var(--pos-s2); }

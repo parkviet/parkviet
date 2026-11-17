@@ -35,8 +35,10 @@ module Spree
             reservation.revision += 1
             reservation.save!
             Guard.hold!(reservation, resources, starts_at, ends_at)
-            AuditEntry.record!(store: store, actor: staff, action: 'reservation.update', subject: reservation,
-                               metadata: { before: before, after: reservation.reload.to_pos.slice(:starts_at, :ends_at, :party_size, :resources) })
+            metadata = { before: before, after: reservation.reload.to_pos.slice(:starts_at, :ends_at, :party_size, :resources) }
+            outside = attrs.key?('starts_at') ? Guard.outside_rules(branch, starts_at, reservation.source) : []
+            metadata[:outside_rules] = outside if outside.any?
+            AuditEntry.record!(store: store, actor: staff, action: 'reservation.update', subject: reservation, metadata: metadata)
             (old + resources).uniq(&:id).each do |resource|
               Realtime.publish(branch, 'resource.updated', id: resource.prefixed_id, refs: { reservation_id: reservation.prefixed_id })
             end

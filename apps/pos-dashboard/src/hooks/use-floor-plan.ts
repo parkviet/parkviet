@@ -1,3 +1,4 @@
+import { type ReservationRuleSettings, readPeriods } from '@parkviet/pos-shared/reservation-window'
 import {
   type AreaRecord,
   normalizeArea,
@@ -33,6 +34,8 @@ export type TableSettings = {
   qr_order_auto_max_items: number
   // Minutes a table may stay seated before the floor flags it; null: no alert.
   seated_alert_minutes: number | null
+  // How long a booking holds its table and when bookings are taken.
+  reservation: ReservationRuleSettings
 }
 
 export const QR_ORDER_MODES = ['staff_approval', 'direct_to_kitchen'] as const
@@ -87,6 +90,24 @@ const tipSplitOf = (value: unknown): TipSplit => {
   }
 }
 const textOrNull = (value: unknown) => (typeof value === 'string' && value ? value : null)
+const minutesOr = (value: unknown, fallback: number) =>
+  Number.isInteger(value) ? (value as number) : fallback
+const reservationOf = (source: Record<string, unknown>): ReservationRuleSettings => ({
+  reservation_periods: readPeriods(source.reservation_periods),
+  reservation_effective_periods: readPeriods(source.reservation_effective_periods),
+  reservation_periods_source:
+    source.reservation_periods_source === 'branch' ||
+    source.reservation_periods_source === 'opening_hours'
+      ? source.reservation_periods_source
+      : 'none',
+  reservation_open_buffer_minutes: minutesOr(source.reservation_open_buffer_minutes, 0),
+  reservation_close_buffer_minutes: minutesOr(source.reservation_close_buffer_minutes, 0),
+  reservation_min_lead_minutes: minutesOr(source.reservation_min_lead_minutes, 0),
+  reservation_duration_minutes: minutesOr(source.reservation_duration_minutes, 120),
+  reservation_grace_minutes: minutesOr(source.reservation_grace_minutes, 15),
+  business_day_cutoff: textOrNull(source.business_day_cutoff) ?? '04:00',
+  timezone: textOrNull(source.timezone) ?? 'Asia/Ho_Chi_Minh',
+})
 export const useTableSettings = (branchId: string) =>
   useFloorList('settings', '/pos/table_settings', branchId, (data): TableSettings => {
     // Fields of anything but an object read as absent.
@@ -113,6 +134,7 @@ export const useTableSettings = (branchId: string) =>
       seated_alert_minutes: Number.isInteger(source.seated_alert_minutes)
         ? (source.seated_alert_minutes as number)
         : null,
+      reservation: reservationOf(source),
       tax_categories: rows(source.tax_categories).flatMap((row) => {
         const item = row as { id?: unknown; name?: unknown }
         return typeof item.id === 'string' && typeof item.name === 'string'

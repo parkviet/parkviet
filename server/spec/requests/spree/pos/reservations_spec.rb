@@ -57,6 +57,21 @@ RSpec.describe 'POS reservations', type: :request do
     expect(response).to have_http_status(:created), response.body
   end
 
+  it "books outside the branch's booking rules, noting the broken rules in the audit" do
+    branch.update!(timezone: 'Asia/Ho_Chi_Minh', reservation_periods: [{ 'start' => '17:00', 'end' => '22:00' }],
+                   reservation_open_buffer_minutes: 30)
+    day = 2.days.from_now.in_time_zone('Asia/Ho_Chi_Minh')
+
+    book(small, at: day.change(hour: 17, min: 10))
+    expect(response).to have_http_status(:created), response.body
+    audit = Spree::Pos::AuditEntry.where(action: 'reservation.create').last
+    expect(audit.metadata['outside_rules']).to eq(['before_open'])
+
+    book(large, at: day.change(hour: 19, min: 0))
+    expect(response).to have_http_status(:created), response.body
+    expect(Spree::Pos::AuditEntry.where(action: 'reservation.create').last.metadata).not_to have_key('outside_rules')
+  end
+
   it 'refuses a party larger than the tables' do
     body = book(small, party: 5)
     expect(response).to have_http_status(:conflict)

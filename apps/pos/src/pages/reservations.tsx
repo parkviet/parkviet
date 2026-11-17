@@ -1,5 +1,10 @@
 import { formatMoney } from '@parkviet/pos-shared/money';
 import {
+  acceptWindow,
+  bookingReasons,
+  minutesClock,
+} from '@parkviet/pos-shared/reservation-window';
+import {
   depositStatusKey,
   RESERVATIONS_MODULE,
   type Reservation,
@@ -8,7 +13,7 @@ import {
   timelineSpan,
 } from '@parkviet/pos-shared/reservations';
 import { useNavigate } from '@tanstack/react-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageState, PosPage } from '../components/pos-page';
 import { usePosSelection } from '../components/pos-selection';
@@ -16,6 +21,7 @@ import { RemoteApprovalButton } from '../components/remote-approval-button';
 import {
   useAvailability,
   useReservationCommands,
+  useReservationRules,
   useReservations,
 } from '../hooks/use-reservations';
 import { useResourceBoard } from '../hooks/use-resource-board';
@@ -207,6 +213,16 @@ function BookingForm({
   const [message, setMessage] = useState('');
   const startsAt = useMemo(() => instant(`${date}T${time}`), [date, time]);
   const free = useAvailability(branchId, startsAt ? { startsAt, partySize } : null);
+  const rules = useReservationRules(branchId, true).data;
+  // Staff may book outside the branch's rules after seeing why; the warning
+  // is acknowledged for one time only.
+  const [acknowledged, setAcknowledged] = useState('');
+  const warningRef = useRef<HTMLDivElement>(null);
+  const reasons = startsAt && rules ? bookingReasons(new Date(startsAt), new Date(), rules) : [];
+  const windows = (rules?.periods ?? []).flatMap((period) => {
+    const window = acceptWindow(period, rules?.openBuffer ?? 0, rules?.closeBuffer ?? 0);
+    return window ? [`${minutesClock(window.from)}–${minutesClock(window.to)}`] : [];
+  });
   const tables = free.data ?? [];
   const chosen = tables.some((row) => row.id === tableId) ? tableId : (tables[0]?.id ?? '');
   return (
@@ -216,6 +232,11 @@ function BookingForm({
       onSubmit={(event) => {
         event.preventDefault();
         if (!guestName.trim() || !chosen || !startsAt) return;
+        if (reasons.length > 0 && acknowledged !== startsAt) {
+          setAcknowledged(startsAt);
+          warningRef.current?.focus();
+          return;
+        }
         setBusy(true);
         setMessage('');
         void onBook({
@@ -273,7 +294,33 @@ function BookingForm({
           required
           onChange={(event) => setTime(event.target.value)}
         />
+        {windows.length > 0 ? (
+          <small className="workspace-hint">
+            {t('reservationsWindows', { windows: windows.join(', ') })}
+          </small>
+        ) : null}
       </label>
+      {reasons.length > 0 ? (
+        <div
+          ref={warningRef}
+          tabIndex={-1}
+          role="alert"
+          className="reservation-rule-warning"
+          aria-label={t('reservationsRuleWarning')}
+        >
+          <strong>{t('reservationsRuleWarning')}</strong>
+          <ul>
+            {reasons.map((reason) => (
+              <li key={reason}>
+                {t(`reservationsRule_${reason}`, {
+                  minutes: rules?.minLead ?? 0,
+                  windows: windows.join(', '),
+                })}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <label>
         {t('reservationsTable')}
         <select value={chosen} onChange={(event) => setTableId(event.target.value)}>
@@ -296,7 +343,11 @@ function BookingForm({
         className="checkout-submit"
         disabled={disabled || busy || !chosen || !guestName.trim()}
       >
-        {busy ? t('waiting') : t('reservationsBook')}
+        {busy
+          ? t('waiting')
+          : reasons.length > 0
+            ? t('reservationsBookAnyway')
+            : t('reservationsBook')}
       </button>
       {message ? (
         <p className="workspace-hint" role="status">

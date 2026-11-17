@@ -72,4 +72,44 @@ RSpec.describe 'POS table settings API', type: :request do
     expect(response.parsed_body.dig('data', 'seated_alert_minutes')).to be_nil
     expect(branch.reload.seated_alert_minutes).to be_nil
   end
+
+  it 'saves when bookings are taken, falls back to the opening hours, and refuses periods that leave no time' do
+    update = lambda do |values|
+      put '/api/v3/admin/pos/table_settings', headers: bearer(manager).merge('Idempotency-Key' => SecureRandom.uuid),
+                                              params: { branch_id: branch.prefixed_id, **values }, as: :json
+    end
+    Spree::Pos::StoreInfo.create!(store: store, name: 'POS', phone: '0901111111', business_day_cutoff: '04:00',
+                                  opening_time: '08:00', closing_time: '23:00')
+
+    get '/api/v3/admin/pos/table_settings', headers: bearer(manager), params: { branch_id: branch.prefixed_id }
+    expect_pos_schema!(response, 'TableSettings')
+    expect(response.parsed_body['data']).to include(
+      'reservation_periods' => [], 'reservation_periods_source' => 'opening_hours',
+      'reservation_effective_periods' => [{ 'start' => '08:00', 'end' => '23:00' }], 'reservation_min_lead_minutes' => 0
+    )
+
+    update.call(reservation_periods: [{ start: '22:00', end: '01:00' }, { start: '10:00', end: '14:00' }],
+                reservation_open_buffer_minutes: 30, reservation_close_buffer_minutes: 60, reservation_min_lead_minutes: 15,
+                reservation_duration_minutes: 90)
+    expect(response).to have_http_status(:ok), response.body
+    expect_pos_schema!(response, 'TableSettings')
+    expect(response.parsed_body['data']).to include(
+      'reservation_periods' => [{ 'start' => '10:00', 'end' => '14:00' }, { 'start' => '22:00', 'end' => '01:00' }],
+      'reservation_periods_source' => 'branch', 'reservation_open_buffer_minutes' => 30,
+      'reservation_close_buffer_minutes' => 60, 'reservation_min_lead_minutes' => 15, 'reservation_duration_minutes' => 90
+    )
+
+    update.call(reservation_close_buffer_minutes: 160)
+    expect(response).to have_http_status(:conflict)
+    expect(response.parsed_body.dig('error', 'details', 'reason')).to eq('reservation_window_empty')
+    update.call(reservation_periods: [{ start: '10:00', end: '14:00' }, { start: '13:00', end: '15:00' }])
+    expect(response.parsed_body.dig('error', 'details', 'reason')).to eq('reservation_periods_invalid')
+    update.call(reservation_min_lead_minutes: 1000)
+    expect(response.parsed_body.dig('error', 'details', 'reason')).to eq('reservation_settings_invalid')
+    expect(branch.reload.reservation_close_buffer_minutes).to eq(60)
+
+    update.call(reservation_periods: [])
+    expect(response).to have_http_status(:ok), response.body
+    expect(response.parsed_body.dig('data', 'reservation_periods_source')).to eq('opening_hours')
+  end
 end

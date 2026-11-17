@@ -34,6 +34,7 @@ import { type FormEvent, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useBranchScope } from '../components/branch-detail'
 import { type CanvasTable, FloorPlanCanvas } from '../components/floor-plan-canvas'
+import { ReservationSettingsCard } from '../components/reservation-settings-card'
 import {
   ModelCard,
   ModelCheck,
@@ -136,6 +137,9 @@ export function BranchFloorPlanTab() {
     <div className="space-y-6">
       <FloorCard write={canManageResources(access)} />
       <TableSettingsCard write={canManageBranch(access, branch.id)} />
+      {modules?.['fnb.reservations'] === true ? (
+        <ReservationSettingsCard write={canManageBranch(access, branch.id)} />
+      ) : null}
       {modules?.['fnb.qr_order'] === true ? (
         <TableCodesCard write={canManageResources(access)} />
       ) : null}

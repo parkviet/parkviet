@@ -9825,6 +9825,37 @@ components:
         reservation_duration_minutes:
           type: integer
           description: The length of a booking when none is given.
+        reservation_periods:
+          type: array
+          maxItems: 4
+          description: >-
+            The branch's own service periods, the same every day, sorted from the business day's cutoff.
+            An end before the start runs past midnight. Empty uses the opening hours.
+          items:
+            $ref: '#/components/schemas/ReservationPeriod'
+        reservation_effective_periods:
+          type: array
+          description: The periods bookings follow - the branch's own, or the opening hours as one period, or none (any time).
+          items:
+            $ref: '#/components/schemas/ReservationPeriod'
+        reservation_periods_source:
+          type: string
+          enum: [branch, opening_hours, none]
+        reservation_open_buffer_minutes:
+          type: integer
+          description: Minutes after a period opens before its first booking.
+        reservation_close_buffer_minutes:
+          type: integer
+          description: Minutes before a period closes after its last booking.
+        reservation_min_lead_minutes:
+          type: integer
+          description: How far ahead of now a booking must start. Staff bookings outside the rules are only warned about.
+        business_day_cutoff:
+          type: string
+          description: When the branch's business day starts, HH:MM.
+        timezone:
+          type: string
+          description: The branch's IANA time zone.
         reservation_fee_product_id:
           type: [string, 'null']
           description: The service sold when a deposit is kept (priced with its tax included).
@@ -9888,6 +9919,17 @@ components:
           type: [string, 'null']
         is_default:
           type: boolean
+    ReservationPeriod:
+      type: object
+      additionalProperties: false
+      required: [start, end]
+      properties:
+        start:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+        end:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
     TableSettingsInput:
       type: object
       required: [branch_id]
@@ -9928,6 +9970,24 @@ components:
           type: integer
           minimum: 1
           maximum: 1440
+        reservation_periods:
+          type: array
+          maxItems: 4
+          description: Periods may not overlap, and each must last longer than both buffers together.
+          items:
+            $ref: '#/components/schemas/ReservationPeriod'
+        reservation_open_buffer_minutes:
+          type: integer
+          minimum: 0
+          maximum: 999
+        reservation_close_buffer_minutes:
+          type: integer
+          minimum: 0
+          maximum: 999
+        reservation_min_lead_minutes:
+          type: integer
+          minimum: 0
+          maximum: 999
         reservation_fee_product_id:
           type: [string, 'null']
         course_labels:
