@@ -24,7 +24,11 @@ module Spree
         'show_cost' => false,
         'order_note' => true,
         'coupons' => true,
-        'auto_print_receipt' => false
+        'auto_print_receipt' => false,
+        'inline_variants' => false,
+        'scheduled_delivery' => false,
+        'auto_print_prebill' => false,
+        'print_void_tickets' => true
       }.freeze
       ENUMS = {
         'cart_order' => %w[newest_first oldest_first],

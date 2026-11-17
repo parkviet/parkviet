@@ -113,7 +113,7 @@ export function BranchFeaturesTab() {
             icon={<SettingsIcon />}
           >
             <p className="text-sm text-muted-foreground">{t('featuresSections.displayIntro')}</p>
-            <SalesFields keys={['show_stock', 'show_cost', 'cart_order']} />
+            <SalesFields keys={['show_stock', 'show_cost', 'cart_order', 'inline_variants']} />
           </ModelCard>
           <ModelCard
             title={t('featuresSections.utilities')}
@@ -131,7 +131,9 @@ export function BranchFeaturesTab() {
           >
             <p className="text-sm text-muted-foreground">{t('featuresSections.printIntro')}</p>
             <KitchenTrigger />
-            <SalesFields keys={['auto_print_receipt']} />
+            <SalesFields
+              keys={['auto_print_receipt', 'auto_print_prebill', 'print_void_tickets']}
+            />
             <CupAutoPrint />
           </ModelCard>
           <ModelCard
@@ -141,6 +143,7 @@ export function BranchFeaturesTab() {
           >
             <p className="text-sm text-muted-foreground">{t('featuresSections.ordersIntro')}</p>
             <FeatureList features={ORDER_FEATURES} listLabel={t('featuresSections.orders')} />
+            <SalesFields keys={['scheduled_delivery']} />
             <QrModeField />
             <KioskKitchenField />
           </ModelCard>
@@ -398,6 +401,8 @@ function SalesDraftProvider({
 function SalesFields({ keys }: { keys: SalesKey[] }) {
   const { t } = useTranslation()
   const { draft, set, canWrite, busy } = useSalesDraft()
+  const { modules } = useBranchScope()
+  const kitchenOff = modules != null && modules['fnb.kitchen'] !== true
   return (
     <div className="space-y-4">
       {keys.map((key) => {
@@ -439,6 +444,10 @@ function SalesFields({ keys }: { keys: SalesKey[] }) {
           order_note: 'salesOrderNote',
           coupons: 'salesCoupons',
           auto_print_receipt: 'salesAutoPrint',
+          inline_variants: 'salesInlineVariants',
+          scheduled_delivery: 'salesScheduledDelivery',
+          auto_print_prebill: 'salesAutoPrintPrebill',
+          print_void_tickets: 'salesPrintVoidTickets',
         }[key]
         const hint = {
           allow_oversell: 'salesAllowOversellHint',
@@ -448,19 +457,28 @@ function SalesFields({ keys }: { keys: SalesKey[] }) {
           order_note: 'salesOrderNoteHint',
           coupons: 'salesCouponsHint',
           auto_print_receipt: 'salesAutoPrintHint',
+          inline_variants: 'salesInlineVariantsHint',
+          scheduled_delivery: 'salesScheduledDeliveryHint',
+          auto_print_prebill: 'salesAutoPrintPrebillHint',
+          print_void_tickets: 'salesPrintVoidTicketsHint',
         }[key]
         if (!label) return null
+        const needsKitchen = key === 'print_void_tickets' && kitchenOff
         return (
           <div key={key}>
             <ToggleRow
               checked={draft[key] === true}
-              disabled={!canWrite || busy}
+              disabled={!canWrite || busy || needsKitchen}
               switchLabel={t(label)}
               onChange={(value) => set({ [key]: value })}
               label={t(label)}
               description={hint ? t(hint) : undefined}
               extra={
-                key === 'allow_oversell' ? <p role="note">{t('salesAllowOversellWarn')}</p> : null
+                needsKitchen ? (
+                  <p role="note">{t('salesPrintVoidTicketsNeedsKitchen')}</p>
+                ) : key === 'allow_oversell' ? (
+                  <p role="note">{t('salesAllowOversellWarn')}</p>
+                ) : null
               }
             />
           </div>

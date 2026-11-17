@@ -67,6 +67,8 @@
   "invalid": "The submitted data is not valid.",
   "missing": "That branch or register was not found in this store.",
   "conflict": "The record changed. Reload it and try again.",
+  "stockInsufficient": "Only {{on_hand}} left, the order needs {{needed}}.",
+  "stockInsufficientPlain": "Not enough stock at this branch.",
   "offline": "Could not reach the server. Check the connection and try again.",
   "leaseBusy": "This invoice is held by another tab, device, or the page before reload. Do not reload again. Close the other editor and wait for the lease to expire (up to 2 minutes), or explicitly use “Take over editing” if permitted and needed.",
   "leaseStale": "This page's editing access expired or was taken over elsewhere. Select “Claim editing” again; reloading is not required.",
@@ -250,7 +252,7 @@
     },
     "fnb_kitchen": {
       "label": "Kitchen and bar",
-      "description": "Send items to kitchen and bar stations; kitchen screens (KDS) and kitchen tickets. A cancelled item is still printed on a void ticket.",
+      "description": "Send items to kitchen and bar stations; kitchen screens (KDS) and kitchen tickets.",
       "off": "Kitchen and bar is off at this branch, so orders are not sent to the kitchen and no new station can be added. Items still sell as usual.",
       "disabled": "Kitchen and bar is off at this branch; the server records no new station or route. Selling is not affected."
     },

@@ -12,23 +12,31 @@ export const SALES_SETTING_KEYS = [
   'coupons',
   'payment_chime',
   'auto_print_receipt',
-] as const
+  'inline_variants',
+  'scheduled_delivery',
+  'auto_print_prebill',
+  'print_void_tickets',
+] as const;
 
-export type SalesSettingKey = (typeof SALES_SETTING_KEYS)[number]
-export type CartOrder = 'newest_first' | 'oldest_first'
-export type PaymentChime = 'off' | 'default'
+export type SalesSettingKey = (typeof SALES_SETTING_KEYS)[number];
+export type CartOrder = 'newest_first' | 'oldest_first';
+export type PaymentChime = 'off' | 'default';
 
 export type SalesSettings = {
-  allow_oversell: boolean
-  warn_below_cost: boolean
-  show_stock: boolean
-  show_cost: boolean
-  cart_order: CartOrder
-  order_note: boolean
-  coupons: boolean
-  payment_chime: PaymentChime
-  auto_print_receipt: boolean
-}
+  allow_oversell: boolean;
+  warn_below_cost: boolean;
+  show_stock: boolean;
+  show_cost: boolean;
+  cart_order: CartOrder;
+  order_note: boolean;
+  coupons: boolean;
+  payment_chime: PaymentChime;
+  auto_print_receipt: boolean;
+  inline_variants: boolean;
+  scheduled_delivery: boolean;
+  auto_print_prebill: boolean;
+  print_void_tickets: boolean;
+};
 
 export const SALES_SETTING_DEFAULTS: SalesSettings = {
   allow_oversell: true,
@@ -40,22 +48,26 @@ export const SALES_SETTING_DEFAULTS: SalesSettings = {
   coupons: true,
   payment_chime: 'default',
   auto_print_receipt: false,
-}
+  inline_variants: false,
+  scheduled_delivery: false,
+  auto_print_prebill: false,
+  print_void_tickets: true,
+};
 
-const CART_ORDERS: readonly CartOrder[] = ['newest_first', 'oldest_first']
-const CHIMES: readonly PaymentChime[] = ['off', 'default']
+const CART_ORDERS: readonly CartOrder[] = ['newest_first', 'oldest_first'];
+const CHIMES: readonly PaymentChime[] = ['off', 'default'];
 
 function flag(value: unknown, fallback: boolean) {
-  return typeof value === 'boolean' ? value : fallback
+  return typeof value === 'boolean' ? value : fallback;
 }
 
 export function normalizeSalesSettings(value: unknown): SalesSettings {
   const source =
     typeof value === 'object' && value !== null && !Array.isArray(value)
       ? (value as Record<string, unknown>)
-      : {}
-  const cart = source.cart_order
-  const chime = source.payment_chime
+      : {};
+  const cart = source.cart_order;
+  const chime = source.payment_chime;
   return {
     allow_oversell: flag(source.allow_oversell, SALES_SETTING_DEFAULTS.allow_oversell),
     warn_below_cost: flag(source.warn_below_cost, SALES_SETTING_DEFAULTS.warn_below_cost),
@@ -70,5 +82,9 @@ export function normalizeSalesSettings(value: unknown): SalesSettings {
       ? (chime as PaymentChime)
       : SALES_SETTING_DEFAULTS.payment_chime,
     auto_print_receipt: flag(source.auto_print_receipt, SALES_SETTING_DEFAULTS.auto_print_receipt),
-  }
+    inline_variants: flag(source.inline_variants, SALES_SETTING_DEFAULTS.inline_variants),
+    scheduled_delivery: flag(source.scheduled_delivery, SALES_SETTING_DEFAULTS.scheduled_delivery),
+    auto_print_prebill: flag(source.auto_print_prebill, SALES_SETTING_DEFAULTS.auto_print_prebill),
+    print_void_tickets: flag(source.print_void_tickets, SALES_SETTING_DEFAULTS.print_void_tickets),
+  };
 }

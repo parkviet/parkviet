@@ -165,9 +165,15 @@ module Spree
           ActiveRecord.after_all_transactions_commit { print!(ticket, actor) }
         end
 
-        # The station's printer gets the void ticket too. A printer that is off
-        # is logged; the void has happened and the screen shows it.
+        # The station's printer gets the void ticket when the branch still
+        # prints voids. A printer that is off is logged; the void has happened
+        # and the screen shows it either way.
         def print!(ticket, actor)
+          unless SalesSettings.for(ticket.branch)['print_void_tickets']
+            Rails.logger.info("[pos] void ticket #{ticket.prefixed_id} not queued: print_void_tickets is off")
+            return
+          end
+
           printer = ticket.kitchen_station.printer
           return if printer.nil?
 

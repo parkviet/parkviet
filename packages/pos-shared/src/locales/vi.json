@@ -67,6 +67,8 @@
   "invalid": "Dữ liệu gửi lên không hợp lệ.",
   "missing": "Không tìm thấy chi nhánh hoặc quầy trong cửa hàng này.",
   "conflict": "Dữ liệu đã đổi. Hãy tải lại rồi thử lại.",
+  "stockInsufficient": "Chỉ còn {{on_hand}}, đơn cần {{needed}}.",
+  "stockInsufficientPlain": "Không đủ tồn kho tại chi nhánh.",
   "offline": "Không kết nối được máy chủ. Kiểm tra kết nối rồi thử lại.",
   "leaseBusy": "Hóa đơn đang được giữ quyền sửa ở tab, máy khác hoặc phiên trước khi F5. Không cần tải lại trang. Đóng nơi đang sửa rồi chờ khóa hết hạn (tối đa 2 phút); nếu có quyền và cần chuyển ngay, dùng “Tiếp quản quyền sửa”.",
   "leaseStale": "Quyền sửa của trang này đã hết hạn hoặc đã được tiếp quản ở nơi khác. Bấm “Nhận quyền sửa” để xin lại; không cần F5.",
@@ -250,7 +252,7 @@
     },
     "fnb_kitchen": {
       "label": "Bếp và bar",
-      "description": "Gửi món tới trạm bếp, bar; màn hình bếp (KDS) và phiếu in bếp. Món đã huỷ vẫn được in trên phiếu huỷ.",
+      "description": "Gửi món tới trạm bếp, bar; màn hình bếp (KDS) và phiếu in bếp.",
       "off": "Chi nhánh chưa bật chức năng Bếp và bar, nên đơn không gửi tới bếp và không thêm được trạm mới. Món vẫn bán bình thường.",
       "disabled": "Chi nhánh chưa bật chức năng Bếp và bar; máy chủ không ghi nhận trạm hay tuyến mới. Việc bán hàng không bị ảnh hưởng."
     },
