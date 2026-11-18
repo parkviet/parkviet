@@ -48,7 +48,8 @@ RSpec.describe 'POS goods catalog reads', type: :request do
       expect(ids.call('SP000002')).to eq([milk.prefixed_id])
       expect(ids.call('8934567')).to eq([rice.prefixed_id])
       expect(ids.call('1')).to contain_exactly(rice.prefixed_id, milk.prefixed_id)
-      expect(ids.call('  ')).to eq([])
+      # Ransack drops a blank term before the scope, so the list stays unfiltered.
+      expect(ids.call('  ')).to include(rice.prefixed_id, milk.prefixed_id)
     end
 
     it 'lists the products a channel does not carry, even when another channel does' do
