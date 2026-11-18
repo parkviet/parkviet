@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { emptyGoodsProduct } from '../lib/goods-products'
+import { syncVariantRows } from '../lib/goods-variants'
 import { goodsProductSchema } from '../schemas/goods-product'
 
 const sdk = vi.hoisted(() => ({
@@ -8,8 +9,10 @@ const sdk = vi.hoisted(() => ({
     update: vi.fn(),
     bulkAddToChannels: vi.fn(),
     media: { create: vi.fn(), delete: vi.fn() },
+    variants: { create: vi.fn(), delete: vi.fn() },
   },
   variants: { list: vi.fn() },
+  optionTypes: { list: vi.fn(), create: vi.fn(), update: vi.fn() },
   files: { upload: vi.fn() },
 }))
 const request = vi.hoisted(() => vi.fn())
@@ -45,6 +48,7 @@ const context = (overrides: Record<string, unknown> = {}) => ({
 beforeEach(() => {
   vi.clearAllMocks()
   sdk.variants.list.mockResolvedValue({ data: [] })
+  sdk.optionTypes.list.mockResolvedValue({ data: [], meta: { next: null } })
   sdk.products.create.mockResolvedValue(created)
   sdk.products.update.mockResolvedValue(created)
   request.mockResolvedValue({ data: {} })
@@ -145,5 +149,101 @@ describe('saveGoodsProduct', () => {
   it('leaves branches alone for staff who cannot manage them', async () => {
     await saveGoodsProduct(parsed(), context({ manageBranches: false }))
     expect(request).not.toHaveBeenCalled()
+  })
+})
+
+describe('saveGoodsProduct with attributes and add-on groups', () => {
+  const attributes = [{ name: 'Size', values: ['M', 'L'] }]
+  const rows = syncVariantRows(attributes, [], [], { price: '30000', costPrice: '' })
+
+  it('creates the option type, names every variant and gives the menu item its groups', async () => {
+    sdk.variants.list
+      .mockResolvedValueOnce({ data: [{ sku: 'SP000004' }] })
+      .mockResolvedValue({ data: [] })
+    const outcome = await saveGoodsProduct(
+      parsed({ attributes, variants: rows, unitCode: 'item', modifierGroupIds: ['grp_topping'] }),
+      context({ addons: { menuItem: null } }),
+    )
+    expect(outcome.failures).toEqual([])
+    expect(sdk.optionTypes.create).toHaveBeenCalledWith({
+      name: 'size',
+      label: 'Size',
+      option_values: [
+        { name: 'm', label: 'M', position: 1 },
+        { name: 'l', label: 'L', position: 2 },
+      ],
+    })
+    const body = sdk.products.create.mock.calls[0][0]
+    expect(body).not.toHaveProperty('prices')
+    expect(
+      body.variants.map((row: { sku: string; options: unknown }) => [row.sku, row.options]),
+    ).toEqual([
+      ['SP000005', [{ name: 'size', value: 'm' }]],
+      ['SP000006', [{ name: 'size', value: 'l' }]],
+    ])
+    const menu = request.mock.calls.find(([, path]) => path === '/pos/menu_items')
+    expect(menu?.[0]).toBe('POST')
+    expect(menu?.[2]).toMatchObject({
+      body: { product_id: 'prod_new', kind: 'single', modifier_group_ids: ['grp_topping'] },
+      idempotencyKey: expect.any(String),
+    })
+    // A product with variants keeps its unit to the per-variant editor.
+    expect(request.mock.calls.some(([, path]) => path === '/pos/units/variant')).toBe(false)
+  })
+
+  it('on an edit deletes removed variants, creates new ones and reports a refused delete', async () => {
+    const stored = {
+      ...created,
+      default_variant_id: 'v_m',
+      metadata: {},
+      media: [],
+      channels: [{ code: 'pos' }],
+      variants: [
+        { id: 'v_m', options_text: 'Size: M' },
+        { id: 'v_s', options_text: 'Size: S' },
+      ],
+    }
+    sdk.optionTypes.list.mockResolvedValue({
+      data: [
+        {
+          id: 'ot_size',
+          name: 'size',
+          label: 'Size',
+          option_values: [{ id: 'ov_m', name: 'm', label: 'M', position: 1 }],
+        },
+      ],
+      meta: { next: null },
+    })
+    const inUse = Object.assign(new Error('Variant has orders'), { status: 422 })
+    sdk.products.variants.delete.mockRejectedValueOnce(inUse)
+    const edited = rows.map((row) =>
+      row.values[0] === 'M' ? { ...row, variantId: 'v_m', sku: 'A-M' } : { ...row, sku: 'A-L' },
+    )
+    const outcome = await saveGoodsProduct(
+      parsed({ attributes, variants: edited, modifierGroupIds: ['grp_a'] }),
+      context({
+        existing: { product: stored, branchIds: ['branch_a', 'branch_b'], unitCode: 'ly' } as never,
+        addons: { menuItem: { id: 'mi_1', kind: 'single', modifierGroupIds: ['grp_a'] } },
+      }),
+    )
+    expect(sdk.optionTypes.update).toHaveBeenCalledWith('ot_size', {
+      option_values: [
+        { id: 'ov_m', name: 'm', label: 'M', position: 1 },
+        { name: 'l', label: 'L', position: 2 },
+      ],
+    })
+    expect(sdk.products.update.mock.calls[0][1].variants).toEqual([
+      expect.objectContaining({ id: 'v_m', sku: 'A-M' }),
+    ])
+    expect(sdk.products.variants.delete).toHaveBeenCalledWith('prod_new', 'v_s')
+    expect(sdk.products.variants.create).toHaveBeenCalledWith(
+      'prod_new',
+      expect.objectContaining({ sku: 'A-L', options: [{ name: 'size', value: 'l' }] }),
+    )
+    expect(outcome.failures).toEqual([{ step: 'variantDelete', error: inUse, label: 'Size: S' }])
+    // Unchanged groups are not written again.
+    expect(request.mock.calls.some(([, path]) => String(path).startsWith('/pos/menu_items'))).toBe(
+      false,
+    )
   })
 })

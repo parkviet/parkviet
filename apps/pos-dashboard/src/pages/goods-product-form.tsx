@@ -3,17 +3,25 @@ import type { Product } from '@spree/admin-sdk'
 import { mapSpreeErrorsToForm, PageHeader, usePermissions } from '@spree/dashboard-core'
 import { Badge, Button, Checkbox, Field, FieldLabel, Switch, Textarea } from '@spree/dashboard-ui'
 import {
+  ArrowLeftRightIcon,
   BanknoteIcon,
   BoxesIcon,
   FolderTreeIcon,
+  LayersIcon,
   PackageIcon,
   StoreIcon,
+  TagsIcon,
+  TicketPercentIcon,
 } from '@spree/dashboard-ui/icons'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { type ReactNode, useEffect, useId, useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { get, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import { GoodsAddonGroups } from '../components/goods-addon-groups'
 import { CategoryChecklist } from '../components/goods-category-checklist'
+import { GoodsProductPriceLists } from '../components/goods-product-price-lists'
+import { GoodsUnitConversions } from '../components/goods-unit-conversions'
+import { GoodsVariantEditor } from '../components/goods-variant-editor'
 import { PageSkeleton } from '../components/page-skeleton'
 import { ModelCard, ModelState } from '../components/setup/model-ui'
 import { Input, TopologyField, TopologySelect } from '../components/topology-fields'
@@ -28,14 +36,17 @@ import {
   createUnit,
   type FollowUpFailure,
   PRODUCT_FORM_EXPAND,
+  type ProductMenuItem,
   type SaveContext,
   saveGoodsProduct,
+  useGoodsOptionTypes,
   useGoodsTaxRates,
   useGoodsUnits,
   useProductBranches,
   useProductUnit,
 } from '../hooks/use-goods-products'
 import { GoodsSetupError, useGoodsSetup } from '../hooks/use-goods-setup'
+import { useMenuItems, useModifierGroups } from '../hooks/use-menu-admin'
 import { usePosSession } from '../hooks/use-pos-session'
 import { useSession } from '../hooks/use-session'
 import {
@@ -48,8 +59,9 @@ import {
   type ParsedGoodsProduct,
   PREP_PRESETS,
   sellingVariants,
+  variantsEditable,
 } from '../lib/goods-products'
-import { canAdminister, canWriteGoods } from '../lib/pos-access'
+import { canAdminister, canWriteGoods, visibleNav } from '../lib/pos-access'
 import { goodsProductSchema } from '../schemas/goods-product'
 
 type Notice = { text: string; failed: boolean; lines?: string[] }
@@ -67,8 +79,8 @@ const followUpNotice = (
         text: t('goods.products.form.followUpFailed'),
         failed: true,
         lines: failures.map(
-          ({ step, error }) =>
-            `${t(`goods.products.form.followUp.${step}`)}: ${describeFailure(error, t)}`,
+          ({ step, error, label }) =>
+            `${t(`goods.products.form.followUp.${step}`, { variant: label })}: ${describeFailure(error, t)}`,
         ),
       }
 
@@ -89,6 +101,14 @@ export function GoodsProductFormPage({ productId }: { productId?: string }) {
   const branchIds = useMemo(() => branches.map((branch) => branch.id), [branches])
   const assigned = useProductBranches(productId ?? '', branchIds, editing && branchIds.length > 0)
   const unit = useProductUnit(editing ? (product.data?.default_variant_id ?? null) : null)
+  // Add-on groups are offered where the add-on groups page is: the selected
+  // branch runs the menu and the staff may change it.
+  const addonsOn = visibleNav('goods-addons', access)
+  const menuItems = useMenuItems(addonsOn)
+  const menuItem = useMemo((): ProductMenuItem | null => {
+    const item = productId ? menuItems.data?.find((row) => row.product_id === productId) : undefined
+    return item ? { id: item.id, kind: item.kind, modifierGroupIds: item.modifier_group_ids } : null
+  }, [menuItems.data, productId])
   const [notice, setNotice] = useState<Notice | null>(() =>
     productId ? (afterCreate.get(productId) ?? null) : null,
   )
@@ -100,7 +120,10 @@ export function GoodsProductFormPage({ productId }: { productId?: string }) {
     context.isPending ||
     types.isPending ||
     (editing &&
-      (product.isPending || unit.isPending || (branchIds.length > 0 && assigned.isPending)))
+      (product.isPending ||
+        unit.isPending ||
+        (branchIds.length > 0 && assigned.isPending) ||
+        (addonsOn && menuItems.isPending)))
   if (loading) return <PageSkeleton variant="page" />
   const failed = editing && (product.isError || assigned.isError)
   if (failed || types.isError)
@@ -126,6 +149,7 @@ export function GoodsProductFormPage({ productId }: { productId?: string }) {
         kind,
         unitCode: unit.data?.sale_unit ?? 'item',
         branchIds: assigned.data ?? [],
+        modifierGroupIds: menuItem?.modifierGroupIds ?? [],
       })
     : emptyGoodsProduct(manageBranches ? branchIds : [])
   return (
@@ -144,19 +168,37 @@ export function GoodsProductFormPage({ productId }: { productId?: string }) {
       }
       branches={branches}
       manageBranches={manageBranches}
+      addons={
+        addonsOn
+          ? {
+              // Saved only once the product's menu item is known.
+              ready: menuItems.isSuccess,
+              menuItem,
+              error: menuItems.error,
+              retry: () => void menuItems.refetch(),
+            }
+          : null
+      }
       notice={notice}
       setNotice={setNotice}
     />
   )
 }
+type AddonsState = {
+  ready: boolean
+  menuItem: ProductMenuItem | null
+  error: unknown
+  retry: () => void
+}
 
-type Branch = { id: string; name: string; stock_location_id: string }
+type Branch = { id: string; name: string; stock_location_id: string; timezone?: string }
 
 function ProductForm({
   initial,
   existing,
   branches,
   manageBranches,
+  addons,
   notice,
   setNotice,
 }: {
@@ -164,6 +206,7 @@ function ProductForm({
   existing?: { product: Product; branchIds: string[]; unitCode: string }
   branches: Branch[]
   manageBranches: boolean
+  addons: AddonsState | null
   notice: Notice | null
   setNotice: (notice: Notice | null) => void
 }) {
@@ -191,7 +234,12 @@ function ProductForm({
       saveGoodsProduct(value, saving),
   )
   const busy = form.formState.isSubmitting
-  const withOptions = existing ? optionVariants(existing.product).length > 0 : false
+  const storedOptions = existing ? optionVariants(existing.product) : []
+  // Stored variants the matrix cannot represent keep their own values.
+  const lockedVariants = Boolean(existing && !variantsEditable(existing.product))
+  const withOptions = lockedVariants || draft.attributes.length > 0
+  const optionTypes = useGoodsOptionTypes(canWrite)
+  const modifierGroups = useModifierGroups(addons !== null)
   const readOnly = !canWrite
   const set = <K extends keyof GoodsProductFormValues>(key: K, value: GoodsProductFormValues[K]) =>
     form.setValue(key, value as never, { shouldDirty: true })
@@ -221,6 +269,7 @@ function ProductForm({
           manageBranches,
           image,
           existing,
+          addons: addons?.ready ? { menuItem: addons.menuItem } : undefined,
         },
       })
       const next = followUpNotice(outcome.failures, t, !existing)
@@ -279,11 +328,28 @@ function ProductForm({
   })
   const variants = existing ? sellingVariants(existing.product) : []
   const selectedBranches = branches.filter((branch) => draft.branchIds.includes(branch.id))
+  const errorAt = (path: string) => (get(errors, path) as { message?: string } | undefined)?.message
+  const onHand = (variantId: string) =>
+    variants
+      .filter((variant) => variant.id === variantId)
+      .flatMap((variant) => variant.stock_levels ?? [])
+      .filter((level) =>
+        branches.some((branch) => branch.stock_location_id === level.stock_location_id),
+      )
+      .reduce((sum, level) => sum + level.count_on_hand, 0)
+  const variantChoices = variants.map((variant) => ({
+    id: variant.id,
+    label: variant.options_text?.trim() || existing?.product.name || variant.id,
+    basePrice: variant.price?.amount ?? existing?.product.price?.amount ?? null,
+  }))
+  const timeZone = branches[0]?.timezone ?? 'Asia/Ho_Chi_Minh'
 
   return (
     <form
       // Errors set by hand (schema and server) would otherwise block the next submit.
       onSubmit={(event) => {
+        // A dialog's own form (unit or price list editor) bubbles here through React.
+        if (event.target !== event.currentTarget) return
         form.clearErrors()
         void form.handleSubmit(submit)(event)
       }}
@@ -368,9 +434,12 @@ function ProductForm({
           </div>
           {withOptions && (
             <p className="text-sm text-muted-foreground">
-              {t('goods.products.form.withOptions', {
-                count: optionVariants(existing!.product).length,
-              })}
+              {t(
+                lockedVariants
+                  ? 'goods.products.form.withOptions'
+                  : 'goods.products.form.variants.perVariant',
+                { count: lockedVariants ? storedOptions.length : draft.variants.length },
+              )}
             </p>
           )}
           <TopologyField
@@ -439,7 +508,7 @@ function ProductForm({
             label={t('goods.products.form.trackInventory')}
             hint={t('goods.products.form.trackHint')}
             checked={draft.trackInventory}
-            disabled={withOptions}
+            disabled={lockedVariants}
             onChange={(checked) => set('trackInventory', checked)}
           />
           {!draft.trackInventory ? (
@@ -479,6 +548,10 @@ function ProductForm({
             <p className="text-sm text-muted-foreground">
               {t('goods.products.form.stockNoBranch')}
             </p>
+          ) : withOptions ? (
+            <p className="text-sm text-muted-foreground">
+              {t('goods.products.form.variants.stockPerVariant')}
+            </p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               {selectedBranches.map((branch) => {
@@ -513,6 +586,64 @@ function ProductForm({
         </ModelCard>
 
         <ModelCard
+          title={t('goods.products.form.variants.title')}
+          id="goods-variants"
+          icon={<LayersIcon />}
+        >
+          {lockedVariants ? (
+            <ul className="space-y-1 text-sm">
+              {storedOptions.map((variant) => (
+                <li key={variant.id} className="flex justify-between gap-4">
+                  <span>{variant.options_text}</span>
+                  <span className="text-muted-foreground">{variant.sku ?? '—'}</span>
+                </li>
+              ))}
+              <li className="text-muted-foreground">{t('goods.products.form.variants.locked')}</li>
+            </ul>
+          ) : (
+            <GoodsVariantEditor
+              attributes={draft.attributes}
+              rows={draft.variants}
+              initialRows={initial.variants}
+              onChange={({ attributes, rows }) => {
+                set('attributes', attributes)
+                set('variants', rows)
+              }}
+              defaults={{ price: draft.price, costPrice: draft.costPrice }}
+              lockNames={storedOptions.length > 0}
+              suggestions={(optionTypes.data ?? []).map((type) => type.label)}
+              branches={manageBranches ? selectedBranches : []}
+              trackInventory={draft.trackInventory}
+              onHand={onHand}
+              errorAt={errorAt}
+              disabled={busy || readOnly}
+            />
+          )}
+        </ModelCard>
+
+        {addons && (
+          <ModelCard
+            title={t('goods.products.form.addons.title')}
+            id="goods-addons"
+            icon={<TagsIcon />}
+          >
+            <GoodsAddonGroups
+              groups={modifierGroups.data}
+              value={draft.modifierGroupIds}
+              onChange={(ids) => set('modifierGroupIds', ids)}
+              combo={addons.menuItem?.kind === 'combo'}
+              error={addons.error ?? modifierGroups.error}
+              retry={() => {
+                addons.retry()
+                void modifierGroups.refetch()
+              }}
+              storeId={storeId}
+              disabled={busy || readOnly || !addons.ready}
+            />
+          </ModelCard>
+        )}
+
+        <ModelCard
           title={t('goods.products.form.categories')}
           id="goods-categories"
           icon={<FolderTreeIcon />}
@@ -545,6 +676,47 @@ function ProductForm({
           )}
         </ModelCard>
       </fieldset>
+
+      {/* Saved on their own (dialogs), so they stay usable while the form is read-only. */}
+      <ModelCard
+        title={t('goods.products.form.units.title')}
+        id="goods-units"
+        icon={<ArrowLeftRightIcon />}
+      >
+        {existing ? (
+          <GoodsUnitConversions
+            product={existing.product}
+            variants={variantChoices}
+            branchId={existing.branchIds[0] ?? null}
+            storeId={storeId}
+            canWrite={manageBranches}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {t('goods.products.form.units.afterCreate')}
+          </p>
+        )}
+      </ModelCard>
+
+      <ModelCard
+        title={t('goods.products.form.priceLists.title')}
+        id="goods-price-lists"
+        icon={<TicketPercentIcon />}
+      >
+        {existing ? (
+          <GoodsProductPriceLists
+            productId={existing.product.id}
+            variants={variantChoices}
+            currency={currency}
+            timeZone={timeZone}
+            canWrite={canWrite}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {t('goods.products.form.priceLists.afterCreate')}
+          </p>
+        )}
+      </ModelCard>
 
       <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-2 rounded-md border bg-background p-3">
         <Button

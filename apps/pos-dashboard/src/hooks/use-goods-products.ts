@@ -10,10 +10,16 @@ import {
   productUpdateBody,
   SKU_PREFIX,
 } from '../lib/goods-products'
+import {
+  type OptionNames,
+  type ParsedVariantRow,
+  planOptionTypes,
+  variantChanges,
+} from '../lib/goods-variants'
 import { posRequest } from '../lib/pos-request'
 import { goodsKey, type ProductListParams } from './use-goods'
 import type { ProductTypeIds } from './use-goods-setup'
-import { POS_CHANNEL_CODE } from './use-goods-setup'
+import { listAll, POS_CHANNEL_CODE } from './use-goods-setup'
 import { useSession } from './use-session'
 
 // Reads and the save sequence of the goods product screens. Products stay
@@ -25,7 +31,14 @@ import { useSession } from './use-session'
 export const PRODUCT_EXPAND = ['variants', 'variants.stock_levels', 'default_variant']
 export const PRODUCT_FORM_EXPAND = [...PRODUCT_EXPAND, 'categories', 'media', 'channels']
 
-export type VariantUnitRow = { variant_id: string; sale_unit: string; sale_unit_name: string }
+export type VariantUnitRow = {
+  variant_id: string
+  sale_unit: string
+  sale_unit_name: string
+  base_unit?: string
+  ratio_numerator?: number
+  ratio_denominator?: number
+}
 export type GoodsListProduct = Product & { unit_name: string | null }
 
 export const readVariantUnits = async (variantIds: string[]) =>
@@ -127,6 +140,27 @@ export function useProductBranches(productId: string, branchIds: string[], enabl
     queryFn: () => readProductBranches(productId, branchIds),
   })
 }
+// The selling unit and conversion of each of a product's variants.
+export function useVariantUnits(variantIds: string[], enabled = true) {
+  const { storeId, status } = useSession()
+  return useQuery({
+    queryKey: goodsKey(storeId, 'variant-units', variantIds),
+    enabled: enabled && status === 'authenticated' && variantIds.length > 0,
+    queryFn: () => readVariantUnits(variantIds),
+  })
+}
+// The store's option types with their values, offered as attribute names.
+export function useGoodsOptionTypes(enabled = true) {
+  const { storeId, status } = useSession()
+  return useQuery({
+    queryKey: goodsKey(storeId, 'option-types'),
+    enabled: enabled && status === 'authenticated',
+    queryFn: () =>
+      listAll((page) =>
+        adminClient.optionTypes.list({ limit: 100, page, expand: ['option_values'] }),
+      ),
+  })
+}
 export function useProductUnit(variantId: string | null) {
   const { storeId, status } = useSession()
   return useQuery({
@@ -136,19 +170,78 @@ export function useProductUnit(variantId: string | null) {
   })
 }
 
-// The next free generated SKU. Variants are read highest first; a candidate
-// another product took meanwhile is skipped.
-export async function generateSku(client: Pick<typeof adminClient, 'variants'> = adminClient) {
+// The next free generated SKUs, one per variant to name. Variants are read
+// highest first; a candidate another product took meanwhile is skipped, and
+// `reserved` (SKUs typed in the same form) are never handed out.
+export async function generateSkus(
+  count: number,
+  client: Pick<typeof adminClient, 'variants'> = adminClient,
+  reserved: readonly string[] = [],
+) {
+  if (count === 0) return []
   const { data } = await client.variants.list({ sku_start: SKU_PREFIX, sort: '-sku', limit: 100 })
-  const taken = data.map((variant) => variant.sku)
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const candidate = nextSku(taken)
-    const clash = await client.variants.list({ sku_eq: candidate, limit: 1 })
-    if (clash.data.length === 0) return candidate
+  const taken: (string | null)[] = [...data.map((variant) => variant.sku), ...reserved]
+  const picked: string[] = []
+  while (picked.length < count) {
+    let candidate = nextSku(taken)
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const clash = await client.variants.list({ sku_eq: candidate, limit: 1 })
+      if (clash.data.length === 0) break
+      taken.push(candidate)
+      candidate = nextSku(taken)
+    }
     taken.push(candidate)
+    picked.push(candidate)
   }
-  return nextSku(taken)
+  return picked
 }
+export const generateSku = async (client: Pick<typeof adminClient, 'variants'> = adminClient) =>
+  (await generateSkus(1, client))[0]
+
+// Makes every attribute and value an option type of the store, so variants
+// name them by their stored names.
+export async function ensureOptionTypes(
+  attributes: ParsedGoodsProduct['attributes'],
+  client: Pick<typeof adminClient, 'optionTypes'> = adminClient,
+): Promise<OptionNames> {
+  if (attributes.length === 0) return []
+  const existing = await listAll((page) =>
+    client.optionTypes.list({ limit: 100, page, expand: ['option_values'] }),
+  )
+  const { writes, names } = planOptionTypes(attributes, existing)
+  for (const write of writes)
+    if (write.kind === 'create') await client.optionTypes.create(write.params)
+    else await client.optionTypes.update(write.id, write.params)
+  return names
+}
+
+// Gives rows without a SKU generated ones.
+async function namedRows(rows: ParsedVariantRow[]) {
+  const typed = rows.map((row) => row.sku).filter(Boolean)
+  const generated = await generateSkus(rows.filter((row) => !row.sku).length, adminClient, typed)
+  return rows.map((row) => (row.sku ? row : { ...row, sku: generated.shift() ?? '' }))
+}
+
+// The add-on groups of a product live on its menu item: one is created for
+// the product the first time groups are chosen, then its groups are replaced.
+export type ProductMenuItem = { id: string; kind: string; modifierGroupIds: string[] }
+export async function saveProductAddons(
+  productId: string,
+  menuItem: ProductMenuItem | null,
+  groupIds: readonly string[],
+) {
+  const body = { modifier_group_ids: groupIds }
+  const idempotencyKey = crypto.randomUUID()
+  if (menuItem)
+    return posRequest('PATCH', `/pos/menu_items/${menuItem.id}`, { body, idempotencyKey })
+  if (groupIds.length === 0) return null
+  return posRequest('POST', '/pos/menu_items', {
+    body: { product_id: productId, kind: 'single', ...body },
+    idempotencyKey,
+  })
+}
+export const sameIds = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((id, index) => id === b[index])
 
 const assign = (branchId: string, productId: string) =>
   posRequest('POST', `/pos/branches/${branchId}/products`, { body: { product_id: productId } })
@@ -171,8 +264,10 @@ const setUnit = (branchId: string, variantId: string, unit: string) =>
 // A step after the product itself was saved that did not go through. The
 // product is kept; saving again repeats only what is still missing.
 export type FollowUpFailure = {
-  step: 'branches' | 'unit' | 'image' | 'channel'
+  step: 'branches' | 'unit' | 'image' | 'channel' | 'addons' | 'variantCreate' | 'variantDelete'
   error: unknown
+  // The variant a variant step was about.
+  label?: string
 }
 export type SaveOutcome = { productId: string; failures: FollowUpFailure[] }
 
@@ -190,18 +285,22 @@ export type SaveContext = {
     branchIds: string[]
     unitCode: string
   }
+  // The product's menu item when add-on groups are managed here (null: none
+  // yet); absent when the signed-in staff cannot change the menu.
+  addons?: { menuItem: ProductMenuItem | null }
 }
 
 async function attempt(
   failures: FollowUpFailure[],
   step: FollowUpFailure['step'],
   run: () => Promise<unknown>,
+  label?: string,
 ) {
   try {
     await run()
     return true
   } catch (error) {
-    failures.push({ step, error })
+    failures.push({ step, error, ...(label ? { label } : {}) })
     return false
   }
 }
@@ -215,16 +314,46 @@ export async function saveGoodsProduct(
 ): Promise<SaveOutcome> {
   const types = await context.ensureProductTypes()
   const productTypeId = types[value.kind]
-  const sku = value.sku || (await generateSku())
-  const parsed = { ...value, sku }
+  const withOptions = value.attributes.length > 0
+  const sku = withOptions ? value.sku : value.sku || (await generateSku())
+  const parsed = { ...value, sku, variants: await namedRows(value.variants) }
+  const optionNames = await ensureOptionTypes(parsed.attributes)
   const failures: FollowUpFailure[] = []
   const existing = context.existing
   let product: Product
   if (existing) {
+    const changes = withOptions
+      ? variantChanges(parsed.variants, existing.product, {
+          currency: context.currency,
+          trackInventory: parsed.trackInventory,
+          stockLocations: context.stockLocations,
+          branchIds: parsed.branchIds,
+          names: optionNames,
+        })
+      : null
     product = await adminClient.products.update(
       existing.product.id,
-      productUpdateBody(parsed, existing.product, { currency: context.currency, productTypeId }),
+      productUpdateBody(parsed, existing.product, {
+        currency: context.currency,
+        productTypeId,
+        variants: changes?.updates,
+      }),
     )
+    // Removed first, so a SKU freed by a removed variant can be taken by a new one.
+    for (const removed of changes?.deletes ?? [])
+      await attempt(
+        failures,
+        'variantDelete',
+        () => adminClient.products.variants.delete(existing.product.id, removed.id),
+        removed.label,
+      )
+    for (const added of changes?.creates ?? [])
+      await attempt(
+        failures,
+        'variantCreate',
+        () => adminClient.products.variants.create(existing.product.id, added.params),
+        added.label,
+      )
     if (context.image) {
       const image = context.image
       await attempt(failures, 'image', async () => {
@@ -246,6 +375,7 @@ export async function saveGoodsProduct(
         productTypeId,
         stockLocations: context.stockLocations,
         imageSignedId,
+        optionNames,
       }),
     )
   }
@@ -272,11 +402,19 @@ export async function saveGoodsProduct(
     // The unit is store-wide but set through a branch that sells the product.
     const through = parsed.branchIds[0]
     const unitChanged = parsed.unitCode !== (existing?.unitCode ?? 'item')
-    if (unitChanged && through && optionVariants(product).length === 0 && published)
+    const simple = !withOptions && optionVariants(product).length === 0
+    if (unitChanged && through && simple && published)
       await attempt(failures, 'unit', () =>
         setUnit(through, product.default_variant_id, parsed.unitCode),
       )
   }
+  // After the branches: a new menu item also joins the assortment of every
+  // branch running the menu.
+  const addons = context.addons
+  if (addons && !sameIds(addons.menuItem?.modifierGroupIds ?? [], parsed.modifierGroupIds))
+    await attempt(failures, 'addons', () =>
+      saveProductAddons(product.id, addons.menuItem, parsed.modifierGroupIds),
+    )
   return { productId: product.id, failures }
 }
 

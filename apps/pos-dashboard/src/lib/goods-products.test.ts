@@ -16,6 +16,7 @@ import {
   toCsv,
   type VariantSlice,
 } from './goods-products'
+import { syncVariantRows } from './goods-variants'
 
 const variant = (overrides: Partial<VariantSlice> = {}): VariantSlice => ({
   id: 'variant_1',
@@ -289,5 +290,60 @@ describe('branch changes', () => {
   it('adds and removes only the difference', () => {
     expect(branchChanges(['a', 'b'], ['b', 'c'])).toEqual({ add: ['c'], remove: ['a'] })
     expect(branchChanges([], [])).toEqual({ add: [], remove: [] })
+  })
+})
+
+describe('attributes in the form', () => {
+  const base = { ...emptyGoodsProduct(['branch_a']), name: 'Áo thun', price: '' }
+  const attributes = [
+    { name: 'Màu sắc', values: ['Đỏ', 'Xanh'] },
+    { name: 'Size', values: ['M'] },
+  ]
+  const rows = syncVariantRows(attributes, [], [], { price: '120.000', costPrice: '' })
+  it('prices each kept variant instead of the product and drops left-out ones', () => {
+    const parsed = goodsProductSchema('VND').parse({
+      ...base,
+      attributes,
+      variants: rows.map((row, index) => (index === 1 ? { ...row, enabled: false } : row)),
+    })
+    expect(parsed.variants.map((row) => [row.values, row.price])).toEqual([[['Đỏ', 'M'], '120000']])
+    const body = productCreateBody(parsed, {
+      currency: 'VND',
+      channelId: 'ch_pos',
+      productTypeId: 'pt_goods',
+      stockLocations: { branch_a: 'sloc_a' },
+    })
+    expect(body).not.toHaveProperty('prices')
+    expect(body.variants).toHaveLength(1)
+    expect(body.variants?.[0]).toMatchObject({ prices: [{ currency: 'VND', amount: '120000' }] })
+  })
+  it('reports attribute, row and duplicate SKU problems on their fields', () => {
+    const result = goodsProductSchema('VND').safeParse({
+      ...base,
+      attributes: [{ name: ' ', values: [] }, ...attributes],
+      variants: rows.map((row) => ({
+        ...row,
+        sku: 'SAME',
+        price: row.key.includes('xanh') ? 'x' : row.price,
+      })),
+    })
+    const issues = result.error?.issues.map((issue) => [issue.path.join('.'), issue.message])
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        ['attributes.0.name', 'goods.products.form.errors.attributeName'],
+        ['attributes.0.values', 'goods.products.form.errors.attributeValues'],
+        ['variants.1.price', 'goods.products.form.errors.price'],
+        ['variants.1.sku', 'goods.products.form.errors.skuDuplicate'],
+      ]),
+    )
+    expect(issues).not.toContainEqual(['price', 'goods.products.form.errors.price'])
+  })
+  it('needs one variant kept', () => {
+    const result = goodsProductSchema('VND').safeParse({
+      ...base,
+      attributes,
+      variants: rows.map((row) => ({ ...row, enabled: false })),
+    })
+    expect(result.error?.issues.map((issue) => issue.path.join('.'))).toContain('variants')
   })
 })

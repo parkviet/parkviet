@@ -145,5 +145,20 @@ never sends `stock_levels` (the API removes locations left out); a create that
 saved the product but failed a later step (branches, unit, image) is retried by
 saving again, which patches instead of creating a second product.
 
+Attributes are Spree option types (`lib/goods-variants.ts`): before a save the
+form makes each attribute and value exist (named by an ASCII slug, shown by its
+label; an update sends the type's whole value set back) and variants name them
+in `options`. A new product is priced per variant, never with product-level
+`prices`. An edit keeps attribute names, sends kept variants with the product
+`PATCH`, then deletes and creates variants through `/products/:id/variants`; a
+refused delete (variant on orders) is a reported follow-up step. A simple product
+given attributes turns its single variant into the first combination. Add-on
+groups are the product's `menu_items.modifier_group_ids` (an item is created the
+first time groups are chosen, which also adds it to every branch running the
+menu), shown only where the add-on groups page is. Unit conversion opens the
+branch `VariantUnitEditor` through a branch selling the product. The price-list
+card writes Spree prices (`/prices/bulk_upsert`, `bulk_destroy`, `min_quantity`
+breaks on lists with a volume rule) on its own and refreshes only price reads.
+
 Do not edit `apps/dashboard`. POS administration lives only here: do not add
 settings or setup screens back to `apps/pos`.

@@ -5,6 +5,15 @@ import type {
   ProductUpdateParams,
   ProductVariantParams,
 } from '@spree/admin-sdk'
+import {
+  type AttributeValues,
+  attributesFromVariants,
+  createdVariants,
+  type OptionNames,
+  type OptionVariantSlice,
+  type ParsedVariantRow,
+  type VariantRowValues,
+} from './goods-variants'
 
 // Pure mapping between Spree products and what the goods screens show and
 // send. Inputs are structural slices of the Admin API records, so tests and
@@ -21,6 +30,7 @@ export type VariantSlice = {
   options_text?: string | null
   price?: PriceSlice
   stock_levels?: StockLevelSlice[]
+  option_values?: OptionVariantSlice['option_values']
 }
 export type ProductSlice = {
   id: string
@@ -197,16 +207,23 @@ export type GoodsProductFormValues = {
   openingStock: Record<string, string>
   categoryIds: string[]
   branchIds: string[]
+  // Attributes and the variant matrix; no attribute is a simple product.
+  attributes: AttributeValues[]
+  variants: VariantRowValues[]
+  // Add-on groups offered with the product (its menu item's groups).
+  modifierGroupIds: string[]
 }
 // Already validated and canonical (see `schemas/goods-product.ts`).
 export type ParsedGoodsProduct = Omit<
   GoodsProductFormValues,
-  'prepMinutes' | 'price' | 'costPrice' | 'openingStock'
+  'prepMinutes' | 'price' | 'costPrice' | 'openingStock' | 'variants'
 > & {
   prepMinutes: number | null
   price: string
   costPrice: string | null
   openingStock: Record<string, number>
+  // The combinations kept in the product, in matrix order.
+  variants: ParsedVariantRow[]
 }
 
 export const emptyGoodsProduct = (branchIds: string[]): GoodsProductFormValues => ({
@@ -224,6 +241,9 @@ export const emptyGoodsProduct = (branchIds: string[]): GoodsProductFormValues =
   openingStock: {},
   categoryIds: [],
   branchIds,
+  attributes: [],
+  variants: [],
+  modifierGroupIds: [],
 })
 
 type EditableProduct = ProductSlice & {
@@ -239,10 +259,12 @@ export function prepMinutesOf(metadata: Record<string, unknown> | null | undefin
 }
 export function formFromProduct(
   product: EditableProduct,
-  context: { kind: GoodsKind; unitCode: string; branchIds: string[] },
+  context: { kind: GoodsKind; unitCode: string; branchIds: string[]; modifierGroupIds?: string[] },
 ): GoodsProductFormValues {
   const variant = sellingVariants(product)[0]
   const prep = prepMinutesOf(product.metadata)
+  // Variants whose attributes cannot be read back keep their values as they are.
+  const matrix = attributesFromVariants(optionVariants(product))
   return {
     name: product.name,
     kind: context.kind,
@@ -258,8 +280,15 @@ export function formFromProduct(
     openingStock: {},
     categoryIds: (product.categories ?? []).map((category) => category.id),
     branchIds: context.branchIds,
+    attributes: matrix.attributes,
+    variants: matrix.rows,
+    modifierGroupIds: context.modifierGroupIds ?? [],
   }
 }
+// Whether the form can edit a product's variants: a product whose stored
+// variants do not each name one value of every attribute cannot.
+export const variantsEditable = (product: Pick<ProductSlice, 'variants'>) =>
+  attributesFromVariants(optionVariants(product)).derivable
 
 const withPrep = (metadata: Record<string, unknown>, minutes: number | null) => {
   const { [PREP_MINUTES_KEY]: _previous, ...rest } = metadata
@@ -280,6 +309,8 @@ export type CreateContext = {
   // Selling stock location of each branch, by branch id.
   stockLocations: Record<string, string>
   imageSignedId?: string | null
+  // Option type names of the attributes (from `planOptionTypes`).
+  optionNames?: OptionNames
 }
 // A new product goes on sale at once on the `pos` channel. Opening stock is
 // written only for tracked items, at the selected branches' locations.
@@ -295,6 +326,7 @@ export function productCreateBody(
           : []
       })
     : []
+  const withOptions = value.attributes.length > 0
   return {
     name: value.name,
     status: 'active',
@@ -303,27 +335,43 @@ export function productCreateBody(
     ...(value.taxCategoryId ? { tax_category_id: value.taxCategoryId } : {}),
     category_ids: value.categoryIds,
     metadata: withPrep({}, value.prepMinutes),
-    prices: [{ currency: context.currency as PriceParams['currency'], amount: value.price }],
+    // A product with options is priced per variant, never both ways.
+    ...(withOptions
+      ? {}
+      : {
+          prices: [{ currency: context.currency as PriceParams['currency'], amount: value.price }],
+        }),
     product_publications: [{ channel_id: context.channelId }],
     ...(context.imageSignedId ? { media: [{ signed_id: context.imageSignedId }] } : {}),
-    variants: [
-      {
-        ...variantFields(value, context.currency),
-        ...(levels.length > 0 ? { stock_levels: levels } : {}),
-      },
-    ],
+    variants: withOptions
+      ? createdVariants(value.variants, {
+          currency: context.currency,
+          trackInventory: value.trackInventory,
+          stockLocations: context.stockLocations,
+          branchIds: value.branchIds,
+          names: context.optionNames ?? [],
+        })
+      : [
+          {
+            ...variantFields(value, context.currency),
+            ...(levels.length > 0 ? { stock_levels: levels } : {}),
+          },
+        ],
   }
 }
 
 // An edit never sends stock levels: the API removes locations left out of
 // them, and stock already counted keeps its history through the inventory
-// screens. A product with options keeps its per-variant price and codes.
+// screens. With attributes, the stored variants kept in the matrix ride
+// along (`variants`, from `variantChanges`); a product whose variants the
+// form cannot edit keeps its per-variant price and codes.
 export function productUpdateBody(
   value: ParsedGoodsProduct,
   product: Pick<EditableProduct, 'default_variant_id' | 'metadata' | 'variants'>,
-  context: { currency: string; productTypeId: string },
+  context: { currency: string; productTypeId: string; variants?: ProductVariantParams[] },
 ): ProductUpdateParams {
-  const simple = optionVariants(product).length === 0
+  const withOptions = value.attributes.length > 0
+  const simple = !withOptions && optionVariants(product).length === 0
   return {
     name: value.name,
     product_type_id: context.productTypeId,
@@ -337,6 +385,7 @@ export function productUpdateBody(
           variants: [{ id: product.default_variant_id, ...variantFields(value, context.currency) }],
         }
       : {}),
+    ...(withOptions && context.variants?.length ? { variants: context.variants } : {}),
   }
 }
 
