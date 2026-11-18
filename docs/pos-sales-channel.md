@@ -26,6 +26,13 @@ Danh mục, tem cân và thêm hàng dùng bộ giải giá theo ngữ cảnh c�
 
 Giá cơ sở vẫn là giá dự phòng theo quy tắc chuẩn của Spree khi không có bảng giá phù hợp. Có thể cấu hình catalog mặc định của kênh và bảng giá của catalog trong Spree. Những chính sách không giới hạn theo kênh vẫn áp dụng theo hành vi chuẩn của Spree.
 
+Bảng giá được quản lý ở POS dashboard, mục Hàng hoá > Bảng giá (`/goods/price-lists`), và là bảng giá Spree thật:
+
+- Bảng giá cho mọi khách có quy tắc kênh (`channel_rule`), mặc định là kênh `pos`; bỏ hết kênh thì bảng giá áp dụng trên mọi kênh. Ngày bắt đầu và kết thúc tính theo giờ của cửa hàng; bảng giá ngoài khoảng ngày không được dùng.
+- Giá sỉ là bảng giá có quy tắc số lượng (`volume_rule`) và các bậc giá theo `min_quantity` của từng biến thể. Ở quầy, mỗi dòng hàng bán theo đơn vị gốc được định giá theo số lượng của chính dòng đó: lúc thêm hàng, khi gộp thêm vào dòng cũ và khi sửa số lượng. Dòng có giá đã đổi tay, dòng thực đơn, hàng cân hoặc bán theo đơn vị quy đổi, dòng từ tem cân và dòng do máy chủ đặt giá không bị định giá lại. Bán offline vẫn dùng giá một đơn vị trong danh mục đã tải.
+- Bảng giá cho nhóm khách là bảng giá của một catalog Spree gán cho các nhóm khách đó (catalog mang `metadata.pos_price_list = true`). Catalog không hỏi quy tắc kênh, nên bảng giá này áp dụng cho khách thuộc nhóm trên mọi kênh. Ở quầy, giá tính lúc thêm hàng, nên cần chọn khách trước khi thêm hàng.
+- Spree không có trường mã cho bảng giá, nên mã bảng giá (tự sinh dạng `BG` và sáu chữ số) nằm ở `description`. "Giá theo công thức" chỉ tính giá từ giá bán rồi ghi vào bảng giá; công thức không được lưu lại.
+
 Giá đã ghi trên dòng hàng không bị đổi hàng loạt bởi thay đổi cấu hình kênh. Snapshot đã khóa bởi khoản thu được giữ nguyên; hệ thống không định giá lại giao dịch đã bắt đầu thanh toán.
 
 ## Khi thiếu hoặc tắt kênh

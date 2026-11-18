@@ -82,7 +82,10 @@ module Spree
             new_base = existing.base_quantity + base_quantity
             raise Conflict, 'Quantity is too large.' if new_base > UnitNormalizer::MAX_BASE_QUANTITY
 
-            line.update!(quantity: new_base, price: line_price)
+            was = existing.base_quantity
+            # Keys match only on the price the line was keyed at; the line keeps
+            # the price it charges now, which a quantity break may have lowered.
+            line.update!(quantity: new_base, price: existing.line_price)
             existing.update!(base_quantity: new_base, sale_quantity: existing.sale_quantity + sale_qty)
             # Lots are chosen again for the new quantity when payment is prepared.
             Inventory::AllocateTraceability.release_line!(existing)
@@ -108,6 +111,11 @@ module Spree
               Inventory::AllocateTraceability.reserve_serials!(workspace: workspace, sale_line: sale_line, serials: sale_line.serial_codes)
             end
             SaleLineKinds::Menu.record!(sale_line, menu) if menu
+          end
+          # A list-priced line is keyed and first priced as one unit, then
+          # charged what the price lists ask for its whole quantity.
+          if menu.nil? && label.nil? && server_price.nil? && price_override.blank?
+            SalesChannel.reprice_line!(sale_line, was: was || 1)
           end
           audit = { variant_id: variant.prefixed_id, sale_line_id: sale_line.prefixed_id, line_item_id: line.prefixed_id, quantity: base_quantity }
           audit[:menu] = SaleLineKinds::Menu.audit(menu) if menu

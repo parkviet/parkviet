@@ -249,7 +249,7 @@ export function GoodsProductPriceLists({
   )
 }
 
-function ListPriceDialog({
+export function ListPriceDialog({
   list,
   join,
   productId,

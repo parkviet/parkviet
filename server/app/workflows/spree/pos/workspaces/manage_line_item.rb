@@ -86,8 +86,11 @@ module Spree
               OnHandGuard.ensure_added!(workspace, sale_line.variant, base_quantity - sale_line.base_quantity, kind: sale_line.kind)
             end
             sale_line.line_item.update!(quantity: base_quantity)
-            changed = sale_line.base_quantity != base_quantity
+            was = sale_line.base_quantity
+            changed = was != base_quantity
             sale_line.update!(sale_quantity: sale_qty, base_quantity: base_quantity)
+            # A list-priced line follows the price lists' quantity breaks.
+            SalesChannel.reprice_line!(sale_line, was: was) if changed
             # Reservations only follow a real quantity change.
             Inventory::AllocateTraceability.release_line!(sale_line) if changed
             recalculate!(workspace)

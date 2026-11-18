@@ -183,7 +183,7 @@ module Spree
               quantity: line.quantity,
               price: money(line.price),
               original_price: original_price,
-              list_price: money(snapshot_locked ? quoted_price : (SalesChannel.price(line.variant, store: store, currency: order.currency, order: order)&.amount || quoted_price)),
+              list_price: money(snapshot_locked ? quoted_price : (SalesChannel.price(line.variant, store: store, currency: order.currency, order: order, quantity: SalesChannel.line_quantity(sale) || 1)&.amount || quoted_price)),
               amount: money(line.amount),
               net_amount: money(line.amount + line.discounts.to_a.sum(&:amount)),
               discounts: line.discounts.to_a.map { |row|

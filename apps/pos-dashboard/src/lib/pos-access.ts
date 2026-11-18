@@ -190,6 +190,12 @@ export const canReadCategories = (access: PosAccess) =>
   hasKey(access, 'read_categories') || hasKey(access, 'write_categories')
 export const canWriteCategories = (access: PosAccess) => hasKey(access, 'write_categories')
 export const canCreatePosChannel = (access: PosAccess) => hasKey(access, 'write_settings')
+// Price lists name channels and customer groups, which Spree reads under the
+// settings and customers keys.
+export const canReadChannels = (access: PosAccess) =>
+  hasKey(access, 'read_settings') || hasKey(access, 'write_settings')
+export const canReadCustomerGroups = (access: PosAccess) =>
+  hasKey(access, 'read_customers') || hasKey(access, 'write_customers')
 // Spree registers product types as their own catalog scope, apart from products.
 export const canReadProductTypes = (access: PosAccess) =>
   hasKey(access, 'read_product_types') || hasKey(access, 'write_product_types')

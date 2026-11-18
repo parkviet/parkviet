@@ -168,6 +168,21 @@ branch `VariantUnitEditor` through a branch selling the product. The price-list
 card writes Spree prices (`/prices/bulk_upsert`, `bulk_destroy`, `min_quantity`
 breaks on lists with a volume rule) on its own and refreshes only price reads.
 
+Price lists (`pages/goods-price-lists.tsx`, `pages/goods-price-list-form.tsx` at
+`/goods/price-lists/new` and `/$priceListId`, pure rules in `lib/goods-price-list-form.ts`,
+reads and saves in `hooks/use-goods-price-lists.ts`) are Spree price lists. The tabs
+count states from `status`, `starts_at`, `ends_at` (an end in the past is expired
+whatever the status). The code is the list's `description` (Spree has no code or
+metadata field; generated codes are `BG` and six digits). A list for all customers
+carries a `channel_rule` (the `pos` channel by default, ensured on save) and, for
+wholesale, a `volume_rule`; the payload sends the whole rule set, keeping rule ids
+and rules the screen does not manage. A customer-group list is the price list of a
+catalog created with `metadata.pos_price_list = true` and assigned to the groups;
+it is read through `/catalogs` and cannot switch audience later. New lists are
+activated. Formula pricing only writes `prices` (bottom rung) from the selling price
+when products are added or "Apply formula" is pressed. Prices per product use the
+product form's `ListPriceDialog`. Channels need `read_settings`, groups `read_customers`.
+
 Categories (`pages/goods-categories.tsx`, tree helpers in `lib/goods-categories.ts`,
 save sequence in `hooks/use-goods-categories.ts`) are Spree `/categories`, shown
 in tree order (`lft`) as a list or a grid (`?layout=grid`). Order moves a category

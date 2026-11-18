@@ -197,6 +197,82 @@ RSpec.describe 'POS sales channel', type: :request, pos_channel: :manual do
     expect(product.default_variant.price_in('VND').amount).to eq(100)
   end
 
+  def line_total
+    response.parsed_body.dig('data', 'totals', 'total')
+  end
+
+  def update_line(workspace, revision:, quantity:)
+    id = response.parsed_body.dig('data', 'line_items', 0, 'id')
+    command(workspace, "items/#{id}/update", revision: revision, quantity: quantity)
+  end
+
+  it 'prices each line by its own quantity on a wholesale list and follows later quantity changes' do
+    publish
+    list = Spree::PriceList.create!(store: store, name: 'Wholesale', status: 'active', match_policy: 'all')
+    Spree::PriceRules::ChannelRule.create!(price_list: list, preferred_channel_ids: [channel.id])
+    Spree::PriceRules::VolumeRule.create!(price_list: list, preferred_min_quantity: 10)
+    Spree::Price.create!(variant: product.default_variant, price_list: list, currency: 'VND', amount: 70)
+    Spree::Price.create!(variant: product.default_variant, price_list: list, currency: 'VND', amount: 60, min_quantity: 20)
+    catalog
+    expect(response.parsed_body.fetch('data').sole['price']).to eq('100.0')
+    workspace = draft
+    add(workspace, quantity: 9, merge: true)
+    expect(line_total).to eq('900.0')
+    add(workspace, revision: 1, quantity: 1, merge: true)
+    expect(response.parsed_body.dig('data', 'line_items').size).to eq(1)
+    expect(response.parsed_body.dig('data', 'line_items', 0, 'price')).to eq('70.0')
+    expect(response.parsed_body.dig('data', 'line_items', 0, 'list_price')).to eq('70.0')
+    expect(line_total).to eq('700.0')
+    add(workspace, revision: 2, quantity: 1, merge: true)
+    expect(response.parsed_body.dig('data', 'line_items').size).to eq(1)
+    expect(line_total).to eq('770.0')
+    update_line(workspace, revision: 3, quantity: 20)
+    expect(response).to have_http_status(:ok)
+    expect(line_total).to eq('1200.0')
+    update_line(workspace, revision: 4, quantity: 2)
+    expect(line_total).to eq('200.0')
+    expect(response.parsed_body.dig('data', 'line_items', 0, 'original_price')).to be_nil
+  end
+
+  it 'applies a quantity break of a channel list to a line added at that quantity' do
+    publish
+    list = channel_price(80).price_list
+    Spree::Price.create!(variant: product.default_variant, price_list: list, currency: 'VND', amount: 50, min_quantity: 5)
+    workspace = draft
+    add(workspace, quantity: 5)
+    expect(response).to have_http_status(:ok)
+    expect(line_total).to eq('250.0')
+  end
+
+  it 'keeps a price set by hand when the quantity changes' do
+    publish
+    list = channel_price(80).price_list
+    Spree::Price.create!(variant: product.default_variant, price_list: list, currency: 'VND', amount: 50, min_quantity: 5)
+    workspace = draft
+    add(workspace)
+    sale_line = Spree::Pos::SaleLine.find_by!(workspace: workspace)
+    sale_line.line_item.update!(price: 90)
+    sale_line.update!(unit_price: 90, line_price: 90)
+    update_line(workspace, revision: 1, quantity: 5)
+    expect(response).to have_http_status(:ok)
+    expect(sale_line.reload.unit_price).to eq(90)
+  end
+
+  it 'applies a scheduled channel list only inside its dates' do
+    publish
+    list = channel_price(80).price_list
+    list.update!(status: 'scheduled', starts_at: 1.day.from_now, ends_at: 2.days.from_now)
+    catalog
+    expect(response.parsed_body.fetch('data').sole['price']).to eq('100.0')
+    list.update!(starts_at: 1.hour.ago)
+    catalog
+    expect(response.parsed_body.fetch('data').sole['price']).to eq('80.0')
+    list.update!(starts_at: 2.days.ago, ends_at: 1.day.ago)
+    workspace = draft
+    add(workspace)
+    expect(line_total).to eq('100.0')
+  end
+
   it 'evaluates automatic promotions against the order POS channel, not the ambient request channel' do
     publish
     promotion = create(:promotion, store: store, code: nil, kind: 'automatic', name: 'POS campaign')

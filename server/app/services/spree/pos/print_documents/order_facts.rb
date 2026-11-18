@@ -55,7 +55,8 @@ module Spree
         def original_price(variant:, sale_line:, line_price:, store:, order:)
           return nil if variant.nil? || sale_line&.kind == Timed::Lines::KIND
 
-          base_list = SalesChannel.price(variant, store: store, currency: order.currency, order: order)&.amount
+          base_list = SalesChannel.price(variant, store: store, currency: order.currency, order: order,
+                                                   quantity: SalesChannel.line_quantity(sale_line) || 1)&.amount
           return nil if base_list.nil? || base_list <= 0
 
           list = if sale_line&.kind == SaleLineKinds::Menu::KIND

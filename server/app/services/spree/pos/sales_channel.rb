@@ -34,13 +34,49 @@ module Spree
           .where('spree_products.discontinue_on IS NULL OR spree_products.discontinue_on > ?', Time.current)
       end
 
-      def price(variant, store:, currency:, order: nil)
+      # The list price of one unit, or of a line of `quantity` units: price
+      # lists with quantity breaks or a volume rule charge by the line's size.
+      # The quantity is always explicit, so a line is never priced by the size
+      # of another line of the same variant.
+      def price(variant, store:, currency:, order: nil, quantity: 1)
         context = if order
-                    Spree::Pricing::Context.from_order(variant, order)
+                    Spree::Pricing::Context.from_order(variant, order, quantity: quantity)
                   else
-                    Spree::Pricing::Context.new(variant: variant, store: store, currency: currency, channel: resolve!(store))
+                    Spree::Pricing::Context.new(variant: variant, store: store, currency: currency, channel: resolve!(store),
+                                                quantity: quantity)
                   end
         variant.price_for(context)
+      end
+
+      # The quantity a sale line is priced by: its count when it sells whole
+      # base units at the list price, nil for measured, packed, labelled and
+      # server-priced lines, whose price is not the list's per-unit price.
+      def line_quantity(sale_line)
+        return nil unless sale_line && %w[ordinary tracked].include?(sale_line.kind) && sale_line.label_barcode.blank?
+        return nil unless sale_line.sale_unit_code == sale_line.base_unit_code && sale_line.ratio_numerator == sale_line.ratio_denominator
+
+        sale_line.base_quantity
+      end
+
+      # Re-prices a list-priced line at its quantity once the count changed.
+      # `was` is the line's quantity before: only a line still charging the
+      # list price for that quantity follows the list, so an overridden or
+      # otherwise set price is never replaced.
+      def reprice_line!(sale_line, was:)
+        quantity = line_quantity(sale_line)
+        # A whole base unit charges its own price per base unit; anything else
+        # is not a list price this can follow.
+        return if quantity.nil? || was.nil? || sale_line.unit_price != sale_line.line_price
+
+        order = sale_line.order
+        before = price(sale_line.variant, store: order.store, currency: order.currency, order: order, quantity: was)&.amount
+        return if before.nil? || before != sale_line.unit_price
+
+        now = price(sale_line.variant, store: order.store, currency: order.currency, order: order, quantity: quantity)&.amount
+        return if now.nil? || now == sale_line.unit_price
+
+        sale_line.line_item.update!(price: now)
+        sale_line.update!(unit_price: now, line_price: now)
       end
 
       def validate_order!(workspace)
