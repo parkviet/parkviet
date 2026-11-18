@@ -3,10 +3,11 @@ import type { PosMenuModifierGroup } from '@parkviet/pos-shared/types/pos-contex
 import { Button } from '@spree/dashboard-ui'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { describeSelection } from '../lib/goods-addons'
 import { ModelCheck } from './setup/model-ui'
 
 // The add-on groups offered with a product, chosen from the store's
-// modifier groups. New groups are made on the menu screen.
+// modifier groups. Groups are made on the goods add-on groups screen.
 export function GoodsAddonGroups({
   groups,
   value,
@@ -39,13 +40,6 @@ export function GoodsAddonGroups({
     )
   if (combo)
     return <p className="text-sm text-muted-foreground">{t('goods.products.form.addons.combo')}</p>
-  const selectionText = (group: PosMenuModifierGroup) => {
-    const min = group.min_select
-    const max = group.max_select
-    if (min > 0 && max === min) return t('goods.products.form.addons.exactly', { count: min })
-    if (min > 0) return t('goods.products.form.addons.required', { min, max })
-    return t('goods.products.form.addons.optional', { max })
-  }
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">{t('goods.products.form.addons.hint')}</p>
@@ -63,7 +57,7 @@ export function GoodsAddonGroups({
               checked={value.includes(group.id)}
               disabled={disabled}
               name={group.name}
-              description={`${selectionText(group)} · ${group.options.map((option) => option.name).join(', ') || '—'}`}
+              description={`${describeSelection(group, t)} · ${group.options.map((option) => option.name).join(', ') || '—'}`}
               onChange={(checked) =>
                 onChange(
                   checked
@@ -77,7 +71,7 @@ export function GoodsAddonGroups({
           ))}
         </fieldset>
       )}
-      <Link to="/$storeId/menu" params={{ storeId }} className="text-sm underline">
+      <Link to="/$storeId/goods/addons" params={{ storeId }} className="text-sm underline">
         {t('goods.products.form.addons.manage')}
       </Link>
     </div>

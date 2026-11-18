@@ -16,6 +16,7 @@ import {
 import { BookOpenIcon } from '@spree/dashboard-ui/icons'
 import { type ReactNode, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AddonGroupDialog } from '../components/addon-group-dialog'
 import { BranchPicker } from '../components/branch-picker'
 import { PageSkeleton } from '../components/page-skeleton'
 import { type ProductHit, ProductSearch } from '../components/product-search'
@@ -36,6 +37,7 @@ import {
   useModifierGroups,
 } from '../hooks/use-menu-admin'
 import { usePosSession } from '../hooks/use-pos-session'
+import type { AddonGroup } from '../lib/goods-addons'
 import {
   canManageMenu,
   canManageRecipes,
@@ -109,6 +111,15 @@ export function MenuPage() {
     await run(() => save('DELETE', path))
   }
   const close = () => setDialog(null)
+  // The same dialog as the goods add-on screen.
+  const groupDialog = (group?: AddonGroup) => (
+    <AddonGroupDialog
+      group={group}
+      branchId={selection.branchId}
+      onSaved={() => setNotice({ text: t('saved'), failed: false })}
+      onClose={close}
+    />
+  )
   const categoryRows = categories.data ?? []
   const itemRows = items.data ?? []
   const groupRows = groups.data ?? []
@@ -318,10 +329,7 @@ export function MenuPage() {
         title={t('menuAdmin.groups')}
         action={
           manage && (
-            <Button
-              disabled={write.isPending}
-              onClick={() => setDialog(<GroupDialog save={save} onClose={close} />)}
-            >
+            <Button disabled={write.isPending} onClick={() => setDialog(groupDialog())}>
               {t('menuAdmin.addGroup')}
             </Button>
           )
@@ -351,13 +359,7 @@ export function MenuPage() {
             ],
             actions: manage && (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setDialog(<GroupDialog group={group} save={save} onClose={close} />)
-                  }
-                >
+                <Button variant="outline" size="sm" onClick={() => setDialog(groupDialog(group))}>
                   {t('adminEdit')}
                 </Button>
                 <Button
@@ -916,150 +918,6 @@ function ItemDialog({
             <DialogError error={error} />
           </DialogBody>
           <DialogActions busy={busy} close={close} disabled={!ready} />
-        </form>
-      )}
-    </TopologyDialog>
-  )
-}
-
-type OptionDraft = { id?: string; name: string; price_delta: string; default_selected: boolean }
-
-function GroupDialog({
-  group,
-  save,
-  onClose,
-}: {
-  group?: PosMenuModifierGroup
-  save: Save
-  onClose: () => void
-}) {
-  const { t } = useTranslation()
-  const [name, setName] = useState(group?.name ?? '')
-  const [min, setMin] = useState(String(group?.min_select ?? 0))
-  const [max, setMax] = useState(String(group?.max_select ?? 1))
-  const [allowQuantity, setAllowQuantity] = useState(group?.allow_quantity ?? false)
-  const [options, setOptions] = useState<OptionDraft[]>(
-    (group?.options ?? [])
-      .filter((option) => option.active)
-      .map((option) => ({
-        id: option.id,
-        name: option.name,
-        price_delta: option.price_delta.replace(/\.0+$/, ''),
-        default_selected: option.default_selected,
-      })),
-  )
-  const { busy, error, submit } = useDialogSubmit(onClose)
-  const minValue = Number(min)
-  const maxValue = Number(max)
-  const valid =
-    name.trim() &&
-    Number.isInteger(minValue) &&
-    Number.isInteger(maxValue) &&
-    minValue >= 0 &&
-    maxValue >= 1 &&
-    minValue <= maxValue &&
-    options.length > 0 &&
-    options.every((option) => option.name.trim() && /^-?\d+(\.\d+)?$/.test(option.price_delta))
-  const update = (index: number, change: Partial<OptionDraft>) =>
-    setOptions((current) => current.map((row, at) => (at === index ? { ...row, ...change } : row)))
-  return (
-    <TopologyDialog
-      title={t(group ? 'menuAdmin.editGroup' : 'menuAdmin.addGroup')}
-      subtitle={group?.name}
-      dirty
-      busy={busy}
-      onClose={onClose}
-    >
-      {(close) => (
-        <form
-          className="flex min-h-0 flex-col"
-          onSubmit={(event) => {
-            event.preventDefault()
-            void submit(() =>
-              save(group ? 'PATCH' : 'POST', `/pos/modifier_groups${group ? `/${group.id}` : ''}`, {
-                name: name.trim(),
-                min_select: minValue,
-                max_select: maxValue,
-                allow_quantity: allowQuantity,
-                options: options.map((option, position) => ({
-                  ...option,
-                  name: option.name.trim(),
-                  position,
-                })),
-              }),
-            )
-          }}
-        >
-          <DialogBody className="space-y-4">
-            <TextField label={t('adminName')} value={name} onChange={setName} maxLength={80} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <TextField
-                label={t('menuAdmin.min')}
-                hint={t('menuAdmin.minHint')}
-                value={min}
-                onChange={setMin}
-                inputMode="numeric"
-              />
-              <TextField
-                label={t('menuAdmin.max')}
-                value={max}
-                onChange={setMax}
-                inputMode="numeric"
-              />
-            </div>
-            <CheckField
-              label={t('menuAdmin.allowQuantity')}
-              checked={allowQuantity}
-              onChange={setAllowQuantity}
-            />
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">{t('menuAdmin.options')}</legend>
-              {options.map((option, index) => (
-                <div key={option.id ?? `new-${index}`} className="flex flex-wrap items-end gap-2">
-                  <div className="flex-1">
-                    <TextField
-                      label={t('adminName')}
-                      value={option.name}
-                      maxLength={80}
-                      onChange={(value) => update(index, { name: value })}
-                    />
-                  </div>
-                  <TextField
-                    label={t('menuAdmin.priceDelta')}
-                    value={option.price_delta}
-                    inputMode="numeric"
-                    onChange={(value) => update(index, { price_delta: value })}
-                  />
-                  <CheckField
-                    label={t('menuAdmin.default')}
-                    checked={option.default_selected}
-                    onChange={(checked) => update(index, { default_selected: checked })}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setOptions((current) => current.filter((_, at) => at !== index))}
-                  >
-                    {t('menuAdmin.delete')}
-                  </Button>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  setOptions((current) => [
-                    ...current,
-                    { name: '', price_delta: '0', default_selected: false },
-                  ])
-                }
-              >
-                {t('menuAdmin.addOption')}
-              </Button>
-            </fieldset>
-            <DialogError error={error} />
-          </DialogBody>
-          <DialogActions busy={busy} close={close} disabled={!valid} />
         </form>
       )}
     </TopologyDialog>

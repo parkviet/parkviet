@@ -66,7 +66,8 @@ module Spree
           sale_line.line_modifiers.delete_all
           pricing.options.each do |row|
             sale_line.line_modifiers.create!(modifier_option: row.option, name: row.option.name, group_name: row.group.name,
-                                             price_delta: row.option.price_delta, quantity: row.quantity)
+                                             price_delta: row.option.price_delta, cost_price: row.option.own_cost,
+                                             quantity: row.quantity)
           end
           if sale_line.line_components.empty?
             pricing.components.each do |component|

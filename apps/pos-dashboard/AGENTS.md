@@ -192,5 +192,19 @@ at 1:1, refused once stock or a recipe counts in it), and the low-stock
 threshold is the selected branch's `PUT /pos/stock_alerts`, offered while it
 runs recipes. The server refuses to delete a product an active recipe uses.
 
+Add-on groups (`pages/goods-addons.tsx`, pure rules in `lib/goods-addons.ts`) are
+the store's `modifier_groups`. `components/addon-group-dialog.tsx` is the one
+group dialog, also opened by the menu screen: three switches map to the stored
+limits (required is `min_select` ≥ 1, several options is `max_select` ≥ 2, more
+than one of an option is `allow_quantity`, only with several options), each
+option has a price, its own cost and in stock (`active`; the counter leaves an
+option out of stock out), and the products are menu items whose
+`modifier_group_ids` are patched, or created as single items for a product not on
+the menu yet. Option costs come only to menu or stock managers; a row read
+without `cost_price` never sends one, so the stored cost stays. The server copies
+an option's cost onto a sold line only when no active recipe or stocked variant
+counts what it uses; the copy feeds the menu margin report and the below-cost
+warning.
+
 Do not edit `apps/dashboard`. POS administration lives only here: do not add
 settings or setup screens back to `apps/pos`.

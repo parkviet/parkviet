@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_18_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_18_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -3562,8 +3562,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_180000) do
     t.integer "quantity", default: 1, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "cost_price", precision: 10, scale: 2
     t.index ["modifier_option_id"], name: "index_spree_pos_line_modifiers_on_modifier_option_id"
     t.index ["sale_line_id"], name: "index_spree_pos_line_modifiers_on_sale_line_id"
+    t.check_constraint "cost_price IS NULL OR cost_price >= 0::numeric", name: "chk_pos_line_modifiers_cost"
     t.check_constraint "quantity > 0 AND price_delta >= 0::numeric", name: "chk_pos_line_modifiers_values"
   end
 
@@ -3770,8 +3772,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_180000) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "cost_price", precision: 10, scale: 2
     t.index ["modifier_group_id"], name: "index_spree_pos_modifier_options_on_modifier_group_id"
     t.index ["variant_id"], name: "index_spree_pos_modifier_options_on_variant_id"
+    t.check_constraint "cost_price IS NULL OR cost_price >= 0::numeric", name: "chk_pos_modifier_options_cost"
     t.check_constraint "price_delta >= 0::numeric", name: "chk_pos_modifier_options_price"
   end
 

@@ -28,10 +28,10 @@ module Spree
         min_select.positive?
       end
 
-      def to_pos
+      def to_pos(costs: false)
         {
           id: prefixed_id, name: name, min_select: min_select, max_select: max_select, allow_quantity: allow_quantity,
-          position: position, required: required?, options: modifier_options.map(&:to_pos)
+          position: position, required: required?, options: modifier_options.map { |option| option.to_pos(costs: costs) }
         }
       end
 

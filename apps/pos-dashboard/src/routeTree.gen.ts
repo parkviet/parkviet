@@ -94,6 +94,7 @@ import { Route as AuthenticatedStoreIdBranchesBranchIdProductsRouteImport } from
 import { Route as AuthenticatedStoreIdBranchesBranchIdRatePlansRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/rate-plans'
 import { Route as AuthenticatedStoreIdBranchesBranchIdRegistersRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/registers'
 import { Route as AuthenticatedStoreIdBranchesBranchIdStaffRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/staff'
+import { Route as AuthenticatedStoreIdGoodsAddonsIndexRouteImport } from './routes/_authenticated/$storeId/goods/addons/index'
 import { Route as AuthenticatedStoreIdGoodsCategoriesIndexRouteImport } from './routes/_authenticated/$storeId/goods/categories/index'
 import { Route as AuthenticatedStoreIdGoodsIngredientsIndexRouteImport } from './routes/_authenticated/$storeId/goods/ingredients/index'
 import { Route as AuthenticatedStoreIdGoodsProductsIndexRouteImport } from './routes/_authenticated/$storeId/goods/products/index'
@@ -606,6 +607,12 @@ const AuthenticatedStoreIdBranchesBranchIdStaffRoute =
     path: '/staff',
     getParentRoute: () => AuthenticatedStoreIdBranchesBranchIdRoute,
   } as any)
+const AuthenticatedStoreIdGoodsAddonsIndexRoute =
+  AuthenticatedStoreIdGoodsAddonsIndexRouteImport.update({
+    id: '/goods/addons/',
+    path: '/goods/addons/',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
 const AuthenticatedStoreIdGoodsCategoriesIndexRoute =
   AuthenticatedStoreIdGoodsCategoriesIndexRouteImport.update({
     id: '/goods/categories/',
@@ -737,6 +744,7 @@ export interface FileRoutesByFullPath {
   '/$storeId/goods/products/new': typeof AuthenticatedStoreIdGoodsProductsNewRoute
   '/$storeId/settings/receipt-templates/$templateId': typeof AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRoute
   '/$storeId/branches/$branchId/': typeof AuthenticatedStoreIdBranchesBranchIdIndexRoute
+  '/$storeId/goods/addons/': typeof AuthenticatedStoreIdGoodsAddonsIndexRoute
   '/$storeId/goods/categories/': typeof AuthenticatedStoreIdGoodsCategoriesIndexRoute
   '/$storeId/goods/ingredients/': typeof AuthenticatedStoreIdGoodsIngredientsIndexRoute
   '/$storeId/goods/products/': typeof AuthenticatedStoreIdGoodsProductsIndexRoute
@@ -819,6 +827,7 @@ export interface FileRoutesByTo {
   '/$storeId/goods/products/new': typeof AuthenticatedStoreIdGoodsProductsNewRoute
   '/$storeId/settings/receipt-templates/$templateId': typeof AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRoute
   '/$storeId/branches/$branchId': typeof AuthenticatedStoreIdBranchesBranchIdIndexRoute
+  '/$storeId/goods/addons': typeof AuthenticatedStoreIdGoodsAddonsIndexRoute
   '/$storeId/goods/categories': typeof AuthenticatedStoreIdGoodsCategoriesIndexRoute
   '/$storeId/goods/ingredients': typeof AuthenticatedStoreIdGoodsIngredientsIndexRoute
   '/$storeId/goods/products': typeof AuthenticatedStoreIdGoodsProductsIndexRoute
@@ -914,6 +923,7 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/goods/products/new': typeof AuthenticatedStoreIdGoodsProductsNewRoute
   '/_authenticated/$storeId/settings/receipt-templates/$templateId': typeof AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRoute
   '/_authenticated/$storeId/branches/$branchId/': typeof AuthenticatedStoreIdBranchesBranchIdIndexRoute
+  '/_authenticated/$storeId/goods/addons/': typeof AuthenticatedStoreIdGoodsAddonsIndexRoute
   '/_authenticated/$storeId/goods/categories/': typeof AuthenticatedStoreIdGoodsCategoriesIndexRoute
   '/_authenticated/$storeId/goods/ingredients/': typeof AuthenticatedStoreIdGoodsIngredientsIndexRoute
   '/_authenticated/$storeId/goods/products/': typeof AuthenticatedStoreIdGoodsProductsIndexRoute
@@ -1009,6 +1019,7 @@ export interface FileRouteTypes {
     | '/$storeId/goods/products/new'
     | '/$storeId/settings/receipt-templates/$templateId'
     | '/$storeId/branches/$branchId/'
+    | '/$storeId/goods/addons/'
     | '/$storeId/goods/categories/'
     | '/$storeId/goods/ingredients/'
     | '/$storeId/goods/products/'
@@ -1091,6 +1102,7 @@ export interface FileRouteTypes {
     | '/$storeId/goods/products/new'
     | '/$storeId/settings/receipt-templates/$templateId'
     | '/$storeId/branches/$branchId'
+    | '/$storeId/goods/addons'
     | '/$storeId/goods/categories'
     | '/$storeId/goods/ingredients'
     | '/$storeId/goods/products'
@@ -1185,6 +1197,7 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/goods/products/new'
     | '/_authenticated/$storeId/settings/receipt-templates/$templateId'
     | '/_authenticated/$storeId/branches/$branchId/'
+    | '/_authenticated/$storeId/goods/addons/'
     | '/_authenticated/$storeId/goods/categories/'
     | '/_authenticated/$storeId/goods/ingredients/'
     | '/_authenticated/$storeId/goods/products/'
@@ -1794,6 +1807,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoreIdBranchesBranchIdStaffRouteImport
       parentRoute: typeof AuthenticatedStoreIdBranchesBranchIdRoute
     }
+    '/_authenticated/$storeId/goods/addons/': {
+      id: '/_authenticated/$storeId/goods/addons/'
+      path: '/goods/addons'
+      fullPath: '/$storeId/goods/addons/'
+      preLoaderRoute: typeof AuthenticatedStoreIdGoodsAddonsIndexRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
     '/_authenticated/$storeId/goods/categories/': {
       id: '/_authenticated/$storeId/goods/categories/'
       path: '/goods/categories'
@@ -2149,6 +2169,7 @@ interface AuthenticatedStoreIdRouteChildren {
   AuthenticatedStoreIdIndexRoute: typeof AuthenticatedStoreIdIndexRoute
   AuthenticatedStoreIdGoodsProductsProductIdRoute: typeof AuthenticatedStoreIdGoodsProductsProductIdRoute
   AuthenticatedStoreIdGoodsProductsNewRoute: typeof AuthenticatedStoreIdGoodsProductsNewRoute
+  AuthenticatedStoreIdGoodsAddonsIndexRoute: typeof AuthenticatedStoreIdGoodsAddonsIndexRoute
   AuthenticatedStoreIdGoodsCategoriesIndexRoute: typeof AuthenticatedStoreIdGoodsCategoriesIndexRoute
   AuthenticatedStoreIdGoodsIngredientsIndexRoute: typeof AuthenticatedStoreIdGoodsIngredientsIndexRoute
   AuthenticatedStoreIdGoodsProductsIndexRoute: typeof AuthenticatedStoreIdGoodsProductsIndexRoute
@@ -2201,6 +2222,8 @@ const AuthenticatedStoreIdRouteChildren: AuthenticatedStoreIdRouteChildren = {
     AuthenticatedStoreIdGoodsProductsProductIdRoute,
   AuthenticatedStoreIdGoodsProductsNewRoute:
     AuthenticatedStoreIdGoodsProductsNewRoute,
+  AuthenticatedStoreIdGoodsAddonsIndexRoute:
+    AuthenticatedStoreIdGoodsAddonsIndexRoute,
   AuthenticatedStoreIdGoodsCategoriesIndexRoute:
     AuthenticatedStoreIdGoodsCategoriesIndexRoute,
   AuthenticatedStoreIdGoodsIngredientsIndexRoute:

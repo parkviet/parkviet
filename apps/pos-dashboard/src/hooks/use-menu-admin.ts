@@ -1,11 +1,7 @@
-import type {
-  PosMenu,
-  PosMenuCategory,
-  PosMenuItem,
-  PosMenuModifierGroup,
-} from '@parkviet/pos-shared/types/pos-context'
+import type { PosMenu, PosMenuCategory, PosMenuItem } from '@parkviet/pos-shared/types/pos-context'
 import { useResourceMutation } from '@spree/dashboard-core'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import type { AddonGroup } from '../lib/goods-addons'
 import { posRequest } from '../lib/pos-request'
 import { posKey } from '../lib/query-keys'
 import { useSession } from './use-session'
@@ -75,8 +71,9 @@ export const useMenuTaxDefaults = (enabled: boolean) =>
     enabled,
     (body): MenuTaxDefaults => body.meta?.tax_defaults ?? { food: null, alcohol: null },
   )
+// Option costs come only to the people who manage the menu or stock.
 export const useModifierGroups = (enabled: boolean) =>
-  useMenuQuery<PosMenuModifierGroup>('modifier_groups', enabled)
+  useMenuQuery<AddonGroup>('modifier_groups', enabled)
 export const useMenuSchedules = (enabled: boolean) =>
   useMenuQuery<MenuSchedule>('menu_schedules', enabled)
 

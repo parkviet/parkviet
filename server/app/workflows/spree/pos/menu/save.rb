@@ -10,7 +10,7 @@ module Spree
         CATEGORY_FIELDS = %w[name position color active].freeze
         ITEM_FIELDS = %w[kind kitchen_category cup_label show_components_on_kds position active drink_credit qr_orderable].freeze
         GROUP_FIELDS = %w[name min_select max_select allow_quantity position].freeze
-        OPTION_FIELDS = %w[name price_delta default_selected position active].freeze
+        OPTION_FIELDS = %w[name price_delta cost_price default_selected position active].freeze
         SCHEDULE_FIELDS = %w[name days_of_week starts_at ends_at active label].freeze
         MAX_ROWS = 100
 
@@ -57,7 +57,8 @@ module Spree
         end
 
         def modifier_group(store:, staff:, key:, attributes:, group: nil)
-          command(store, staff, key, 'modifier_group', group, attributes) do
+          # The writer manages the menu, so the answer carries the option costs.
+          command(store, staff, key, 'modifier_group', group, attributes, present: ->(saved) { saved.to_pos(costs: true) }) do
             record = group || ModifierGroup.new(store: store)
             record.lock! if record.persisted?
             record.assign_attributes(attributes.slice(*GROUP_FIELDS))
@@ -110,7 +111,7 @@ module Spree
           end
         end
 
-        def command(store, staff, key, resource, record, attributes)
+        def command(store, staff, key, resource, record, attributes, present: :to_pos.to_proc)
           op = record ? 'update' : 'create'
           payload = { 'command' => "#{resource}.#{op}", 'id' => record&.prefixed_id, 'attributes' => attributes }
           CommandExecutor.call(store: store, actor: staff, key: key, payload: payload, authorize: -> { Guard.manage!(store, staff) }) do
@@ -118,7 +119,7 @@ module Spree
             saved = yield
             AuditEntry.record!(store: store, actor: staff, action: "#{resource}.change", subject: saved,
                                metadata: { op: op, id: saved.prefixed_id, changes: attributes.except('options', 'items', 'components').keys })
-            saved.to_pos
+            present.call(saved)
           end
         end
 

@@ -6767,6 +6767,12 @@ components:
                 type: integer
               active:
                 type: boolean
+                description: False while the option is out of stock; the counter leaves it out.
+              cost_price:
+                type: [string, 'null']
+                description: >-
+                  What one pick costs when no recipe or stocked variant counts it. Only in the
+                  modifier group list and writes, for people who manage the menu or stock.
     MenuAvailability:
       type: object
       additionalProperties: false

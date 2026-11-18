@@ -6,8 +6,9 @@ module Spree
       # Gross margin by menu item size over completed sales: revenue is the
       # line amount after line promotions and before added tax (order-level
       # discounts stay on the order), cost is what the recipes consumed at
-      # the cost copied when the sale completed. A size sold without any
-      # consumption shows `costed: false` and a zero cost.
+      # the cost copied when the sale completed, plus the own cost of the
+      # options picked, copied when they were picked. A size sold without any
+      # consumption or option cost shows `costed: false` and a zero cost.
       class MenuMargin < Grouped
         COLUMNS = %w[menu_item sku quantity revenue cost margin margin_rate costed].freeze
         REVENUE_SQL = 'SUM(spree_line_items.price * spree_line_items.quantity + spree_line_items.adjustment_total - ' \
@@ -28,6 +29,7 @@ module Spree
                  pluck('spree_pos_sale_lines.variant_id', Arel.sql('SUM(spree_pos_sale_lines.base_quantity)'), Arel.sql(REVENUE_SQL))
           costs = consumptions.joins(:sale_line).group('spree_pos_sale_lines.variant_id').
                   sum(Arel.sql("#{RecipeConsumption.table_name}.base_quantity * COALESCE(#{RecipeConsumption.table_name}.unit_cost, 0)"))
+          costs = costs.merge(option_costs_by_variant) { |_, recipe, option| BigDecimal(recipe.to_s) + BigDecimal(option.to_s) }
           variants = Spree::Variant.with_deleted.includes(:product, :option_values).where(id: sold.map(&:first)).index_by(&:id)
           rows = sold.map do |variant_id, quantity, revenue|
             revenue = BigDecimal(revenue.to_s)
@@ -37,6 +39,11 @@ module Spree
               costed: costs.key?(variant_id) }
           end
           rows.sort_by { |row| [-BigDecimal(row[:revenue]), row[:menu_item]] }
+        end
+
+        def option_costs_by_variant
+          LineModifier.joins(:sale_line).merge(menu_lines).where.not(cost_price: nil).group('spree_pos_sale_lines.variant_id').
+            sum(Arel.sql("#{LineModifier.table_name}.cost_price * #{LineModifier.table_name}.quantity * spree_pos_sale_lines.base_quantity"))
         end
 
         def menu_lines

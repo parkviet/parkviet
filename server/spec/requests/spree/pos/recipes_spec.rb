@@ -82,6 +82,31 @@ RSpec.describe 'POS recipes API', type: :request do
     expect(response.parsed_body.dig('error', 'details', 'reason')).to eq('module_disabled')
   end
 
+  it 'counts the own cost of options without a recipe in the margin and the below-cost warning' do
+    group = modifier_group!(store, item, name: 'Topping', options: { 'Trân châu' => 5_000, 'Kem' => 8_000 }, max: 3, allow_quantity: true)
+    pearls = option(group, 'Trân châu')
+    pearls.update!(cost_price: 1_500)
+    cream = option(group, 'Kem')
+    cream.update!(cost_price: 9_999)
+    # The recipe counts what the cream uses, so its own cost stays out.
+    recipe!(store, manager, cream, [[milk, 50, 'ml']])
+    sale = menu_sale(store, branch)
+    add_menu(sale, size(item, 0), quantity: 2, modifiers: picks([pearls, 2], [cream, 1]))
+    line = menu_lines(sale).sole
+    expect(line.line_modifiers.map { |pick| [pick.name, pick.cost_price] }).to contain_exactly(['Trân châu', 1_500], ['Kem', nil])
+    pay_and_complete(sale)
+
+    data = call(manager, :get, 'reports/menu_margin', branch_id: branch.prefixed_id, from: business_today, to: business_today)
+    expect(response).to have_http_status(:ok)
+    expect(data['data'].map { |row| [row['menu_item'], row['quantity'], row['revenue'], row['cost'], row['costed']] }).
+      to eq([['Trà sữa · Size: M', 2, '96000.0', '10000.0', true]])
+
+    allow(Spree::Pos::SalesSettings).to receive(:for).and_return({ 'warn_below_cost' => true })
+    expect(line.reload.below_cost?).to be(false)
+    line.line_modifiers.find_by!(name: 'Trân châu').update!(cost_price: 30_000)
+    expect(line.reload.below_cost?).to be(true)
+  end
+
   describe 'reports' do
     before do
       recipe!(store, manager, size(item, 0), [[milk, 150, 'ml']])

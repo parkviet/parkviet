@@ -7,8 +7,22 @@ module Spree
         module Pos
           # Modifier groups of the store with their options. Saving a group
           # replaces its option list; lines already sold keep their copies.
+          # Option costs are read by the people who change the menu or stock,
+          # as recipe costs are.
           class ModifierGroupsController < MenuResourcesController
             private
+
+            def present(record)
+              @costs = cost_reader? if @costs.nil?
+              record.to_pos(costs: @costs)
+            end
+
+            def cost_reader?
+              Spree::Pos::Recipes.read!(current_store, current_user)
+              true
+            rescue CanCan::AccessDenied
+              false
+            end
 
             def model
               Spree::Pos::ModifierGroup

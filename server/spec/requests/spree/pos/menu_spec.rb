@@ -128,6 +128,35 @@ RSpec.describe 'POS menu API', type: :request do
     expect(Spree::Pos::MenuItem.find_by_prefix_id!(item['id']).menu_category_id).to be_nil
   end
 
+  it 'keeps option costs and stock marks, shown to menu managers only' do
+    item = menu_item!(store, branch, name: 'Trà sữa', price: 30_000)
+    group = write(:post, manager, 'modifier_groups', name: 'Topping', min_select: 1, max_select: 3, allow_quantity: true,
+                                                     options: [{ name: 'Trân châu', price_delta: '5000', cost_price: '1500' },
+                                                               { name: 'Thạch', price_delta: '4000', cost_price: '', active: false }])['data']
+    expect(response).to have_http_status(:created)
+    expect(group['options'].map { |row| [row['name'], row['cost_price'], row['active']] }).
+      to eq([['Trân châu', '1500.0', true], ['Thạch', nil, false]])
+    write(:patch, manager, "menu_items/#{item.prefixed_id}", modifier_group_ids: [group['id']])
+    expect(response).to have_http_status(:ok)
+
+    # Editors that leave the cost out keep it.
+    pearls = group['options'].first
+    write(:patch, manager, "modifier_groups/#{group['id']}", options: [{ id: pearls['id'], name: 'Trân châu', price_delta: '6000' }])
+    expect(response.parsed_body.dig('data', 'options').sole).to include('price_delta' => '6000.0', 'cost_price' => '1500.0')
+    write(:post, manager, 'modifier_groups', name: 'Sai', options: [{ name: 'Âm', price_delta: '0', cost_price: '-1' }])
+    expect(response).to have_http_status(:unprocessable_content)
+
+    get '/api/v3/admin/pos/modifier_groups', headers: auth(manager)
+    expect_pos_schema!(response, 'ModifierGroup')
+    expect(response.parsed_body['data'].sole['options'].sole).to include('cost_price' => '1500.0')
+
+    cashier = credit_staff(store, branch, PosCreditHelpers::CASHIER)
+    get '/api/v3/admin/pos/modifier_groups', headers: auth(cashier)
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['data'].sole['options'].sole).not_to have_key('cost_price')
+    expect(read_menu(cashier).parsed_body.dig('data', 'modifier_groups').sole['options'].sole).not_to have_key('cost_price')
+  end
+
   it 'refuses menu changes while no branch of the store runs the menu' do
     set_pos_module(branch, 'fnb.menu', false)
     write(:post, manager, 'menu_categories', name: 'Cà phê')

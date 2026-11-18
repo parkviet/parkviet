@@ -15,6 +15,9 @@ module Spree
       validates :name, :group_name, presence: true
       validates :quantity, numericality: { only_integer: true, greater_than: 0 }
       validates :price_delta, numericality: { greater_than_or_equal_to: 0 }
+      # The option's own cost per pick at the time of sale, for margins and
+      # the below-cost warning; never sent with the line.
+      validates :cost_price, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
       def to_pos
         {

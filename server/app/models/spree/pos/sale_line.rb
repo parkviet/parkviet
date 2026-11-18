@@ -85,10 +85,12 @@ module Spree
       def below_cost?
         return false unless SalesSettings.for(workspace.branch)['warn_below_cost']
 
+        # The size's cost plus what each picked option costs on its own.
+        picks = line_modifiers.map { |pick| pick.cost_price && (pick.cost_price * pick.quantity) }.compact
         cost = variant&.cost_price
-        return false if cost.nil?
+        return false if cost.nil? && picks.empty?
 
-        unit_price < cost
+        unit_price < (cost || 0) + picks.sum(BigDecimal('0'))
       end
 
       def pending_kitchen_quantity
