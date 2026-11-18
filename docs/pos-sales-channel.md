@@ -4,13 +4,21 @@
 
 POS dùng kênh có **mã `pos` thuộc cửa hàng hiện tại**. Không dùng tên hiển thị để nhận diện kênh, không tự chuyển sang Online hoặc Wholesale nếu cấu hình thiếu.
 
-1. Trong Spree Dashboard, chọn đúng cửa hàng và mở **Settings → Sales channels**.
+Cách nhanh nhất là tạo sản phẩm từ nhóm **Hàng hoá** của app quản trị POS:
+
+1. Lần lưu sản phẩm đầu tiên, app tìm kênh mã `pos` của cửa hàng. Nếu chưa có, app **tự tạo** kênh “Point of Sale” mã `pos`, đang hoạt động và không đặt làm kênh mặc định. Tạo kênh cần quyền ghi Cài đặt (`write_settings`); người không có quyền này nhận thông báo nhờ quản trị tạo kênh.
+2. Sản phẩm tạo từ màn Hàng hoá được xuất bản lên kênh `pos` (nguyên liệu thì không) và cấp cho các chi nhánh đã chọn.
+3. Nếu kênh `pos` có sẵn nhưng đang tắt, app không tự bật lại; sản phẩm vẫn được lưu và màn hình báo kênh đang tắt.
+
+Có thể làm thủ công trong Spree Dashboard:
+
+1. Chọn đúng cửa hàng và mở **Settings → Sales channels**.
 2. Tạo kênh với mã `pos` và bật hoạt động. Tên hiển thị có thể là “Point of Sale”.
 3. Xuất bản những sản phẩm muốn bán tại quầy lên kênh này. Kiểm tra lịch bắt đầu và kết thúc xuất bản nếu có.
 4. Trong app quản trị POS, mở **Hàng bán tại chi nhánh** và cấp sản phẩm cho từng chi nhánh.
 5. Quay lại POS hoặc tải lại trang để cập nhật trạng thái cấu hình.
 
-Ứng dụng không tự tạo kênh, tự xuất bản toàn bộ danh mục hoặc thay đổi dữ liệu cũ. Một sản phẩm phải đồng thời đang được xuất bản trên kênh POS, còn được phép bán và được cấp cho chi nhánh mới bán được. Tồn kho vẫn lấy từ kho của chi nhánh.
+Ứng dụng không tự xuất bản sản phẩm cũ hay toàn bộ danh mục và không thay đổi dữ liệu cũ; chỉ sản phẩm tạo từ màn Hàng hoá được xuất bản lên kênh `pos`. Một sản phẩm phải đồng thời đang được xuất bản trên kênh POS, còn được phép bán và được cấp cho chi nhánh mới bán được. Tồn kho vẫn lấy từ kho của chi nhánh.
 
 ## Giá và khuyến mại
 

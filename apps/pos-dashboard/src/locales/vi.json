@@ -3412,5 +3412,25 @@
     "range_lastMonth": "Tháng trước",
     "compare": "So sánh với kỳ trước",
     "invalid": "Khoảng ngày không hợp lệ: ngày bắt đầu phải trước ngày kết thúc và cách nhau tối đa 366 ngày."
+  },
+  "goods": {
+    "nav": "Hàng hoá",
+    "products": { "title": "Sản phẩm" },
+    "barcodeLabels": { "title": "In tem mã vạch" },
+    "ingredients": { "title": "Nguyên liệu" },
+    "priceLists": { "title": "Bảng giá" },
+    "categories": { "title": "Danh mục" },
+    "addons": { "title": "Nhóm bán kèm" },
+    "recipes": { "title": "Công thức chế biến" },
+    "kind": {
+      "goods": "Hàng hoá",
+      "service": "Dịch vụ",
+      "ingredient": "Nguyên liệu"
+    },
+    "setup": {
+      "pos_channel_forbidden": "Cửa hàng chưa có kênh bán hàng mã pos. Cần người có quyền ghi Cài đặt tạo kênh này trước khi lưu sản phẩm.",
+      "product_types_forbidden": "Cửa hàng chưa đủ loại sản phẩm Hàng hoá, Dịch vụ, Nguyên liệu. Cần người có quyền ghi Sản phẩm lưu lần đầu để tạo chúng.",
+      "pos_channel_inactive": "Kênh bán hàng pos đang tắt. Sản phẩm vẫn được lưu nhưng chưa bán được ở quầy cho đến khi bật lại kênh trong Spree Dashboard."
+    }
   }
 }

@@ -53,6 +53,14 @@ export type PosPage =
   | 'meal-sponsors'
   | 'vehicle-commission'
   // Server information: store administrators (the default branch below).
+  // Goods: the store's Spree catalog kept from POS administration.
+  | 'goods-products'
+  | 'goods-barcode-labels'
+  | 'goods-ingredients'
+  | 'goods-price-lists'
+  | 'goods-categories'
+  | 'goods-addons'
+  | 'goods-recipes'
   | 'system'
 export function canAdminister(access: PosAccess, write = false) {
   return (
@@ -168,7 +176,32 @@ export const runsVehicleCommission = (access: PosAccess) =>
 export const canManageVehicleCommission = (access: PosAccess) =>
   canAdminister(access, true) || hasCapability(access, 'pos.vehicle_visit.manage')
 export function visibleNav(page: PosPage, access: PosAccess) {
+// Goods are Spree catalog records, so their gates are the staff role's
+// catalog keys from /me (expanded server-side; `write_*` is still checked
+// on its own so a role granting only writes reads too). Products, ingredients,
+// price lists and product types share `products`; categories have their own
+// keys; creating the `pos` channel is a settings write.
+const hasKey = (access: PosAccess, key: string) => access.permissionKeys.includes(key)
+export const canReadGoods = (access: PosAccess) =>
+  hasKey(access, 'read_products') || hasKey(access, 'write_products')
+export const canWriteGoods = (access: PosAccess) => hasKey(access, 'write_products')
+export const canReadCategories = (access: PosAccess) =>
+  hasKey(access, 'read_categories') || hasKey(access, 'write_categories')
+export const canWriteCategories = (access: PosAccess) => hasKey(access, 'write_categories')
+export const canCreatePosChannel = (access: PosAccess) => hasKey(access, 'write_settings')
   if (page === 'vehicle-commission')
+  if (
+    page === 'goods-products' ||
+    page === 'goods-barcode-labels' ||
+    page === 'goods-ingredients' ||
+    page === 'goods-price-lists'
+  )
+    return canReadGoods(access)
+  if (page === 'goods-categories') return canReadCategories(access)
+  // Add-on groups and recipes keep the menu and recipe gates, offered while
+  // the selected branch runs those modules.
+  if (page === 'goods-addons') return runsMenu(access) && canManageMenu(access)
+  if (page === 'goods-recipes') return runsRecipes(access) && canManageRecipes(access)
     return runsVehicleCommission(access) && canManageVehicleCommission(access)
   if (page === 'meal-accounts' || page === 'meal-sponsors')
     return runsMealAccounts(access) && canManageMealAccounts(access)
@@ -264,6 +297,9 @@ export function routeAllowed(page: PosPage, access: PosAccess) {
   if (page === 'stock-alerts') return canReadStockAlerts(access)
   // Invoices already made stay reachable after the store stops issuing.
   if (page === 'einvoices') return canReadEinvoices(access)
+  // Store administrators prepare add-ons and recipes before a branch runs them.
+  if (page === 'goods-addons') return canManageMenu(access)
+  if (page === 'goods-recipes') return canManageRecipes(access)
   // Orders already completed are settled after the branch stops taking them.
   if (page === 'platform-settlement') return canSettlePlatforms(access)
   return visibleNav(page, access)

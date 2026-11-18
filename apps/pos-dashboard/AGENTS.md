@@ -112,5 +112,21 @@ there. A branch copies those values and overrides them on its Information tab
 (`components/branch-info-card.tsx`). New branches take the store's business types;
 the first selected type is the primary one.
 
+## Goods ("Hàng hoá")
+
+The Goods group (`/goods/*`; `/products` stays the redirect to the branch
+Products tab) manages the store's Spree catalog: products, barcode labels,
+ingredients, price lists, categories, add-on groups and recipes. Products are
+Spree records read and written through `adminClient.<resource>`
+(`hooks/use-goods.ts`, keys `['pos', storeId, 'goods', ...]`); there is no POS
+product table. Gates in `pos-access.ts` use the staff role's catalog keys:
+`read_products`/`write_products` (products, ingredients, price lists, labels),
+`read_categories`/`write_categories`, and `write_settings` to create the `pos`
+channel; add-on groups and recipes keep the menu and recipe gates. Before a
+save, `hooks/use-goods-setup.ts` ensures the `pos` channel (created active, not
+default, never re-activated) and the product types `Hàng hoá`, `Dịch vụ`,
+`Nguyên liệu`, recognized by name without marks or case. Never ensure them on
+read. Each nav child is added to the `goods` group in `nav.ts` with its page.
+
 Do not edit `apps/dashboard`. POS administration lives only here: do not add
 settings or setup screens back to `apps/pos`.

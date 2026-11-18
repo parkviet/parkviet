@@ -3,14 +3,19 @@ import { describe, expect, it } from 'vitest'
 import {
   branchTabs,
   canAdminister,
+  canCreatePosChannel,
   canManageBranch,
   canManageEinvoices,
   canManageMealAccounts,
   canManageMenu,
   canManageRatePlans,
   canManageResources,
+  canReadCategories,
+  canReadGoods,
   canSendReminders,
   canSetSoldOut,
+  canWriteCategories,
+  canWriteGoods,
   routeAllowed,
   visibleNav,
 } from './pos-access'
@@ -398,5 +403,61 @@ describe('POS permission gates', () => {
     expect(visibleNav('branch-emenu', staff(['pos.shift.open'], true))).toBe(false)
     expect(routeAllowed('branch-emenu', staff(['pos.shift.open'], true))).toBe(false)
     expect(tabs(staff(['pos.shift.open'], true))).not.toContain('emenu')
+  })
+})
+
+describe('goods gates', () => {
+  const catalogPages = [
+    'goods-products',
+    'goods-barcode-labels',
+    'goods-ingredients',
+    'goods-price-lists',
+  ] as const
+  it('opens catalog pages to product readers and writes to product writers', () => {
+    const reader = { permissionKeys: ['read_products'] }
+    for (const page of catalogPages) {
+      expect(visibleNav(page, reader)).toBe(true)
+      expect(routeAllowed(page, reader)).toBe(true)
+    }
+    expect(canReadGoods(reader)).toBe(true)
+    expect(canWriteGoods(reader)).toBe(false)
+    const writer = { permissionKeys: ['write_products'] }
+    expect(canReadGoods(writer)).toBe(true)
+    expect(canWriteGoods(writer)).toBe(true)
+    // POS topology administration alone does not reach the catalog.
+    const posOwner = { permissionKeys: ['write_pos_topology'] }
+    for (const page of catalogPages) expect(routeAllowed(page, posOwner)).toBe(false)
+    expect(visibleNav('goods-categories', reader)).toBe(false)
+  })
+  it('gates categories on their own keys and channel creation on settings writes', () => {
+    const categories = { permissionKeys: ['read_categories'] }
+    expect(visibleNav('goods-categories', categories)).toBe(true)
+    expect(routeAllowed('goods-categories', categories)).toBe(true)
+    expect(canReadCategories(categories)).toBe(true)
+    expect(canWriteCategories(categories)).toBe(false)
+    expect(canWriteCategories({ permissionKeys: ['write_categories'] })).toBe(true)
+    expect(visibleNav('goods-products', categories)).toBe(false)
+    expect(canCreatePosChannel({ permissionKeys: ['write_products'] })).toBe(false)
+    expect(canCreatePosChannel({ permissionKeys: ['write_settings'] })).toBe(true)
+  })
+  it('keeps the menu and recipe gates for add-ons and recipes', () => {
+    const at = (capabilities: string[], modules: Record<string, boolean>, keys: string[] = []) => ({
+      permissionKeys: keys,
+      context: { capabilities, modules } as unknown as PosContext,
+    })
+    const menu = at(['pos.menu.manage'], { 'fnb.menu': true })
+    expect(visibleNav('goods-addons', menu)).toBe(true)
+    expect(visibleNav('goods-addons', at(['pos.menu.manage'], {}))).toBe(false)
+    expect(routeAllowed('goods-addons', at(['pos.menu.manage'], {}))).toBe(true)
+    expect(routeAllowed('goods-addons', at(['pos.menu.sold_out'], { 'fnb.menu': true }))).toBe(
+      false,
+    )
+    const stock = at(['pos.inventory.manage'], { 'fnb.recipes': true })
+    expect(visibleNav('goods-recipes', stock)).toBe(true)
+    expect(visibleNav('goods-recipes', at(['pos.inventory.manage'], {}))).toBe(false)
+    expect(routeAllowed('goods-recipes', at([], {}, ['write_pos_topology']))).toBe(true)
+    expect(routeAllowed('goods-recipes', at(['pos.report.read'], { 'fnb.recipes': true }))).toBe(
+      false,
+    )
   })
 })

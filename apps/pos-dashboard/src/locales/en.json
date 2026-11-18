@@ -3431,5 +3431,25 @@
     "range_lastMonth": "Last month",
     "compare": "Compare with previous period",
     "invalid": "Invalid date range: the start must not be after the end, and at most 366 days apart."
+  },
+  "goods": {
+    "nav": "Goods",
+    "products": { "title": "Products" },
+    "barcodeLabels": { "title": "Barcode labels" },
+    "ingredients": { "title": "Ingredients" },
+    "priceLists": { "title": "Price lists" },
+    "categories": { "title": "Categories" },
+    "addons": { "title": "Add-on groups" },
+    "recipes": { "title": "Recipes" },
+    "kind": {
+      "goods": "Goods",
+      "service": "Service",
+      "ingredient": "Ingredient"
+    },
+    "setup": {
+      "pos_channel_forbidden": "The store has no sales channel with code pos yet. Someone allowed to change Settings must create it before products are saved.",
+      "product_types_forbidden": "The store is missing the Goods, Service and Ingredient product types. Someone allowed to change Products must save first to create them.",
+      "pos_channel_inactive": "The pos sales channel is switched off. Products are saved but cannot be sold at the counter until the channel is switched back on in the Spree Dashboard."
+    }
   }
 }

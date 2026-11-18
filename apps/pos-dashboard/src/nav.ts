@@ -1,5 +1,6 @@
 import { type NavEntry, nav, settingsNav, usePermissions } from '@spree/dashboard-core'
 import {
+  Boxes,
   Bus,
   ChartColumn,
   HandCoins,
@@ -33,6 +34,17 @@ const groups: { key: string; labelKey: string; icon: NavEntry['icon']; children:
       { key: 'deliveries', labelKey: 'deliveriesTitle', path: '/deliveries' },
       { key: 'einvoices', labelKey: 'einvoices.title', path: '/einvoices' },
     ],
+  },
+  {
+    key: 'goods',
+    labelKey: 'goods.nav',
+    icon: Boxes,
+    // One line per screen, added as its page lands, in this order:
+    // { key: 'goods-products', labelKey: 'goods.products.title', path: '/goods/products' },
+    // goods-barcode-labels /goods/barcode-labels, goods-ingredients /goods/ingredients,
+    // goods-price-lists /goods/price-lists, goods-categories /goods/categories,
+    // goods-addons /goods/addons, goods-recipes /goods/recipes.
+    children: [],
   },
   {
     key: 'money',
