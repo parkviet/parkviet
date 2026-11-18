@@ -45,6 +45,7 @@ const groups: { key: string; labelKey: string; icon: NavEntry['icon']; children:
     // goods-addons /goods/addons, goods-recipes /goods/recipes.
     children: [
       { key: 'goods-products', labelKey: 'goods.products.title', path: '/goods/products' },
+      { key: 'goods-categories', labelKey: 'goods.categories.title', path: '/goods/categories' },
     ],
   },
   {

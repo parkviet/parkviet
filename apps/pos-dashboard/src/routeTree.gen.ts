@@ -93,6 +93,7 @@ import { Route as AuthenticatedStoreIdBranchesBranchIdProductsRouteImport } from
 import { Route as AuthenticatedStoreIdBranchesBranchIdRatePlansRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/rate-plans'
 import { Route as AuthenticatedStoreIdBranchesBranchIdRegistersRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/registers'
 import { Route as AuthenticatedStoreIdBranchesBranchIdStaffRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/staff'
+import { Route as AuthenticatedStoreIdGoodsCategoriesIndexRouteImport } from './routes/_authenticated/$storeId/goods/categories/index'
 import { Route as AuthenticatedStoreIdGoodsProductsIndexRouteImport } from './routes/_authenticated/$storeId/goods/products/index'
 import { Route as AuthenticatedStoreIdGoodsProductsProductIdRouteImport } from './routes/_authenticated/$storeId/goods/products/$productId'
 import { Route as AuthenticatedStoreIdGoodsProductsNewRouteImport } from './routes/_authenticated/$storeId/goods/products/new'
@@ -597,6 +598,12 @@ const AuthenticatedStoreIdBranchesBranchIdStaffRoute =
     path: '/staff',
     getParentRoute: () => AuthenticatedStoreIdBranchesBranchIdRoute,
   } as any)
+const AuthenticatedStoreIdGoodsCategoriesIndexRoute =
+  AuthenticatedStoreIdGoodsCategoriesIndexRouteImport.update({
+    id: '/goods/categories/',
+    path: '/goods/categories/',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
 const AuthenticatedStoreIdGoodsProductsIndexRoute =
   AuthenticatedStoreIdGoodsProductsIndexRouteImport.update({
     id: '/goods/products/',
@@ -715,6 +722,7 @@ export interface FileRoutesByFullPath {
   '/$storeId/goods/products/new': typeof AuthenticatedStoreIdGoodsProductsNewRoute
   '/$storeId/settings/receipt-templates/$templateId': typeof AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRoute
   '/$storeId/branches/$branchId/': typeof AuthenticatedStoreIdBranchesBranchIdIndexRoute
+  '/$storeId/goods/categories/': typeof AuthenticatedStoreIdGoodsCategoriesIndexRoute
   '/$storeId/goods/products/': typeof AuthenticatedStoreIdGoodsProductsIndexRoute
   '/$storeId/settings/receipt-templates/': typeof AuthenticatedStoreIdSettingsReceiptTemplatesIndexRoute
 }
@@ -794,6 +802,7 @@ export interface FileRoutesByTo {
   '/$storeId/goods/products/new': typeof AuthenticatedStoreIdGoodsProductsNewRoute
   '/$storeId/settings/receipt-templates/$templateId': typeof AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRoute
   '/$storeId/branches/$branchId': typeof AuthenticatedStoreIdBranchesBranchIdIndexRoute
+  '/$storeId/goods/categories': typeof AuthenticatedStoreIdGoodsCategoriesIndexRoute
   '/$storeId/goods/products': typeof AuthenticatedStoreIdGoodsProductsIndexRoute
   '/$storeId/settings/receipt-templates': typeof AuthenticatedStoreIdSettingsReceiptTemplatesIndexRoute
 }
@@ -886,6 +895,7 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/goods/products/new': typeof AuthenticatedStoreIdGoodsProductsNewRoute
   '/_authenticated/$storeId/settings/receipt-templates/$templateId': typeof AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRoute
   '/_authenticated/$storeId/branches/$branchId/': typeof AuthenticatedStoreIdBranchesBranchIdIndexRoute
+  '/_authenticated/$storeId/goods/categories/': typeof AuthenticatedStoreIdGoodsCategoriesIndexRoute
   '/_authenticated/$storeId/goods/products/': typeof AuthenticatedStoreIdGoodsProductsIndexRoute
   '/_authenticated/$storeId/settings/receipt-templates/': typeof AuthenticatedStoreIdSettingsReceiptTemplatesIndexRoute
 }
@@ -978,6 +988,7 @@ export interface FileRouteTypes {
     | '/$storeId/goods/products/new'
     | '/$storeId/settings/receipt-templates/$templateId'
     | '/$storeId/branches/$branchId/'
+    | '/$storeId/goods/categories/'
     | '/$storeId/goods/products/'
     | '/$storeId/settings/receipt-templates/'
   fileRoutesByTo: FileRoutesByTo
@@ -1057,6 +1068,7 @@ export interface FileRouteTypes {
     | '/$storeId/goods/products/new'
     | '/$storeId/settings/receipt-templates/$templateId'
     | '/$storeId/branches/$branchId'
+    | '/$storeId/goods/categories'
     | '/$storeId/goods/products'
     | '/$storeId/settings/receipt-templates'
   id:
@@ -1148,6 +1160,7 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/goods/products/new'
     | '/_authenticated/$storeId/settings/receipt-templates/$templateId'
     | '/_authenticated/$storeId/branches/$branchId/'
+    | '/_authenticated/$storeId/goods/categories/'
     | '/_authenticated/$storeId/goods/products/'
     | '/_authenticated/$storeId/settings/receipt-templates/'
   fileRoutesById: FileRoutesById
@@ -1748,6 +1761,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoreIdBranchesBranchIdStaffRouteImport
       parentRoute: typeof AuthenticatedStoreIdBranchesBranchIdRoute
     }
+    '/_authenticated/$storeId/goods/categories/': {
+      id: '/_authenticated/$storeId/goods/categories/'
+      path: '/goods/categories'
+      fullPath: '/$storeId/goods/categories/'
+      preLoaderRoute: typeof AuthenticatedStoreIdGoodsCategoriesIndexRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
     '/_authenticated/$storeId/goods/products/': {
       id: '/_authenticated/$storeId/goods/products/'
       path: '/goods/products'
@@ -2087,6 +2107,7 @@ interface AuthenticatedStoreIdRouteChildren {
   AuthenticatedStoreIdIndexRoute: typeof AuthenticatedStoreIdIndexRoute
   AuthenticatedStoreIdGoodsProductsProductIdRoute: typeof AuthenticatedStoreIdGoodsProductsProductIdRoute
   AuthenticatedStoreIdGoodsProductsNewRoute: typeof AuthenticatedStoreIdGoodsProductsNewRoute
+  AuthenticatedStoreIdGoodsCategoriesIndexRoute: typeof AuthenticatedStoreIdGoodsCategoriesIndexRoute
   AuthenticatedStoreIdGoodsProductsIndexRoute: typeof AuthenticatedStoreIdGoodsProductsIndexRoute
 }
 
@@ -2137,6 +2158,8 @@ const AuthenticatedStoreIdRouteChildren: AuthenticatedStoreIdRouteChildren = {
     AuthenticatedStoreIdGoodsProductsProductIdRoute,
   AuthenticatedStoreIdGoodsProductsNewRoute:
     AuthenticatedStoreIdGoodsProductsNewRoute,
+  AuthenticatedStoreIdGoodsCategoriesIndexRoute:
+    AuthenticatedStoreIdGoodsCategoriesIndexRoute,
   AuthenticatedStoreIdGoodsProductsIndexRoute:
     AuthenticatedStoreIdGoodsProductsIndexRoute,
 }

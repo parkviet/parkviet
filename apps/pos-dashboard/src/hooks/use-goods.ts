@@ -32,10 +32,11 @@ export const useGoodsProduct = (id: string, expand: string[] = [], enabled = tru
   )
 
 const ALL = { limit: 100 } as const
+// Every category of the store; the categories page reads it through the same key.
+export const readGoodsCategories = () =>
+  listAll((page) => adminClient.categories.list({ ...ALL, page, sort: 'position' }))
 export const useGoodsCategories = (enabled = true) =>
-  useGoodsQuery(['categories'], enabled, () =>
-    listAll((page) => adminClient.categories.list({ ...ALL, page, sort: 'position' })),
-  )
+  useGoodsQuery(['categories'], enabled, readGoodsCategories)
 // The store's product types with the POS kinds recognized among them.
 export const useGoodsProductTypes = (enabled = true) =>
   useGoodsQuery(['product-types'], enabled, async () => {

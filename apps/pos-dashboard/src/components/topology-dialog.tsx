@@ -15,6 +15,7 @@ export function TopologyDialog({
   dirty,
   busy,
   onClose,
+  wide,
   children,
 }: {
   title: string
@@ -22,6 +23,8 @@ export function TopologyDialog({
   dirty: boolean
   busy: boolean
   onClose: () => void
+  // Room for two columns, such as a picker beside its selection.
+  wide?: boolean
   children: (close: () => void) => ReactNode
 }) {
   const { t } = useTranslation()
@@ -47,7 +50,10 @@ export function TopologyDialog({
         if (!open) void close()
       }}
     >
-      <DialogContent showCloseButton={false} className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent
+        showCloseButton={false}
+        className={`max-h-[90dvh] overflow-y-auto ${wide ? 'sm:max-w-5xl' : 'sm:max-w-2xl'}`}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{subtitle || t('adminWorkspace')}</DialogDescription>

@@ -160,5 +160,15 @@ branch `VariantUnitEditor` through a branch selling the product. The price-list
 card writes Spree prices (`/prices/bulk_upsert`, `bulk_destroy`, `min_quantity`
 breaks on lists with a volume rule) on its own and refreshes only price reads.
 
+Categories (`pages/goods-categories.tsx`, tree helpers in `lib/goods-categories.ts`,
+save sequence in `hooks/use-goods-categories.ts`) are Spree `/categories`, shown
+in tree order (`lft`) as a list or a grid (`?layout=grid`). Order moves a category
+among its siblings with `PATCH /categories/:id/reposition` (0-based index); a
+parent change also goes through reposition, since a plain update cannot move a
+category to the top level. Members are written only with `POST`/`DELETE
+/categories/:id/products`; a save that failed after creating the category is
+retried without creating a second one. Deleting a category also deletes the ones
+under it and keeps the products; `products_count` includes subcategories.
+
 Do not edit `apps/dashboard`. POS administration lives only here: do not add
 settings or setup screens back to `apps/pos`.
