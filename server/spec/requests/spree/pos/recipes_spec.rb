@@ -65,6 +65,54 @@ RSpec.describe 'POS recipes API', type: :request do
     expect(response).to have_http_status(:forbidden)
   end
 
+  it "lists the store's active recipes with their cost, searched and narrowed" do
+    sugar = ingredient!(store, branch, name: 'Đường', base: 'g', stock: 5_000)
+    sugar.update_column(:cost_price, nil)
+    medium = size(item, 0)
+    large = size(item, 1)
+    recipe!(store, manager, medium, [[milk, 150, 'ml'], [sugar, 10, 'g']])
+    recipe!(store, manager, large, [[milk, 200, 'ml']])
+    # Retiring and saving again leaves only the newest version listed.
+    recipe!(store, manager, large, [])
+    recipe!(store, manager, large, [[milk, 250, 'ml']])
+    group = modifier_group!(store, item, name: 'Topping', options: { 'Kem' => 8_000 })
+    cream = option(group, 'Kem')
+    recipe!(store, manager, cream, [[milk, 50, 'ml']])
+    other_store = menu_store
+    other_item = menu_item!(other_store, recipe_branch(other_store), name: 'Trà sữa khác', price: 30_000)
+    Spree::Pos::Recipe.create!(store: other_store, owner: size(other_item, 0), version: 1, active: true)
+
+    data = call(manager, :get, 'recipes/list')
+    expect(response).to have_http_status(:ok)
+    expect_pos_schema!(response, 'RecipeListRow')
+    expect(data['data'].map { |row| [row['owner_type'], row['name'], row['options_text'], row['group_name']] }).
+      to eq([['modifier_option', 'Kem', nil, 'Topping'], ['variant', 'Trà sữa', medium.options_text, nil],
+             ['variant', 'Trà sữa', large.options_text, nil]])
+    # Sugar has no cost price, so the medium's cost is unknown.
+    expect(data['data'].map { |row| [row['version'], row['ingredients'], row['estimated_cost']] }).
+      to eq([[1, 1, '2000.0'], [1, 2, nil], [2, 1, '10000.0']])
+    expect(data['data'][2]).to include('owner_id' => large.prefixed_id, 'product_id' => item.product.prefixed_id, 'track_inventory' => false)
+    expect(data['meta']).to include('count' => 3, 'page' => 1)
+
+    expect(call(manager, :get, 'recipes/list', q: 'topp')['data'].map { |row| row['name'] }).to eq(['Kem'])
+    expect(call(manager, :get, 'recipes/list', q: large.sku)['data'].map { |row| row['owner_id'] }).to eq([large.prefixed_id])
+    expect(call(manager, :get, 'recipes/list', owner_type: 'variant', limit: 1)['meta']).to include('count' => 2, 'next' => 2)
+    expect(call(manager, :get, 'recipes/list', variant_ids: "#{large.prefixed_id},#{milk.prefixed_id},#{cream.prefixed_id}")['data'].
+      map { |row| row['owner_id'] }).to eq([large.prefixed_id])
+    expect(call(manager, :get, 'recipes/list', variant_ids: '')['data']).to eq([])
+
+    call(manager, :get, 'recipes/list', owner_type: 'product')
+    expect(response).to have_http_status(:conflict)
+    expect(response.parsed_body.dig('error', 'details', 'reason')).to eq('recipe_owner_invalid')
+
+    cream.destroy!
+    expect(call(manager, :get, 'recipes/list')['data'].map { |row| row['owner_type'] }).to eq(%w[variant variant])
+
+    cashier = credit_staff(store, branch, PosCreditHelpers::CASHIER)
+    call(cashier, :get, 'recipes/list')
+    expect(response).to have_http_status(:forbidden)
+  end
+
   it 'sets thresholds, lists low ones first and removes one' do
     sugar = ingredient!(store, branch, name: 'Đường', base: 'g', stock: 5_000)
     call(manager, :put, 'stock_alerts', branch_id: branch.prefixed_id, variant_id: sugar.prefixed_id, min_quantity: 1_000)

@@ -465,6 +465,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v3/admin/pos/recipes/list:
+    get:
+      operationId: posRecipeList
+      description: >
+        The store's active recipes whose size or option still exists, ordered
+        by product or group name, each with its ingredient count and what one
+        costs at today's cost prices. Same access as reading one recipe.
+      parameters:
+        - name: q
+          in: query
+          description: Matches the product name, a SKU, the option or its group name
+          schema:
+            type: string
+        - name: owner_type
+          in: query
+          schema:
+            type: string
+            enum: [variant, modifier_option]
+        - name: variant_ids
+          in: query
+          description: Comma-separated variant ids (at most the page maximum); keeps only their recipes
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: One page of recipes
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RecipeListRow'
+                  meta:
+                    $ref: '#/components/schemas/WorkspacePageMeta'
+        '409':
+          description: Refused; `error.details.reason` is `recipe_owner_invalid` for an unknown `owner_type`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v3/admin/pos/stock_alerts:
     get:
       operationId: posStockAlerts
@@ -6972,6 +7024,44 @@ components:
                 format: date-time
               ingredients:
                 type: integer
+    RecipeListRow:
+      type: object
+      additionalProperties: false
+      required: [id, version, ingredients, estimated_cost, owner_type, owner_id, product_id, name, options_text, sku,
+                 group_name, cost_price, track_inventory]
+      properties:
+        id:
+          type: string
+        version:
+          type: integer
+        ingredients:
+          type: integer
+        estimated_cost:
+          type: [string, 'null']
+          description: One unit at today's cost prices; null while an ingredient has none
+        owner_type:
+          type: string
+          enum: [variant, modifier_option]
+        owner_id:
+          type: string
+        product_id:
+          type: [string, 'null']
+          description: The size's product; null for an option
+        name:
+          type: string
+          description: The product name, or the option name
+        options_text:
+          type: [string, 'null']
+        sku:
+          type: [string, 'null']
+        group_name:
+          type: [string, 'null']
+          description: The option's group; null for a size
+        cost_price:
+          type: [string, 'null']
+          description: The size's or option's own cost price now
+        track_inventory:
+          type: [boolean, 'null']
     Recipe:
       type: object
       additionalProperties: false

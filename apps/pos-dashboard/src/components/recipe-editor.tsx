@@ -39,6 +39,30 @@ export function recipeFailure(error: unknown, t: (key: string) => string) {
     : describeFailure(error, t)
 }
 
+// Saves a recipe; a size still holding stock asks before that stock is
+// written off. Resolves to the saved owner, or null when the person declined.
+export function useConfirmedRecipeSave() {
+  const { t } = useTranslation()
+  const confirm = useConfirm()
+  const saveRecipe = useSaveRecipe()
+  async function save(body: RecipeOwnerRef & { ingredients: RecipeRow[] }) {
+    try {
+      return (await saveRecipe.mutateAsync(body)).data
+    } catch (failure) {
+      if (conflictReason(failure) !== 'recipe_variant_has_stock') throw failure
+      const stocked = await confirm({
+        message: t('recipes.confirmWriteOff'),
+        variant: 'destructive',
+        confirmLabel: t('recipes.writeOff'),
+        cancelLabel: t('adminCancel'),
+      })
+      if (!stocked) return null
+      return (await saveRecipe.mutateAsync({ ...body, confirm_stock_write_off: true })).data
+    }
+  }
+  return { save, isPending: saveRecipe.isPending }
+}
+
 type Owner = { key: string; label: string; ref: RecipeOwnerRef }
 type Row = { variantId: string; name: string; quantity: string; unitCode: string }
 
@@ -137,13 +161,12 @@ function OwnerRecipe({
 }) {
   const { t } = useTranslation()
   const { storeId } = useSession()
-  const confirm = useConfirm()
   const recipe = useRecipe(owner.ref)
   const units = useQuery({
     queryKey: posKey(storeId, 'units', 'active'),
     queryFn: () => readUnits(false),
   })
-  const saveRecipe = useSaveRecipe()
+  const saveRecipe = useConfirmedRecipeSave()
   const [rows, setRows] = useState<Row[] | null>(null)
   const [notice, setNotice] = useState<{ text: string; failed: boolean } | null>(null)
   const current = rows ?? rowsOf(recipe.data)
@@ -168,19 +191,7 @@ function OwnerRecipe({
       ),
     }
     try {
-      try {
-        await saveRecipe.mutateAsync(body)
-      } catch (failure) {
-        if (conflictReason(failure) !== 'recipe_variant_has_stock') throw failure
-        const stocked = await confirm({
-          message: t('recipes.confirmWriteOff'),
-          variant: 'destructive',
-          confirmLabel: t('recipes.writeOff'),
-          cancelLabel: t('adminCancel'),
-        })
-        if (!stocked) return
-        await saveRecipe.mutateAsync({ ...body, confirm_stock_write_off: true })
-      }
+      if ((await saveRecipe.save(body)) === null) return
       setRows(null)
       setNotice({ text: t('saved'), failed: false })
     } catch (failure) {

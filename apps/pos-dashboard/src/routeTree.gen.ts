@@ -100,6 +100,7 @@ import { Route as AuthenticatedStoreIdGoodsIngredientsIndexRouteImport } from '.
 import { Route as AuthenticatedStoreIdGoodsProductsIndexRouteImport } from './routes/_authenticated/$storeId/goods/products/index'
 import { Route as AuthenticatedStoreIdGoodsProductsProductIdRouteImport } from './routes/_authenticated/$storeId/goods/products/$productId'
 import { Route as AuthenticatedStoreIdGoodsProductsNewRouteImport } from './routes/_authenticated/$storeId/goods/products/new'
+import { Route as AuthenticatedStoreIdGoodsRecipesIndexRouteImport } from './routes/_authenticated/$storeId/goods/recipes/index'
 import { Route as AuthenticatedStoreIdSettingsReceiptTemplatesIndexRouteImport } from './routes/_authenticated/$storeId/settings/receipt-templates/index'
 import { Route as AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRouteImport } from './routes/_authenticated/$storeId/settings/receipt-templates/$templateId'
 
@@ -643,6 +644,12 @@ const AuthenticatedStoreIdGoodsProductsNewRoute =
     path: '/goods/products/new',
     getParentRoute: () => AuthenticatedStoreIdRoute,
   } as any)
+const AuthenticatedStoreIdGoodsRecipesIndexRoute =
+  AuthenticatedStoreIdGoodsRecipesIndexRouteImport.update({
+    id: '/goods/recipes/',
+    path: '/goods/recipes/',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
 const AuthenticatedStoreIdSettingsReceiptTemplatesIndexRoute =
   AuthenticatedStoreIdSettingsReceiptTemplatesIndexRouteImport.update({
     id: '/',
@@ -748,6 +755,7 @@ export interface FileRoutesByFullPath {
   '/$storeId/goods/categories/': typeof AuthenticatedStoreIdGoodsCategoriesIndexRoute
   '/$storeId/goods/ingredients/': typeof AuthenticatedStoreIdGoodsIngredientsIndexRoute
   '/$storeId/goods/products/': typeof AuthenticatedStoreIdGoodsProductsIndexRoute
+  '/$storeId/goods/recipes/': typeof AuthenticatedStoreIdGoodsRecipesIndexRoute
   '/$storeId/settings/receipt-templates/': typeof AuthenticatedStoreIdSettingsReceiptTemplatesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -831,6 +839,7 @@ export interface FileRoutesByTo {
   '/$storeId/goods/categories': typeof AuthenticatedStoreIdGoodsCategoriesIndexRoute
   '/$storeId/goods/ingredients': typeof AuthenticatedStoreIdGoodsIngredientsIndexRoute
   '/$storeId/goods/products': typeof AuthenticatedStoreIdGoodsProductsIndexRoute
+  '/$storeId/goods/recipes': typeof AuthenticatedStoreIdGoodsRecipesIndexRoute
   '/$storeId/settings/receipt-templates': typeof AuthenticatedStoreIdSettingsReceiptTemplatesIndexRoute
 }
 export interface FileRoutesById {
@@ -927,6 +936,7 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/goods/categories/': typeof AuthenticatedStoreIdGoodsCategoriesIndexRoute
   '/_authenticated/$storeId/goods/ingredients/': typeof AuthenticatedStoreIdGoodsIngredientsIndexRoute
   '/_authenticated/$storeId/goods/products/': typeof AuthenticatedStoreIdGoodsProductsIndexRoute
+  '/_authenticated/$storeId/goods/recipes/': typeof AuthenticatedStoreIdGoodsRecipesIndexRoute
   '/_authenticated/$storeId/settings/receipt-templates/': typeof AuthenticatedStoreIdSettingsReceiptTemplatesIndexRoute
 }
 export interface FileRouteTypes {
@@ -1023,6 +1033,7 @@ export interface FileRouteTypes {
     | '/$storeId/goods/categories/'
     | '/$storeId/goods/ingredients/'
     | '/$storeId/goods/products/'
+    | '/$storeId/goods/recipes/'
     | '/$storeId/settings/receipt-templates/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -1106,6 +1117,7 @@ export interface FileRouteTypes {
     | '/$storeId/goods/categories'
     | '/$storeId/goods/ingredients'
     | '/$storeId/goods/products'
+    | '/$storeId/goods/recipes'
     | '/$storeId/settings/receipt-templates'
   id:
     | '__root__'
@@ -1201,6 +1213,7 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/goods/categories/'
     | '/_authenticated/$storeId/goods/ingredients/'
     | '/_authenticated/$storeId/goods/products/'
+    | '/_authenticated/$storeId/goods/recipes/'
     | '/_authenticated/$storeId/settings/receipt-templates/'
   fileRoutesById: FileRoutesById
 }
@@ -1849,6 +1862,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoreIdGoodsProductsNewRouteImport
       parentRoute: typeof AuthenticatedStoreIdRoute
     }
+    '/_authenticated/$storeId/goods/recipes/': {
+      id: '/_authenticated/$storeId/goods/recipes/'
+      path: '/goods/recipes'
+      fullPath: '/$storeId/goods/recipes/'
+      preLoaderRoute: typeof AuthenticatedStoreIdGoodsRecipesIndexRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
     '/_authenticated/$storeId/settings/receipt-templates/': {
       id: '/_authenticated/$storeId/settings/receipt-templates/'
       path: '/'
@@ -2173,6 +2193,7 @@ interface AuthenticatedStoreIdRouteChildren {
   AuthenticatedStoreIdGoodsCategoriesIndexRoute: typeof AuthenticatedStoreIdGoodsCategoriesIndexRoute
   AuthenticatedStoreIdGoodsIngredientsIndexRoute: typeof AuthenticatedStoreIdGoodsIngredientsIndexRoute
   AuthenticatedStoreIdGoodsProductsIndexRoute: typeof AuthenticatedStoreIdGoodsProductsIndexRoute
+  AuthenticatedStoreIdGoodsRecipesIndexRoute: typeof AuthenticatedStoreIdGoodsRecipesIndexRoute
 }
 
 const AuthenticatedStoreIdRouteChildren: AuthenticatedStoreIdRouteChildren = {
@@ -2230,6 +2251,8 @@ const AuthenticatedStoreIdRouteChildren: AuthenticatedStoreIdRouteChildren = {
     AuthenticatedStoreIdGoodsIngredientsIndexRoute,
   AuthenticatedStoreIdGoodsProductsIndexRoute:
     AuthenticatedStoreIdGoodsProductsIndexRoute,
+  AuthenticatedStoreIdGoodsRecipesIndexRoute:
+    AuthenticatedStoreIdGoodsRecipesIndexRoute,
 }
 
 const AuthenticatedStoreIdRouteWithChildren =

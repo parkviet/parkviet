@@ -59,6 +59,49 @@ export type StockAlert = {
   low: boolean
 }
 
+// One card of the store's recipe list (`GET /pos/recipes/list`).
+export type RecipeListRow = {
+  id: string
+  version: number
+  ingredients: number
+  estimated_cost: string | null
+  owner_type: 'variant' | 'modifier_option'
+  owner_id: string
+  product_id: string | null
+  name: string
+  options_text: string | null
+  sku: string | null
+  group_name: string | null
+  cost_price: string | null
+  track_inventory: boolean | null
+}
+export type RecipeListMeta = { page: number; pages: number; count: number; next: number | null }
+export type RecipeListParams = {
+  q?: string
+  page?: number
+  limit?: number
+  owner_type?: 'variant' | 'modifier_option'
+  variant_ids?: string
+}
+
+export const readRecipeList = (params: RecipeListParams) =>
+  posRequest<{ data: RecipeListRow[]; meta: RecipeListMeta }>('GET', '/pos/recipes/list', {
+    params: Object.fromEntries(
+      Object.entries(params)
+        .filter(([, value]) => value !== undefined && value !== '')
+        .map(([key, value]) => [key, String(value)]),
+    ),
+  })
+export function useRecipeList(params: RecipeListParams, enabled = true) {
+  const { storeId } = useSession()
+  return useQuery({
+    queryKey: posKey(storeId, 'goods', 'recipes', params),
+    enabled,
+    placeholderData: (previous) => previous,
+    queryFn: () => readRecipeList(params),
+  })
+}
+
 export function useRecipe(owner: RecipeOwnerRef | null) {
   const { storeId } = useSession()
   return useQuery({

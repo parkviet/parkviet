@@ -231,6 +231,7 @@ Rails.application.routes.draw do
             put 'menu_favorites', to: 'menu_favorites#update'
             # Recipes of menu sizes and options, and a branch's low-stock thresholds.
             get 'recipes', to: 'recipes#show'
+            get 'recipes/list', to: 'recipes#index'
             put 'recipes', to: 'recipes#update'
             get 'stock_alerts', to: 'stock_alerts#index'
             put 'stock_alerts', to: 'stock_alerts#update'

@@ -122,6 +122,62 @@ module Spree
         owner.is_a?(Spree::Variant) ? 'variant' : 'modifier_option'
       end
 
+      VARIANT_JOIN = 'LEFT JOIN spree_variants owner_variants ON spree_pos_recipes.owner_type = ' \
+                     "'Spree::Variant' AND owner_variants.id = spree_pos_recipes.owner_id AND owner_variants.deleted_at IS NULL"
+      PRODUCT_JOIN = 'LEFT JOIN spree_products owner_products ON owner_products.id = owner_variants.product_id ' \
+                     'AND owner_products.deleted_at IS NULL'
+      OPTION_JOIN = 'LEFT JOIN spree_pos_modifier_options owner_options ON spree_pos_recipes.owner_type = ' \
+                    "'Spree::Pos::ModifierOption' AND owner_options.id = spree_pos_recipes.owner_id"
+      GROUP_JOIN = 'LEFT JOIN spree_pos_modifier_groups owner_groups ON owner_groups.id = owner_options.modifier_group_id'
+      LIST_SEARCH = 'owner_products.name ILIKE :like OR owner_variants.sku ILIKE :like OR ' \
+                    'owner_options.name ILIKE :like OR owner_groups.name ILIKE :like'
+      LIST_ORDER = 'COALESCE(owner_products.name, owner_groups.name) ASC, owner_options.name ASC NULLS FIRST, ' \
+                   'spree_pos_recipes.id ASC'
+
+      # The store's active recipes whose owner still exists, by product or
+      # option name. `term` matches the product name, a SKU, the option or
+      # its group; `owner_type` is `variant` or `modifier_option`;
+      # `variant_ids` (database ids) keeps those variants' recipes.
+      def listing(store, term: nil, owner_type: nil, variant_ids: nil)
+        scope = Recipe.for_store(store).active.joins(VARIANT_JOIN, PRODUCT_JOIN, OPTION_JOIN, GROUP_JOIN)
+        scope = scope.where('owner_products.id IS NOT NULL OR owner_groups.id IS NOT NULL')
+        case owner_type.to_s
+        when '' then nil
+        when 'variant' then scope = scope.where(owner_type: 'Spree::Variant')
+        when 'modifier_option' then scope = scope.where(owner_type: 'Spree::Pos::ModifierOption')
+        else raise Conflict.new('Name variant or modifier_option.', reason: 'recipe_owner_invalid')
+        end
+        scope = scope.where(owner_type: 'Spree::Variant', owner_id: variant_ids) unless variant_ids.nil?
+        text = term.to_s.strip
+        scope = scope.where(LIST_SEARCH, like: "%#{ActiveRecord::Base.sanitize_sql_like(text)}%") if text.present?
+        scope.order(Arel.sql(LIST_ORDER))
+      end
+
+      # A card of the recipe list for each record of `listing`: what it
+      # makes, how many ingredients it has and what one costs today.
+      def rows(store, records)
+        ActiveRecord::Associations::Preloader.new(records: records, associations: { recipe_ingredients: { ingredient_variant: :product } }).call
+        owned = ->(type) { records.select { |row| row.owner_type == type }.map(&:owner_id) }
+        variants = Spree::Variant.with_deleted.includes(:product, option_values: :option_type).where(id: owned.call('Spree::Variant')).index_by(&:id)
+        options = ModifierOption.includes(:modifier_group).where(id: owned.call('Spree::Pos::ModifierOption')).index_by(&:id)
+        records.map do |recipe|
+          costs = recipe.recipe_ingredients.map { |row| row.to_pos(unit_cost: unit_cost(store.id, row.ingredient_variant))[:cost] }
+          row = { id: recipe.prefixed_id, version: recipe.version, ingredients: recipe.recipe_ingredients.size,
+                  estimated_cost: costs.any?(&:nil?) ? nil : costs.sum { |value| BigDecimal(value) }.to_s('F') }
+          if recipe.owner_type == 'Spree::Variant'
+            variant = variants.fetch(recipe.owner_id)
+            row.merge(owner_type: 'variant', owner_id: variant.prefixed_id, product_id: variant.product.prefixed_id,
+                      name: variant.product.name, options_text: variant.options_text.presence, sku: variant.sku.presence,
+                      group_name: nil, cost_price: variant.cost_price&.to_s('F'), track_inventory: variant.track_inventory)
+          else
+            option = options.fetch(recipe.owner_id)
+            row.merge(owner_type: 'modifier_option', owner_id: option.prefixed_id, product_id: nil, name: option.name,
+                      options_text: nil, sku: nil, group_name: option.modifier_group.name,
+                      cost_price: option.cost_price&.to_s('F'), track_inventory: nil)
+          end
+        end
+      end
+
       # The owner's active version and its history, newest first.
       def present(store, owner)
         versions = Recipe.for_owner(owner).includes(recipe_ingredients: { ingredient_variant: :product }).order(version: :desc).to_a

@@ -206,5 +206,20 @@ an option's cost onto a sold line only when no active recipe or stocked variant
 counts what it uses; the copy feeds the menu margin report and the below-cost
 warning.
 
+Recipes (`pages/goods-recipes.tsx`, drawer in `components/goods-recipe-sheet.tsx`,
+pure rules in `lib/goods-recipes.ts`) list `GET /pos/recipes/list` (the store's
+active recipes of variants and add-on options, `q`, `owner_type`, `variant_ids`,
+paged, with each one's estimated cost) and read and write one recipe with the
+existing `GET`/`PUT /pos/recipes`, the same calls as the menu's
+`RecipeEditor`; both save through `useConfirmedRecipeSave` (a size with stock
+asks before it is written off) and deleting saves an empty list. The drawer picks
+a selling variant of any non-ingredient product and adds ingredients from the
+ingredient products. "Cost from ingredients" then sets the variant's
+`cost_price` with `PATCH /products/:id/variants/:id` from the server's
+`estimated_cost`, rounded to two decimals; it needs `write_products`. The
+route needs `canManageRecipes`; the nav item also needs the selected branch to
+run `fnb.recipes`. A recipe saves while any active branch runs the module, and
+ingredients are taken from stock only at branches that run it.
+
 Do not edit `apps/dashboard`. POS administration lives only here: do not add
 settings or setup screens back to `apps/pos`.
