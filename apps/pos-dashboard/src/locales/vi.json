@@ -4057,7 +4057,80 @@
       }
     },
     "barcodeLabels": { "title": "In tem mã vạch" },
-    "ingredients": { "title": "Nguyên liệu" },
+    "ingredients": {
+      "title": "Nguyên liệu",
+      "create": "Thêm nguyên liệu",
+      "hint": "Nguyên liệu là hàng dùng để chế biến, không bán ở quầy và không lên kênh POS. Tồn kho, giá trị kho và mức cảnh báo tính theo chi nhánh đang chọn.",
+      "sectionAt": "Nguyên liệu tại {{branch}}",
+      "searchPlaceholder": "Mã hoặc tên nguyên liệu…",
+      "empty": "Chưa có nguyên liệu nào.",
+      "export": "Xuất CSV",
+      "exported_other": "Đã xuất {{count}} nguyên liệu.",
+      "noAlert": "Chưa đặt",
+      "onHandHint": "Số lượng tại kho bán của chi nhánh đang chọn, theo đơn vị của nguyên liệu.",
+      "negativeHint": "Tồn âm, hãy kiểm kho lại.",
+      "typesUnreadable": "Vai trò của bạn chưa có quyền xem Loại sản phẩm (read_product_types), nên chưa biết sản phẩm nào là nguyên liệu. Nhờ quản trị cấp thêm quyền này.",
+      "stop": "Ngừng kinh doanh",
+      "resume": "Kinh doanh lại",
+      "stopConfirm": "Ngừng kinh doanh {{name}}? Nguyên liệu vẫn giữ tồn kho và có thể kinh doanh lại.",
+      "stopped": "Đã ngừng kinh doanh {{name}}.",
+      "resumed": "{{name}} đã kinh doanh lại.",
+      "delete": "Xoá",
+      "deleteConfirm": "Xoá nguyên liệu {{name}}? Không xoá được nếu nguyên liệu đang có trong công thức.",
+      "deleted": "Đã xoá {{name}}.",
+      "deleteFailed": "Không xoá được {{name}}.",
+      "saved": "Đã lưu {{name}}.",
+      "stock": {
+        "in_stock": "Còn hàng",
+        "low": "Dưới mức cảnh báo",
+        "out": "Hết hàng"
+      },
+      "business": {
+        "active": "Đang kinh doanh",
+        "inactive": "Ngừng kinh doanh"
+      },
+      "columns": {
+        "sku": "Mã",
+        "name": "Tên nguyên liệu",
+        "unit": "Đơn vị",
+        "cost_price": "Giá vốn",
+        "on_hand": "Tồn kho",
+        "value": "Giá trị kho",
+        "stock_state": "Trạng thái tồn",
+        "alert": "Mức cảnh báo",
+        "business": "Trạng thái kinh doanh"
+      },
+      "form": {
+        "createTitle": "Thêm nguyên liệu",
+        "editTitle": "Sửa nguyên liệu",
+        "intro": "Nguyên liệu theo dõi tồn kho theo đơn vị đã chọn và không bán ở quầy.",
+        "name": "Tên nguyên liệu",
+        "sku": "Mã nguyên liệu",
+        "skuPlaceholder": "Để trống để tự sinh, ví dụ NL000001",
+        "unit": "Đơn vị",
+        "unitHint": "Tồn kho, tồn đầu kỳ và công thức đều tính theo đơn vị này. Không đổi được khi đã có tồn hoặc đang dùng trong công thức.",
+        "costPrice": "Giá vốn / {{unit}}",
+        "alert": "Mức cảnh báo tồn thấp",
+        "alertHint": "Tại {{branch}}. Để trống hoặc 0 nếu không cảnh báo.",
+        "openingStock": "Tồn đầu kỳ",
+        "openingStockAt": "Tồn đầu kỳ – {{location}} ({{unit}})",
+        "saveAndNew": "Lưu và tạo tiếp",
+        "createdNext": "Đã tạo {{name}}. Nhập nguyên liệu tiếp theo.",
+        "followUpFailed": "Đã lưu nguyên liệu, nhưng còn bước chưa xong. Lưu lại để thử tiếp.",
+        "followUp": {
+          "unit": "Đơn vị",
+          "alert": "Mức cảnh báo"
+        },
+        "errors": {
+          "name": "Nhập tên nguyên liệu (tối đa 255 ký tự).",
+          "sku": "Mã không có khoảng trắng, tối đa 64 ký tự.",
+          "unit": "Chọn đơn vị.",
+          "cost": "Nhập giá vốn hợp lệ, ví dụ 12000 hoặc 12.000.",
+          "alert": "Mức cảnh báo là số nguyên không âm, tối đa 9 chữ số.",
+          "stock": "Tồn đầu kỳ là số nguyên không âm, tối đa 7 chữ số."
+        }
+      }
+    },
     "priceLists": { "title": "Bảng giá" },
     "categories": {
       "title": "Danh mục",

@@ -165,15 +165,28 @@ function csvField(value: string) {
 export const toCsv = (rows: readonly (readonly string[])[]) =>
   `﻿${rows.map((row) => row.map(csvField).join(',')).join('\r\n')}\r\n`
 
-// Generated SKUs are `SP` and six digits, one above the highest in use.
+// Hands the text to the browser as a CSV file download.
+export function downloadCsv(text: string, filename: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.append(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+// Generated SKUs are a prefix (`SP` for products, `NL` for ingredients) and
+// six digits, one above the highest in use with that prefix.
 export const SKU_PREFIX = 'SP'
-const GENERATED = /^SP(\d{6,})$/
-export function nextSku(existing: readonly (string | null | undefined)[]) {
+export function nextSku(existing: readonly (string | null | undefined)[], prefix = SKU_PREFIX) {
+  const generated = new RegExp(`^${prefix}(\\d{6,})$`)
   const highest = existing.reduce((max, sku) => {
-    const match = sku ? GENERATED.exec(sku.trim()) : null
+    const match = sku ? generated.exec(sku.trim()) : null
     return match ? Math.max(max, Number(match[1])) : max
   }, 0)
-  return `${SKU_PREFIX}${String(highest + 1).padStart(6, '0')}`
+  return `${prefix}${String(highest + 1).padStart(6, '0')}`
 }
 
 // Product images the form accepts.

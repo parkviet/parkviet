@@ -10,7 +10,7 @@ module Spree
             pos_permissions index: %w[read_pos_orders read_pos_topology write_pos_topology read_products write_products],
                             variant_units: %w[read_pos_orders read_pos_topology],
                             variants: %w[read_pos_topology write_pos_topology read_products write_products],
-                            update_variant_unit: %w[write_pos_topology],
+                            update_variant_unit: %w[write_pos_topology write_products],
                             create: %w[write_pos_topology], update: %w[write_pos_topology],
                             disable: %w[write_pos_topology], enable: %w[write_pos_topology]
 
@@ -145,8 +145,20 @@ module Spree
               render json: { data: data }
             end
 
+            # With `branch_id`, the selling unit and conversion of a variant the
+            # branch sells (topology writers managing that branch). Without
+            # one, the stock unit of a catalog item no branch sells, such as an
+            # ingredient (see #update_stock_unit).
             def update_variant_unit
               return if channel_rejected?
+
+              params[:branch_id].blank? ? update_stock_unit : update_branch_unit
+            end
+
+            private
+
+            def update_branch_unit
+              raise CanCan::AccessDenied unless policy.permission?('write_pos_topology')
 
               branch = branch!(params[:branch_id])
               raise CanCan::AccessDenied unless policy.allows?(branch, Spree::Pos::Capabilities::MANAGE)
@@ -183,7 +195,58 @@ module Spree
               render json: { data: record.to_pos(variant: variant) }
             end
 
-            private
+            # Catalog writers set the unit an item no branch sells is counted
+            # in: a canonical unit at 1:1, untracked, without a scale label.
+            # Nothing is sold through it, so no selling module applies. Once
+            # configured, the unit stays while the item has stock or is in a
+            # recipe, which both count in it.
+            def update_stock_unit
+              raise CanCan::AccessDenied unless catalog_writer?
+
+              Spree::Pos::UnitDefinition.ensure_defaults!(current_store)
+              variant = Spree::Variant.find_by_prefix_id(params[:variant_id].to_s)
+              raise ActiveRecord::RecordNotFound if variant.nil? || variant.product.store_id != current_store.id
+              if Spree::Pos::BranchProduct.exists?(product_id: variant.product_id)
+                raise Spree::Pos::Conflict.new('A product sold at a branch takes its unit there.', reason: 'unit_branch_required')
+              end
+
+              unit = unit!(params[:sale_unit_code] || params[:sale_unit])
+              raise Spree::Pos::Conflict.new('A stock unit is a canonical unit at 1:1.', reason: 'stock_unit_invalid') unless plain_stock_unit?(unit)
+
+              record = Spree::Pos::VariantUnit.find_or_initialize_by(store: current_store, variant: variant)
+              if stock_unit_change?(record, unit) && stock_unit_in_use?(record, variant)
+                raise Spree::Pos::Conflict.new('The unit is fixed while stock or a recipe counts in it.', reason: 'stock_unit_in_use')
+              end
+
+              ActiveRecord::Base.transaction { configure_variant_unit!(record, variant, unit, unit, unit) }
+              audit!('variant_unit.configure', variant, variant_id: variant.prefixed_id, version: record.version)
+              render json: { data: record.to_pos(variant: variant) }
+            end
+
+            def plain_stock_unit?(unit)
+              same = [params[:base_unit_code] || params[:base_unit], params[:price_unit_code] || params[:price_unit]].compact
+              unit.code == unit.base_code && same.all? { |code| code.to_s == unit.code } &&
+                ratio_value(params[:ratio_numerator], 1) == 1 && ratio_value(params[:ratio_denominator], 1) == 1 &&
+                tracked_mode(params[:tracked_mode]) == 'none' && params[:label_code].blank?
+            end
+
+            # A variant without a configuration is counted in `item`.
+            def stock_unit_change?(record, unit)
+              record.persisted? ? record.base_unit_id != unit.id : unit.code != Spree::Pos::UnitDefinition::FALLBACK_CODE
+            end
+
+            # Recipes keep each ingredient's quantity in its stock unit. Stock
+            # counted before the first configuration (the opening count of a
+            # new item) is taken to be in the unit being set.
+            def stock_unit_in_use?(record, variant)
+              return true if Spree::Pos::RecipeIngredient.exists?(ingredient_variant_id: variant.id)
+
+              record.persisted? && Spree::StockLevel.where(variant_id: variant.id).where.not(count_on_hand: 0).exists?
+            end
+
+            def catalog_writer?
+              policy.permission?('write_products')
+            end
 
             # Module gates (D5) for what this request newly sets up at the
             # branch, compared with the stored configuration: starting serial

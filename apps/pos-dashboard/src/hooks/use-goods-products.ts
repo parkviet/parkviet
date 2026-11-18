@@ -177,26 +177,29 @@ export async function generateSkus(
   count: number,
   client: Pick<typeof adminClient, 'variants'> = adminClient,
   reserved: readonly string[] = [],
+  prefix = SKU_PREFIX,
 ) {
   if (count === 0) return []
-  const { data } = await client.variants.list({ sku_start: SKU_PREFIX, sort: '-sku', limit: 100 })
+  const { data } = await client.variants.list({ sku_start: prefix, sort: '-sku', limit: 100 })
   const taken: (string | null)[] = [...data.map((variant) => variant.sku), ...reserved]
   const picked: string[] = []
   while (picked.length < count) {
-    let candidate = nextSku(taken)
+    let candidate = nextSku(taken, prefix)
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const clash = await client.variants.list({ sku_eq: candidate, limit: 1 })
       if (clash.data.length === 0) break
       taken.push(candidate)
-      candidate = nextSku(taken)
+      candidate = nextSku(taken, prefix)
     }
     taken.push(candidate)
     picked.push(candidate)
   }
   return picked
 }
-export const generateSku = async (client: Pick<typeof adminClient, 'variants'> = adminClient) =>
-  (await generateSkus(1, client))[0]
+export const generateSku = async (
+  client: Pick<typeof adminClient, 'variants'> = adminClient,
+  prefix = SKU_PREFIX,
+) => (await generateSkus(1, client, [], prefix))[0]
 
 // Makes every attribute and value an option type of the store, so variants
 // name them by their stored names.

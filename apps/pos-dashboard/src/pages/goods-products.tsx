@@ -57,6 +57,7 @@ import { POS_CHANNEL_CODE, useGoodsSetup } from '../hooks/use-goods-setup'
 import { usePosSession } from '../hooks/use-pos-session'
 import { useSession } from '../hooks/use-session'
 import {
+  downloadCsv,
   GOODS_COLUMNS,
   type GoodsCellContext,
   type GoodsColumn,
@@ -71,10 +72,22 @@ import { goodsProductSearchSchema } from '../schemas/goods-product-search'
 const TABLE_KEY = 'pos-goods-products'
 const STATUSES = ['active', 'draft', 'archived'] as const
 type Status = (typeof STATUSES)[number]
-const VIEW_PARAMS = {
+// The catalog not on the `pos` channel yet leaves out ingredients, which are
+// never published there. A Ransack group keeps products without a type, which
+// `product_type_id_not_eq` alone would drop.
+const viewParams = (ingredientTypeId: string | null) => ({
   pos: { channels_code_eq: POS_CHANNEL_CODE },
-  unpublished: { not_in_channel: POS_CHANNEL_CODE },
-} as const
+  unpublished: {
+    not_in_channel: POS_CHANNEL_CODE,
+    ...(ingredientTypeId
+      ? {
+          'q[g][0][m]': 'or',
+          'q[g][0][product_type_id_null]': '1',
+          'q[g][0][product_type_id_not_eq]': ingredientTypeId,
+        }
+      : {}),
+  },
+})
 
 // The store's products as the counter sells them: what is on the `pos`
 // channel, with a second view of the catalog not on it yet. Paging,
@@ -92,6 +105,7 @@ export function GoodsProductsPage() {
   const view = searchParams.view ?? 'pos'
   const currency = context.data?.store.currency ?? 'VND'
   const types = useGoodsProductTypes(canReadProductTypes({ permissionKeys }))
+  const viewQuery = viewParams(types.data?.byKind.ingredient?.id ?? null)
   const categories = useGoodsCategories()
   const taxCategories = useGoodsTaxCategories()
   const taxRates = useGoodsTaxRates()
@@ -390,7 +404,7 @@ export function GoodsProductsPage() {
     setExporting(true)
     try {
       const params: Record<string, unknown> = {
-        ...VIEW_PARAMS[view],
+        ...viewQuery[view],
         expand: PRODUCT_EXPAND,
         sort: searchParams.sort
           ? `${searchParams.dir === 'desc' ? '-' : ''}${searchParams.sort}`
@@ -406,7 +420,7 @@ export function GoodsProductsPage() {
         const text = cells(row)
         return columns.map((key: GoodsColumn) => text[key])
       })
-      download(toCsv([header, ...body]), `san-pham-${new Date().toISOString().slice(0, 10)}.csv`)
+      downloadCsv(toCsv([header, ...body]), `san-pham-${new Date().toISOString().slice(0, 10)}.csv`)
       setNotice({ text: t('goods.products.exported', { count: rows.length }), failed: false })
     } catch (failure) {
       setNotice({ text: describeFailure(failure, t), failed: true })
@@ -450,11 +464,11 @@ export function GoodsProductsPage() {
         queryFn={(params: ProductListParams) => readGoodsProducts(params)}
         defaultParams={{ expand: PRODUCT_EXPAND }}
         views={[
-          { key: 'pos', label: t('goods.products.viewPos'), params: VIEW_PARAMS.pos },
+          { key: 'pos', label: t('goods.products.viewPos'), params: viewQuery.pos },
           {
             key: 'unpublished',
             label: t('goods.products.viewUnpublished'),
-            params: VIEW_PARAMS.unpublished,
+            params: viewQuery.unpublished,
           },
         ]}
         searchParams={searchParams}
@@ -537,17 +551,6 @@ const defaultColumns = () =>
   getTable(TABLE_KEY)
     .columns.filter((column) => column.default)
     .map((column) => column.key)
-
-function download(text: string, filename: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }))
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.append(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
-}
 
 function StatusDialog({ onSubmit, onCancel }: BulkActionFormProps<{ status: Status }>) {
   const { t } = useTranslation()

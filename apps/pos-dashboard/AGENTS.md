@@ -178,5 +178,19 @@ category to the top level. Members are written only with `POST`/`DELETE
 retried without creating a second one. Deleting a category also deletes the ones
 under it and keeps the products; `products_count` includes subcategories.
 
+Ingredients (`pages/goods-ingredients.tsx`, drawer in
+`components/goods-ingredient-sheet.tsx`, mapping in `lib/goods-ingredients.ts`,
+save sequence in `hooks/use-goods-ingredients.ts`) are products of the
+`Nguyên liệu` type (`q[product_type_id_eq]`), tracked, on no channel, so no
+branch assortment holds them; the products list's "not on POS yet" view leaves
+them out with a Ransack `or` group that keeps untyped products. The whole list
+is read and filtered locally for the selected branch's selling location.
+Generated codes are `NL` and six digits. A create sends opening `stock_levels`
+for every distinct branch location; an edit never does. The stock unit is
+`PUT /pos/units/variant` without `branch_id` (catalog writers, canonical unit
+at 1:1, refused once stock or a recipe counts in it), and the low-stock
+threshold is the selected branch's `PUT /pos/stock_alerts`, offered while it
+runs recipes. The server refuses to delete a product an active recipe uses.
+
 Do not edit `apps/dashboard`. POS administration lives only here: do not add
 settings or setup screens back to `apps/pos`.

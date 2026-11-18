@@ -109,6 +109,10 @@ test('products not on the pos channel are published in bulk, creating the channe
   await page.getByRole('tab', { name: 'Chưa lên kênh POS' }).click();
   await expect(rowNamed(page, 'Gạo thơm')).toBeVisible();
   expect(state.lists.at(-1)?.get('q[not_in_channel]')).toBe('pos');
+  // Ingredients are never published there; products without a type stay listed.
+  expect(state.lists.at(-1)?.get('q[g][0][m]')).toBe('or');
+  expect(state.lists.at(-1)?.get('q[g][0][product_type_id_null]')).toBe('1');
+  expect(state.lists.at(-1)?.get('q[g][0][product_type_id_not_eq]')).toBe('pt_ingredient');
   await rowNamed(page, 'Gạo thơm').getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Đưa lên kênh POS' }).click();
   await expect.poll(() => state.writes.map((write) => write.path)).toContain('/products/bulk_add_to_channels');

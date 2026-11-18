@@ -147,7 +147,7 @@ const runsMenu = (access: PosAccess) => access.context?.modules?.['fnb.menu'] ==
 export const canManageRecipes = (access: PosAccess) =>
   canAdminister(access, true) || hasCapability(access, 'pos.inventory.manage')
 export const runsRecipes = (access: PosAccess) => access.context?.modules?.['fnb.recipes'] === true
-const canReadStockAlerts = (access: PosAccess) =>
+export const canReadStockAlerts = (access: PosAccess) =>
   canAdminister(access) || canManageRecipes(access) || hasCapability(access, 'pos.report.read')
 // E-invoices of the selected branch: store administrators read them, and they
 // or e-invoice managers act on them. Provider settings stay with store

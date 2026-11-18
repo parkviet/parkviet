@@ -4086,7 +4086,81 @@
       }
     },
     "barcodeLabels": { "title": "Barcode labels" },
-    "ingredients": { "title": "Ingredients" },
+    "ingredients": {
+      "title": "Ingredients",
+      "create": "Add ingredient",
+      "hint": "Ingredients are used in preparation, are not sold at the counter and are never published on the POS channel. Stock, stock value and thresholds are for the selected branch.",
+      "sectionAt": "Ingredients at {{branch}}",
+      "searchPlaceholder": "Ingredient code or name…",
+      "empty": "No ingredients yet.",
+      "export": "Export CSV",
+      "exported_one": "Exported {{count}} ingredient.",
+      "exported_other": "Exported {{count}} ingredients.",
+      "noAlert": "Not set",
+      "onHandHint": "Quantity at the selected branch's selling location, in the ingredient's unit.",
+      "negativeHint": "Negative stock, count it again.",
+      "typesUnreadable": "Your role cannot read product types (read_product_types), so ingredients cannot be told apart. Ask an administrator to add this permission.",
+      "stop": "Stop using",
+      "resume": "Use again",
+      "stopConfirm": "Stop using {{name}}? Its stock is kept and it can be used again.",
+      "stopped": "{{name}} is no longer in use.",
+      "resumed": "{{name}} is in use again.",
+      "delete": "Delete",
+      "deleteConfirm": "Delete the ingredient {{name}}? An ingredient used in a recipe cannot be deleted.",
+      "deleted": "Deleted {{name}}.",
+      "deleteFailed": "Could not delete {{name}}.",
+      "saved": "Saved {{name}}.",
+      "stock": {
+        "in_stock": "In stock",
+        "low": "Below threshold",
+        "out": "Out of stock"
+      },
+      "business": {
+        "active": "In use",
+        "inactive": "Not in use"
+      },
+      "columns": {
+        "sku": "Code",
+        "name": "Ingredient",
+        "unit": "Unit",
+        "cost_price": "Cost",
+        "on_hand": "On hand",
+        "value": "Stock value",
+        "stock_state": "Stock status",
+        "alert": "Threshold",
+        "business": "Status"
+      },
+      "form": {
+        "createTitle": "Add ingredient",
+        "editTitle": "Edit ingredient",
+        "intro": "An ingredient tracks stock in the chosen unit and is not sold at the counter.",
+        "name": "Ingredient name",
+        "sku": "Ingredient code",
+        "skuPlaceholder": "Leave blank to generate one, e.g. NL000001",
+        "unit": "Unit",
+        "unitHint": "Stock, opening stock and recipes all count in this unit. It cannot change once there is stock or a recipe uses it.",
+        "costPrice": "Cost per {{unit}}",
+        "alert": "Low-stock threshold",
+        "alertHint": "At {{branch}}. Leave blank or 0 for no warning.",
+        "openingStock": "Opening stock",
+        "openingStockAt": "Opening stock – {{location}} ({{unit}})",
+        "saveAndNew": "Save and add another",
+        "createdNext": "Created {{name}}. Enter the next ingredient.",
+        "followUpFailed": "The ingredient was saved, but some steps did not finish. Save again to retry them.",
+        "followUp": {
+          "unit": "Unit",
+          "alert": "Threshold"
+        },
+        "errors": {
+          "name": "Enter the ingredient name (up to 255 characters).",
+          "sku": "The code has no spaces and up to 64 characters.",
+          "unit": "Choose a unit.",
+          "cost": "Enter a valid cost, e.g. 12000 or 12.000.",
+          "alert": "The threshold is a whole number of 0 or more, up to 9 digits.",
+          "stock": "Opening stock is a whole number of 0 or more, up to 7 digits."
+        }
+      }
+    },
     "priceLists": { "title": "Price lists" },
     "categories": {
       "title": "Categories",
