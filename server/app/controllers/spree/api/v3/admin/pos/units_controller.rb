@@ -213,12 +213,18 @@ module Spree
               unit = unit!(params[:sale_unit_code] || params[:sale_unit])
               raise Spree::Pos::Conflict.new('A stock unit is a canonical unit at 1:1.', reason: 'stock_unit_invalid') unless plain_stock_unit?(unit)
 
-              record = Spree::Pos::VariantUnit.find_or_initialize_by(store: current_store, variant: variant)
-              if stock_unit_change?(record, unit) && stock_unit_in_use?(record, variant)
-                raise Spree::Pos::Conflict.new('The unit is fixed while stock or a recipe counts in it.', reason: 'stock_unit_in_use')
-              end
+              # Checked under the variant lock, so stock or a recipe written
+              # meanwhile is seen before the unit changes under it.
+              record = ActiveRecord::Base.transaction do
+                variant.lock!
+                row = Spree::Pos::VariantUnit.find_or_initialize_by(store: current_store, variant: variant)
+                if stock_unit_change?(row, unit) && stock_unit_in_use?(row, variant)
+                  raise Spree::Pos::Conflict.new('The unit is fixed while stock or a recipe counts in it.', reason: 'stock_unit_in_use')
+                end
 
-              ActiveRecord::Base.transaction { configure_variant_unit!(record, variant, unit, unit, unit) }
+                configure_variant_unit!(row, variant, unit, unit, unit)
+                row
+              end
               audit!('variant_unit.configure', variant, variant_id: variant.prefixed_id, version: record.version)
               render json: { data: record.to_pos(variant: variant) }
             end

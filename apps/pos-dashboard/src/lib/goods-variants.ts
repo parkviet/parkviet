@@ -319,6 +319,17 @@ export type VariantChanges = {
   creates: { label: string; params: VariantCreateParams }[]
   deletes: { id: string; label: string }[]
 }
+// The `variants` of the product update. That update replaces the product's
+// variant set, so a variant to remove rides along unchanged and is deleted on
+// its own afterwards: a refused delete (the variant is on orders, or an
+// ingredient of an active recipe) is then reported as that step instead of
+// failing the whole save. Without kept variants nothing is sent and the
+// stored set stays as it is.
+export const productUpdateVariants = (changes: VariantChanges): ProductVariantParams[] =>
+  changes.updates.length > 0
+    ? [...changes.updates, ...changes.deletes.map(({ id }) => ({ id }))]
+    : []
+
 // How an edit reaches the wanted matrix. A product without option variants
 // turns its single variant into the first combination, so its stock and
 // history stay; stored variants not in the matrix are deleted.

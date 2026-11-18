@@ -148,49 +148,65 @@ export function useSalesChannels(enabled: boolean) {
 }
 
 export type ListPayload = PriceListUpdateParams & { name: string }
-// What a save has already written, so a retried save never creates twice.
-export type SavedPriceList = { listId: string; catalogId: string | null }
+// What a save has already written, so a retried save never creates twice and
+// still switches on a list whose activation did not go through. A group
+// list's id is null until its catalog has been read back.
+export type SavedPriceList = { listId: string | null; catalogId: string | null; activated: boolean }
 
 // Creates or updates a list. A list for customer groups is the price list of
 // a catalog assigned to those groups (Spree's audience model); it is created
 // with the catalog and the catalog is switched on. A new standalone list is
 // switched on too, which Spree turns into scheduled when it starts later.
+// Every write reports what it did through `progress` before the next starts.
 export async function savePriceList(input: {
   saved: SavedPriceList | null
   payload: ListPayload
   groupIds: string[] | null
   progress: (saved: SavedPriceList) => void
-}): Promise<SavedPriceList> {
+}): Promise<SavedPriceList & { listId: string }> {
   const { payload, groupIds } = input
   const assignments = (groupIds ?? []).map((id) => ({
     assignable_type: 'customer_group' as const,
     assignable_id: id,
   }))
-  if (input.saved) {
-    await adminClient.priceLists.update(input.saved.listId, payload)
-    if (input.saved.catalogId)
-      await adminClient.catalogs.update(input.saved.catalogId, { name: payload.name, assignments })
-    return input.saved
+  let saved = input.saved
+  const record = (next: SavedPriceList) => {
+    input.progress(next)
+    return next
   }
-  if (groupIds) {
-    const catalog = await adminClient.catalogs.create({
-      name: payload.name,
-      metadata: { [POS_CATALOG_FLAG]: true },
-      price_list: payload,
-      assignments,
-    })
-    const read = await adminClient.catalogs.get(catalog.id, { expand: ['price_list'] })
+  const written = saved !== null
+  if (!saved) {
+    if (groupIds) {
+      const catalog = await adminClient.catalogs.create({
+        name: payload.name,
+        metadata: { [POS_CATALOG_FLAG]: true },
+        price_list: payload,
+        assignments,
+      })
+      saved = record({ listId: null, catalogId: catalog.id, activated: false })
+    } else {
+      const list = await adminClient.priceLists.create(payload)
+      saved = record({ listId: list.id, catalogId: null, activated: false })
+    }
+  }
+  if (saved.catalogId && !saved.listId) {
+    const read = await adminClient.catalogs.get(saved.catalogId, { expand: ['price_list'] })
     if (!read.price_list) throw new Error('The catalog was saved without its price list.')
-    const saved = { listId: read.price_list.id, catalogId: catalog.id }
-    input.progress(saved)
-    await adminClient.catalogs.activate(catalog.id)
-    return saved
+    saved = record({ ...saved, listId: read.price_list.id })
   }
-  const list = await adminClient.priceLists.create(payload)
-  const saved = { listId: list.id, catalogId: null }
-  input.progress(saved)
-  await adminClient.priceLists.activate(list.id)
-  return saved
+  const listId = saved.listId
+  if (!listId) throw new Error('The catalog was saved without its price list.')
+  if (written) {
+    await adminClient.priceLists.update(listId, payload)
+    if (saved.catalogId)
+      await adminClient.catalogs.update(saved.catalogId, { name: payload.name, assignments })
+  }
+  if (!saved.activated) {
+    if (saved.catalogId) await adminClient.catalogs.activate(saved.catalogId)
+    else await adminClient.priceLists.activate(listId)
+    saved = record({ ...saved, activated: true })
+  }
+  return { ...saved, listId }
 }
 
 // Deleting a customer-group list deletes its catalog, which deletes the list.

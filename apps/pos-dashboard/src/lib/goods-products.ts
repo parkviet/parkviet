@@ -402,6 +402,13 @@ export function productUpdateBody(
   }
 }
 
+// What a bulk delete did: the server skips products it refuses (on orders,
+// an ingredient of an active recipe) and counts only those it deleted.
+export function bulkDeleteOutcome(selected: number, deleted: number) {
+  const count = Math.min(Math.max(0, deleted), selected)
+  return { count, refused: selected - count }
+}
+
 // Branch assignments to add and remove so the product ends up sold exactly
 // at the selected branches.
 export function branchChanges(current: readonly string[], selected: readonly string[]) {

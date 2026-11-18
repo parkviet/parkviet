@@ -1,13 +1,6 @@
 import { formatMoney } from '@parkviet/pos-shared/money'
 import { conflictReason, describeFailure } from '@parkviet/pos-shared/request-failure'
-import {
-  Badge,
-  Button,
-  DialogBody,
-  DialogFooter,
-  SearchInput,
-  Switch,
-} from '@spree/dashboard-ui'
+import { Badge, Button, DialogBody, DialogFooter, SearchInput, Switch } from '@spree/dashboard-ui'
 import { GripVerticalIcon, MoveDownIcon, MoveUpIcon, Trash2Icon } from '@spree/dashboard-ui/icons'
 import { type PointerEvent, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'

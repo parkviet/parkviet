@@ -113,6 +113,23 @@ RSpec.describe 'POS recipes API', type: :request do
     expect(response).to have_http_status(:forbidden)
   end
 
+  it 'reads the units and options of every listed ingredient at once' do
+    queries = lambda do
+      count = 0
+      counter = ->(*, payload) { count += 1 if payload[:sql].match?(/spree_pos_variant_units|spree_option_values/) }
+      ActiveSupport::Notifications.subscribed(counter, 'sql.active_record') { call(manager, :get, 'recipes/list') }
+      expect(response).to have_http_status(:ok)
+      count
+    end
+    recipe!(store, manager, size(item, 0), [[milk, 150, 'ml']])
+    one = queries.call
+
+    sugar = ingredient!(store, branch, name: 'Đường', base: 'g', stock: 5_000, cost: 20)
+    tea = ingredient!(store, branch, name: 'Trà', base: 'g', stock: 5_000, cost: 30)
+    recipe!(store, manager, size(item, 1), [[milk, 200, 'ml'], [sugar, 10, 'g'], [tea, 5, 'g']])
+    expect(queries.call).to eq(one)
+  end
+
   it 'sets thresholds, lists low ones first and removes one' do
     sugar = ingredient!(store, branch, name: 'Đường', base: 'g', stock: 5_000)
     call(manager, :put, 'stock_alerts', branch_id: branch.prefixed_id, variant_id: sugar.prefixed_id, min_quantity: 1_000)

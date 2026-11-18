@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { goodsProductSchema } from '../schemas/goods-product'
 import {
   branchChanges,
+  bulkDeleteOutcome,
   emptyGoodsProduct,
   formFromProduct,
   type GoodsCellContext,
@@ -345,5 +346,13 @@ describe('attributes in the form', () => {
       variants: rows.map((row) => ({ ...row, enabled: false })),
     })
     expect(result.error?.issues.map((issue) => issue.path.join('.'))).toContain('variants')
+  })
+})
+
+describe('bulkDeleteOutcome', () => {
+  it('counts what the server deleted and how many it refused', () => {
+    expect(bulkDeleteOutcome(5, 3)).toEqual({ count: 3, refused: 2 })
+    expect(bulkDeleteOutcome(2, 2)).toEqual({ count: 2, refused: 0 })
+    expect(bulkDeleteOutcome(2, 0)).toEqual({ count: 0, refused: 2 })
   })
 })

@@ -67,6 +67,27 @@ RSpec.describe 'POS goods catalog reads', type: :request do
       expect(missing).to include(milk.prefixed_id)
       expect(missing).not_to include(rice.prefixed_id)
     end
+
+    it 'keeps both scopes from the Store API and the seller API' do
+      %i[store seller].each do |audience|
+        expect(Spree::Product.ransackable_scopes(audience)).not_to include('search_with_barcode', 'not_in_channel')
+      end
+      expect(Spree::Product.ransackable_scopes).to include('search_with_barcode', 'not_in_channel')
+
+      Spree::ProductPublication.create!(product: rice, channel: pos_channel)
+      key = create(:api_key, :publishable, store: store)
+      storefront = lambda do |q|
+        get '/api/v3/store/products', headers: { 'x-spree-api-key' => key.token }, params: { q: q }
+        response.parsed_body
+      end
+
+      unfiltered = storefront.call({})
+      expect(unfiltered['data']).to be_present
+      # Either scope, applied, would empty the list.
+      narrowed = storefront.call({ search_with_barcode: 'no-such-term', not_in_channel: 'pos' })
+      expect(response).to have_http_status(:ok)
+      expect(narrowed['data'].map { |row| row['id'] }).to eq(unfiltered['data'].map { |row| row['id'] })
+    end
   end
 
   describe 'variant units' do
@@ -162,6 +183,19 @@ RSpec.describe 'POS goods catalog reads', type: :request do
       expect(unit_row.call.base_unit.code).to eq('ml')
     end
 
+    it 'sees stock counted while the change waited for the item' do
+      put_unit(catalog, { variant_id: variant.prefixed_id, sale_unit: 'g' })
+      stock_item = variant.stock_items.find_or_create_by!(stock_location: branch.stock_location)
+      allow_any_instance_of(Spree::Variant).to receive(:lock!).and_wrap_original do |original, *args|
+        original.call(*args).tap { stock_item.set_count_on_hand(4) if stock_item.reload.count_on_hand.zero? }
+      end
+
+      put_unit(catalog, { variant_id: variant.prefixed_id, sale_unit: 'ml' })
+      expect(response).to have_http_status(:conflict)
+      expect(response.parsed_body.dig('error', 'details', 'reason')).to eq('stock_unit_in_use')
+      expect(unit_row.call.base_unit.code).to eq('g')
+    end
+
     it 'keeps the unit of an ingredient a recipe counts in' do
       tea = product_named('Trà sữa', sku: 'SP000010', barcode: '')
       recipe = Spree::Pos::Recipe.create!(store: store, owner: tea.default_variant, version: 1, active: true)
@@ -212,6 +246,45 @@ RSpec.describe 'POS goods catalog reads', type: :request do
 
       delete_product('products/bulk_destroy', { ids: [sugar.prefixed_id] })
       expect(sugar.reload.deleted_at).to be_nil
+    end
+
+    describe 'a variant of a product with several' do
+      let(:syrup) { product_named('Siro', sku: 'NL000003', barcode: '') }
+      let!(:flavor) { create(:variant, product: syrup, sku: 'NL000003-DAU') }
+      let(:headers) { { 'Authorization' => "Bearer #{token_for(catalog)}" } }
+
+      before do
+        recipe.recipe_ingredients.create!(ingredient_variant: flavor, quantity: 1, unit_code: 'item', base_quantity: 1,
+                                          base_unit_code: 'item')
+      end
+
+      it 'refuses to drop it from the product while an active recipe uses it' do
+        patch "/api/v3/admin/products/#{syrup.prefixed_id}", headers: headers, as: :json,
+                                                             params: { name: 'Siro mới', variants: [{ id: syrup.default_variant.prefixed_id }] }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.parsed_body.dig('error', 'message')).to include('ingredient of an active recipe')
+        expect(flavor.reload.deleted_at).to be_nil
+        expect(syrup.reload.name).to eq('Siro')
+      end
+
+      it 'refuses to delete it on its own until the recipe is retired' do
+        delete "/api/v3/admin/products/#{syrup.prefixed_id}/variants/#{flavor.prefixed_id}", headers: headers
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.parsed_body.dig('error', 'message')).to include('ingredient of an active recipe')
+        expect(flavor.reload.deleted_at).to be_nil
+
+        recipe.update!(active: false)
+        delete "/api/v3/admin/products/#{syrup.prefixed_id}/variants/#{flavor.prefixed_id}", headers: headers
+        expect(response).to have_http_status(:no_content)
+        expect(Spree::Variant.with_deleted.find(flavor.id).deleted_at).not_to be_nil
+      end
+
+      it 'refuses to delete the product for a variant other than its default one' do
+        delete "/api/v3/admin/products/#{syrup.prefixed_id}", headers: headers
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include('ingredient of an active recipe')
+      end
     end
 
     it 'deletes it once the recipe is retired' do

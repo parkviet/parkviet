@@ -232,8 +232,11 @@ describe('saveGoodsProduct with attributes and add-on groups', () => {
         { name: 'l', label: 'L', position: 2 },
       ],
     })
+    // The variant to delete rides along, so the update does not remove it
+    // and its refusal is reported by the delete below.
     expect(sdk.products.update.mock.calls[0][1].variants).toEqual([
       expect.objectContaining({ id: 'v_m', sku: 'A-M' }),
+      { id: 'v_s' },
     ])
     expect(sdk.products.variants.delete).toHaveBeenCalledWith('prod_new', 'v_s')
     expect(sdk.products.variants.create).toHaveBeenCalledWith(
@@ -241,9 +244,50 @@ describe('saveGoodsProduct with attributes and add-on groups', () => {
       expect.objectContaining({ sku: 'A-L', options: [{ name: 'size', value: 'l' }] }),
     )
     expect(outcome.failures).toEqual([{ step: 'variantDelete', error: inUse, label: 'Size: S' }])
+    expect(outcome.failures[0].error).toBe(inUse)
     // Unchanged groups are not written again.
     expect(request.mock.calls.some(([, path]) => String(path).startsWith('/pos/menu_items'))).toBe(
       false,
     )
+  })
+  it('takes a variant already gone as removed', async () => {
+    const stored = {
+      ...created,
+      default_variant_id: 'v_m',
+      metadata: {},
+      media: [],
+      channels: [{ code: 'pos' }],
+      variants: [
+        { id: 'v_m', options_text: 'Size: M' },
+        { id: 'v_s', options_text: 'Size: S' },
+      ],
+    }
+    sdk.optionTypes.list.mockResolvedValue({
+      data: [
+        {
+          id: 'ot_size',
+          name: 'size',
+          label: 'Size',
+          option_values: [{ id: 'ov_m', name: 'm', label: 'M', position: 1 }],
+        },
+      ],
+      meta: { next: null },
+    })
+    sdk.products.variants.delete.mockRejectedValueOnce(
+      Object.assign(new Error('Not found'), { status: 404 }),
+    )
+    const outcome = await saveGoodsProduct(
+      parsed({
+        attributes,
+        variants: rows
+          .filter((row) => row.values[0] === 'M')
+          .map((row) => ({ ...row, variantId: 'v_m', sku: 'A-M' })),
+      }),
+      context({
+        existing: { product: stored, branchIds: ['branch_a', 'branch_b'], unitCode: 'ly' } as never,
+      }),
+    )
+    expect(sdk.products.variants.delete).toHaveBeenCalledWith('prod_new', 'v_s')
+    expect(outcome.failures).toEqual([])
   })
 })

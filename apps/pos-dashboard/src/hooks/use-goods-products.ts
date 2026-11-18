@@ -1,3 +1,4 @@
+import { failureStatus } from '@parkviet/pos-shared/request-failure'
 import type { Product } from '@spree/admin-sdk'
 import { adminClient } from '@spree/dashboard-core'
 import { useQuery } from '@tanstack/react-query'
@@ -14,6 +15,7 @@ import {
   type OptionNames,
   type ParsedVariantRow,
   planOptionTypes,
+  productUpdateVariants,
   variantChanges,
 } from '../lib/goods-variants'
 import { posRequest } from '../lib/pos-request'
@@ -339,15 +341,19 @@ export async function saveGoodsProduct(
       productUpdateBody(parsed, existing.product, {
         currency: context.currency,
         productTypeId,
-        variants: changes?.updates,
+        variants: changes ? productUpdateVariants(changes) : undefined,
       }),
     )
     // Removed first, so a SKU freed by a removed variant can be taken by a new one.
+    // A variant already gone (404) needs no removal.
     for (const removed of changes?.deletes ?? [])
       await attempt(
         failures,
         'variantDelete',
-        () => adminClient.products.variants.delete(existing.product.id, removed.id),
+        () =>
+          adminClient.products.variants.delete(existing.product.id, removed.id).catch((error) => {
+            if (failureStatus(error) !== 404) throw error
+          }),
         removed.label,
       )
     for (const added of changes?.creates ?? [])

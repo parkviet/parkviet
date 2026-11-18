@@ -166,8 +166,11 @@ function PriceListForm({
     return text ? { text, failed: false } : null
   })
   const saved = useRef<SavedPriceList | null>(
-    entry ? { listId: entry.list.id, catalogId: entry.catalog?.id ?? null } : null,
+    entry ? { listId: entry.list.id, catalogId: entry.catalog?.id ?? null, activated: true } : null,
   )
+  // Once a save has written the list, its audience is fixed: a retry finishes
+  // that list rather than making one for the other audience.
+  const [written, setWritten] = useState(Boolean(entry))
   const save = useGoodsWrite(savePriceList)
   const busy = save.isPending
   const dirty = JSON.stringify(values) !== JSON.stringify(initial)
@@ -206,13 +209,14 @@ function PriceListForm({
         { ...values, channelIds },
         { timeZone, existing: entry?.list, fallbackCode: generated },
       )
-      const created = !saved.current
+      const created = !entry
       const result = await save.mutateAsync({
         saved: saved.current,
         payload,
         groupIds: values.audience === 'groups' ? values.groupIds : null,
         progress: (next) => {
           saved.current = next
+          setWritten(true)
         },
       })
       if (created) {
@@ -418,9 +422,9 @@ function PriceListForm({
               ],
               (value) => set('audience', value as PriceListFormValues['audience']),
               // A list keeps how it reaches buyers: a group list lives in its catalog.
-              Boolean(entry) || !canReadCustomerGroups({ permissionKeys }),
+              written || !canReadCustomerGroups({ permissionKeys }),
             )}
-            {entry && (
+            {written && (
               <p className="text-sm text-muted-foreground">
                 {t('goods.priceLists.form.audienceLocked')}
               </p>

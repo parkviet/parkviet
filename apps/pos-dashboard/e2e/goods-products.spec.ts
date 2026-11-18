@@ -46,6 +46,8 @@ async function install(page: Page, options: { posChannel?: boolean; write?: bool
       products.push(created);
       return route.fulfill({ status: 201, json: created });
     }
+    // The server skips a product it refuses (on orders, a recipe ingredient) and counts the rest.
+    if (path === '/products/bulk_destroy') return route.fulfill({ json: { product_count: 1 } });
     const one = /^\/products\/([^/]+)$/.exec(path);
     if (one) {
       const row = [...products, ...unpublished].find((item) => item.id === one[1]);
@@ -102,6 +104,17 @@ test('the products list shows variants, price ranges, negative stock and deletes
   await page.getByRole('dialog').last().getByRole('button', { name: 'Xoá', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Đã xoá Trà đào.' })).toBeVisible();
   expect(state.writes).toContainEqual({ method: 'DELETE', path: '/products/prod_tea', body: null });
+});
+
+test('a bulk delete says how many selected products the server refused', async ({ page }) => {
+  const state = await install(page); await page.goto('/store_1/goods/products');
+  await rowNamed(page, 'Trà đào').getByRole('checkbox').check();
+  await rowNamed(page, 'Cà phê').getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Xoá', exact: true }).click();
+  await page.getByRole('dialog').last().getByRole('button', { name: 'Xoá', exact: true }).click();
+  await expect.poll(() => state.writes.map((write) => write.path)).toContain('/products/bulk_destroy');
+  await expect(page.getByText('Đã xoá 1 sản phẩm.')).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: '1 sản phẩm đã chọn chưa được xoá' })).toBeVisible();
 });
 
 test('products not on the pos channel are published in bulk, creating the channel when missing', async ({ page }) => {

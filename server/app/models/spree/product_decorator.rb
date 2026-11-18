@@ -12,7 +12,8 @@ module Spree
   #   channels still matches through the other one.
   #
   # Both take a text argument that must reach the scope as typed, so Ransack
-  # does not turn "1" or "0" into a boolean first.
+  # does not turn "1" or "0" into a boolean first. Both are staff filters:
+  # the Store API and the seller API may not use them.
   #
   # A product whose variant is an ingredient of an active POS recipe is not
   # deleted (one at a time or in bulk): sales would keep consuming a variant
@@ -29,6 +30,12 @@ module Spree
 
     def self.prepended(base)
       base.whitelisted_ransackable_scopes = (Array(base.whitelisted_ransackable_scopes).map(&:to_s) | POS_SCOPES)
+      private_scopes = base.private_ransackable_scopes || {}
+      base.private_ransackable_scopes = private_scopes.merge(
+        Spree::RansackableAttributes::RESTRICTED_AUDIENCES.to_h do |audience|
+          [audience, Array(private_scopes[audience]).map(&:to_s) | POS_SCOPES]
+        end
+      )
       base.singleton_class.prepend(ClassMethods)
       base.before_destroy :ensure_not_in_active_recipes, prepend: true
 
@@ -38,7 +45,8 @@ module Spree
 
         pattern = "%#{sanitize_sql_like(term)}%"
         barcoded = Spree::Variant.where('spree_variants.barcode ILIKE ?', pattern).select(:product_id)
-        where(id: Spree::Product.search(term).pluck(:id)).or(where(id: barcoded))
+        named = Spree::Product.where(store_id: Spree::Current.store&.id).search(term).select(:id)
+        where(id: named).or(where(id: barcoded))
       }
 
       base.scope :not_in_channel, lambda { |code|
@@ -51,7 +59,7 @@ module Spree
 
     def ensure_not_in_active_recipes
       used = Spree::Pos::RecipeIngredient.joins(:recipe).
-             where(spree_pos_recipes: { active: true }, ingredient_variant_id: variants_including_master.select(:id))
+             where(spree_pos_recipes: { active: true }, ingredient_variant_id: variants.select(:id))
       return unless used.exists?
 
       errors.add(:base, :in_active_recipe, message: 'This product is an ingredient of an active recipe. Remove it from the recipe first.')

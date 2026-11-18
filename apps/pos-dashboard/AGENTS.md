@@ -158,8 +158,10 @@ form makes each attribute and value exist (named by an ASCII slug, shown by its
 label; an update sends the type's whole value set back) and variants name them
 in `options`. A new product is priced per variant, never with product-level
 `prices`. An edit keeps attribute names, sends kept variants with the product
-`PATCH`, then deletes and creates variants through `/products/:id/variants`; a
-refused delete (variant on orders) is a reported follow-up step. A simple product
+`PATCH` (with the variants to remove as bare ids, since that update replaces the
+variant set), then deletes and creates variants through `/products/:id/variants`; a
+refused delete (variant on orders, or an ingredient of an active recipe) is a
+reported follow-up step, and a variant already gone counts as deleted. A simple product
 given attributes turns its single variant into the first combination. Add-on
 groups are the product's `menu_items.modifier_group_ids` (an item is created the
 first time groups are chosen, which also adds it to every branch running the
@@ -189,8 +191,9 @@ carries a `channel_rule` (the `pos` channel by default, ensured on save) and, fo
 wholesale, a `volume_rule`; the payload sends the whole rule set, keeping rule ids
 and rules the screen does not manage. A customer-group list is the price list of a
 catalog created with `metadata.pos_price_list = true` and assigned to the groups;
-it is read through `/catalogs` and cannot switch audience later. New lists are
-activated. Formula pricing only writes `prices` (bottom rung) from the selling price
+it is read through `/catalogs` and cannot switch audience once a save has written
+it. New lists are activated; a save that failed after creating the list (or its
+catalog) is retried without creating a second one, and still activates it. Formula pricing only writes `prices` (bottom rung) from the selling price
 when products are added or "Apply formula" is pressed. Prices per product use the
 product form's `ListPriceDialog`. Channels need `read_settings`, groups `read_customers`.
 
@@ -216,7 +219,9 @@ for every distinct branch location; an edit never does. The stock unit is
 `PUT /pos/units/variant` without `branch_id` (catalog writers, canonical unit
 at 1:1, refused once stock or a recipe counts in it), and the low-stock
 threshold is the selected branch's `PUT /pos/stock_alerts`, offered while it
-runs recipes. The server refuses to delete a product an active recipe uses.
+runs recipes. The server refuses to delete a product or a variant an active
+recipe uses (also when a product update leaves the variant out); a bulk delete
+reports how many products it refused.
 
 Add-on groups (`pages/goods-addons.tsx`, pure rules in `lib/goods-addons.ts`) are
 the store's `modifier_groups`. `components/addon-group-dialog.tsx` is the one

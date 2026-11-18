@@ -91,10 +91,11 @@ module Spree
 
       # The variant's cost per stock unit, from its `cost_price` (per price
       # unit, like its selling price), to four decimals; nil when it has none.
-      def unit_cost(store_id, variant)
+      # `configured` is the variant's active unit configuration when the
+      # caller has read it already (nil for none).
+      def unit_cost(store_id, variant, configured: StockIntegration.variant_unit(store_id, variant))
         return nil if variant.cost_price.nil?
 
-        configured = StockIntegration.variant_unit(store_id, variant)
         cost = variant.cost_price.to_r
         cost = cost * Rational(configured.ratio_denominator, configured.ratio_numerator) / configured.price_unit.factor_to_base if configured
         BigDecimal((cost * 10_000).round) / 10_000
@@ -156,12 +157,17 @@ module Spree
       # A card of the recipe list for each record of `listing`: what it
       # makes, how many ingredients it has and what one costs today.
       def rows(store, records)
-        ActiveRecord::Associations::Preloader.new(records: records, associations: { recipe_ingredients: { ingredient_variant: :product } }).call
+        ingredient_variants = { ingredient_variant: [:product, { option_values: :option_type }] }
+        ActiveRecord::Associations::Preloader.new(records: records, associations: { recipe_ingredients: ingredient_variants }).call
+        ingredient_ids = records.flat_map { |recipe| recipe.recipe_ingredients.map(&:ingredient_variant_id) }.uniq
+        units = VariantUnit.includes(:price_unit).where(store_id: store.id, variant_id: ingredient_ids, status: 'active').index_by(&:variant_id)
         owned = ->(type) { records.select { |row| row.owner_type == type }.map(&:owner_id) }
         variants = Spree::Variant.with_deleted.includes(:product, option_values: :option_type).where(id: owned.call('Spree::Variant')).index_by(&:id)
         options = ModifierOption.includes(:modifier_group).where(id: owned.call('Spree::Pos::ModifierOption')).index_by(&:id)
         records.map do |recipe|
-          costs = recipe.recipe_ingredients.map { |row| row.to_pos(unit_cost: unit_cost(store.id, row.ingredient_variant))[:cost] }
+          costs = recipe.recipe_ingredients.map do |row|
+            row.to_pos(unit_cost: unit_cost(store.id, row.ingredient_variant, configured: units[row.ingredient_variant_id]))[:cost]
+          end
           row = { id: recipe.prefixed_id, version: recipe.version, ingredients: recipe.recipe_ingredients.size,
                   estimated_cost: costs.any?(&:nil?) ? nil : costs.sum { |value| BigDecimal(value) }.to_s('F') }
           if recipe.owner_type == 'Spree::Variant'

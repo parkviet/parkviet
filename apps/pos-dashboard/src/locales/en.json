@@ -3904,6 +3904,7 @@
         "deleteTitle": "Delete {n} products?",
         "deleteConfirm": "The selected products leave the catalog. Past orders stay as they are.",
         "deleteDone": "Deleted {n} products.",
+        "deleteRefused": "{{count}} of the selected products were not deleted: they are on orders or an ingredient of an active recipe.",
         "apply": "Apply",
         "failed": "That did not go through. Try again."
       },

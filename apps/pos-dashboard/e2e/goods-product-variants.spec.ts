@@ -157,7 +157,8 @@ test('editing variants deletes a removed value, creates a new one and reports a 
   await page.getByRole('button', { name: 'Lưu', exact: true }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'Sản phẩm đã được lưu nhưng còn bước chưa xong' })).toContainText('Xoá phiên bản S');
   const patch = state.writes.find((write) => write.method === 'PATCH' && write.path === '/products/prod_tee')?.body as Json;
-  expect(patch.variants).toEqual([expect.objectContaining({ id: 'v_m', sku: 'POLO-M', prices: [{ currency: 'VND', amount: '210000' }] })]);
+  // The variant to delete rides along unchanged, so only its own delete can refuse it.
+  expect(patch.variants).toEqual([expect.objectContaining({ id: 'v_m', sku: 'POLO-M', prices: [{ currency: 'VND', amount: '210000' }] }), { id: 'v_s' }]);
   expect(patch).not.toHaveProperty('prices');
   expect(state.writes.find((write) => write.method === 'DELETE')?.path).toBe('/products/prod_tee/variants/v_s');
   expect(state.writes.find((write) => write.method === 'POST' && write.path === '/products/prod_tee/variants')?.body).toMatchObject({

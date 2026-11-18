@@ -57,6 +57,7 @@ import { POS_CHANNEL_CODE, useGoodsSetup } from '../hooks/use-goods-setup'
 import { usePosSession } from '../hooks/use-pos-session'
 import { useSession } from '../hooks/use-session'
 import {
+  bulkDeleteOutcome,
   downloadCsv,
   GOODS_COLUMNS,
   type GoodsCellContext,
@@ -385,7 +386,17 @@ export function GoodsProductsPage() {
         confirmLabel: t('goods.products.delete'),
         variant: 'destructive',
       },
-      run: ({ ids }) => adminClient.products.bulkDestroy({ ids }),
+      run: async ({ ids }) => {
+        setNotice(null)
+        const { product_count } = await adminClient.products.bulkDestroy({ ids })
+        const outcome = bulkDeleteOutcome(ids.length, product_count)
+        if (outcome.refused > 0)
+          setNotice({
+            text: t('goods.products.bulk.deleteRefused', { count: outcome.refused }),
+            failed: true,
+          })
+        return { count: outcome.count }
+      },
       invalidate: [goodsKey(storeId)],
       successMessage: t('goods.products.bulk.deleteDone'),
       errorMessage: t('goods.products.bulk.failed'),

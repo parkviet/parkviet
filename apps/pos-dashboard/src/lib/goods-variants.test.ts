@@ -8,6 +8,7 @@ import {
   optionSlug,
   type ParsedVariantRow,
   planOptionTypes,
+  productUpdateVariants,
   syncVariantRows,
   variantChanges,
 } from './goods-variants'
@@ -294,5 +295,23 @@ describe('variant payloads', () => {
     expect(changes.updates[0]).not.toHaveProperty('options')
     expect(changes.creates[0].params).not.toHaveProperty('stock_levels')
     expect(changes.deletes).toEqual([{ id: 'v2', label: 'Màu sắc: Đỏ, Size: L' }])
+  })
+})
+
+describe('productUpdateVariants', () => {
+  it('keeps the variants to delete in the update so their removal is its own step', () => {
+    expect(
+      productUpdateVariants({
+        updates: [{ id: 'v_m', sku: 'A-M' }],
+        creates: [],
+        deletes: [{ id: 'v_s', label: 'Size: S' }],
+      }),
+    ).toEqual([{ id: 'v_m', sku: 'A-M' }, { id: 'v_s' }])
+  })
+
+  it('sends nothing when no stored variant is kept', () => {
+    expect(
+      productUpdateVariants({ updates: [], creates: [], deletes: [{ id: 'v_s', label: 'S' }] }),
+    ).toEqual([])
   })
 })
