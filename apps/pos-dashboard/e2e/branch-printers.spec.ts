@@ -89,6 +89,36 @@ test('a station printer picks its print station', async ({ page }) => {
   expect(state.writes.at(-1)?.body).toMatchObject({ connection: 'sunmi_builtin', print_station_device_id: 'posdevice_1', address: null });
 });
 
+test('the product label role opens only for a TSPL station printer', async ({ page }) => {
+  const state = await install(page);
+  await page.goto('/store_1/branches/branch_main/printing');
+  await page.getByRole('button', { name: 'Thêm máy in' }).click();
+  await page.getByLabel('Tên máy in').fill('Máy tem');
+  await pick(page, 'Kết nối', 'Máy Sunmi tích hợp');
+  await pick(page, 'Trạm in', 'Trạm bếp');
+
+  // ESC/POS: the role is shut and says why.
+  const labelRole = page.getByRole('checkbox', { name: 'Tem sản phẩm' });
+  await expect(labelRole).toBeDisabled();
+  await expect(page.getByText('Chỉ máy in TSPL nối qua trạm in mới nhận được tem sản phẩm.')).toBeVisible();
+
+  await pick(page, 'Ngôn ngữ lệnh', 'TSPL');
+  await expect(labelRole).toBeEnabled();
+  await labelRole.check();
+
+  // Back to ESC/POS: the role goes with the language.
+  await pick(page, 'Ngôn ngữ lệnh', 'ESC/POS');
+  await expect(labelRole).toBeDisabled();
+  await expect(labelRole).not.toBeChecked();
+
+  await pick(page, 'Ngôn ngữ lệnh', 'TSPL');
+  await labelRole.check();
+  await page.getByRole('checkbox', { name: 'Biên lai' }).uncheck();
+  await page.getByRole('form', { name: 'Thông tin máy in' }).getByRole('button', { name: 'Lưu', exact: true }).click();
+  await expect(page.getByTestId('printer-row')).toContainText('Máy tem');
+  expect(state.writes.at(-1)?.body).toMatchObject({ command_language: 'tspl', roles: ['product_label'], print_station_device_id: 'posdevice_1' });
+});
+
 test('a test print on a station says it was queued', async ({ page }) => {
   const state = await install(page); state.printers.push(row('Trạm'));
   await page.goto('/store_1/branches/branch_main/printing');

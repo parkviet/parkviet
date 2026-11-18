@@ -52,11 +52,11 @@ export function copyBanner(print: Pick<ReceiptPrint, 'copy' | 'copy_number'> | n
 // copy is always labelled as one, whatever the template.
 export function receiptPrintDocument(
   receipt: ReceiptSnapshot,
-  print: Pick<ReceiptPrint, 'copy' | 'copy_number'> | null,
+  print: (Pick<ReceiptPrint, 'copy' | 'copy_number'> & { printed_at?: string | null }) | null,
   t: Translate,
   config: TemplateConfig = defaultTemplate(snapshotDocumentType(receipt)),
 ): PrintDocument {
-  return renderDocument(config, snapshotData(receipt, t), { banner: copyBanner(print, t) });
+  return renderDocument(config, snapshotData(receipt, t, print), { banner: copyBanner(print, t) });
 }
 
 // A provisional bill of an open order: server figures as they stand, always
@@ -116,18 +116,18 @@ export const PRINTING_ATTRIBUTE = 'data-receipt-printing';
 // rolls use a long page that thermal drivers cut after the content.
 // Sheet margins match the printable widths in receipt.css (A4 186mm, A5
 // 128mm, A6 93mm).
-export function pageRule(paper: PaperSize): string {
+export function pageRule(paper: PaperSize, customMargins = false): string {
   switch (paper) {
     case '58mm':
       return '@page { size: 58mm 297mm; margin: 2mm; }';
     case '80mm':
       return '@page { size: 80mm 297mm; margin: 3mm; }';
     case 'a5':
-      return '@page { size: A5; margin: 10mm; }';
+      return `@page { size: A5; margin: ${customMargins ? '0' : '10mm'}; }`;
     case 'a6':
-      return '@page { size: A6; margin: 6mm; }';
+      return `@page { size: A6; margin: ${customMargins ? '0' : '6mm'}; }`;
     default:
-      return '@page { size: A4; margin: 12mm; }';
+      return `@page { size: A4; margin: ${customMargins ? '0' : '12mm'}; }`;
   }
 }
 
@@ -174,9 +174,12 @@ export function createBrowserPrintAdapter(win: Window = window): PrintAdapter {
       const doc = win.document;
       const skipped = await settleImages(doc, win);
       for (const image of skipped) image.setAttribute(SKIPPED_IMAGE_ATTRIBUTE, '');
+      const customMargins =
+        typeof doc.querySelector === 'function' &&
+        doc.querySelector('.receipt-print-root .receipt-custom-margins') !== null;
       const style = doc.createElement('style');
       style.id = PAGE_STYLE_ID;
-      style.textContent = pageRule(paper);
+      style.textContent = pageRule(paper, customMargins);
       doc.getElementById(PAGE_STYLE_ID)?.remove();
       doc.head.append(style);
       doc.documentElement.setAttribute(PRINTING_ATTRIBUTE, paper);

@@ -1,9 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_TEMPLATES } from './defaults';
-import { DOCUMENT_TYPES, type DocumentType, type TemplateConfig } from './types';
+import { DEFAULT_TEMPLATES, defaultTemplate } from './defaults';
+import {
+  PAPER_SIZES,
+  RECEIPT_DOCUMENT_TYPES,
+  type ReceiptDocumentType,
+  type TemplateConfig,
+} from './types';
 import {
   BLOCK_TYPES,
+  BUSINESS_FIELDS,
   charsPerLine,
   editableConfig,
   issueTarget,
@@ -19,17 +25,32 @@ const draft = (config: TemplateConfig, name = 'Phiếu K80') => ({
   paper: '80mm' as const,
   config,
 });
-const codes = (config: TemplateConfig, type: DocumentType = 'sale', name?: string) =>
+const codes = (config: TemplateConfig, type: ReceiptDocumentType = 'sale', name?: string) =>
   validateTemplate(draft(config, name), type).map((issue) => `${issue.pointer} ${issue.code}`);
 const sale = () => editableConfig(DEFAULT_TEMPLATES.sale, 'sale');
 
 describe('template validation mirrors the server', () => {
-  it.each(DOCUMENT_TYPES)('accepts the built-in %s template', (type) => {
-    expect(validateTemplate(draft(DEFAULT_TEMPLATES[type]), type)).toEqual([]);
-    expect(validateTemplate(draft(editableConfig(DEFAULT_TEMPLATES[type], type)), type)).toEqual(
-      [],
-    );
-  });
+  it.each(RECEIPT_DOCUMENT_TYPES)(
+    'accepts the built-in %s template on all 5 paper sizes',
+    (type) => {
+      expect(validateTemplate(draft(DEFAULT_TEMPLATES[type]), type)).toEqual([]);
+      expect(validateTemplate(draft(editableConfig(DEFAULT_TEMPLATES[type], type)), type)).toEqual(
+        [],
+      );
+      for (const paper of PAPER_SIZES) {
+        const tailored = defaultTemplate(type, paper);
+        expect(
+          validateTemplate({ name: `${type} ${paper}`, paper, config: tailored }, type),
+        ).toEqual([]);
+        expect(
+          validateTemplate(
+            { name: `${type} ${paper}`, paper, config: editableConfig(tailored, type) },
+            type,
+          ),
+        ).toEqual([]);
+      }
+    },
+  );
 
   it('offers exactly the sections and fields the server schema allows', () => {
     const schema = readFileSync(
@@ -61,7 +82,7 @@ describe('template validation mirrors the server', () => {
         ),
       ]),
     );
-    expect(Object.keys(server).sort()).toEqual([...DOCUMENT_TYPES].sort());
+    expect(Object.keys(server).sort()).toEqual([...RECEIPT_DOCUMENT_TYPES].sort());
     expect(server).toEqual(JSON.parse(JSON.stringify(SECTION_RULES)));
   });
 
@@ -100,7 +121,7 @@ describe('template validation mirrors the server', () => {
 
   it('accepts a field only on a document type that has its data', () => {
     const config = editableConfig(DEFAULT_TEMPLATES.prebill, 'prebill');
-    config.totals = { fields: ['item_total', 'tax', 'total'], labels: { tax: 'Thuế' } };
+    config.totals = { fields: ['item_total', 'tax' as never, 'total'], labels: { tax: 'Thuế' } };
     expect(codes(config, 'prebill')).toEqual([
       '/config/totals/fields/1 field_unavailable',
       '/config/totals/labels/tax field_unavailable',
@@ -120,10 +141,110 @@ describe('template validation mirrors the server', () => {
       '/config/payments/labels/methods field_unavailable',
     ]);
   });
+
+  it('validates 4-side page margins, cut_feed_mm, title size, business fields, section options and einvoice', () => {
+    const valid = sale();
+    valid.page = {
+      ...valid.page,
+      margins: { top: 2, right: 4, bottom: 3, left: 4 },
+      cut_feed_mm: 12,
+    };
+    valid.header = [
+      { type: 'business', fields: [...BUSINESS_FIELDS], align: 'center' },
+      { type: 'title', label: 'HÓA ĐƠN', size: 'xl' },
+    ];
+    valid.meta = {
+      fields: ['time', 'table', 'check_in', 'check_out', 'duration', 'printed_at', 'print_count'],
+      labels: { table: 'Bàn phục vụ' },
+      table_style: 'two_lines',
+      time_format: 'date',
+    };
+    valid.lines = {
+      layout: 'table',
+      columns: ['index', 'name', 'barcode', 'original_price', 'price', 'amount', 'note'],
+      show_trace: true,
+      show_conversion: true,
+      ruling: 'grid',
+      timed_style: 'range',
+    };
+    valid.totals = {
+      fields: ['item_count', 'item_total', 'promotions', 'shipping', 'fees', 'total'],
+      labels: { item_count: 'SL món' },
+    };
+    valid.payments = {
+      fields: ['methods', 'paid_total', 'previous_debt', 'customer_debt', 'transfer_qr'],
+      labels: { transfer_qr: 'Quét QR thanh toán' },
+      qr_size: 'l',
+      qr_caption: 'right',
+    };
+    valid.einvoice = {
+      fields: ['seller_tax_code', 'number', 'lookup_code', 'cqt_code', 'qr', 'lookup_url'],
+      labels: { qr: 'Quét tra cứu HĐĐT' },
+      qr_size: 's',
+      qr_caption: 'above',
+    };
+    expect(codes(valid, 'sale')).toEqual([]);
+
+    const bad = sale();
+    bad.page = {
+      ...bad.page,
+      margins: { top: -1, right: 16, bottom: 0 } as never,
+      cut_feed_mm: 31,
+    };
+    bad.header = [
+      { type: 'business', fields: ['name', 'secret' as never] },
+      { type: 'title', size: 'xxl' as never },
+    ];
+    bad.meta = {
+      fields: ['time'],
+      table_style: 'three_lines' as never,
+      time_format: 'clock' as never,
+    };
+    bad.lines = {
+      layout: 'stacked',
+      columns: ['name'],
+      show_trace: true,
+      show_conversion: true,
+      ruling: 'dotted' as never,
+      timed_style: 'seconds' as never,
+    };
+    bad.payments = {
+      fields: ['methods'],
+      qr_size: 'xl' as never,
+      qr_caption: 'diagonal' as never,
+    };
+    bad.einvoice = {
+      fields: ['qr', 'unknown' as never],
+      qr_size: 'xs' as never,
+      qr_caption: 'inside' as never,
+    };
+    expect(codes(bad, 'sale')).toEqual([
+      '/config/page/margins/top invalid_value',
+      '/config/page/margins/right invalid_value',
+      '/config/page/margins/left missing',
+      '/config/page/cut_feed_mm invalid_value',
+      '/config/header/0/fields/1 field_unavailable',
+      '/config/header/1/size invalid_value',
+      '/config/meta/table_style invalid_value',
+      '/config/meta/time_format invalid_value',
+      '/config/payments/qr_size invalid_value',
+      '/config/payments/qr_caption invalid_value',
+      '/config/einvoice/fields/1 field_unavailable',
+      '/config/einvoice/qr_size invalid_value',
+      '/config/einvoice/qr_caption invalid_value',
+      '/config/lines/ruling invalid_value',
+      '/config/lines/timed_style invalid_value',
+    ]);
+
+    const prebill = editableConfig(DEFAULT_TEMPLATES.prebill, 'prebill');
+    expect(codes({ ...prebill, einvoice: { fields: ['qr'] } }, 'prebill')).toEqual([
+      '/config/einvoice section_unavailable',
+    ]);
+  });
 });
 
 describe('editable config', () => {
-  it('fills a missing section with every field it prints and keeps the locked ones', () => {
+  it('fills a missing section with every field it prints, keeps einvoice off when absent, and keeps locked ones', () => {
     const config = editableConfig(
       {
         schema: 1,
@@ -140,6 +261,7 @@ describe('editable config', () => {
     expect(config.payments?.fields).toEqual(SECTION_RULES.sale.payments);
     expect(config.totals?.fields).toEqual(['item_total', 'total']);
     expect(config.lines?.columns).toEqual(['qty', 'name']);
+    expect(config.einvoice).toEqual({ fields: [], labels: {} });
   });
 
   it('drops sections the document type does not have', () => {
@@ -175,16 +297,18 @@ describe('server errors', () => {
     expect(issueTarget('/config/footer/1/value')).toEqual({ area: 'footer', index: 1 });
     expect(issueTarget('/config/header')).toEqual({ area: 'header', index: null });
     expect(issueTarget('/config/payments/labels/debt')).toEqual({ area: 'payments', index: null });
+    expect(issueTarget('/config/einvoice/fields/0')).toEqual({ area: 'einvoice', index: null });
     expect(issueTarget('/name')).toEqual({ area: 'name', index: null });
     expect(issueTarget('/config')).toEqual({ area: 'config', index: null });
   });
 });
 
 describe('line width', () => {
-  it('estimates the characters a roll fits and flags longer lines', () => {
+  it('estimates the characters a roll fits, shrinking when horizontal margins are set', () => {
     expect(charsPerLine('58mm', 'm')).toBe(32);
     expect(charsPerLine('80mm', 's')).toBeGreaterThan(48);
     expect(charsPerLine('58mm', 'm', 'l')).toBeLessThan(32);
+    expect(charsPerLine('58mm', 'm', 'm', { top: 0, right: 12, bottom: 0, left: 12 })).toBe(16);
     expect(charsPerLine('a4', 'm')).toBeNull();
     expect(overlongLines(['ngắn', 'x'.repeat(40)], 32)).toEqual(['x'.repeat(40)]);
     expect(overlongLines(['x'.repeat(400)], null)).toEqual([]);

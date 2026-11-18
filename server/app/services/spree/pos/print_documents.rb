@@ -40,8 +40,11 @@ module Spree
       def place_of(workspace)
         store = workspace.store
         branch = workspace.branch
-        { 'storeName' => store.name, 'storeProfile' => ReceiptBuilder.store_profile(store), 'branchName' => branch.name,
-          'branchCode' => branch.code, 'returnWindowDays' => branch.return_window_days, 'registerName' => workspace.register&.name }
+        printed = StoreInfo.printable(branch)
+        { 'storeName' => printed&.dig('name').presence || store.name,
+          'storeProfile' => ReceiptBuilder.store_profile(store, branch: branch),
+          'branchName' => branch.name, 'branchCode' => branch.code,
+          'returnWindowDays' => branch.return_window_days, 'registerName' => workspace.register&.name }
       end
 
       def wrap(kind, document)

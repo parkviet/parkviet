@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { escapeHtml, qrPath, renderSheetContentHtml, renderSheetHtml } from './sheet-html';
 import golden from './sheet-html.golden.json';
@@ -48,6 +49,26 @@ describe('renderSheetHtml', () => {
   it('matches the markup the POS sheet component printed, case by case', () => {
     const expected = golden as Record<string, string>;
     const cases = sheetCases();
+    if (process.env.UPDATE_GOLDEN === '1') {
+      const next: Record<string, string> = {};
+      for (const item of cases) {
+        const html = renderSheetHtml(item.document, {
+          paper: item.paper,
+          markOverflow: item.markOverflow,
+          testId: item.testId,
+          printId: item.printId,
+        });
+        next[item.name] =
+          expected[item.name] && fromReact(expected[item.name]) === html
+            ? expected[item.name]
+            : html;
+      }
+      writeFileSync(
+        new URL('./sheet-html.golden.json', import.meta.url),
+        `${JSON.stringify(next, null, 2)}\n`,
+      );
+      return;
+    }
     expect(cases.map((item) => item.name).sort()).toEqual(Object.keys(expected).sort());
     for (const item of cases)
       expect(
@@ -255,5 +276,73 @@ describe('sections', () => {
     expect(renderSheetContentHtml(base, { paper: '80mm' })).toBe(
       '<header class="receipt-header"></header>',
     );
+  });
+
+  it('applies custom 4-side margins, ruling classes, struck-through originalPrice, 4 QR caption positions and coerced 58mm QR', () => {
+    const html80 = renderSheetHtml(
+      {
+        ...base,
+        page: {
+          ...base.page,
+          margins: { top: 4, right: 3, bottom: 5, left: 2 },
+        },
+        header: [{ kind: 'title', title: 'T', number: null, size: 'xl' }],
+        lines: {
+          layout: 'stacked',
+          ruling: 'rows',
+          items: [
+            {
+              index: 1,
+              name: 'Trà',
+              amount: '25.000 ₫',
+              originalPrice: '35.000 ₫',
+              details: ['1 × 25.000 ₫'],
+            },
+          ],
+        },
+        transferQr: {
+          value: 'https://example.com',
+          caption: 'Quét',
+          lines: ['VCB'],
+          size: 'l',
+          captionPosition: 'left',
+        },
+        einvoice: {
+          rows: [{ label: 'Mã tra cứu', value: 'ABC' }],
+          qr: {
+            value: 'https://example.com/e',
+            caption: 'HĐĐT',
+            lines: [],
+            size: 's',
+            captionPosition: 'above',
+          },
+        },
+      },
+      { paper: '80mm', testId: 's' },
+    );
+    expect(html80).toContain('class="receipt-sheet receipt-80mm receipt-custom-margins"');
+    expect(html80).toContain('style="padding:4mm 3mm 5mm 2mm"');
+    expect(html80).toContain('<h2 class="receipt-title-xl">T</h2>');
+    expect(html80).toContain('<ol class="receipt-lines receipt-ruling-rows">');
+    expect(html80).toContain('<del class="receipt-original-price">35.000 ₫</del>');
+    expect(html80).toContain('receipt-qr-size-l receipt-qr-caption-left');
+    expect(html80).toContain('data-testid="receipt-einvoice"');
+    expect(html80).toContain('receipt-qr-size-s receipt-qr-caption-above');
+
+    // On 58mm, left/right QR caption position coerces to below
+    const html58 = renderSheetContentHtml(
+      {
+        ...base,
+        transferQr: {
+          value: 'https://example.com',
+          caption: 'Quét',
+          lines: [],
+          captionPosition: 'right',
+        },
+      },
+      { paper: '58mm' },
+    );
+    expect(html58).toContain('receipt-qr-caption-below');
+    expect(html58).not.toContain('receipt-qr-caption-right');
   });
 });

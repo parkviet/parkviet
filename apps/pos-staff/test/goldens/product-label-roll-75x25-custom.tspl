@@ -1,0 +1,28 @@
+SIZE 75 mm,25 mm
+GAP 2 mm,0 mm
+DIRECTION 1
+CLS
+TEXT 24,16,"2",0,1,1,"Quay Hai"
+TEXT 24,40,"2",0,1,1,"Sua tuoi tiet trung"
+TEXT 24,64,"2",0,1,1,"1L"
+TEXT 24,88,"2",0,1,1,"Xanh / M"
+TEXT 24,112,"2",0,1,1,"8934563138165"
+TEXT 24,136,"2",0,1,1,"Ma: SP000101"
+TEXT 24,160,"2",0,1,1,"DVT Hop"
+TEXT 328,16,"2",0,1,1,"Quay Hai"
+TEXT 328,40,"2",0,1,1,"Sua tuoi tiet trung"
+TEXT 328,64,"2",0,1,1,"1L"
+TEXT 328,88,"2",0,1,1,"Xanh / M"
+TEXT 328,112,"2",0,1,1,"8934563138165"
+TEXT 328,136,"2",0,1,1,"Ma: SP000101"
+TEXT 328,160,"2",0,1,1,"DVT Hop"
+PRINT 1,1
+CLS
+TEXT 24,16,"2",0,1,1,"Quay Hai"
+TEXT 24,40,"2",0,1,1,"Sua tuoi tiet trung"
+TEXT 24,64,"2",0,1,1,"1L"
+TEXT 24,88,"2",0,1,1,"4006381333931"
+TEXT 24,112,"2",0,1,1,"Ma: SP000101"
+TEXT 24,136,"2",0,1,1,"DVT Hop"
+TEXT 24,160,"2",0,1,1,"In ngay 19/11/2026"
+PRINT 1,1

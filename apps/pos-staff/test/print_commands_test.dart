@@ -175,4 +175,83 @@ void main() {
     expect(foldToAscii('ửỡợ ỨỪ'), 'uoo UU');
     expect(foldToAscii('日本'), '??');
   });
+
+  test('applies 4-side margins, cut_feed_mm, title size, originalPrice, ruling, transferQr and einvoice', () {
+    final out = documentCommands(
+      {
+        'page': {
+          'margins': {'top': 8, 'right': 3, 'bottom': 4, 'left': 3},
+          'cut_feed_mm': 8,
+        },
+        'banners': <Object?>[],
+        'header': [
+          {'kind': 'title', 'title': 'NHỎ', 'number': null, 'size': 'm'},
+        ],
+        'meta': [
+          {'label': 'A', 'value': 'B'},
+        ],
+        'lines': {
+          'layout': 'stacked',
+          'ruling': 'rows',
+          'items': [
+            {
+              'index': 1,
+              'name': 'Trà',
+              'amount': '25.000 ₫',
+              'originalPrice': '35.000 ₫',
+              'details': <Object?>[],
+            },
+            {
+              'index': 2,
+              'name': 'Bánh',
+              'amount': '15.000 ₫',
+              'details': <Object?>[],
+            },
+          ],
+        },
+        'totals': <Object?>[],
+        'payments': <Object?>[],
+        'payQr': null,
+        'transferQr': {
+          'value': '000201',
+          'caption': 'Quét CK',
+          'lines': ['VCB 123'],
+          'captionPosition': 'above',
+        },
+        'einvoice': {
+          'rows': [
+            {'label': 'Mã tra cứu', 'value': 'ABC123'},
+          ],
+          'qr': {
+            'value': 'https://tracuu.test',
+            'caption': 'Tra cứu',
+            'lines': <Object?>[],
+            'captionPosition': 'left',
+          },
+        },
+        'notes': <Object?>[],
+        'footer': <Object?>[],
+        'disclaimer': null,
+      },
+      printer(paper: '58mm'),
+    );
+
+    expect(out[0], isA<FeedCommand>().having((f) => f.lines, 'lines', 2));
+    expect(out[1], const TextCommand('NHỎ', align: PrintAlign.center, bold: true, large: false));
+    expect(out[2], TextCommand('  A${' ' * 26}B'));
+    final texts = out.whereType<TextCommand>().map((cmd) => cmd.text).toList();
+    expect(texts, contains('  Giá gốc 35.000 ₫'));
+    expect(texts.where((line) => line == '  ${'-' * 28}').length, greaterThanOrEqualTo(3));
+
+    final transferQrIdx = out.indexWhere((cmd) => cmd is QrCommand && cmd.value == '000201');
+    final transferCaptionIdx = out.indexWhere((cmd) => cmd is TextCommand && cmd.text == 'Quét CK');
+    expect(transferCaptionIdx, lessThan(transferQrIdx));
+
+    final einvQrIdx = out.indexWhere((cmd) => cmd is QrCommand && cmd.value == 'https://tracuu.test');
+    final einvCaptionIdx = out.indexWhere((cmd) => cmd is TextCommand && cmd.text == 'Tra cứu');
+    expect(einvQrIdx, lessThan(einvCaptionIdx));
+
+    expect(out[out.length - 2], isA<FeedCommand>().having((f) => f.lines, 'lines', 6));
+    expect(out.last, isA<CutCommand>());
+  });
 }

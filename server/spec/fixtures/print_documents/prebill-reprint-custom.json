@@ -133,7 +133,8 @@
       },
       "totals": {
         "fields": [
-          "item_total"
+          "item_total",
+          "shipping"
         ],
         "labels": {
           "total": "Phải trả"

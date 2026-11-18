@@ -102,3 +102,18 @@ test('read-only administrators can read units and formats without write controls
   await table.getByRole('row').filter({ hasText: 'Gạo ST25' }).getByRole('button', { name: MENU }).click(); await expect(page.getByRole('menuitem')).toHaveText(['Đơn vị và mã tem']); await page.keyboard.press('Escape');
   await act(page, 'Gạo ST25', 'Đơn vị và mã tem'); const dialog = page.getByRole('dialog', { name: 'Đơn vị và mã tem cân' }); await expect(dialog.getByLabel('Đơn vị bán')).toBeDisabled(); await expect(dialog.getByRole('button', { name: 'Lưu', exact: true })).toHaveCount(0); await dialog.getByRole('button', { name: 'Đóng', exact: true }).click(); await page.goto('/store_1/scale-labels'); await expect(page.getByRole('table')).toContainText('Cân quầy thịt'); await expect(page.getByRole('button', { name: 'Thêm mẫu tem' })).toHaveCount(0); await expect(page.getByRole('table').getByRole('button', { name: /^Cân quầy thịt/ })).toHaveCount(0); expect(state.writes).toEqual([]);
 });
+
+test('products sold at the branch can be ticked for labels, on the current page only', async ({ page }) => {
+  await install(page); await open(page); const table = page.getByRole('table');
+  // Only the one product sold at the branch is selectable; the others are not.
+  await expect(page.getByRole('checkbox', { name: /Sản phẩm 01 chưa bán ở chi nhánh/ })).toBeDisabled();
+  const action = page.getByRole('button', { name: /^In tem \(\d+\)$/ }); await expect(action).toBeDisabled(); await expect(action).toHaveText('In tem (0)');
+  await page.getByRole('checkbox', { name: 'Chọn Gạo ST25 để in tem' }).check(); await expect(action).toHaveText('In tem (1)');
+  await page.getByRole('checkbox', { name: 'Chọn tất cả trong trang' }).first().uncheck(); await expect(action).toHaveText('In tem (0)');
+  await page.getByRole('checkbox', { name: 'Chọn tất cả trong trang' }).first().check(); await expect(action).toHaveText('In tem (1)');
+  // A new page starts without a selection.
+  await open(page, 'products?page=2'); await expect(table.getByRole('row')).toHaveCount(6); await expect(page.getByTestId('label-selection-bar')).toHaveCount(0);
+  // The dialog opens with the variants of the ticked product.
+  await open(page); await page.getByRole('checkbox', { name: 'Chọn Gạo ST25 để in tem' }).check(); await action.click();
+  await expect(page.getByRole('dialog', { name: 'In tem sản phẩm' }).getByTestId('label-row')).toHaveCount(2);
+});

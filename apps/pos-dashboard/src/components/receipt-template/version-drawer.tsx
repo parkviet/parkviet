@@ -1,24 +1,58 @@
 import { formatDocumentTime, type TemplateData } from '@parkviet/pos-shared/receipt-template/data'
 import { describeFailure } from '@parkviet/pos-shared/request-failure'
 import { Badge, Button, Sheet, SheetContent, SheetHeader, SheetTitle } from '@spree/dashboard-ui'
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { type ReceiptTemplate, useReceiptTemplateVersions } from '../../hooks/use-receipt-templates'
+import {
+  type ReceiptTemplate,
+  type ReceiptTemplateVersion,
+  useReceiptTemplateVersions,
+} from '../../hooks/use-receipt-templates'
 import { Notice } from './controls'
 import { TemplatePreview } from './template-preview'
 
 export function VersionDrawer({
   template,
   data,
-  timeZone,
-  busy,
-  onRestore,
-  onClose,
+  ...rest
 }: {
   template: ReceiptTemplate
   data: TemplateData
   timeZone: string
   busy: boolean
+  onRestore: (version: number) => void
+  onClose: () => void
+}) {
+  return (
+    <VersionHistoryDrawer
+      template={template}
+      renderPreview={(version) => (
+        <TemplatePreview
+          config={version.config}
+          data={data}
+          paper={template.paper}
+          testId="receipt-template-version-preview"
+        />
+      )}
+      {...rest}
+    />
+  )
+}
+
+// The saved versions of a template with a preview of the selected one and
+// a restore button; what a version looks like is the caller's to draw.
+export function VersionHistoryDrawer({
+  template,
+  timeZone,
+  busy,
+  renderPreview,
+  onRestore,
+  onClose,
+}: {
+  template: Pick<ReceiptTemplate, 'id' | 'name' | 'current_version'>
+  timeZone: string
+  busy: boolean
+  renderPreview: (version: ReceiptTemplateVersion) => ReactNode
   onRestore: (version: number) => void
   onClose: () => void
 }) {
@@ -102,12 +136,7 @@ export function VersionDrawer({
               className="min-w-0"
               aria-label={t('receiptTemplates.history.previewOf', { version: shown.version })}
             >
-              <TemplatePreview
-                config={shown.config}
-                data={data}
-                paper={template.paper}
-                testId="receipt-template-version-preview"
-              />
+              {renderPreview(shown)}
             </section>
           ) : null}
         </div>

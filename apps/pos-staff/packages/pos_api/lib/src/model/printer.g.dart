@@ -108,6 +108,8 @@ const PrinterRolesEnum _$printerRolesEnum_checklist =
     const PrinterRolesEnum._('checklist');
 const PrinterRolesEnum _$printerRolesEnum_tableQr =
     const PrinterRolesEnum._('tableQr');
+const PrinterRolesEnum _$printerRolesEnum_productLabel =
+    const PrinterRolesEnum._('productLabel');
 
 PrinterRolesEnum _$printerRolesEnumValueOf(String name) {
   switch (name) {
@@ -127,6 +129,8 @@ PrinterRolesEnum _$printerRolesEnumValueOf(String name) {
       return _$printerRolesEnum_checklist;
     case 'tableQr':
       return _$printerRolesEnum_tableQr;
+    case 'productLabel':
+      return _$printerRolesEnum_productLabel;
     default:
       throw ArgumentError(name);
   }
@@ -142,6 +146,7 @@ final BuiltSet<PrinterRolesEnum> _$printerRolesEnumValues =
   _$printerRolesEnum_cupLabel,
   _$printerRolesEnum_checklist,
   _$printerRolesEnum_tableQr,
+  _$printerRolesEnum_productLabel,
 ]);
 
 const PrinterStatusEnum _$printerStatusEnum_active =
@@ -281,6 +286,7 @@ class _$PrinterRolesEnumSerializer
     'cupLabel': 'cup_label',
     'checklist': 'checklist',
     'tableQr': 'table_qr',
+    'productLabel': 'product_label',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'receipt': 'receipt',
@@ -291,6 +297,7 @@ class _$PrinterRolesEnumSerializer
     'cup_label': 'cupLabel',
     'checklist': 'checklist',
     'table_qr': 'tableQr',
+    'product_label': 'productLabel',
   };
 
   @override

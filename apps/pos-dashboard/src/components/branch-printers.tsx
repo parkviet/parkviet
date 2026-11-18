@@ -43,6 +43,7 @@ export const PRINTER_ROLES: readonly PrinterRole[] = [
   'cup_label',
   'checklist',
   'table_qr',
+  'product_label',
 ]
 
 type Draft = {
@@ -59,6 +60,10 @@ type Draft = {
   https: boolean
   cut: boolean
 }
+
+// Product labels are TSPL: only a station printer set to that language takes them.
+const takesLabels = (draft: Pick<Draft, 'connection' | 'language'>) =>
+  STATION.includes(draft.connection) && draft.language === 'tspl'
 
 const blank: Draft = {
   id: null,
@@ -89,6 +94,8 @@ const draftOf = (row: Printer): Draft => ({
   https: row.settings.https === true,
   cut: row.settings.cut !== false,
 })
+
+const isNotLabelRole = (role: PrinterRole) => role !== 'product_label'
 
 // Only the fields this connection uses go to the server, which refuses the rest.
 function bodyOf(draft: Draft) {
@@ -224,7 +231,12 @@ export function BranchPrinters() {
   )
 
   const edit = (patch: Partial<Draft>) =>
-    setDraft((current) => (current ? { ...current, ...patch } : current))
+    setDraft((current) => {
+      if (!current) return current
+      const next = { ...current, ...patch }
+      // A printer that stops being TSPL stops being a label printer.
+      return takesLabels(next) ? next : { ...next, roles: next.roles.filter(isNotLabelRole) }
+    })
 
   return (
     <ModelCard title={t('branchPrinters.title')} id="printing-printers" icon={<PrinterIcon />}>
@@ -389,6 +401,12 @@ export function BranchPrinters() {
               <ModelCheck
                 key={role}
                 checked={draft.roles.includes(role)}
+                disabled={role === 'product_label' && !takesLabels(draft)}
+                description={
+                  role === 'product_label' && !takesLabels(draft)
+                    ? t('branchPrinters.roleNeedsTspl')
+                    : undefined
+                }
                 onChange={(on) =>
                   edit({
                     roles: on

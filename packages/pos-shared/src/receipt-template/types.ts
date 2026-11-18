@@ -1,12 +1,15 @@
 // A print template describes how a document is laid out, never what it
 // says: amounts, lines and names come from the receipt snapshot or the
 // open order as the server reported them. The header and footer are
-// ordered blocks; information, lines, totals and payments are fixed
-// sections whose fields can only be switched off or relabelled.
+// ordered blocks; information, lines, totals, payments and e-invoice are
+// fixed sections whose fields can only be switched off or relabelled.
 
 export type PaperSize = '58mm' | '80mm' | 'a4' | 'a5' | 'a6';
 
-export type DocumentType =
+export const PAPER_SIZES: readonly PaperSize[] = ['58mm', '80mm', 'a4', 'a5', 'a6'];
+
+// The documents a receipt template lays out.
+export type ReceiptDocumentType =
   | 'sale'
   | 'prebill'
   | 'payment_ticket'
@@ -14,7 +17,7 @@ export type DocumentType =
   | 'refund'
   | 'shift_closure';
 
-export const DOCUMENT_TYPES: readonly DocumentType[] = [
+export const RECEIPT_DOCUMENT_TYPES: readonly ReceiptDocumentType[] = [
   'sale',
   'prebill',
   'payment_ticket',
@@ -23,8 +26,26 @@ export const DOCUMENT_TYPES: readonly DocumentType[] = [
   'shift_closure',
 ];
 
+// Every kind of template the store keeps. A product label shares the
+// template store but not the receipt layout: its config and paper stocks
+// are in `../product-label`.
+export type DocumentType = ReceiptDocumentType | 'product_label';
+
+export const DOCUMENT_TYPES: readonly DocumentType[] = [...RECEIPT_DOCUMENT_TYPES, 'product_label'];
+
+export const isReceiptDocumentType = (value: unknown): value is ReceiptDocumentType =>
+  (RECEIPT_DOCUMENT_TYPES as readonly unknown[]).includes(value);
+
 export type Align = 'left' | 'center' | 'right';
 export type TextSize = 's' | 'm' | 'l';
+export type TitleSize = 'm' | 'l' | 'xl';
+export type PageMargins = { top: number; right: number; bottom: number; left: number };
+export type TableStyle = 'one_line' | 'two_lines';
+export type TimeFormat = 'datetime' | 'date';
+export type LineRuling = 'none' | 'rows' | 'grid';
+export type TimedStyle = 'duration' | 'range';
+export type QrSize = 's' | 'm' | 'l';
+export type QrCaptionPosition = 'below' | 'above' | 'left' | 'right';
 
 export type BusinessField =
   | 'name'
@@ -32,6 +53,8 @@ export type BusinessField =
   | 'address'
   | 'phone'
   | 'email'
+  | 'tax_code'
+  | 'description'
   | 'url'
   | 'facebook'
   | 'instagram';
@@ -48,7 +71,7 @@ export type TextBlock = {
 };
 // The document title and number. Always printed: a template without one
 // gets it appended to its header.
-export type TitleBlock = { type: 'title'; label?: string };
+export type TitleBlock = { type: 'title'; label?: string; size?: TitleSize };
 export type DividerBlock = { type: 'divider'; style?: 'solid' | 'dashed' };
 export type SpacerBlock = { type: 'spacer'; mm?: number };
 
@@ -85,19 +108,39 @@ export type MetaField =
   | 'branch'
   | 'order_number'
   | 'return_number'
-  | 'customer';
+  | 'customer'
+  | 'table'
+  | 'check_in'
+  | 'check_out'
+  | 'duration'
+  | 'call_number'
+  | 'order_source'
+  | 'printed_at'
+  | 'print_count';
 
 export type LineColumn =
   | 'index'
   | 'name'
   | 'sku'
+  | 'barcode'
   | 'unit'
   | 'qty'
+  | 'original_price'
   | 'price'
   | 'discount'
-  | 'amount';
+  | 'amount'
+  | 'note';
 
-export type TotalField = 'item_total' | 'discount' | 'tax' | 'included_tax' | 'total';
+export type TotalField =
+  | 'item_count'
+  | 'item_total'
+  | 'discount'
+  | 'promotions'
+  | 'shipping'
+  | 'fees'
+  | 'tax'
+  | 'included_tax'
+  | 'total';
 
 export type PaymentField =
   | 'methods'
@@ -106,13 +149,30 @@ export type PaymentField =
   | 'reference'
   | 'paid_total'
   | 'debt'
+  | 'previous_debt'
+  | 'customer_debt'
   | 'due_on'
   // The pay-later VietQR of a debt; its label is the caption under the code.
-  | 'pay_qr';
+  | 'pay_qr'
+  // The store's bank transfer VietQR; its label is the caption of the code.
+  | 'transfer_qr';
+
+export type EinvoiceField =
+  | 'seller_tax_code'
+  | 'number'
+  | 'lookup_code'
+  | 'cqt_code'
+  | 'qr'
+  | 'lookup_url';
 
 export type FieldSection<F extends string> = {
   fields: F[];
   labels?: Partial<Record<F, string>>;
+};
+
+export type MetaSection = FieldSection<MetaField> & {
+  table_style?: TableStyle;
+  time_format?: TimeFormat;
 };
 
 export type LinesSection = {
@@ -120,11 +180,27 @@ export type LinesSection = {
   columns: LineColumn[];
   show_trace: boolean;
   show_conversion: boolean;
+  ruling?: LineRuling;
+  timed_style?: TimedStyle;
+};
+
+export type PaymentsSection = FieldSection<PaymentField> & {
+  qr_size?: QrSize;
+  qr_caption?: QrCaptionPosition;
+};
+
+export type EinvoiceSection = FieldSection<EinvoiceField> & {
+  qr_size?: QrSize;
+  qr_caption?: QrCaptionPosition;
 };
 
 export type PageSettings = {
-  // Carried with the template; the print page margin does not use it yet.
+  // Legacy single margin kept so older saved templates stay valid; unused when printing.
   margin_mm: number;
+  // Four-side page margins in millimetres (0–15). Only applied when set.
+  margins?: PageMargins;
+  // Extra paper fed before the cutter on thermal rolls (0–30 mm).
+  cut_feed_mm?: number;
   font: 'sans' | 'mono';
   font_size: TextSize;
   line_spacing: number;
@@ -140,10 +216,11 @@ export type TemplateConfig = {
   schema: 1;
   page: PageSettings;
   header: TemplateBlock[];
-  meta?: FieldSection<MetaField>;
+  meta?: MetaSection;
   lines?: LinesSection;
   totals?: FieldSection<TotalField>;
-  payments?: FieldSection<PaymentField>;
+  payments?: PaymentsSection;
+  einvoice?: EinvoiceSection;
   footer: TemplateBlock[];
 };
 
@@ -165,7 +242,7 @@ export type PrintBlock =
   | { kind: 'qr'; value: string; caption: string | null; align: Align }
   | { kind: 'barcode'; value: string; align: Align }
   | { kind: 'signatures'; parties: { party: SignatureParty; label: string }[] }
-  | { kind: 'title'; title: string; number: string | null }
+  | { kind: 'title'; title: string; number: string | null; size?: TitleSize }
   | { kind: 'divider'; style: 'solid' | 'dashed' }
   | { kind: 'spacer'; mm: number };
 
@@ -173,6 +250,7 @@ export type PrintStackedLine = {
   index: number | null;
   name: string;
   amount: string | null;
+  originalPrice?: string | null;
   details: string[];
 };
 
@@ -183,20 +261,37 @@ export type PrintTableRow = {
   index: number | null;
   name: string;
   cells: string[];
+  originalPrice?: string | null;
   details: string[];
 };
 
 export type PrintLines =
-  | { layout: 'stacked'; items: PrintStackedLine[] }
+  | { layout: 'stacked'; ruling?: LineRuling; items: PrintStackedLine[] }
   | {
       layout: 'table';
+      ruling?: LineRuling;
       headings: PrintTableHeadings;
       columns: PrintTableColumn[];
       rows: PrintTableRow[];
     };
 
+export type PrintQr = {
+  value: string;
+  caption: string;
+  lines: string[];
+  size?: QrSize;
+  captionPosition?: QrCaptionPosition;
+};
+
+export type PrintPayQr = PrintQr;
+
+export type PrintEinvoice = {
+  rows: PrintRow[];
+  qr: PrintQr | null;
+};
+
 export type PrintDocument = {
-  documentType: DocumentType;
+  documentType: ReceiptDocumentType;
   page: PageSettings;
   // "BẢN SAO", "TẠM TÍNH – CHƯA THANH TOÁN", test print: never removable.
   banners: string[];
@@ -207,12 +302,14 @@ export type PrintDocument = {
   payments: PrintRow[];
   // The bank QR for what is still owed, printed under the payments.
   payQr: PrintPayQr | null;
+  // Optional transfer VietQR on sales, pre-bills and payment tickets.
+  transferQr?: PrintQr | null;
+  // Structured e-invoice block on sales when the template enables it.
+  einvoice?: PrintEinvoice | null;
   notes: string[];
   footer: PrintBlock[];
   disclaimer: string | null;
 };
-
-export type PrintPayQr = { value: string; caption: string; lines: string[] };
 
 export type PrintJobKind =
   | 'receipt'
@@ -229,5 +326,5 @@ export type PrintJobKind =
 export type PrintJobDocument = Omit<PrintDocument, 'documentType'> & {
   version: 1;
   kind: PrintJobKind;
-  documentType: DocumentType | null;
+  documentType: ReceiptDocumentType | null;
 };

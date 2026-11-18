@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_18_170100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_18_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -4049,7 +4049,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_170100) do
     t.index ["source_type", "source_id"], name: "idx_pos_print_jobs_source"
     t.index ["store_id", "idempotency_key"], name: "idx_pos_print_jobs_key", unique: true
     t.check_constraint "attempts >= 0", name: "chk_pos_print_jobs_attempts"
-    t.check_constraint "kind::text = ANY (ARRAY['receipt'::character varying, 'prebill'::character varying, 'kitchen_ticket'::character varying, 'void_ticket'::character varying, 'ready_ticket'::character varying, 'cup_label'::character varying, 'checklist'::character varying, 'table_qr'::character varying, 'test'::character varying]::text[])", name: "chk_pos_print_jobs_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['receipt'::character varying, 'prebill'::character varying, 'kitchen_ticket'::character varying, 'void_ticket'::character varying, 'ready_ticket'::character varying, 'cup_label'::character varying, 'checklist'::character varying, 'table_qr'::character varying, 'test'::character varying, 'product_label'::character varying]::text[])", name: "chk_pos_print_jobs_kind"
     t.check_constraint "status::text = ANY (ARRAY['queued'::character varying, 'claimed'::character varying, 'printed'::character varying, 'failed'::character varying, 'canceled'::character varying]::text[])", name: "chk_pos_print_jobs_status"
   end
 
@@ -4225,8 +4225,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_170100) do
     t.index ["store_id", "document_type", "status"], name: "idx_pos_receipt_templates_type"
     t.index ["store_id", "document_type"], name: "idx_pos_receipt_templates_default", unique: true, where: "(is_default AND ((status)::text = 'active'::text))"
     t.check_constraint "current_version >= 1", name: "chk_pos_receipt_templates_current_version"
-    t.check_constraint "document_type::text = ANY (ARRAY['sale'::character varying, 'prebill'::character varying, 'payment_ticket'::character varying, 'return'::character varying, 'refund'::character varying, 'shift_closure'::character varying]::text[])", name: "chk_pos_receipt_templates_document_type"
-    t.check_constraint "paper::text = ANY (ARRAY['58mm'::character varying, '80mm'::character varying, 'a4'::character varying, 'a5'::character varying, 'a6'::character varying]::text[])", name: "chk_pos_receipt_templates_paper"
+    t.check_constraint "document_type::text = ANY (ARRAY['sale'::character varying, 'prebill'::character varying, 'payment_ticket'::character varying, 'return'::character varying, 'refund'::character varying, 'shift_closure'::character varying, 'product_label'::character varying]::text[])", name: "chk_pos_receipt_templates_document_type"
+    t.check_constraint "paper::text = ANY (ARRAY['58mm'::character varying, '80mm'::character varying, 'a4'::character varying, 'a5'::character varying, 'a6'::character varying, 'roll_50x30'::character varying, 'roll_40x30'::character varying, 'roll_75x25_2'::character varying, 'roll_72x22_2'::character varying, 'roll_110x22_3'::character varying, 'sheet_a4_100'::character varying, 'sheet_a4_65'::character varying, 'sheet_a4_180'::character varying, 'sheet_a5_40'::character varying]::text[])", name: "chk_pos_receipt_templates_paper"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'disabled'::character varying]::text[])", name: "chk_pos_receipt_templates_status"
   end
 

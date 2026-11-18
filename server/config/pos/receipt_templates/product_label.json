@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "page": {
+    "font_size": 9,
+    "margins": { "top": 1, "right": 1, "bottom": 1, "left": 1 }
+  },
+  "fields": [
+    { "key": "store_name", "enabled": false, "text": null },
+    { "key": "store_address", "enabled": false, "text": null },
+    { "key": "product_name", "enabled": true, "max_lines": 2 },
+    { "key": "variant_options", "enabled": true },
+    { "key": "barcode", "enabled": true, "symbology": "auto", "show_text": true },
+    { "key": "sku", "enabled": false, "label": null },
+    { "key": "unit", "enabled": true, "label": null },
+    { "key": "price", "enabled": true, "label": null, "currency": "symbol" },
+    { "key": "original_price", "enabled": false },
+    { "key": "printed_date", "enabled": false, "label": null }
+  ]
+}

@@ -5,13 +5,28 @@ import {
   resourceSearchSchema,
   useResourceMutation,
 } from '@spree/dashboard-core'
-import { Badge, ResourceNameCell, RowActions, SectionTitle, useConfirm } from '@spree/dashboard-ui'
-import { PackageCheckIcon, PackageIcon, PackageXIcon, TagIcon } from '@spree/dashboard-ui/icons'
+import {
+  Badge,
+  Button,
+  Checkbox,
+  ResourceNameCell,
+  RowActions,
+  SectionTitle,
+  useConfirm,
+} from '@spree/dashboard-ui'
+import {
+  PackageCheckIcon,
+  PackageIcon,
+  PackageXIcon,
+  PrinterIcon,
+  TagIcon,
+} from '@spree/dashboard-ui/icons'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type BranchScope, useBranchScope } from '../components/branch-detail'
+import { PrintLabelsDialog } from '../components/product-label/print-labels-dialog'
 import { VariantUnitEditor } from '../components/variant-unit-editor'
 import {
   assignBranchProduct,
@@ -19,6 +34,7 @@ import {
   fetchBranchProducts,
   removeBranchProduct,
 } from '../hooks/use-branch-catalog'
+import { fetchProductVariants, type LabelPrintItem } from '../hooks/use-product-label-data'
 import { hiddenTimestamps } from '../tables/columns'
 
 export function BranchProductsTab() {
@@ -32,6 +48,41 @@ function BranchProducts({ branch, access, storeId }: BranchScope) {
   const searchParams = resourceSearchSchema.parse(useSearch({ strict: false }))
   const [notice, setNotice] = useState<{ text: string; failed: boolean } | null>(null)
   const [unitProduct, setUnitProduct] = useState<BranchProduct | null>(null)
+  // Rows of the page on screen and the ones ticked for labels. Only products
+  // sold at the branch can be ticked, and only on the current page.
+  const [pageRows, setPageRows] = useState<BranchProduct[]>([])
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set())
+  const [labelItems, setLabelItems] = useState<LabelPrintItem[] | null>(null)
+  const [labelLoading, setLabelLoading] = useState(false)
+  const sellable = pageRows.filter((product) => product.assigned)
+  const pickedRows = sellable.filter((product) => picked.has(product.id))
+  const allPicked = sellable.length > 0 && pickedRows.length === sellable.length
+  const togglePicked = (id: string) =>
+    setPicked((current) => {
+      const next = new Set(current)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
+  async function openLabels() {
+    if (pickedRows.length === 0 || labelLoading) return
+    setNotice(null)
+    setLabelLoading(true)
+    try {
+      const variants = await fetchProductVariants(branch.id, pickedRows)
+      if (variants.length === 0) {
+        setNotice({ text: t('productLabelPrint.noVariantsForProducts'), failed: true })
+        return
+      }
+      setLabelItems(variants)
+    } catch (failure) {
+      setNotice({
+        text: t('productLabelPrint.variantsFailed', { reason: describeFailure(failure, t) }),
+        failed: true,
+      })
+    } finally {
+      setLabelLoading(false)
+    }
+  }
   const mutation = useResourceMutation({
     mutationFn: async (product: BranchProduct) => {
       if (!access.write) throw Object.assign(new Error('Access denied'), { status: 403 })
@@ -81,6 +132,23 @@ function BranchProducts({ branch, access, storeId }: BranchScope) {
     searchPlaceholder: t('branchProductsSearchPlaceholder'),
     emptyMessage: t('branchProductsEmpty'),
     columns: [
+      {
+        key: 'select',
+        label: t('productLabelPrint.select'),
+        default: true,
+        className: 'w-8',
+        render: (product) => (
+          <Checkbox
+            checked={picked.has(product.id)}
+            disabled={!product.assigned}
+            onCheckedChange={() => togglePicked(product.id)}
+            aria-label={t(
+              product.assigned ? 'productLabelPrint.selectRow' : 'productLabelPrint.selectDisabled',
+              { name: product.name },
+            )}
+          />
+        ),
+      },
       {
         key: 'name',
         label: t('adminName'),
@@ -137,11 +205,43 @@ function BranchProducts({ branch, access, storeId }: BranchScope) {
           {notice.text}
         </p>
       )}
+      {sellable.length > 0 && (
+        <div
+          className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2"
+          data-testid="label-selection-bar"
+        >
+          <div className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={allPicked}
+              indeterminate={pickedRows.length > 0 && !allPicked}
+              onCheckedChange={() =>
+                setPicked(allPicked ? new Set() : new Set(sellable.map((product) => product.id)))
+              }
+              aria-label={t('productLabelPrint.selectAll')}
+            />
+            {t('productLabelPrint.selectAll')}
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            disabled={pickedRows.length === 0 || labelLoading}
+            onClick={() => void openLabels()}
+          >
+            <PrinterIcon className="size-4" />
+            {t('productLabelPrint.action', { n: pickedRows.length })}
+          </Button>
+        </div>
+      )}
       <ResourceTable<BranchProduct>
         tableKey={tableKey}
         hideHeader
         queryKey={['pos', 'branch-products', branch.id, 'table']}
-        queryFn={(params: Record<string, unknown>) => fetchBranchProducts(branch.id, params)}
+        queryFn={async (params: Record<string, unknown>) => {
+          const result = await fetchBranchProducts(branch.id, params)
+          setPageRows(result.data)
+          setPicked(new Set())
+          return result
+        }}
         searchParams={searchParams}
         rowActions={(product) => (
           <RowActions
@@ -170,6 +270,14 @@ function BranchProducts({ branch, access, storeId }: BranchScope) {
           />
         )}
       />
+      {labelItems && (
+        <PrintLabelsDialog
+          branchId={branch.id}
+          timeZone={branch.timezone || 'Asia/Ho_Chi_Minh'}
+          items={labelItems}
+          onClose={() => setLabelItems(null)}
+        />
+      )}
       {unitProduct && (
         <VariantUnitEditor
           branchId={branch.id}

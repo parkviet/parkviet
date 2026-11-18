@@ -1,0 +1,29 @@
+SIZE 72 mm,22 mm
+GAP 2 mm,0 mm
+DIRECTION 1
+CLS
+TEXT 8,8,"2",0,1,1,"Sua tuoi tiet trung"
+BARCODE 53,32,"128",56,1,0,2,4,"SP-1"
+TEXT 8,116,"2",0,1,1,"Hop"
+TEXT 8,140,"3",0,1,1,"32.000 d"
+TEXT 296,8,"2",0,1,1,"Sua tuoi tiet trung"
+BARCODE 341,32,"128",56,1,0,2,4,"SP-1"
+TEXT 296,116,"2",0,1,1,"Hop"
+TEXT 296,140,"3",0,1,1,"32.000 d"
+PRINT 2,1
+CLS
+TEXT 8,8,"2",0,1,1,"Sua tuoi tiet trung"
+BARCODE 53,32,"128",56,1,0,2,4,"SP-1"
+TEXT 8,116,"2",0,1,1,"Hop"
+TEXT 8,140,"3",0,1,1,"32.000 d"
+TEXT 296,8,"2",0,1,1,"Sua tuoi tiet trung"
+TEXT 296,32,"2",0,1,1,"8934563138166"
+TEXT 296,56,"2",0,1,1,"Hop"
+TEXT 296,80,"3",0,1,1,"32.000 d"
+PRINT 1,1
+CLS
+TEXT 8,8,"2",0,1,1,"Sua tuoi tiet trung"
+TEXT 8,32,"2",0,1,1,"Hop"
+TEXT 296,8,"2",0,1,1,"Sua tuoi tiet trung"
+TEXT 296,32,"2",0,1,1,"Hop"
+PRINT 1,1

@@ -2,10 +2,13 @@ import { encode } from 'uqr';
 import { barcodeWidthMm, code128Bars, QUIET_ZONE } from './code128';
 import type {
   Align,
+  PageMargins,
   PaperSize,
   PrintBlock,
   PrintDocument,
+  PrintEinvoice,
   PrintLines,
+  PrintQr,
   PrintRow,
   SignatureParty,
   TextSize,
@@ -185,7 +188,12 @@ function textLineHtml(line: string, limit: number | null): string {
   );
 }
 
-function blockHtml(block: PrintBlock, layout: SheetLayout, fontSize: TextSize): string {
+function blockHtml(
+  block: PrintBlock,
+  layout: SheetLayout,
+  fontSize: TextSize,
+  margins?: PageMargins | null,
+): string {
   switch (block.kind) {
     case 'text': {
       const className = classes(
@@ -193,7 +201,9 @@ function blockHtml(block: PrintBlock, layout: SheetLayout, fontSize: TextSize): 
         block.bold && 'receipt-bold',
         block.size !== 'm' && `receipt-size-${block.size}`,
       );
-      const limit = layout.markOverflow ? charsPerLine(layout.paper, fontSize, block.size) : null;
+      const limit = layout.markOverflow
+        ? charsPerLine(layout.paper, fontSize, block.size, margins)
+        : null;
       return block.lines
         .map((line) => el('p', [['class', className]], textLineHtml(line, limit)))
         .join('');
@@ -219,8 +229,11 @@ function blockHtml(block: PrintBlock, layout: SheetLayout, fontSize: TextSize): 
       );
     case 'title':
       return (
-        el('h2', [], escapeHtml(block.title)) +
-        (block.number ? el('p', [['class', 'receipt-number']], escapeHtml(block.number)) : '')
+        el(
+          'h2',
+          [['class', block.size && block.size !== 'l' ? `receipt-title-${block.size}` : null]],
+          escapeHtml(block.title),
+        ) + (block.number ? el('p', [['class', 'receipt-number']], escapeHtml(block.number)) : '')
       );
     case 'divider':
       return el('div', [['class', `receipt-divider receipt-divider-${block.style}`]], '');
@@ -272,13 +285,25 @@ const th = (label: string, className: string | null = null) =>
     escapeHtml(label),
   );
 
-const cellsHtml = (cells: string[]) => cells.map((cell) => el('td', [], escapeHtml(cell))).join('');
+const cellsHtml = (cells: string[], priceIndex = -1, originalPrice?: string | null) =>
+  cells
+    .map((cell, idx) =>
+      el(
+        'td',
+        [],
+        (idx === priceIndex && originalPrice
+          ? el('del', [['class', 'receipt-original-price']], escapeHtml(originalPrice))
+          : '') + escapeHtml(cell),
+      ),
+    )
+    .join('');
 
 // The lines of a table template on an A4 or A5 sheet: one ruled row per
 // line, the line number and every column in its own cell.
 function sheetTableHtml(lines: Extract<PrintLines, { layout: 'table' }>): string {
   const { headings } = lines;
   const hasIndex = headings.index !== null;
+  const priceIndex = lines.columns.findIndex((column) => column.key === 'price');
   const head = el(
     'tr',
     [],
@@ -296,21 +321,34 @@ function sheetTableHtml(lines: Extract<PrintLines, { layout: 'table' }>): string
             'td',
             [['class', 'receipt-grid-name']],
             escapeHtml(row.name) +
+              (priceIndex < 0 && row.originalPrice
+                ? el(
+                    'small',
+                    [],
+                    el('del', [['class', 'receipt-original-price']], escapeHtml(row.originalPrice)),
+                  )
+                : '') +
               row.details.map((detail) => el('small', [], escapeHtml(detail))).join(''),
           ) +
-          cellsHtml(row.cells),
+          cellsHtml(row.cells, priceIndex, row.originalPrice),
       ),
     )
     .join('');
-  return el('table', [['class', 'receipt-grid']], el('thead', [], head) + el('tbody', [], body));
+  return el(
+    'table',
+    [['class', classes('receipt-grid', lines.ruling && `receipt-ruling-${lines.ruling}`)]],
+    el('thead', [], head) + el('tbody', [], body),
+  );
 }
 
 function linesHtml(lines: PrintLines, paper: PaperSize): string {
+  const rulingClass = lines.ruling ? `receipt-ruling-${lines.ruling}` : null;
   if (lines.layout === 'table') {
     if (lines.rows.length === 0) return '';
     if (WIDE_PAPERS.includes(paper)) return sheetTableHtml(lines);
     const span = Math.max(lines.columns.length, 1);
     const hasColumns = lines.columns.length > 0;
+    const priceIndex = lines.columns.findIndex((column) => column.key === 'price');
     const head = hasColumns
       ? el('thead', [], el('tr', [], lines.columns.map((column) => th(column.label)).join('')))
       : '';
@@ -322,17 +360,34 @@ function linesHtml(lines: PrintLines, paper: PaperSize): string {
           'tbody',
           [],
           fullRow('ticket-name', numbered(row.index, row.name)) +
+            (priceIndex < 0 && row.originalPrice
+              ? el(
+                  'tr',
+                  [['class', 'ticket-detail']],
+                  el(
+                    'td',
+                    [['colspan', span]],
+                    el('del', [['class', 'receipt-original-price']], escapeHtml(row.originalPrice)),
+                  ),
+                )
+              : '') +
             row.details.map((detail) => fullRow('ticket-detail', detail)).join('') +
-            (hasColumns ? el('tr', [['class', 'ticket-figures']], cellsHtml(row.cells)) : ''),
+            (hasColumns
+              ? el(
+                  'tr',
+                  [['class', 'ticket-figures']],
+                  cellsHtml(row.cells, priceIndex, row.originalPrice),
+                )
+              : ''),
         ),
       )
       .join('');
-    return el('table', [['class', 'ticket-table']], head + bodies);
+    return el('table', [['class', classes('ticket-table', rulingClass)]], head + bodies);
   }
   if (lines.items.length === 0) return '';
   return el(
     'ol',
-    [['class', 'receipt-lines']],
+    [['class', classes('receipt-lines', rulingClass)]],
     lines.items
       .map((line) =>
         el(
@@ -346,12 +401,87 @@ function linesHtml(lines: PrintLines, paper: PaperSize): string {
                 ? el('span', [['class', 'receipt-money']], escapeHtml(line.amount))
                 : ''),
           ) +
+            (line.originalPrice
+              ? el(
+                  'p',
+                  [['class', 'receipt-line-detail receipt-original-line']],
+                  el('del', [['class', 'receipt-original-price']], escapeHtml(line.originalPrice)),
+                )
+              : '') +
             line.details
               .map((detail) => el('p', [['class', 'receipt-line-detail']], escapeHtml(detail)))
               .join(''),
         ),
       )
       .join(''),
+  );
+}
+
+function styledQrHtml(qr: PrintQr, paper: PaperSize, baseClass: string, testId: string): string {
+  const rawPos = qr.captionPosition;
+  const pos = paper === '58mm' && (rawPos === 'left' || rawPos === 'right') ? 'below' : rawPos;
+  if (baseClass === 'receipt-pay-qr' && qr.size === undefined && pos === undefined) {
+    return el(
+      'section',
+      [
+        ['class', 'receipt-pay-qr'],
+        ['data-testid', testId],
+      ],
+      qrHtml(qr.value, qr.caption, 'center') +
+        qr.lines.map((line) => el('p', [], escapeHtml(line))).join(''),
+    );
+  }
+  const code = qrPath(qr.value);
+  if (!code) return '';
+  const svg = el(
+    'svg',
+    [
+      ['viewBox', `0 0 ${code.size} ${code.size}`],
+      ['shape-rendering', 'crispEdges'],
+      ['role', 'img'],
+      ['aria-label', qr.caption || qr.value],
+    ],
+    `<path${attrs([
+      ['d', code.path],
+      ['fill', '#000'],
+    ])}></path>`,
+  );
+  const textContent =
+    (qr.caption ? el('p', [['class', 'receipt-qr-caption']], escapeHtml(qr.caption)) : '') +
+    qr.lines.map((line) => el('p', [], escapeHtml(line))).join('');
+  return el(
+    'section',
+    [
+      [
+        'class',
+        classes(
+          baseClass,
+          'receipt-qr-box',
+          qr.size && qr.size !== 'm' && `receipt-qr-size-${qr.size}`,
+          `receipt-qr-caption-${pos ?? 'below'}`,
+        ),
+      ],
+      ['data-testid', testId],
+      ['data-qr-value', qr.value],
+    ],
+    svg + (textContent ? el('div', [['class', 'receipt-qr-text']], textContent) : ''),
+  );
+}
+
+function einvoiceHtml(einvoice: PrintEinvoice | null | undefined, paper: PaperSize): string {
+  if (!einvoice) return '';
+  const rows = rowsHtml(einvoice.rows, 'receipt-einvoice-rows');
+  const qr = einvoice.qr
+    ? styledQrHtml(einvoice.qr, paper, 'receipt-einvoice-qr', 'receipt-einvoice-qr')
+    : '';
+  if (!rows && !qr) return '';
+  return el(
+    'section',
+    [
+      ['class', 'receipt-einvoice'],
+      ['data-testid', 'receipt-einvoice'],
+    ],
+    rows + qr,
   );
 }
 
@@ -362,6 +492,7 @@ export function sheetClassName(document: PrintDocument, paper: PaperSize): strin
     'receipt-sheet',
     document.documentType === 'payment_ticket' && 'invoice-ticket',
     `receipt-${paper}`,
+    page.margins && 'receipt-custom-margins',
     page.font === 'mono' && 'receipt-font-mono',
     page.font_size !== 'm' && `receipt-scale-${page.font_size}`,
   ]
@@ -375,13 +506,23 @@ export function sheetLineHeight(document: PrintDocument): number | null {
   return spacing === DEFAULT_LINE_SPACING ? null : spacing;
 }
 
+function sheetStyle(document: PrintDocument): string | null {
+  const parts: string[] = [];
+  const lineHeight = sheetLineHeight(document);
+  if (lineHeight !== null) parts.push(`line-height:${lineHeight}`);
+  const m = document.page.margins;
+  if (m) parts.push(`padding:${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm`);
+  return parts.length > 0 ? parts.join(';') : null;
+}
+
 // The inside of the sheet element: banners, header, rows, lines, pay QR,
-// notes, footer and disclaimer.
+// transfer QR, e-invoice, notes, footer and disclaimer.
 export function renderSheetContentHtml(document: PrintDocument, layout: SheetLayout): string {
   const fontSize = document.page.font_size;
+  const margins = document.page.margins;
   const blocks = (list: PrintBlock[]) =>
-    list.map((block) => blockHtml(block, layout, fontSize)).join('');
-  const { payQr } = document;
+    list.map((block) => blockHtml(block, layout, fontSize, margins)).join('');
+  const { payQr, transferQr, einvoice } = document;
   return [
     document.banners.map((banner) => el('p', [['class', 'receipt-banner']], escapeHtml(banner))),
     el('header', [['class', 'receipt-header']], blocks(document.header)),
@@ -389,17 +530,11 @@ export function renderSheetContentHtml(document: PrintDocument, layout: SheetLay
     linesHtml(document.lines, layout.paper),
     rowsHtml(document.totals, 'receipt-totals'),
     rowsHtml(document.payments, 'receipt-payments'),
-    payQr
-      ? el(
-          'section',
-          [
-            ['class', 'receipt-pay-qr'],
-            ['data-testid', 'receipt-pay-qr'],
-          ],
-          qrHtml(payQr.value, payQr.caption, 'center') +
-            payQr.lines.map((line) => el('p', [], escapeHtml(line))).join(''),
-        )
+    payQr ? styledQrHtml(payQr, layout.paper, 'receipt-pay-qr', 'receipt-pay-qr') : '',
+    transferQr
+      ? styledQrHtml(transferQr, layout.paper, 'receipt-transfer-qr', 'receipt-transfer-qr')
       : '',
+    einvoiceHtml(einvoice, layout.paper),
     document.notes.map((note) => el('p', [['class', 'receipt-note']], escapeHtml(note))),
     document.footer.length > 0
       ? el('footer', [['class', 'receipt-footer']], blocks(document.footer))
@@ -414,12 +549,11 @@ export function renderSheetContentHtml(document: PrintDocument, layout: SheetLay
 
 // The whole sheet element, ready to place in a print root or a frame.
 export function renderSheetHtml(document: PrintDocument, sheet: SheetElement): string {
-  const lineHeight = sheetLineHeight(document);
   return el(
     'article',
     [
       ['class', sheetClassName(document, sheet.paper)],
-      ['style', lineHeight === null ? null : `line-height:${lineHeight}`],
+      ['style', sheetStyle(document)],
       ['data-testid', sheet.testId],
       ['data-paper', sheet.paper],
       ['data-print-id', sheet.printId],

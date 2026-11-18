@@ -5,7 +5,7 @@ import i18n from '../test-support/i18n';
 import { DEFAULT_TEMPLATES, TEST_PRINT_BANNER } from './defaults';
 import { renderDocument } from './render';
 import { sampleData, withLogo } from './sample-data';
-import { DOCUMENT_TYPES } from './types';
+import { RECEIPT_DOCUMENT_TYPES } from './types';
 
 const t = (key: string, options?: Record<string, unknown>) => i18n.t(key, options ?? {}) as string;
 const now = new Date('2026-11-08T03:30:00Z');
@@ -34,18 +34,21 @@ const texts = (document: ReturnType<typeof renderDocument>) =>
   );
 
 describe('template preview sample data', () => {
-  it.each(DOCUMENT_TYPES)('renders a %s sample at the chosen branch and register', (type) => {
-    const data = sampleData(type, place, t, now);
-    expect(data.documentType).toBe(type);
-    expect(data.store).toMatchObject({ name: 'Park Việt', address: '12 Lê Lợi, Quận 1' });
-    expect(data.store.logoUrl).toBe('https://cdn.example/logo.png');
-    expect(data.branch).toEqual({ name: 'Chi nhánh Quận 1', code: 'q1', returnWindowDays: 7 });
-    expect(data.register).toBe('Quầy 2');
-    expect(data.time).toBe('08/11/2026 10:30');
-    const document = renderDocument(DEFAULT_TEMPLATES[type], data);
-    expect(texts(document)).toContain('Park Việt');
-    expect(texts(document)).toContain('Quầy 2');
-  });
+  it.each(RECEIPT_DOCUMENT_TYPES)(
+    'renders a %s sample at the chosen branch and register',
+    (type) => {
+      const data = sampleData(type, place, t, now);
+      expect(data.documentType).toBe(type);
+      expect(data.store).toMatchObject({ name: 'Park Việt', address: '12 Lê Lợi, Quận 1' });
+      expect(data.store.logoUrl).toBe('https://cdn.example/logo.png');
+      expect(data.branch).toEqual({ name: 'Chi nhánh Quận 1', code: 'q1', returnWindowDays: 7 });
+      expect(data.register).toBe('Quầy 2');
+      expect(data.time).toBe('08/11/2026 10:30');
+      const document = renderDocument(DEFAULT_TEMPLATES[type], data);
+      expect(texts(document)).toContain('Park Việt');
+      expect(texts(document)).toContain('Quầy 2');
+    },
+  );
 
   it('fills every section the document type prints', () => {
     const sale = renderDocument(DEFAULT_TEMPLATES.sale, sampleData('sale', place, t, now));

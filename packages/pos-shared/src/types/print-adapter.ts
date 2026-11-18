@@ -22,9 +22,11 @@ export type ReceiptSnapshot = {
 export type ReceiptEinvoice = {
   status: string;
   invoice_type: 'cash_register' | 'coded';
+  seller_tax_code?: string | null;
   number: string | null;
   symbol: string | null;
   template_code: string | null;
+  cqt_code?: string | null;
   lookup_code: string | null;
   lookup_url: string | null;
   buyer_url: string | null;
@@ -68,7 +70,8 @@ export type PrinterRole =
   | 'ready_ticket'
   | 'cup_label'
   | 'checklist'
-  | 'table_qr';
+  | 'table_qr'
+  | 'product_label';
 
 export type PrinterSettings = {
   codepage?: string;

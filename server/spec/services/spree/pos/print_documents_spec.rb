@@ -29,7 +29,7 @@ RSpec.describe Spree::Pos::PrintDocuments do
     ],
     'meta' => { 'fields' => %w[time customer], 'labels' => { 'time' => 'Lúc' } },
     'lines' => { 'layout' => 'table', 'columns' => %w[index name sku unit qty price discount amount], 'show_trace' => true, 'show_conversion' => true },
-    'totals' => { 'fields' => %w[item_total], 'labels' => { 'total' => 'Phải trả' } },
+    'totals' => { 'fields' => %w[item_total shipping], 'labels' => { 'total' => 'Phải trả' } },
     'payments' => { 'fields' => %w[methods paid_total debt pay_qr], 'labels' => { 'methods' => 'bỏ qua', 'pay_qr' => 'Trả sau' } },
     'footer' => [
       { 'type' => 'qr', 'source' => 'url', 'value' => 'https://example.test/a?b=1', 'caption' => 'Xem', 'align' => 'right' },
@@ -92,7 +92,65 @@ RSpec.describe Spree::Pos::PrintDocuments do
                    'lookup_code' => 'AB12CD34EF', 'lookup_url' => 'https://tracuu.example.test',
                    'buyer_url' => 'https://pos.example.test/pos_einvoice/token-1' }
       footer = [{ 'type' => 'text', 'value' => "Mã tra cứu: {einvoice.lookup_code}\nTra cứu tại {einvoice.lookup_url}\n{einvoice.buyer_qr}" }]
-      [receipt['sale', sale_document].merge('einvoice' => einvoice), nil, default_config['sale'].merge('footer' => footer)]
+      [receipt['sale', sale_document].merge('einvoice' => einvoice), nil, default_config['sale'].except('einvoice').merge('footer' => footer)]
+    },
+    'sale-fnb-full' => lambda {
+      fnb_store = store.merge('tax_code' => '0312345678', 'description' => 'Trà & bánh tươi mỗi ngày')
+      fnb_lines = [
+        sale_document['lines'].first.merge('barcode' => '8938505974192', 'original_price' => '50000.0', 'note' => 'Ít ngọt'),
+        sale_document['lines'].last
+      ]
+      fnb_doc = sale_document.merge(
+        'store' => fnb_store,
+        'lines' => fnb_lines,
+        'table' => { 'name' => 'Bàn 5', 'area' => 'Sân thượng' },
+        'check_in_at' => '2026-11-10T00:35:00Z',
+        'order_source' => 'dine_in',
+        'item_count' => '3',
+        'promotions' => [{ 'label' => 'Happy Hour', 'amount' => '5000.0' }],
+        'fees' => [{ 'label' => 'Phí phục vụ', 'amount' => '10000.0' }],
+        'customer_debt' => { 'previous' => '50000.0', 'total' => '79999.0' },
+        'transfer_qr' => { 'amount' => '29999.0', 'currency' => 'VND', 'transfer_content' => 'R100',
+                           'bank_name' => 'VCB', 'account_number' => '123', 'account_name' => 'SHOP', 'payload' => '000201010212' }
+      )
+      einvoice = {
+        'status' => 'issued', 'invoice_type' => 'cash_register', 'seller_tax_code' => '0312345678',
+        'number' => '0000123', 'symbol' => '1C26MPA', 'template_code' => '1/001',
+        'lookup_code' => 'AB12CD34EF', 'cqt_code' => 'M1-26-ABCDE',
+        'lookup_url' => 'https://tracuu.example.test',
+        'buyer_url' => 'https://pos.example.test/pos_einvoice/token-1'
+      }
+      fnb_config = {
+        'schema' => 1,
+        'page' => { 'margin_mm' => 3, 'margins' => { 'top' => 4, 'right' => 3, 'bottom' => 5, 'left' => 3 }, 'cut_feed_mm' => 8,
+                    'font' => 'sans', 'font_size' => 'm', 'line_spacing' => 1.35 },
+        'header' => [
+          { 'type' => 'business', 'fields' => %w[name tax_code description address phone branch], 'align' => 'center' },
+          { 'type' => 'title', 'size' => 'xl' }
+        ],
+        'meta' => {
+          'fields' => %w[time table check_in check_out duration order_source cashier register branch customer printed_at copy_number],
+          'labels' => {}, 'table_style' => 'two_lines', 'time_format' => 'date'
+        },
+        'lines' => {
+          'layout' => 'stacked', 'ruling' => 'rows',
+          'columns' => %w[index name sku barcode unit qty original_price price discount amount note],
+          'show_trace' => true, 'show_conversion' => true
+        },
+        'totals' => { 'fields' => %w[item_count item_total promotions fees included_tax total], 'labels' => {} },
+        'payments' => {
+          'fields' => %w[methods paid_total debt previous_debt customer_debt transfer_qr],
+          'labels' => {}, 'qr_size' => 'l', 'qr_caption' => 'right'
+        },
+        'einvoice' => {
+          'fields' => %w[seller_tax_code number symbol lookup_code cqt_code qr],
+          'labels' => {}, 'qr_size' => 's', 'qr_caption' => 'above'
+        },
+        'footer' => []
+      }
+      [receipt['sale', fnb_doc].merge('einvoice' => einvoice),
+       { 'copy' => true, 'copy_number' => 1, 'printed_at' => '2026-11-10T02:15:00Z' },
+       fnb_config]
     },
     'sale-call-number' => lambda {
       footer = [{ 'type' => 'text', 'value' => 'Mời {order.guest_name} nhận món' }]
@@ -125,7 +183,19 @@ RSpec.describe Spree::Pos::PrintDocuments do
   prebill_cases = {
     'prebill-default' => -> { [default_config['prebill'], nil, workspace] },
     'prebill-reprint-custom' => -> { [custom_config, described_class::REPRINT_BANNER, workspace] },
-    'prebill-timed-running' => -> { [default_config['prebill'], nil, timed_workspace] }
+    'prebill-timed-running' => -> { [default_config['prebill'], nil, timed_workspace] },
+    'prebill-fnb' => lambda {
+      fnb_ws = timed_workspace.merge(
+        'table' => { 'name' => 'VIP 1', 'area' => 'Tầng 2' },
+        'check_in_at' => '2026-11-11T01:30:00Z',
+        'order_source' => 'dine_in',
+        'item_count' => '2',
+        'transfer_qr' => { 'amount' => '50000.0', 'currency' => 'VND', 'transfer_content' => 'TAMTINH',
+                           'bank_name' => 'ACB', 'account_number' => '999', 'account_name' => 'QUAN', 'payload' => '00020101021299' }
+      )
+      cfg = default_config['prebill'].merge('lines' => default_config['prebill']['lines'].merge('timed_style' => 'duration'))
+      [cfg, nil, fnb_ws]
+    }
   }
 
   def check_golden(path, content)
@@ -158,7 +228,7 @@ RSpec.describe Spree::Pos::PrintDocuments do
   # published contract so the two cannot disagree.
   it 'publishes the document schema for the client contract test' do
     openapi = YAML.safe_load_file(Rails.root.join('openapi/pos-staff.yaml'), aliases: true)
-    names = %w[PrintDocument PrintPage PrintRow PrintPayQr PrintBlock PrintLines]
+    names = %w[PrintDocument PrintPage PrintRow PrintPayQr PrintBlock PrintLines PrintEinvoice]
     check_golden(fixtures_dir.join('schema.json'), openapi.dig('components', 'schemas').slice(*names))
   end
 
@@ -185,7 +255,7 @@ RSpec.describe Spree::Pos::PrintDocuments do
   it 'builds cup labels that pass the schema' do
     document = YAML.safe_load_file(Rails.root.join('openapi/pos-staff.yaml'), aliases: true)
     schema = document.dig('components', 'schemas', 'PrintDocument').merge('components' => document['components'])
-    branch = instance_double(Spree::Pos::Branch, timezone: zone, store: instance_double(Spree::Store, name: 'Quán'))
+    branch = instance_double(Spree::Pos::Branch, id: nil, store_id: nil, timezone: zone, store: instance_double(Spree::Store, name: 'Quán'))
     settings = Spree::Pos::CupLabels::Settings::FIELDS.then { |fields| { 'size' => '58x40', 'fields' => fields, 'pickup_minutes' => 15 } }
 
     label = Spree::Pos::CupLabels::Document.sample(branch: branch, settings: settings, at: now).as_json

@@ -15,9 +15,11 @@ module Spree
       PAPERS = %w[58mm 80mm].freeze
       COMMAND_LANGUAGES = %w[escpos tspl].freeze
       STATUSES = %w[active disabled].freeze
-      ROLES = %w[receipt prebill kitchen_ticket void_ticket ready_ticket cup_label checklist table_qr].freeze
+      ROLES = %w[receipt prebill kitchen_ticket void_ticket ready_ticket cup_label checklist table_qr product_label].freeze
       # Documents rendered as ESC/POS text; a label language cannot print them.
       ESCPOS_KINDS = %w[receipt prebill].freeze
+      # Documents only a label language prints.
+      TSPL_KINDS = %w[product_label].freeze
       # Host or IPv4 with an optional port: no scheme, path or credentials.
       HOST_LABEL = /[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?/
       ADDRESS = /\A#{HOST_LABEL}(?:\.#{HOST_LABEL})*(?::(?<port>\d{1,5}))?\z/
@@ -44,6 +46,7 @@ module Spree
       validate :branch_belongs_to_store
       validate :register_belongs_to_branch
       validate :roles_known
+      validate :label_roles_need_tspl
       validate :settings_known
       validate :connection_fields
       validate :one_default_per_register_role
@@ -76,7 +79,8 @@ module Spree
       def prints?(kind)
         return true unless ROLES.include?(kind)
 
-        roles.include?(kind) && (ESCPOS_KINDS.exclude?(kind) || command_language == 'escpos')
+        roles.include?(kind) && (ESCPOS_KINDS.exclude?(kind) || command_language == 'escpos') &&
+          (TSPL_KINDS.exclude?(kind) || command_language == 'tspl')
       end
 
       def to_pos
@@ -106,6 +110,10 @@ module Spree
 
       def roles_known
         errors.add(:roles, :inclusion) unless roles.is_a?(Array) && (roles - ROLES).empty?
+      end
+
+      def label_roles_need_tspl
+        errors.add(:roles, :invalid) if roles.is_a?(Array) && (roles & TSPL_KINDS).any? && command_language != 'tspl'
       end
 
       def settings_known

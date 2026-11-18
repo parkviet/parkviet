@@ -9,7 +9,7 @@ module Spree
       self.table_name = 'spree_pos_print_jobs'
       has_prefix_id :posprintjob
 
-      KINDS = %w[receipt prebill kitchen_ticket void_ticket ready_ticket cup_label checklist table_qr test].freeze
+      KINDS = %w[receipt prebill kitchen_ticket void_ticket ready_ticket cup_label checklist table_qr product_label test].freeze
       STATUSES = %w[queued claimed printed failed canceled].freeze
       MAX_ATTEMPTS = 5
       LEASE = 30.seconds

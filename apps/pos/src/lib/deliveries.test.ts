@@ -120,7 +120,7 @@ describe('delivery on printed documents', () => {
       value: 'Bố',
     });
     expect(labels(data.totals)).toEqual(['receiptItemTotal', 'receiptDeliveryFee', 'receiptTotal']);
-    expect(data.totals[1]).toMatchObject({ field: null });
+    expect(data.totals[1]).toMatchObject({ field: 'shipping' });
   });
 
   it('leaves a counter sale and a free delivery without a fee row', () => {

@@ -64,6 +64,22 @@ RSpec.describe 'POS printers API', type: :request do
     expect(Spree::Pos::Printer.where(branch: branch).count).to eq(1)
   end
 
+  it 'accepts the product label role on a TSPL station printer' do
+    create_printer(manager, connection: 'sunmi_builtin', print_station_device_id: device.prefixed_id, command_language: 'tspl',
+                            paper: '58mm', roles: ['product_label'])
+
+    expect(response).to have_http_status(:created)
+    expect(response.parsed_body.dig('data', 'roles')).to eq(['product_label'])
+  end
+
+  it 'refuses the product label role on an ESC/POS printer' do
+    create_printer(manager, connection: 'sunmi_builtin', print_station_device_id: device.prefixed_id, command_language: 'escpos',
+                            roles: ['product_label'])
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(errors).to include('roles')
+  end
+
   it 'hides a branch the staff member does not work at' do
     other = credit_branch(store)
     get '/api/v3/admin/pos/printers', headers: auth(cashier), params: { branch_id: other.prefixed_id }

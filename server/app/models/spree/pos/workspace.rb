@@ -161,16 +161,28 @@ module Spree
           [sale.prefixed_id, Spree::Pos::Inventory::AllocateTraceability.line_trace(sale, branch, now: now, memo: memo,
                                                                                                  completed: operational_status == 'completed')]
         end
+        facts = Spree::Pos::PrintDocuments::OrderFacts
+        financial = financial_pos
+        remaining = financial ? BigDecimal(financial[:remaining].to_s) : [order.total, BigDecimal('0')].max
         summary.merge(
           trace: Spree::Pos::Inventory::AllocateTraceability.workspace_trace(self, traces),
           customer: customer_pos,
+          table: facts.safe(:table, workspace_id: id) { facts.table(self) },
+          item_count: facts.safe(:item_count, workspace_id: id) { facts.item_count(lines.map { |line| [line, sale_lines[line.id]] }) },
+          promotions: facts.safe(:promotions, workspace_id: id) { facts.promotions(order) },
+          transfer_qr: facts.safe(:transfer_qr, workspace_id: id) { facts.transfer_qr(self, remaining_amount: remaining) },
           line_items: lines.map do |line|
             sale = sale_lines[line.id]
             quoted_price = sale&.unit_price || line.price
+            original_price = snapshot_locked ? nil : facts.safe(:original_price, line_item_id: line.id) do
+              facts.original_price(variant: line.variant, sale_line: sale, line_price: line.price, store: store, order: order)
+            end
             core = {
               id: line.prefixed_id, variant_id: line.variant.prefixed_id, product_id: line.variant.product.prefixed_id,
-              name: line.variant.product.name, sku: line.variant.sku, quantity: line.quantity,
+              name: line.variant.product.name, sku: line.variant.sku, barcode: facts.barcode(line.variant),
+              quantity: line.quantity,
               price: money(line.price),
+              original_price: original_price,
               list_price: money(snapshot_locked ? quoted_price : (SalesChannel.price(line.variant, store: store, currency: order.currency, order: order)&.amount || quoted_price)),
               amount: money(line.amount),
               net_amount: money(line.amount + line.discounts.to_a.sum(&:amount)),
@@ -229,7 +241,7 @@ module Spree
             currency: order.currency,
             taxes: TaxBreakdown.for(order)
           },
-          financial: financial_pos
+          financial: financial
         )
       end
 

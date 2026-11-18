@@ -87,9 +87,13 @@
       "meta": {
         "fields": [
           "time",
+          "table",
+          "check_in",
+          "duration",
           "customer"
         ],
-        "labels": {}
+        "labels": {},
+        "table_style": "one_line"
       },
       "lines": {
         "layout": "stacked",
@@ -107,15 +111,19 @@
         "fields": [
           "item_total",
           "discount",
+          "shipping",
           "total"
         ],
         "labels": {}
       },
       "payments": {
         "fields": [
-          "paid_total"
+          "paid_total",
+          "transfer_qr"
         ],
-        "labels": {}
+        "labels": {},
+        "qr_size": "m",
+        "qr_caption": "below"
       },
       "footer": []
     },

@@ -11,12 +11,14 @@ import {
 import type {
   Align,
   BusinessField,
+  PageMargins,
   PaperSize,
   QrBlock,
   SignatureParty,
   SocialField,
   TemplateBlock,
   TextSize,
+  TitleSize,
 } from '@parkviet/pos-shared/receipt-template/types'
 import {
   BUSINESS_FIELDS,
@@ -31,12 +33,11 @@ import { resolveText, variableValues } from '@parkviet/pos-shared/receipt-templa
 import { Input, Label } from '@spree/dashboard-ui'
 import { type ReactNode, useId } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, Choice, Problem } from './controls'
+import { Check, Choice, Problem, SegmentedChoice } from './controls'
+import { StepperInput } from './stepper-input'
 import { TemplateTextField } from './variable-picker'
 
 export type BlockProblems = Partial<Record<string, string>>
-const numberOr = (text: string, fallback: number) =>
-  text.trim() !== '' && Number.isFinite(Number(text)) ? Number(text) : fallback
 
 function AlignPicker({
   value,
@@ -49,13 +50,13 @@ function AlignPicker({
 }) {
   const { t } = useTranslation('pos')
   return (
-    <Choice
+    <SegmentedChoice
       label={t('receiptTemplates.block.align')}
       value={value ?? 'center'}
       disabled={readOnly}
-      options={(['left', 'center', 'right'] as const).map((value) => ({
-        value,
-        label: t(`receiptTemplates.align.${value}`),
+      options={(['left', 'center', 'right'] as const).map((item) => ({
+        value: item,
+        label: t(`receiptTemplates.align.${item}`),
       }))}
       onChange={onChange}
     />
@@ -67,6 +68,7 @@ export function BlockEditor({
   data,
   paper,
   pageSize,
+  margins,
   readOnly,
   problems,
   onChange,
@@ -75,9 +77,10 @@ export function BlockEditor({
   data: TemplateData
   paper: PaperSize
   pageSize: TextSize
+  margins?: PageMargins | null
   readOnly: boolean
   problems: BlockProblems
-  onChange: (block: TemplateBlock) => void
+  onChange: (block: TemplateBlock, coalesceField?: string) => void
 }) {
   const { t } = useTranslation('pos')
   const id = useId()
@@ -88,7 +91,7 @@ export function BlockEditor({
     <AlignPicker
       value={align}
       readOnly={readOnly}
-      onChange={(align) => onChange({ ...block, align } as TemplateBlock)}
+      onChange={(nextAlign) => onChange({ ...block, align: nextAlign } as TemplateBlock)}
     />
   )
   const warning = (text: string) => (
@@ -98,21 +101,24 @@ export function BlockEditor({
     case 'logo':
       return (
         <div className="grid gap-3">
-          <Label htmlFor={`${id}-width`}>{t('receiptTemplates.block.logoWidth')}</Label>
-          <Input
-            id={`${id}-width`}
-            type="number"
-            min={20}
-            max={100}
-            step={5}
-            value={block.width_pct ?? 60}
-            disabled={readOnly}
-            aria-invalid={Boolean(problems.width_pct)}
-            aria-describedby={describedBy('width_pct')}
-            onChange={(event) => onChange({ ...block, width_pct: numberOr(event.target.value, 0) })}
-          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StepperInput
+              id={`${id}-width`}
+              label={t('receiptTemplates.block.logoWidth')}
+              min={20}
+              max={100}
+              step={5}
+              value={block.width_pct ?? 60}
+              disabled={readOnly}
+              invalid={Boolean(problems.width_pct)}
+              describedBy={describedBy('width_pct')}
+              onChange={(width_pct) =>
+                onChange({ ...block, width_pct: width_pct ?? 0 }, 'width_pct')
+              }
+            />
+            {alignPicker}
+          </div>
           {error('width_pct')}
-          {alignPicker}
           <Check
             checked={block.monochrome === true}
             disabled={readOnly}
@@ -129,7 +135,7 @@ export function BlockEditor({
       )
     case 'business': {
       const enabled = new Set<string>(block.fields)
-      const limit = charsPerLine(paper, pageSize)
+      const limit = charsPerLine(paper, pageSize, 'm', margins)
       const long = overlongLines(businessLines(block.fields, data), limit)
       const toggle = (field: BusinessField, on: boolean) =>
         onChange({
@@ -141,19 +147,21 @@ export function BlockEditor({
       return (
         <div className="grid gap-3">
           <fieldset className="grid gap-2" aria-describedby={describedBy('fields')}>
-            <legend className="mb-2 font-medium">
+            <legend className="mb-2 font-medium text-sm">
               {t('receiptTemplates.block.businessFields')}
             </legend>
-            {BUSINESS_FIELDS.map((field) => (
-              <Check
-                key={field}
-                checked={enabled.has(field)}
-                disabled={readOnly}
-                onChange={(on) => toggle(field, on)}
-              >
-                {t(`receiptTemplates.business.${field}`)}
-              </Check>
-            ))}
+            <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+              {BUSINESS_FIELDS.map((field) => (
+                <Check
+                  key={field}
+                  checked={enabled.has(field)}
+                  disabled={readOnly}
+                  onChange={(on) => toggle(field, on)}
+                >
+                  {t(`receiptTemplates.business.${field}`)}
+                </Check>
+              ))}
+            </div>
           </fieldset>
           {error('fields')}
           {long.length > 0
@@ -164,7 +172,7 @@ export function BlockEditor({
       )
     }
     case 'text': {
-      const limit = charsPerLine(paper, pageSize, block.size ?? 'm')
+      const limit = charsPerLine(paper, pageSize, block.size ?? 'm', margins)
       const long = overlongLines(
         block.value
           .split(/\r?\n/)
@@ -183,7 +191,7 @@ export function BlockEditor({
             readOnly={readOnly}
             invalid={Boolean(problems.value)}
             describedBy={describedBy('value')}
-            onChange={(value) => onChange({ ...block, value })}
+            onChange={(value) => onChange({ ...block, value }, 'value')}
           />
           {error('value')}
           {long.length > 0
@@ -191,7 +199,7 @@ export function BlockEditor({
             : null}
           <div className="grid gap-3 sm:grid-cols-2">
             {alignPicker}
-            <Choice
+            <SegmentedChoice
               label={t('receiptTemplates.block.size')}
               value={block.size ?? 'm'}
               disabled={readOnly}
@@ -215,27 +223,47 @@ export function BlockEditor({
     case 'title':
       return (
         <div className="grid gap-3">
-          <Label htmlFor={`${id}-title`}>{t('receiptTemplates.block.titleLabel')}</Label>
-          <Input
-            id={`${id}-title`}
-            value={block.label ?? ''}
-            placeholder={data.title}
-            maxLength={MAX_TITLE_LENGTH}
+          <div className="grid gap-2">
+            <Label htmlFor={`${id}-title`}>{t('receiptTemplates.block.titleLabel')}</Label>
+            <Input
+              id={`${id}-title`}
+              value={block.label ?? ''}
+              placeholder={data.title}
+              maxLength={MAX_TITLE_LENGTH}
+              disabled={readOnly}
+              aria-invalid={Boolean(problems.label)}
+              aria-describedby={describedBy('label')}
+              onChange={(event) => {
+                const { label: _previous, ...rest } = block
+                onChange(
+                  event.target.value === '' ? rest : { ...rest, label: event.target.value },
+                  'label',
+                )
+              }}
+            />
+            {error('label')}
+          </div>
+          <SegmentedChoice
+            label={t('receiptTemplates.block.titleSize')}
+            value={block.size ?? 'l'}
             disabled={readOnly}
-            aria-invalid={Boolean(problems.label)}
-            aria-describedby={describedBy('label')}
-            onChange={(event) => {
-              const { label: _previous, ...rest } = block
-              onChange(event.target.value === '' ? rest : { ...rest, label: event.target.value })
+            invalid={Boolean(problems.size)}
+            options={(['m', 'l', 'xl'] as const).map((size: TitleSize) => ({
+              value: size,
+              label: t(`receiptTemplates.titleSize.${size}`),
+            }))}
+            onChange={(size) => {
+              const { size: _prev, ...rest } = block
+              onChange(size === 'l' ? rest : { ...rest, size })
             }}
           />
-          {error('label')}
+          {error('size')}
           <small className="text-muted-foreground">{t('receiptTemplates.block.titleLocked')}</small>
         </div>
       )
     case 'divider':
       return (
-        <Choice
+        <SegmentedChoice
           label={t('receiptTemplates.block.dividerStyle')}
           value={block.style ?? 'dashed'}
           disabled={readOnly}
@@ -277,6 +305,7 @@ export function BlockEditor({
       const update = (
         parties: SignatureParty[],
         labels: Partial<Record<SignatureParty, string>>,
+        coalesceField?: string,
       ) => {
         const kept = Object.fromEntries(
           Object.entries(labels).filter(
@@ -286,6 +315,7 @@ export function BlockEditor({
         const { labels: _previous, ...rest } = block
         onChange(
           Object.keys(kept).length > 0 ? { ...rest, parties, labels: kept } : { ...rest, parties },
+          coalesceField,
         )
       }
       const toggle = (party: SignatureParty, on: boolean) =>
@@ -298,38 +328,48 @@ export function BlockEditor({
       return (
         <div className="grid gap-3">
           <fieldset className="grid gap-2" aria-describedby={describedBy('parties')}>
-            <legend className="mb-2 font-medium">
+            <legend className="mb-2 font-medium text-sm">
               {t('receiptTemplates.block.signatureParties')}
             </legend>
-            {SIGNATURE_PARTIES.map((party) => (
-              <Check
-                key={party}
-                checked={chosen.has(party)}
-                disabled={readOnly}
-                onChange={(on) => toggle(party, on)}
-              >
-                {data.signatureLabels[party]}
-              </Check>
-            ))}
+            <div className="flex flex-wrap gap-4">
+              {SIGNATURE_PARTIES.map((party) => (
+                <Check
+                  key={party}
+                  checked={chosen.has(party)}
+                  disabled={readOnly}
+                  onChange={(on) => toggle(party, on)}
+                >
+                  {data.signatureLabels[party]}
+                </Check>
+              ))}
+            </div>
           </fieldset>
           {error('parties')}
-          {block.parties.map((party) => (
-            <div key={party} className="grid gap-2">
-              <Label htmlFor={`${id}-${party}`}>
-                {t('receiptTemplates.block.signatureLabel', { name: data.signatureLabels[party] })}
-              </Label>
-              <Input
-                id={`${id}-${party}`}
-                value={block.labels?.[party] ?? ''}
-                placeholder={data.signatureLabels[party]}
-                maxLength={MAX_LABEL_LENGTH}
-                disabled={readOnly}
-                onChange={(event) =>
-                  update(block.parties, { ...(block.labels ?? {}), [party]: event.target.value })
-                }
-              />
-            </div>
-          ))}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {block.parties.map((party) => (
+              <div key={party} className="grid gap-2">
+                <Label htmlFor={`${id}-${party}`}>
+                  {t('receiptTemplates.block.signatureLabel', {
+                    name: data.signatureLabels[party],
+                  })}
+                </Label>
+                <Input
+                  id={`${id}-${party}`}
+                  value={block.labels?.[party] ?? ''}
+                  placeholder={data.signatureLabels[party]}
+                  maxLength={MAX_LABEL_LENGTH}
+                  disabled={readOnly}
+                  onChange={(event) =>
+                    update(
+                      block.parties,
+                      { ...(block.labels ?? {}), [party]: event.target.value },
+                      `sig-${party}`,
+                    )
+                  }
+                />
+              </div>
+            ))}
+          </div>
           {error('labels')}
           {!WIDE_PAPERS.includes(paper)
             ? warning(t('receiptTemplates.block.signaturesSheetOnly'))
@@ -340,17 +380,17 @@ export function BlockEditor({
     case 'spacer':
       return (
         <div className="grid gap-2">
-          <Label htmlFor={`${id}-spacer`}>{t('receiptTemplates.block.spacerMm')}</Label>
-          <Input
+          <StepperInput
             id={`${id}-spacer`}
-            type="number"
+            label={t('receiptTemplates.block.spacerMm')}
             min={1}
             max={10}
+            step={1}
             value={block.mm ?? 2}
             disabled={readOnly}
-            aria-invalid={Boolean(problems.mm)}
-            aria-describedby={describedBy('mm')}
-            onChange={(event) => onChange({ ...block, mm: numberOr(event.target.value, 0) })}
+            invalid={Boolean(problems.mm)}
+            describedBy={describedBy('mm')}
+            onChange={(mm) => onChange({ ...block, mm: mm ?? 0 }, 'mm')}
           />
           {error('mm')}
         </div>
@@ -373,7 +413,7 @@ function QrFields({
   problems: BlockProblems
   error: (key: string) => ReactNode
   describedBy: (key: string) => string | undefined
-  onChange: (block: TemplateBlock) => void
+  onChange: (block: TemplateBlock, coalesceField?: string) => void
 }) {
   const { t } = useTranslation('pos')
   const id = useId()
@@ -413,7 +453,7 @@ function QrFields({
             disabled={readOnly}
             aria-invalid={Boolean(problems.value)}
             aria-describedby={describedBy('value')}
-            onChange={(event) => onChange({ ...block, value: event.target.value })}
+            onChange={(event) => onChange({ ...block, value: event.target.value }, 'qr-url')}
           />
           {error('value')}
         </>
@@ -449,7 +489,10 @@ function QrFields({
         aria-describedby={describedBy('caption')}
         onChange={(event) => {
           const { caption: _previous, ...rest } = block
-          onChange(event.target.value === '' ? rest : { ...rest, caption: event.target.value })
+          onChange(
+            event.target.value === '' ? rest : { ...rest, caption: event.target.value },
+            'qr-caption',
+          )
         }}
       />
       {error('caption')}

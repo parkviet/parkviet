@@ -1,0 +1,240 @@
+{
+  "paper": "roll_75x25_2",
+  "config": {
+    "schema": 1,
+    "page": {
+      "font_size": 10,
+      "margins": {
+        "top": 2,
+        "right": 3,
+        "bottom": 2,
+        "left": 3
+      }
+    },
+    "fields": [
+      {
+        "key": "original_price",
+        "enabled": true
+      },
+      {
+        "key": "store_name",
+        "enabled": true,
+        "text": "  Quầy Hai "
+      },
+      {
+        "key": "store_address",
+        "enabled": true,
+        "text": null
+      },
+      {
+        "key": "product_name",
+        "enabled": true,
+        "max_lines": 2
+      },
+      {
+        "key": "variant_options",
+        "enabled": true
+      },
+      {
+        "key": "barcode",
+        "enabled": true,
+        "symbology": "code128",
+        "show_text": false
+      },
+      {
+        "key": "sku",
+        "enabled": true,
+        "label": "Mã:"
+      },
+      {
+        "key": "unit",
+        "enabled": true,
+        "label": "ĐVT"
+      },
+      {
+        "key": "price",
+        "enabled": true,
+        "label": "Giá",
+        "currency": "code"
+      },
+      {
+        "key": "printed_date",
+        "enabled": true,
+        "label": "In ngày"
+      }
+    ]
+  },
+  "items": [
+    {
+      "variant_id": "v",
+      "product_name": "Sữa tươi tiệt trùng 1L",
+      "variant_options": "Xanh / M",
+      "sku": "SP000101",
+      "barcode": "8934563138165",
+      "unit": "Hộp",
+      "price": "1234567.80",
+      "original_price": "40000.0",
+      "currency": "VND",
+      "quantity": 2,
+      "warnings": []
+    },
+    {
+      "variant_id": "u",
+      "product_name": "Sữa tươi tiệt trùng 1L",
+      "variant_options": null,
+      "sku": "SP000101",
+      "barcode": "4006381333931",
+      "unit": "Hộp",
+      "price": "12.50",
+      "original_price": "15.00",
+      "currency": "USD",
+      "quantity": 1,
+      "warnings": []
+    },
+    {
+      "variant_id": "t",
+      "product_name": "   ",
+      "variant_options": null,
+      "sku": "SP000101",
+      "barcode": "8934563138165",
+      "unit": "Hộp",
+      "price": "0.0",
+      "original_price": null,
+      "currency": "VND",
+      "quantity": 0,
+      "warnings": []
+    }
+  ],
+  "store": {
+    "name": null,
+    "address": " "
+  },
+  "now": "2026-11-18T17:30:00Z",
+  "time_zone": "Asia/Ho_Chi_Minh",
+  "document": {
+    "version": 1,
+    "kind": "product_label",
+    "page": {
+      "label": {
+        "width_mm": 35,
+        "height_mm": 25,
+        "columns": 2,
+        "gap_mm": 2,
+        "column_gap_mm": 3,
+        "roll_width_mm": 75
+      }
+    },
+    "font_size": 10,
+    "margins": {
+      "top": 2,
+      "right": 3,
+      "bottom": 2,
+      "left": 3
+    },
+    "labels": [
+      {
+        "rows": [
+          {
+            "kind": "text",
+            "text": "Quầy Hai"
+          },
+          {
+            "kind": "text",
+            "text": "Sữa tươi tiệt trùng 1L",
+            "max_lines": 2
+          },
+          {
+            "kind": "text",
+            "text": "Xanh / M"
+          },
+          {
+            "kind": "text",
+            "text": "8934563138165"
+          },
+          {
+            "kind": "text",
+            "text": "Mã: SP000101"
+          },
+          {
+            "kind": "text",
+            "text": "ĐVT Hộp"
+          },
+          {
+            "kind": "price",
+            "text": "Giá 1.234.567,8 VNĐ",
+            "original": "40.000 VNĐ"
+          },
+          {
+            "kind": "text",
+            "text": "In ngày 19/11/2026"
+          }
+        ],
+        "copies": 2
+      },
+      {
+        "rows": [
+          {
+            "kind": "text",
+            "text": "Quầy Hai"
+          },
+          {
+            "kind": "text",
+            "text": "Sữa tươi tiệt trùng 1L",
+            "max_lines": 2
+          },
+          {
+            "kind": "text",
+            "text": "4006381333931"
+          },
+          {
+            "kind": "text",
+            "text": "Mã: SP000101"
+          },
+          {
+            "kind": "text",
+            "text": "ĐVT Hộp"
+          },
+          {
+            "kind": "price",
+            "text": "Giá 12,5 USD",
+            "original": "15 USD"
+          },
+          {
+            "kind": "text",
+            "text": "In ngày 19/11/2026"
+          }
+        ],
+        "copies": 1
+      },
+      {
+        "rows": [
+          {
+            "kind": "text",
+            "text": "Quầy Hai"
+          },
+          {
+            "kind": "text",
+            "text": "8934563138165"
+          },
+          {
+            "kind": "text",
+            "text": "Mã: SP000101"
+          },
+          {
+            "kind": "text",
+            "text": "ĐVT Hộp"
+          },
+          {
+            "kind": "price",
+            "text": "Giá 0 VNĐ"
+          },
+          {
+            "kind": "text",
+            "text": "In ngày 19/11/2026"
+          }
+        ],
+        "copies": 0
+      }
+    ]
+  }
+}

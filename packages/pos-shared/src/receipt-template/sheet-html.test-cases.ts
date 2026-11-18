@@ -1,7 +1,12 @@
 import { DEFAULT_TEMPLATES } from './defaults';
 import { renderDocument } from './render';
 import { sampleData } from './sample-data';
-import { DOCUMENT_TYPES, type PaperSize, type PrintDocument, type TemplateConfig } from './types';
+import {
+  type PaperSize,
+  type PrintDocument,
+  RECEIPT_DOCUMENT_TYPES,
+  type TemplateConfig,
+} from './types';
 
 // Documents the sheet renderer is checked against: the sample of every
 // document type plus hand-made documents that use every block kind, both
@@ -173,8 +178,103 @@ const EMPTY_STACKED: PrintDocument = {
   lines: { layout: 'stacked', items: [] },
 };
 
+const EXTENDED_FNB_DOCUMENT: PrintDocument = {
+  ...BLOCKS_DOCUMENT,
+  page: {
+    margin_mm: 3,
+    margins: { top: 5, right: 4, bottom: 6, left: 4 },
+    cut_feed_mm: 8,
+    font: 'sans',
+    font_size: 'm',
+    line_spacing: 1.35,
+  },
+  banners: [],
+  header: [{ kind: 'title', title: 'PHIẾU BÁN HÀNG', number: 'R250', size: 'xl' }],
+  meta: [
+    { label: 'Khu vực', value: 'Sân vườn' },
+    { label: 'Bàn', value: 'Bàn 5' },
+    { label: 'Thời gian', value: '07/11/2026' },
+  ],
+  lines: {
+    layout: 'stacked',
+    ruling: 'rows',
+    items: [
+      {
+        index: 1,
+        name: 'Cà phê sữa',
+        amount: '28.000 ₫',
+        originalPrice: '35.000 ₫',
+        details: ['1 Ly × 28.000 ₫', '* Ít ngọt'],
+      },
+      { index: 2, name: 'Bánh sừng bò', amount: '32.000 ₫', details: ['1 Cái × 32.000 ₫'] },
+    ],
+  },
+  payQr: null,
+  transferQr: {
+    value: '00020101021238570010A000000727',
+    caption: 'Quét mã chuyển khoản',
+    lines: ['VCB · 007100 · PARKVIET'],
+    size: 'l',
+    captionPosition: 'right',
+  },
+  einvoice: {
+    rows: [
+      { label: 'Số HĐĐT', value: '0000123' },
+      { label: 'Mã tra cứu', value: 'AB12CD34EF' },
+    ],
+    qr: {
+      value: 'https://tracuu.example.com/AB12CD34EF',
+      caption: 'Tra cứu HĐĐT',
+      lines: [],
+      size: 's',
+      captionPosition: 'above',
+    },
+  },
+  notes: [],
+  footer: [],
+  disclaimer: null,
+};
+
+const EXTENDED_TABLE_GRID: PrintDocument = {
+  ...TABLE_DOCUMENT,
+  page: {
+    margin_mm: 3,
+    margins: { top: 10, right: 8, bottom: 10, left: 8 },
+    font: 'sans',
+    font_size: 'm',
+    line_spacing: 1.35,
+  },
+  header: [{ kind: 'title', title: 'HÓA ĐƠN', number: 'R250', size: 'm' }],
+  lines: {
+    layout: 'table',
+    ruling: 'grid',
+    headings: { index: 'STT', name: 'Tên hàng' },
+    columns: [
+      { key: 'qty', label: 'SL' },
+      { key: 'price', label: 'Đơn giá' },
+      { key: 'amount', label: 'Thành tiền' },
+    ],
+    rows: [
+      {
+        index: 1,
+        name: 'Cà phê sữa',
+        cells: ['1', '28.000', '28.000'],
+        originalPrice: '35.000',
+        details: ['Mã: 8938505974192'],
+      },
+    ],
+  },
+  transferQr: {
+    value: '00020101021238570010A000000727',
+    caption: 'Chuyển khoản bên trái',
+    lines: ['VCB · 007100'],
+    size: 'm',
+    captionPosition: 'left',
+  },
+};
+
 function sampleCases(): SheetCase[] {
-  return DOCUMENT_TYPES.flatMap((type) => {
+  return RECEIPT_DOCUMENT_TYPES.flatMap((type) => {
     const data = sampleData(type, PLACE, t, NOW);
     const stacked = renderDocument(DEFAULT_TEMPLATES[type], data);
     const table = renderDocument(asTable(DEFAULT_TEMPLATES[type]), data);
@@ -212,5 +312,9 @@ export function sheetCases(): SheetCase[] {
     made('table without columns a4', TABLE_WITHOUT_COLUMNS, 'a4', false),
     made('empty table a4', EMPTY_DOCUMENT, 'a4', false),
     made('empty stacked 80mm', EMPTY_STACKED, '80mm', false),
+    made('extended fnb 80mm', EXTENDED_FNB_DOCUMENT, '80mm', false),
+    made('extended fnb 58mm', EXTENDED_FNB_DOCUMENT, '58mm', true),
+    made('extended table grid a4', EXTENDED_TABLE_GRID, 'a4', false),
+    made('extended table grid 80mm', EXTENDED_TABLE_GRID, '80mm', false),
   ];
 }

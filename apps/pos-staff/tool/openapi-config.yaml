@@ -18,7 +18,9 @@ globalProperties:
 # document stays JSON and lib/modes/print_station reads it by the schema.
 typeMappings:
   PrintDocument: JsonObject
+  ProductLabelDocument: JsonObject
 schemaMappings:
   PrintDocument: JsonObject
+  ProductLabelDocument: JsonObject
 importMappings:
   JsonObject: package:built_value/json_object.dart

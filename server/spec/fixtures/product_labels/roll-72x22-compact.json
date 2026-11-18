@@ -1,0 +1,197 @@
+{
+  "paper": "roll_72x22_2",
+  "config": {
+    "schema": 1,
+    "page": {
+      "font_size": 9,
+      "margins": {
+        "top": 1,
+        "right": 1,
+        "bottom": 1,
+        "left": 1
+      }
+    },
+    "fields": [
+      {
+        "key": "store_name",
+        "enabled": false,
+        "text": null
+      },
+      {
+        "key": "store_address",
+        "enabled": false,
+        "text": null
+      },
+      {
+        "key": "product_name",
+        "enabled": true,
+        "max_lines": 1
+      },
+      {
+        "key": "variant_options",
+        "enabled": false
+      },
+      {
+        "key": "barcode",
+        "enabled": true,
+        "symbology": "auto",
+        "show_text": true
+      },
+      {
+        "key": "sku",
+        "enabled": false,
+        "label": null
+      },
+      {
+        "key": "unit",
+        "enabled": true,
+        "label": null
+      },
+      {
+        "key": "price",
+        "enabled": true,
+        "label": null,
+        "currency": "symbol"
+      },
+      {
+        "key": "original_price",
+        "enabled": false
+      },
+      {
+        "key": "printed_date",
+        "enabled": false,
+        "label": null
+      }
+    ]
+  },
+  "items": [
+    {
+      "variant_id": "v",
+      "product_name": "Sữa tươi tiệt trùng 1L",
+      "variant_options": null,
+      "sku": "SP-1",
+      "barcode": null,
+      "unit": "Hộp",
+      "price": "32000.0",
+      "original_price": null,
+      "currency": "VND",
+      "quantity": 5,
+      "warnings": []
+    },
+    {
+      "variant_id": "x",
+      "product_name": "Sữa tươi tiệt trùng 1L",
+      "variant_options": null,
+      "sku": null,
+      "barcode": "8934563138166",
+      "unit": "Hộp",
+      "price": "32000.0",
+      "original_price": null,
+      "currency": "VND",
+      "quantity": 1,
+      "warnings": []
+    },
+    {
+      "variant_id": "y",
+      "product_name": "Sữa tươi tiệt trùng 1L",
+      "variant_options": null,
+      "sku": null,
+      "barcode": null,
+      "unit": "Hộp",
+      "price": null,
+      "original_price": null,
+      "currency": "VND",
+      "quantity": 2,
+      "warnings": []
+    }
+  ],
+  "store": {
+    "name": "Cửa hàng Park Việt",
+    "address": "12 Lê Lợi, Quận 1"
+  },
+  "now": "2026-11-18T17:30:00Z",
+  "time_zone": "Asia/Ho_Chi_Minh",
+  "document": {
+    "version": 1,
+    "kind": "product_label",
+    "page": {
+      "label": {
+        "width_mm": 33,
+        "height_mm": 22,
+        "columns": 2,
+        "gap_mm": 2,
+        "column_gap_mm": 3,
+        "roll_width_mm": 72
+      }
+    },
+    "font_size": 9,
+    "margins": {
+      "top": 1,
+      "right": 1,
+      "bottom": 1,
+      "left": 1
+    },
+    "labels": [
+      {
+        "rows": [
+          {
+            "kind": "text",
+            "text": "Sữa tươi tiệt trùng 1L",
+            "max_lines": 1
+          },
+          {
+            "kind": "barcode",
+            "symbology": "code128",
+            "value": "SP-1",
+            "show_text": true
+          },
+          {
+            "kind": "text",
+            "text": "Hộp"
+          },
+          {
+            "kind": "price",
+            "text": "32.000 ₫"
+          }
+        ],
+        "copies": 5
+      },
+      {
+        "rows": [
+          {
+            "kind": "text",
+            "text": "Sữa tươi tiệt trùng 1L",
+            "max_lines": 1
+          },
+          {
+            "kind": "text",
+            "text": "8934563138166"
+          },
+          {
+            "kind": "text",
+            "text": "Hộp"
+          },
+          {
+            "kind": "price",
+            "text": "32.000 ₫"
+          }
+        ],
+        "copies": 1
+      },
+      {
+        "rows": [
+          {
+            "kind": "text",
+            "text": "Sữa tươi tiệt trùng 1L",
+            "max_lines": 1
+          },
+          {
+            "kind": "text",
+            "text": "Hộp"
+          }
+        ],
+        "copies": 2
+      }
+    ]
+  }
+}

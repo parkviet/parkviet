@@ -1,0 +1,177 @@
+{
+  "paper": "roll_50x30",
+  "config": {
+    "schema": 1,
+    "page": {
+      "font_size": 9,
+      "margins": {
+        "top": 1,
+        "right": 1,
+        "bottom": 1,
+        "left": 1
+      }
+    },
+    "fields": [
+      {
+        "key": "store_name",
+        "enabled": false,
+        "text": null
+      },
+      {
+        "key": "store_address",
+        "enabled": false,
+        "text": null
+      },
+      {
+        "key": "product_name",
+        "enabled": true,
+        "max_lines": 2
+      },
+      {
+        "key": "variant_options",
+        "enabled": true
+      },
+      {
+        "key": "barcode",
+        "enabled": true,
+        "symbology": "auto",
+        "show_text": true
+      },
+      {
+        "key": "sku",
+        "enabled": false,
+        "label": null
+      },
+      {
+        "key": "unit",
+        "enabled": true,
+        "label": null
+      },
+      {
+        "key": "price",
+        "enabled": true,
+        "label": null,
+        "currency": "symbol"
+      },
+      {
+        "key": "original_price",
+        "enabled": true
+      },
+      {
+        "key": "printed_date",
+        "enabled": false,
+        "label": null
+      }
+    ]
+  },
+  "items": [
+    {
+      "variant_id": "v",
+      "product_name": "Sữa tươi tiệt trùng 1L",
+      "variant_options": null,
+      "sku": "SP000101",
+      "barcode": "8934563138165",
+      "unit": "Hộp",
+      "price": "32000.0",
+      "original_price": "36000.0",
+      "currency": "VND",
+      "quantity": 3,
+      "warnings": []
+    },
+    {
+      "variant_id": "w",
+      "product_name": "Áo thun cổ tròn",
+      "variant_options": "Đỏ / L",
+      "sku": "AT-DO-L",
+      "barcode": "AT-DO-L-0042",
+      "unit": "Hộp",
+      "price": "149000.5",
+      "original_price": null,
+      "currency": "VND",
+      "quantity": 2,
+      "warnings": []
+    }
+  ],
+  "store": {
+    "name": "Cửa hàng Park Việt",
+    "address": "12 Lê Lợi, Quận 1"
+  },
+  "now": "2026-11-18T17:30:00Z",
+  "time_zone": "Asia/Ho_Chi_Minh",
+  "document": {
+    "version": 1,
+    "kind": "product_label",
+    "page": {
+      "label": {
+        "width_mm": 50,
+        "height_mm": 30,
+        "columns": 1,
+        "gap_mm": 2,
+        "column_gap_mm": 0,
+        "roll_width_mm": 50
+      }
+    },
+    "font_size": 9,
+    "margins": {
+      "top": 1,
+      "right": 1,
+      "bottom": 1,
+      "left": 1
+    },
+    "labels": [
+      {
+        "rows": [
+          {
+            "kind": "text",
+            "text": "Sữa tươi tiệt trùng 1L",
+            "max_lines": 2
+          },
+          {
+            "kind": "barcode",
+            "symbology": "ean13",
+            "value": "8934563138165",
+            "show_text": true
+          },
+          {
+            "kind": "text",
+            "text": "Hộp"
+          },
+          {
+            "kind": "price",
+            "text": "32.000 ₫",
+            "original": "36.000 ₫"
+          }
+        ],
+        "copies": 3
+      },
+      {
+        "rows": [
+          {
+            "kind": "text",
+            "text": "Áo thun cổ tròn",
+            "max_lines": 2
+          },
+          {
+            "kind": "text",
+            "text": "Đỏ / L"
+          },
+          {
+            "kind": "barcode",
+            "symbology": "code128",
+            "value": "AT-DO-L-0042",
+            "show_text": true
+          },
+          {
+            "kind": "text",
+            "text": "Hộp"
+          },
+          {
+            "kind": "price",
+            "text": "149.000,5 ₫"
+          }
+        ],
+        "copies": 2
+      }
+    ]
+  }
+}

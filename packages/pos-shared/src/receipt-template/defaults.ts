@@ -1,8 +1,15 @@
-import type { DocumentType, PageSettings, TemplateBlock, TemplateConfig } from './types';
+import type {
+  PageSettings,
+  PaperSize,
+  ReceiptDocumentType,
+  SignatureParty,
+  TemplateBlock,
+  TemplateConfig,
+} from './types';
 
 // The built-in template of every document type. They lay the documents out
-// exactly as the POS printed them before templates existed, plus the store
-// address and phone when the store has them. The server keeps the same
+// with the store address and phone when the store has them, plus F&B table
+// and e-invoice fields on sales and pre-bills. The server keeps the same
 // configs as its defaults; this copy prints when templates cannot be
 // loaded. Plain JSON-compatible data only.
 
@@ -21,7 +28,7 @@ const POSTED_META = {
   labels: {},
 } satisfies TemplateConfig['meta'];
 
-export const DEFAULT_TEMPLATES: Readonly<Record<DocumentType, TemplateConfig>> = {
+export const DEFAULT_TEMPLATES: Readonly<Record<ReceiptDocumentType, TemplateConfig>> = {
   sale: {
     schema: 1,
     page: PAGE,
@@ -37,14 +44,29 @@ export const DEFAULT_TEMPLATES: Readonly<Record<DocumentType, TemplateConfig>> =
         size: 'l',
       },
     ],
-    meta: POSTED_META,
+    meta: {
+      fields: [
+        'time',
+        'table',
+        'check_in',
+        'check_out',
+        'cashier',
+        'order_number',
+        'return_number',
+        'customer',
+      ],
+      labels: {},
+    },
     lines: {
       layout: 'stacked',
       columns: ['name', 'sku', 'unit', 'qty', 'price', 'discount', 'amount'],
       show_trace: true,
       show_conversion: true,
     },
-    totals: { fields: ['item_total', 'discount', 'tax', 'included_tax', 'total'], labels: {} },
+    totals: {
+      fields: ['item_total', 'discount', 'shipping', 'tax', 'included_tax', 'total'],
+      labels: {},
+    },
     payments: {
       fields: [
         'methods',
@@ -58,21 +80,34 @@ export const DEFAULT_TEMPLATES: Readonly<Record<DocumentType, TemplateConfig>> =
       ],
       labels: {},
     },
+    einvoice: {
+      fields: ['number', 'lookup_code', 'qr'],
+      labels: {},
+    },
     footer: [],
   },
   prebill: {
     schema: 1,
     page: PAGE,
     header: HEADER,
-    meta: { fields: ['time', 'customer'], labels: {} },
+    meta: {
+      fields: ['time', 'table', 'check_in', 'duration', 'customer'],
+      labels: {},
+      table_style: 'one_line',
+    },
     lines: {
       layout: 'stacked',
       columns: ['name', 'unit', 'qty', 'price', 'amount'],
       show_trace: true,
       show_conversion: false,
     },
-    totals: { fields: ['item_total', 'discount', 'total'], labels: {} },
-    payments: { fields: ['paid_total'], labels: {} },
+    totals: { fields: ['item_total', 'discount', 'shipping', 'total'], labels: {} },
+    payments: {
+      fields: ['paid_total', 'transfer_qr'],
+      labels: {},
+      qr_size: 'm',
+      qr_caption: 'below',
+    },
     footer: [],
   },
   payment_ticket: {
@@ -86,7 +121,7 @@ export const DEFAULT_TEMPLATES: Readonly<Record<DocumentType, TemplateConfig>> =
       show_trace: false,
       show_conversion: false,
     },
-    totals: { fields: ['item_total', 'discount', 'tax', 'total'], labels: {} },
+    totals: { fields: ['item_total', 'discount', 'shipping', 'tax', 'total'], labels: {} },
     payments: { fields: ['methods', 'handed', 'change'], labels: {} },
     footer: [
       { type: 'divider', style: 'dashed' },
@@ -124,6 +159,44 @@ export const DEFAULT_TEMPLATES: Readonly<Record<DocumentType, TemplateConfig>> =
   },
 };
 
-export function defaultTemplate(type: DocumentType): TemplateConfig {
-  return DEFAULT_TEMPLATES[type];
+const SHEET_SIGNATURE_TYPES: readonly ReceiptDocumentType[] = [
+  'sale',
+  'return',
+  'refund',
+  'shift_closure',
+];
+
+// Built-in config tailored to `paper`: A4 and A5 sheets lay lines out in a
+// numbered ruled table and append signature boxes on posted slips, matching
+// `Spree::Pos::ReceiptTemplate.default_config`.
+export function defaultTemplate(
+  type: ReceiptDocumentType,
+  paper: PaperSize = '80mm',
+): TemplateConfig {
+  const base = JSON.parse(JSON.stringify(DEFAULT_TEMPLATES[type])) as TemplateConfig;
+  if (paper !== 'a4' && paper !== 'a5') return base;
+
+  if (base.lines) {
+    const columns = base.lines.columns.includes('index')
+      ? base.lines.columns
+      : (['index', ...base.lines.columns] as typeof base.lines.columns);
+    base.lines = {
+      ...base.lines,
+      layout: 'table',
+      columns,
+      ruling: paper === 'a4' ? 'grid' : 'rows',
+    };
+  }
+
+  if (
+    SHEET_SIGNATURE_TYPES.includes(type) &&
+    base.footer.length < 8 &&
+    !base.footer.some((block) => block.type === 'signatures')
+  ) {
+    const parties: SignatureParty[] =
+      type === 'shift_closure' ? ['cashier', 'seller'] : ['buyer', 'seller'];
+    base.footer = [...base.footer, { type: 'signatures', parties }];
+  }
+
+  return base;
 }

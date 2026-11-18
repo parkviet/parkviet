@@ -95,6 +95,8 @@ export type PosStoreProfile = {
   address: string | null;
   contact_phone: string | null;
   customer_support_email: string | null;
+  tax_code?: string | null;
+  description?: string | null;
   url: string | null;
   facebook: string | null;
   instagram: string | null;
@@ -359,8 +361,10 @@ export type PosLineItem = {
   product_id: string;
   name: string;
   sku: string;
+  barcode?: string | null;
   quantity: number;
   price: string;
+  original_price?: string | null;
   list_price?: string;
   amount: string;
   discounts: { id: string; kind: string; label: string; amount: string }[];
@@ -721,6 +725,27 @@ export type PosWorkspace = {
   // The drink credit of door tickets and what the drinks used of it.
   drink_credit?: { total: string; used: string; remaining: string } | null;
   customer?: PosCustomer | null;
+  table?: { name: string; area?: string | null } | null;
+  resource?: {
+    id: string;
+    name: string;
+    kind: string;
+    area_id?: string | null;
+    area_name?: string | null;
+  } | null;
+  opened_at?: string | null;
+  item_count?: string | null;
+  promotions?: { name?: string | null; amount: string }[] | null;
+  transfer_qr?: {
+    value: string;
+    bank?: string | null;
+    account_number: string;
+    account_name?: string | null;
+    amount?: string | null;
+    currency?: string | null;
+    transfer_content?: string | null;
+  } | null;
+  prebill?: { id?: string; sequence?: number; status?: string; stale?: boolean } | null;
   line_items?: PosLineItem[];
   discount?: PosDiscount | null;
   coupon?: {

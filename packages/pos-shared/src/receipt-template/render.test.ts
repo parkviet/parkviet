@@ -5,7 +5,12 @@ import type { ReceiptSnapshot } from '../types/print-adapter';
 import { paymentTicketData, prebillData, snapshotData } from './data';
 import { DEFAULT_TEMPLATES, defaultTemplate, TEST_PRINT_BANNER } from './defaults';
 import { isWebUrl, printCopies, renderDocument } from './render';
-import { DOCUMENT_TYPES, type PrintBlock, type PrintDocument, type TemplateConfig } from './types';
+import {
+  type PrintBlock,
+  type PrintDocument,
+  RECEIPT_DOCUMENT_TYPES,
+  type TemplateConfig,
+} from './types';
 
 const t = (key: string, options?: Record<string, unknown>) => i18n.t(key, options ?? {}) as string;
 
@@ -86,9 +91,9 @@ const stripped: TemplateConfig = {
 
 describe('built-in templates', () => {
   it('cover every document type as plain JSON data', () => {
-    expect(Object.keys(DEFAULT_TEMPLATES).sort()).toEqual([...DOCUMENT_TYPES].sort());
+    expect(Object.keys(DEFAULT_TEMPLATES).sort()).toEqual([...RECEIPT_DOCUMENT_TYPES].sort());
     expect(JSON.parse(JSON.stringify(DEFAULT_TEMPLATES))).toEqual(DEFAULT_TEMPLATES);
-    for (const type of DOCUMENT_TYPES) expect(defaultTemplate(type).schema).toBe(1);
+    for (const type of RECEIPT_DOCUMENT_TYPES) expect(defaultTemplate(type).schema).toBe(1);
   });
 
   it('print a sale in the slip order with the store address and phone under its name', () => {
@@ -566,5 +571,184 @@ describe('QR codes, barcodes, signatures and copies', () => {
     ])
       expect(isWebUrl(link)).toBe(false);
     expect(isWebUrl('https://shop.vn:8443/a/b?x=1&y=%C3%A1#top')).toBe(true);
+  });
+});
+
+describe('Phase 3–5 extended rendering', () => {
+  const fnbDoc = {
+    ...saleDocument,
+    store: {
+      ...saleDocument.store,
+      tax_code: '0312345678',
+      description: 'Cà phê đặc sản',
+    },
+    table: { name: 'Bàn 3', area: 'Sân vườn' },
+    check_in_at: '2026-11-07T01:35:00Z',
+    order_source: 'grabfood',
+    item_count: '24',
+    promotions: [{ name: 'Happy Hour', amount: '10000.0' }],
+    fees: [{ label: 'Phí phục vụ', amount: '12000.0' }],
+    customer_debt: { previous: '50000.0', total: '50000.0' },
+    transfer_qr: {
+      amount: '230000.0',
+      currency: 'VND',
+      transfer_content: 'R250',
+      bank_name: 'VCB',
+      account_number: '007100',
+      account_name: 'PARKVIET',
+      payload: '000201010212',
+    },
+    lines: [
+      {
+        ...saleDocument.lines[0],
+        barcode: '8938505974192',
+        original_price: '260000.0',
+        note: 'Ướp lạnh',
+      },
+    ],
+  };
+
+  const einvoiceIssued = {
+    status: 'issued',
+    invoice_type: 'cash_register',
+    seller_tax_code: '0312345678',
+    number: '0000889',
+    symbol: '1C26MPA',
+    template_code: '1/001',
+    lookup_code: 'LK9988',
+    cqt_code: 'M1-26-XYZ',
+    lookup_url: 'https://tracuu.example.test/LK9988',
+    buyer_url: 'https://pos.example.test/pos_einvoice/tok',
+  };
+
+  it('renders 4-side margins, cut_feed_mm, title size, table one_line vs two_lines, time_format, ruling, originalPrice, transferQr and structured einvoice', () => {
+    const data = snapshotData(
+      snapshot('sale', fnbDoc, { einvoice: einvoiceIssued } as Partial<ReceiptSnapshot>),
+      t,
+      { copy_number: 2, printed_at: '2026-11-07T03:10:00Z' },
+    );
+
+    const oneLine = renderDocument(
+      {
+        ...defaultTemplate('sale'),
+        page: {
+          ...defaultTemplate('sale').page,
+          margins: { top: 5, right: 4, bottom: 6, left: 4 },
+          cut_feed_mm: 10,
+        },
+        header: [
+          { type: 'business', fields: ['name', 'tax_code', 'description'], align: 'center' },
+          { type: 'title', size: 'xl' },
+        ],
+        meta: {
+          fields: [
+            'time',
+            'table',
+            'check_in',
+            'check_out',
+            'duration',
+            'order_source',
+            'printed_at',
+            'print_count',
+          ],
+          table_style: 'one_line',
+          time_format: 'datetime',
+        },
+        lines: {
+          layout: 'stacked',
+          ruling: 'rows',
+          columns: ['index', 'name', 'barcode', 'qty', 'original_price', 'price', 'amount', 'note'],
+          show_trace: true,
+          show_conversion: false,
+        },
+        totals: { fields: ['item_count', 'item_total', 'promotions', 'fees', 'total'] },
+        payments: {
+          fields: ['methods', 'previous_debt', 'customer_debt', 'transfer_qr'],
+          qr_size: 'l',
+          qr_caption: 'left',
+        },
+        einvoice: {
+          fields: ['seller_tax_code', 'number', 'lookup_code', 'cqt_code', 'lookup_url', 'qr'],
+          qr_size: 's',
+          qr_caption: 'above',
+        },
+      },
+      data,
+    );
+
+    expect(oneLine.page.margins).toEqual({ top: 5, right: 4, bottom: 6, left: 4 });
+    expect(oneLine.page.cut_feed_mm).toBe(10);
+    expect(title(oneLine)).toEqual({
+      kind: 'title',
+      title: 'PHIẾU BÁN HÀNG',
+      number: 'R100',
+      size: 'xl',
+    });
+    expect(text(oneLine.header)).toContain('MST: 0312345678');
+    expect(text(oneLine.header)).toContain('Cà phê đặc sản');
+    expect(oneLine.meta.find((r) => r.label === 'Bàn')?.value).toBe('Sân vườn - Bàn 3');
+    expect(oneLine.meta.find((r) => r.label === 'Thời gian phục vụ')?.value).toBe('1 giờ 25 phút');
+    expect(oneLine.meta.find((r) => r.label === 'Kênh bán')?.value).toBe('GrabFood');
+    expect(oneLine.meta.find((r) => r.label === 'Lượt in')?.value).toBe('3');
+    expect(oneLine.lines.ruling).toBe('rows');
+    expect(stacked(oneLine)[0]).toMatchObject({
+      originalPrice: '260.000 ₫',
+    });
+    expect(stacked(oneLine)[0]?.details).toContain('Mã vạch: 8938505974192');
+    expect(stacked(oneLine)[0]?.details).toContain('* Ướp lạnh');
+    expect(oneLine.totals.map((r) => r.label)).toEqual([
+      'Tổng số lượng',
+      'Tổng tiền hàng',
+      'Happy Hour',
+      'Phí phục vụ',
+      'Tổng cộng',
+    ]);
+    expect(oneLine.transferQr).toMatchObject({
+      value: '000201010212',
+      size: 'l',
+      captionPosition: 'left',
+    });
+    expect(oneLine.einvoice?.rows.map((r) => r.value)).toEqual([
+      '0312345678',
+      '1/0011C26MPA - 0000889',
+      'LK9988',
+      'M1-26-XYZ',
+      'https://tracuu.example.test/LK9988',
+    ]);
+    expect(oneLine.einvoice?.qr).toMatchObject({
+      value: 'https://pos.example.test/pos_einvoice/tok',
+      size: 's',
+      captionPosition: 'above',
+    });
+    // Structured einvoice suppresses automatic footer buyer QR
+    expect(oneLine.footer).toEqual([]);
+
+    // Two-line table + date-only time_format + disabled einvoice falls back to buyer QR in footer
+    const twoLines = renderDocument(
+      {
+        ...defaultTemplate('sale'),
+        meta: {
+          fields: ['time', 'table'],
+          table_style: 'two_lines',
+          time_format: 'date',
+        },
+        einvoice: { fields: [] },
+      },
+      data,
+    );
+    expect(twoLines.meta.slice(0, 3)).toEqual([
+      { label: 'Thời gian', value: '07/11/2026' },
+      { label: 'Khu vực', value: 'Sân vườn' },
+      { label: 'Bàn', value: 'Bàn 3' },
+    ]);
+    expect(twoLines.einvoice).toBeUndefined();
+    expect(twoLines.footer).toEqual([
+      {
+        kind: 'qr',
+        value: 'https://pos.example.test/pos_einvoice/tok',
+        caption: 'Quét mã để nhập thông tin xuất hóa đơn',
+        align: 'center',
+      },
+    ]);
   });
 });

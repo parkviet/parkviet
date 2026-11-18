@@ -48,7 +48,7 @@ module Spree
 
       # What an order shows of its table; no extra query when the table is loaded.
       def to_ref
-        { id: prefixed_id, name: name, kind: kind, area_id: area&.prefixed_id }
+        { id: prefixed_id, name: name, kind: kind, area_id: area&.prefixed_id, area_name: area&.name }
       end
 
       private

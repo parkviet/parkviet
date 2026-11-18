@@ -1,0 +1,170 @@
+{
+  "paper": "roll_110x22_3",
+  "config": {
+    "schema": 1,
+    "page": {
+      "font_size": 9,
+      "margins": {
+        "top": 1,
+        "right": 1,
+        "bottom": 1,
+        "left": 1
+      }
+    },
+    "fields": [
+      {
+        "key": "store_name",
+        "enabled": false,
+        "text": null
+      },
+      {
+        "key": "store_address",
+        "enabled": false,
+        "text": null
+      },
+      {
+        "key": "product_name",
+        "enabled": true,
+        "max_lines": 1
+      },
+      {
+        "key": "variant_options",
+        "enabled": false
+      },
+      {
+        "key": "barcode",
+        "enabled": true,
+        "symbology": "auto",
+        "show_text": true
+      },
+      {
+        "key": "sku",
+        "enabled": false,
+        "label": null
+      },
+      {
+        "key": "unit",
+        "enabled": true,
+        "label": null
+      },
+      {
+        "key": "price",
+        "enabled": true,
+        "label": null,
+        "currency": "symbol"
+      },
+      {
+        "key": "original_price",
+        "enabled": false
+      },
+      {
+        "key": "printed_date",
+        "enabled": false,
+        "label": null
+      }
+    ]
+  },
+  "items": [
+    {
+      "variant_id": "v",
+      "product_name": "Sữa tươi tiệt trùng 1L",
+      "variant_options": null,
+      "sku": "SP000101",
+      "barcode": "ABCDEFGHIJKLM",
+      "unit": "Hộp",
+      "price": "32000.0",
+      "original_price": null,
+      "currency": "VND",
+      "quantity": 4,
+      "warnings": []
+    },
+    {
+      "variant_id": "z",
+      "product_name": "Sữa tươi tiệt trùng 1L",
+      "variant_options": null,
+      "sku": "SP000101",
+      "barcode": "4006381333931",
+      "unit": "Hộp",
+      "price": "32000.0",
+      "original_price": null,
+      "currency": "VND",
+      "quantity": 7,
+      "warnings": []
+    }
+  ],
+  "store": {
+    "name": "Cửa hàng Park Việt",
+    "address": "12 Lê Lợi, Quận 1"
+  },
+  "now": "2026-11-18T17:30:00Z",
+  "time_zone": "Asia/Ho_Chi_Minh",
+  "document": {
+    "version": 1,
+    "kind": "product_label",
+    "page": {
+      "label": {
+        "width_mm": 33,
+        "height_mm": 22,
+        "columns": 3,
+        "gap_mm": 2,
+        "column_gap_mm": 2,
+        "roll_width_mm": 110
+      }
+    },
+    "font_size": 9,
+    "margins": {
+      "top": 1,
+      "right": 1,
+      "bottom": 1,
+      "left": 1
+    },
+    "labels": [
+      {
+        "rows": [
+          {
+            "kind": "text",
+            "text": "Sữa tươi tiệt trùng 1L",
+            "max_lines": 1
+          },
+          {
+            "kind": "text",
+            "text": "ABCDEFGHIJKLM"
+          },
+          {
+            "kind": "text",
+            "text": "Hộp"
+          },
+          {
+            "kind": "price",
+            "text": "32.000 ₫"
+          }
+        ],
+        "copies": 4
+      },
+      {
+        "rows": [
+          {
+            "kind": "text",
+            "text": "Sữa tươi tiệt trùng 1L",
+            "max_lines": 1
+          },
+          {
+            "kind": "barcode",
+            "symbology": "ean13",
+            "value": "4006381333931",
+            "show_text": true
+          },
+          {
+            "kind": "text",
+            "text": "Hộp"
+          },
+          {
+            "kind": "price",
+            "text": "32.000 ₫"
+          }
+        ],
+        "copies": 7
+      }
+    ]
+  }
+}

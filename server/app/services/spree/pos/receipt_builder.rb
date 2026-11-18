@@ -19,8 +19,8 @@ module Spree
     class ReceiptBuilder
       UNAVAILABLE = 'receipt_unavailable'
       TYPES = { Workspace => 'sale', ReturnOperation => 'return', RefundRequest => 'refund', ShiftClosure => 'shift_closure' }.freeze
-      # Business details of `Spree::Store` printed in a receipt header. The
-      # store has no tax code, so none is printed.
+      # Business details of `Spree::Store` printed in a receipt header, overlaid
+      # with `StoreInfo` / `BranchInfo` (tax code, description, logo, address).
       STORE_PROFILE_FIELDS = %w[address contact_phone customer_support_email url facebook instagram].freeze
 
       # The store's printable details as they stand now, blank ones left out.
@@ -29,6 +29,8 @@ module Spree
           value = store.respond_to?(field) ? store.public_send(field).to_s.strip : ''
           fields[field] = value if value.present?
         end
+        logo = StoreInfo.logo_url(store)
+        profile['logo_url'] = logo if logo.present?
         printed = branch && StoreInfo.printable(branch)
         return profile unless printed
 
@@ -36,7 +38,10 @@ module Spree
           value = printed[field].to_s.strip
           value.present? ? profile[field] = value : profile.delete(field)
         end
-        profile['tax_code'] = printed['tax_code'] if printed['tax_code'].present?
+        %w[tax_code description logo_url].each do |field|
+          value = printed[field].to_s.strip
+          profile[field] = value if value.present?
+        end
         profile
       end
 
@@ -120,15 +125,30 @@ module Spree
       def sale
         workspace = record
         order = workspace.order
+        facts = PrintDocuments::OrderFacts
+        ctx = { receipt_workspace_id: workspace.id, receipt_order_id: order.id }
         sale_lines = SaleLine.where(workspace_id: workspace.id).includes(:line_modifiers, :line_components).index_by(&:line_item_id)
         @traces = TraceAllocation.sold.where(sale_line_id: sale_lines.values.map(&:id)).includes(:serial_unit, :inventory_lot).
                   order(:id).group_by(&:sale_line_id)
         timed_ids = sale_lines.values.select { |row| row.kind == Timed::Lines::KIND }.map(&:id)
         @timed = timed_ids.empty? ? {} : TimedSession.where(sale_line_id: timed_ids).includes(:resource, :timed_quote_lines).index_by(&:sale_line_id)
         units = unit_names(workspace.store, sale_lines.values.flat_map { |row| [row.sale_unit_code, row.base_unit_code] })
-        lines = order.line_items.includes(:discounts, variant: :product).sort_by(&:id).map do |line|
-          sale_line(line, sale_lines[line.id], units)
+        ordered_lines = order.line_items.includes(:discounts, variant: %i[product prices]).sort_by(&:id)
+        lines = ordered_lines.map do |line|
+          sale_line(line, sale_lines[line.id], units, workspace)
         end
+        receipt_rows = receipts(workspace)
+        paid = receipt_rows.sum { |row| BigDecimal(row['amount']) }
+        remaining = [order.total - paid, BigDecimal('0')].max
+        extra = {
+          'table' => facts.safe(:table, ctx) { facts.table(workspace) },
+          'check_in_at' => facts.safe(:check_in_at, ctx) { facts.check_in_at(workspace) },
+          'order_source' => facts.safe(:order_source, ctx) { facts.order_source(workspace) },
+          'item_count' => facts.safe(:item_count, ctx) { facts.item_count(ordered_lines.map { |line| [line, sale_lines[line.id]] }) },
+          'promotions' => facts.safe(:promotions, ctx) { facts.promotions(order).presence },
+          'customer_debt' => facts.safe(:customer_debt, ctx) { facts.customer_debt(workspace) },
+          'transfer_qr' => facts.safe(:transfer_qr, ctx) { facts.transfer_qr(workspace, remaining_amount: remaining) }
+        }.compact
         payload = base(workspace.branch, workspace.register, order.number, 'PHIẾU BÁN HÀNG', order.completed_at).merge(
           'currency' => order.currency, 'cashier' => StaffName.call(workspace.shift.owner),
           'customer' => customer(workspace.pos_customer),
@@ -143,21 +163,31 @@ module Spree
             'included_tax_total' => money(order.included_tax_total), 'additional_tax_total' => money(order.additional_tax_total),
             'total' => money(order.total)
           },
-          'receipts' => receipts(workspace), 'credit' => credit(order, workspace.branch), 'note' => workspace.note.presence,
-          'delivery' => delivery(workspace)
-        )
-        paid = payload['receipts'].sum { |row| BigDecimal(row['amount']) }
-        payload['paid_total'] = money(paid)
+          'receipts' => receipt_rows, 'credit' => credit(order, workspace.branch), 'note' => workspace.note.presence,
+          'delivery' => delivery(workspace),
+          'paid_total' => money(paid)
+        ).merge(extra)
         snapshot(workspace.branch, workspace.register, order.number, payload)
       end
 
-      def sale_line(line, sale_line, units)
+      def sale_line(line, sale_line, units, workspace)
+        facts = PrintDocuments::OrderFacts
+        ctx = { receipt_line_item_id: line.id }
         discount = line.discounts.to_a.sum(&:amount)
+        barcode = facts.safe(:barcode, ctx) { facts.barcode(line.variant) }
+        original = facts.safe(:original_price, ctx) do
+          facts.original_price(variant: line.variant, sale_line: sale_line, line_price: line.price,
+                               store: workspace.store, order: workspace.order)
+        end
+        note = facts.safe(:line_note, ctx) { facts.line_note(sale_line) }
         row = {
           'name' => line.variant.product.name, 'sku' => line.variant.sku.presence,
           'quantity' => line.quantity, 'unit_price' => money(line.price), 'amount' => money(line.amount),
           'discount' => money(discount), 'net_amount' => money(line.amount + discount), 'trace' => []
         }
+        row['barcode'] = barcode if barcode
+        row['original_price'] = original if original
+        row['note'] = note if note
         return row if sale_line.nil?
 
         sale_unit = units.fetch(sale_line.sale_unit_code, sale_line.sale_unit_code)
@@ -192,8 +222,8 @@ module Spree
         }
       end
 
-      # Options, combo contents and note of a menu line, printed as detail
-      # rows under the item. Other lines carry none of the keys.
+      # Options and combo contents of a menu line, printed as detail rows
+      # under the item (`note` is carried on every sale line).
       def menu_details(sale_line)
         return {} unless sale_line.kind == SaleLineKinds::Menu::KIND
 
@@ -201,8 +231,7 @@ module Spree
           'modifiers' => sale_line.line_modifiers.map do |row|
             { 'name' => row.name, 'group_name' => row.group_name, 'quantity' => row.quantity, 'price_delta' => money(row.price_delta) }
           end,
-          'components' => sale_line.line_components.map { |row| { 'name' => row.name, 'quantity' => row.quantity } },
-          'note' => sale_line.note
+          'components' => sale_line.line_components.map { |row| { 'name' => row.name, 'quantity' => row.quantity } }
         }
       end
 
@@ -267,11 +296,15 @@ module Spree
       def return_slip
         operation = record
         posted = operation.entitlement_status == 'posted'
-        rows = operation.reservations.where.not(status: 'canceled').includes(line_item: { variant: :product }).order(:id)
+        rows = operation.reservations.where.not(status: 'canceled').includes(:sale_line, line_item: { variant: :product }).order(:id)
         lines = rows.map do |row|
-          { 'name' => row.line_item.variant.product.name, 'sku' => row.line_item.variant.sku.presence,
-            'quantity' => row.received_quantity || row.quantity, 'condition' => row.condition, 'amount' => money(row.total) }
+          note = PrintDocuments::OrderFacts.line_note(row.sale_line)
+          entry = { 'name' => row.line_item.variant.product.name, 'sku' => row.line_item.variant.sku.presence,
+                    'quantity' => row.received_quantity || row.quantity, 'condition' => row.condition, 'amount' => money(row.total) }
+          entry['note'] = note if note
+          entry
         end
+        order_source = PrintDocuments::OrderFacts.order_source(operation.workspace)
         payload = base(operation.branch, nil, operation.core_return.number, 'PHIẾU TRẢ HÀNG', operation.received_at).merge(
           'currency' => operation.currency, 'cashier' => StaffName.call(operation.receiver || operation.requester),
           'order_number' => operation.order.number, 'reason' => operation.reason,
@@ -281,18 +314,21 @@ module Spree
           'credit_note_amount' => posted ? money(operation.credit_note_amount) : nil,
           'refund_entitlement' => posted ? money(operation.refund_entitlement) : nil
         )
+        payload['order_source'] = order_source if order_source
         snapshot(operation.branch, nil, operation.core_return.number, payload)
       end
 
       def return_supplement
         operation = record
         number = "#{operation.core_return.number}-BS"
+        order_source = PrintDocuments::OrderFacts.order_source(operation.workspace)
         payload = base(operation.branch, nil, number, 'PHIẾU BỔ SUNG TRẢ HÀNG', operation.posted_at).merge(
           'currency' => operation.currency, 'order_number' => operation.order.number,
           'return_number' => operation.core_return.number, 'customer' => customer(operation.workspace.pos_customer),
           'entitlement_posted' => true, 'entitlement_total' => money(operation.entitlement_total),
           'credit_note_amount' => money(operation.credit_note_amount), 'refund_entitlement' => money(operation.refund_entitlement)
         )
+        payload['order_source'] = order_source if order_source
         snapshot(operation.branch, nil, number, payload)
       end
 
@@ -300,6 +336,7 @@ module Spree
         request = record
         number = "HT#{request.id.to_s.rjust(6, '0')}"
         evidence = request.payout_evidences.order(:id).last
+        order_source = PrintDocuments::OrderFacts.order_source(request.return_operation.workspace)
         payload = base(request.branch, request.shift&.register, number, 'PHIẾU HOÀN TIỀN', request.confirmed_at).merge(
           'currency' => request.currency, 'cashier' => StaffName.call(request.confirmer),
           'order_number' => request.order.number, 'return_number' => request.return_operation.core_return.number,
@@ -307,6 +344,7 @@ module Spree
           'method' => request.method, 'amount' => money(request.amount),
           'reference' => Masking.reference(evidence&.reference.presence || request.beneficiary_reference)
         )
+        payload['order_source'] = order_source if order_source
         snapshot(request.branch, request.shift&.register, number, payload)
       end
 

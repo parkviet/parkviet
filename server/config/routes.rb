@@ -107,6 +107,8 @@ Rails.application.routes.draw do
             end
             resources :branches, only: [] do
               resources :branch_products, only: [:index, :create, :destroy], path: 'products'
+              post 'product_labels/data', to: 'product_labels#data'
+              post 'product_labels/print', to: 'product_labels#print'
               resources :label_formats, only: [:index, :create, :update] do
                 member do
                   post :disable
@@ -125,6 +127,7 @@ Rails.application.routes.draw do
                 post :default
                 post :restore
                 post :disable
+                post :enable
               end
             end
             resource :context, only: [:show], controller: 'context'
@@ -141,12 +144,12 @@ Rails.application.routes.draw do
             resource :store_profile, only: [:show, :update]
             resource :tax_profile, only: [:show, :update]
             get 'tax_catalog', to: 'tax_catalogs#show'
-            post 'onboarding', to: 'onboarding#create'
-            get 'operations/metrics', to: 'operational_metrics#show'
             resource :tax_regime, only: [:show, :update] do
               post :preview
             end
             get 'tax_options', to: 'tax_options#index'
+            post 'onboarding', to: 'onboarding#create'
+            get 'operations/metrics', to: 'operational_metrics#show'
             get 'system_status', to: 'system_status#show'
             get 'hardware_status', to: 'hardware_status#show'
             resources :branches, only: [:index, :show, :create, :update] do

@@ -1,8 +1,10 @@
 import type {
   Align,
+  PageSettings,
   PrintBlock,
   PrintDocument,
   PrintLines,
+  PrintQr,
   PrintRow,
 } from '../receipt-template/types';
 import type { PrinterTarget } from '../types/print-adapter';
@@ -19,10 +21,14 @@ export type PrintCommand =
   | { type: 'barcode'; value: string; align: Align }
   | { type: 'cut' };
 
-export type PrintableDocument = Omit<PrintDocument, 'documentType' | 'page'>;
+export type PrintableDocument = Omit<PrintDocument, 'documentType' | 'page'> & {
+  page?: Partial<PageSettings>;
+};
 
 const COLUMNS: Record<PrinterTarget['paper'], number> = { '58mm': 32, '80mm': 48 };
 const MM_PER_FEED = 4;
+const MM_PER_COLUMN = 1.5;
+const MIN_COLUMNS = 16;
 
 export function printerColumns(printer: Pick<PrinterTarget, 'paper' | 'settings'>): number {
   const configured = printer.settings.char_width;
@@ -69,10 +75,27 @@ export function documentCommands(
   document: PrintableDocument,
   printer: Pick<PrinterTarget, 'paper' | 'settings'>,
 ): PrintCommand[] {
-  const width = printerColumns(printer);
+  const rawWidth = printerColumns(printer);
+  const margins = document.page?.margins;
+  const maxIndent = Math.max(0, rawWidth - MIN_COLUMNS);
+  const rawLeft = margins ? Math.max(0, Math.round(margins.left / MM_PER_COLUMN)) : 0;
+  const rawRight = margins ? Math.max(0, Math.round(margins.right / MM_PER_COLUMN)) : 0;
+  const leftCols = Math.min(rawLeft, maxIndent);
+  const rightCols = Math.min(rawRight, Math.max(0, maxIndent - leftCols));
+  const width = Math.max(MIN_COLUMNS, rawWidth - leftCols - rightCols);
   const commands: PrintCommand[] = [];
+
+  const padLine = (line: string, align: Align, large: boolean) => {
+    if (leftCols === 0 && rightCols === 0) return line;
+    const leftPad = large ? Math.floor(leftCols / 2) : leftCols;
+    const rightPad = large ? Math.floor(rightCols / 2) : rightCols;
+    if (align === 'left' && leftPad > 0) return `${' '.repeat(leftPad)}${line}`;
+    if (align === 'right' && rightPad > 0) return `${line}${' '.repeat(rightPad)}`;
+    return line;
+  };
+
   const text = (line: string, align: Align = 'left', bold = false, large = false) =>
-    commands.push({ type: 'text', text: line, align, bold, large });
+    commands.push({ type: 'text', text: padLine(line, align, large), align, bold, large });
   const wrapped = (value: string, align: Align = 'left', bold = false, large = false) => {
     for (const line of wrapText(value, large ? Math.floor(width / 2) : width))
       text(line, align, bold, large);
@@ -82,13 +105,25 @@ export function documentCommands(
   };
   const rule = (mark = '-') => text(mark.repeat(width));
 
+  const printQr = (qr: PrintQr) => {
+    if (qr.captionPosition === 'above') {
+      if (qr.caption) wrapped(qr.caption, 'center');
+      for (const line of qr.lines) wrapped(line, 'center');
+      commands.push({ type: 'qr', value: qr.value, align: 'center' });
+      return;
+    }
+    commands.push({ type: 'qr', value: qr.value, align: 'center' });
+    if (qr.caption) wrapped(qr.caption, 'center');
+    for (const line of qr.lines) wrapped(line, 'center');
+  };
+
   const block = (item: PrintBlock) => {
     switch (item.kind) {
       case 'text':
         for (const line of item.lines) wrapped(line, item.align, item.bold, item.size === 'l');
         break;
       case 'title':
-        wrapped(item.title, 'center', true, true);
+        wrapped(item.title, 'center', true, item.size !== 'm');
         if (item.number) wrapped(item.number, 'center', true);
         break;
       case 'qr':
@@ -116,23 +151,31 @@ export function documentCommands(
   };
 
   const lines = (section: PrintLines) => {
+    const ruled = section.ruling === 'rows' || section.ruling === 'grid';
     if (section.layout === 'stacked') {
-      for (const item of section.items) {
+      section.items.forEach((item, idx) => {
+        if (ruled && idx > 0) rule('-');
         const name = item.index === null ? item.name : `${item.index}. ${item.name}`;
         if (item.amount === null) wrapped(name);
         else for (const line of pairLines(name, item.amount, width)) text(line);
+        if (item.originalPrice) wrapped(`  Giá gốc ${item.originalPrice}`);
         for (const detail of item.details) wrapped(`  ${detail}`);
-      }
+      });
       return;
     }
     if (section.columns.length > 0)
       wrapped(section.columns.map((column) => column.label).join(' | '), 'right', true);
-    for (const item of section.rows) {
+    section.rows.forEach((item, idx) => {
+      if (ruled && idx > 0) rule('-');
       wrapped(item.index === null ? item.name : `${item.index}. ${item.name}`);
       if (item.cells.length > 0) wrapped(item.cells.join(' | '), 'right');
+      if (item.originalPrice) wrapped(`  Giá gốc ${item.originalPrice}`);
       for (const detail of item.details) wrapped(`  ${detail}`);
-    }
+    });
   };
+
+  const topFeed = margins && margins.top > 0 ? Math.round(margins.top / MM_PER_FEED) : 0;
+  if (topFeed > 0) commands.push({ type: 'feed', lines: topFeed });
 
   for (const banner of document.banners) wrapped(banner, 'center', true);
   document.header.forEach(block);
@@ -142,15 +185,19 @@ export function documentCommands(
   rule();
   document.totals.forEach(row);
   document.payments.forEach(row);
-  if (document.payQr) {
-    commands.push({ type: 'qr', value: document.payQr.value, align: 'center' });
-    wrapped(document.payQr.caption, 'center');
-    for (const line of document.payQr.lines) wrapped(line, 'center');
+  if (document.payQr) printQr(document.payQr);
+  if (document.transferQr) printQr(document.transferQr);
+  if (document.einvoice) {
+    rule();
+    document.einvoice.rows.forEach(row);
+    if (document.einvoice.qr) printQr(document.einvoice.qr);
   }
   for (const note of document.notes) wrapped(note);
   document.footer.forEach(block);
   if (document.disclaimer) wrapped(document.disclaimer, 'center');
-  commands.push({ type: 'feed', lines: 3 });
+  const bottomMm = (margins?.bottom ?? 0) + (document.page?.cut_feed_mm ?? 0);
+  const extraFeed = bottomMm > 0 ? Math.round(bottomMm / MM_PER_FEED) : 0;
+  commands.push({ type: 'feed', lines: 3 + extraFeed });
   if (printer.settings.cut !== false) commands.push({ type: 'cut' });
   return commands;
 }

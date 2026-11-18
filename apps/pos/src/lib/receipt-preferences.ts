@@ -1,11 +1,11 @@
-import type { DocumentType } from '@parkviet/pos-shared/receipt-template/types';
+import type { ReceiptDocumentType } from '@parkviet/pos-shared/receipt-template/types';
 
-export const rememberedTemplateKey = (documentType: DocumentType) =>
+export const rememberedTemplateKey = (documentType: ReceiptDocumentType) =>
   `parkviet-pos:receipt-template:${documentType}`;
 // Paper was chosen per device before templates carried it.
 export const LEGACY_PAPER_KEYS = ['parkviet-pos:receipt-paper', 'parkviet-pos:ticket-paper'];
 
-export function rememberedTemplate(documentType: DocumentType): string | null {
+export function rememberedTemplate(documentType: ReceiptDocumentType): string | null {
   try {
     return window.localStorage.getItem(rememberedTemplateKey(documentType));
   } catch {
@@ -13,7 +13,7 @@ export function rememberedTemplate(documentType: DocumentType): string | null {
   }
 }
 
-export function rememberTemplate(documentType: DocumentType, templateId: string) {
+export function rememberTemplate(documentType: ReceiptDocumentType, templateId: string) {
   try {
     window.localStorage.setItem(rememberedTemplateKey(documentType), templateId);
     for (const key of LEGACY_PAPER_KEYS) window.localStorage.removeItem(key);

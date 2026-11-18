@@ -1,0 +1,17 @@
+SIZE 50 mm,30 mm
+GAP 2 mm,0 mm
+DIRECTION 1
+CLS
+TEXT 8,8,"2",0,1,1,"Sua tuoi tiet trung 1L"
+BARCODE 57,32,"EAN13",80,1,0,3,6,"8934563138165"
+TEXT 8,140,"2",0,1,1,"Hop"
+TEXT 8,164,"1",0,1,1,"Gia goc 36.000 d"
+TEXT 8,180,"3",0,1,1,"32.000 d"
+PRINT 3,1
+CLS
+TEXT 8,8,"2",0,1,1,"Ao thun co tron"
+TEXT 8,32,"2",0,1,1,"Do / L"
+BARCODE 33,56,"128",80,1,0,2,4,"AT-DO-L-0042"
+TEXT 8,164,"2",0,1,1,"Hop"
+TEXT 8,188,"3",0,1,1,"149.000,5 d"
+PRINT 2,1

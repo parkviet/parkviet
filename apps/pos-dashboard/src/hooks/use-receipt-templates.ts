@@ -1,7 +1,8 @@
-import type {
-  DocumentType,
-  PaperSize,
-  TemplateConfig,
+import {
+  isReceiptDocumentType,
+  type PaperSize,
+  type ReceiptDocumentType,
+  type TemplateConfig,
 } from '@parkviet/pos-shared/receipt-template/types'
 import type { ReceiptSnapshot } from '@parkviet/pos-shared/types/print-adapter'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
@@ -16,7 +17,7 @@ import { useSession } from './use-session'
 
 export type ReceiptTemplate = {
   id: string
-  document_type: DocumentType
+  document_type: ReceiptDocumentType
   name: string
   paper: PaperSize
   status: 'active' | 'disabled'
@@ -89,12 +90,19 @@ const readVersion = async (id: string, version: number) =>
 // kept for a while and refreshed when the window regains focus. Each
 // entry also fills the cache of its current version.
 // Reads the store's templates, seeding each one's current version in the cache.
+// Product label templates share the endpoint but have their own page and
+// config; they are left out of the receipt list.
 export async function readReceiptTemplates(storeId: string, includeDisabled: boolean) {
-  const read = request<{ data: ReceiptTemplate[] }>('GET', '/pos/receipt_templates', {
+  const read = request<{
+    data: (Omit<ReceiptTemplate, 'document_type'> & { document_type: string })[]
+  }>('GET', '/pos/receipt_templates', {
     params: { include_disabled: includeDisabled ? '1' : undefined },
   })
-  const templates = (includeDisabled ? await read : await withTimeout(read, PRINT_READ_TIMEOUT_MS))
-    .data
+  const templates = (
+    includeDisabled ? await read : await withTimeout(read, PRINT_READ_TIMEOUT_MS)
+  ).data.filter((template): template is ReceiptTemplate =>
+    isReceiptDocumentType(template.document_type),
+  )
   for (const template of templates)
     queryClient.setQueryData(versionKey(storeId, template.id, template.version), template)
   return templates
@@ -193,7 +201,7 @@ export const refreshReceiptTemplates = (storeId = getActiveStoreId()) =>
 type Saved = { data: ReceiptTemplate }
 
 export function createReceiptTemplate(body: {
-  from_default: DocumentType
+  from_default: ReceiptDocumentType
   name: string
   paper: PaperSize
 }) {
@@ -213,6 +221,10 @@ export function duplicateReceiptTemplate(id: string) {
 
 export function makeDefaultReceiptTemplate(id: string) {
   return request<Saved>('POST', `/pos/receipt_templates/${id}/default`, { body: {} })
+}
+
+export function enableReceiptTemplate(id: string) {
+  return request<Saved>('POST', `/pos/receipt_templates/${id}/enable`, { body: {} })
 }
 
 export function disableReceiptTemplate(id: string) {

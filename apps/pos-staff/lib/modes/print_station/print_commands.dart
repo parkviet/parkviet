@@ -77,6 +77,8 @@ class CutCommand extends PrintCommand {
 }
 
 const _mmPerFeed = 4;
+const _mmPerColumn = 1.5;
+const _minColumns = 16;
 
 final _control = RegExp('[\u0000-\u001f\u007f]');
 
@@ -137,11 +139,36 @@ List<PrintCommand> documentCommands(Map<String, Object?> document, PrinterProfil
   // A die-cut label is narrower than the printer's roll: wrap to the label,
   // 12 dots a character at 8 dots a millimetre.
   final label = printer.isTspl ? documentLabel(document) : null;
-  final width = label == null ? printer.columns : label.widthMm * 8 ~/ 12;
+  final rawWidth = label == null ? printer.columns : label.widthMm * 8 ~/ 12;
+  final page = document['page'] is Map ? (document['page']! as Map).cast<String, Object?>() : const <String, Object?>{};
+  final margins = label == null && page['margins'] is Map
+      ? (page['margins']! as Map).cast<String, Object?>()
+      : null;
+  final maxIndent = rawWidth > _minColumns ? rawWidth - _minColumns : 0;
+  final rawLeft = margins != null && margins['left'] is num
+      ? ((margins['left']! as num) / _mmPerColumn).round().clamp(0, 999)
+      : 0;
+  final rawRight = margins != null && margins['right'] is num
+      ? ((margins['right']! as num) / _mmPerColumn).round().clamp(0, 999)
+      : 0;
+  final leftCols = rawLeft > maxIndent ? maxIndent : rawLeft;
+  final remainingIndent = maxIndent - leftCols;
+  final rightCols = rawRight > remainingIndent ? remainingIndent : rawRight;
+  final shrunkWidth = rawWidth - leftCols - rightCols;
+  final width = label != null || shrunkWidth >= _minColumns ? shrunkWidth : _minColumns;
   final commands = <PrintCommand>[];
 
+  String padLine(String line, PrintAlign align, bool large) {
+    if (leftCols == 0 && rightCols == 0) return line;
+    final leftPad = large ? leftCols ~/ 2 : leftCols;
+    final rightPad = large ? rightCols ~/ 2 : rightCols;
+    if (align == PrintAlign.left && leftPad > 0) return '${' ' * leftPad}$line';
+    if (align == PrintAlign.right && rightPad > 0) return '$line${' ' * rightPad}';
+    return line;
+  }
+
   void text(String line, {PrintAlign align = PrintAlign.left, bool bold = false, bool large = false, bool invert = false}) =>
-      commands.add(TextCommand(line, align: align, bold: bold, large: large, invert: invert));
+      commands.add(TextCommand(padLine(line, align, large), align: align, bold: bold, large: large, invert: invert));
 
   void wrapped(
     String value, {
@@ -164,6 +191,23 @@ List<PrintCommand> documentCommands(Map<String, Object?> document, PrinterProfil
 
   void rule([String mark = '-']) => text(mark * width);
 
+  void printQr(Map<String, Object?> qr) {
+    final caption = _string(qr['caption']);
+    if (qr['captionPosition'] == 'above') {
+      if (caption != null && caption.isNotEmpty) wrapped(caption, align: PrintAlign.center);
+      for (final line in _strings(qr['lines'])) {
+        wrapped(line, align: PrintAlign.center);
+      }
+      commands.add(QrCommand('${qr['value'] ?? ''}', PrintAlign.center));
+      return;
+    }
+    commands.add(QrCommand('${qr['value'] ?? ''}', PrintAlign.center));
+    if (caption != null && caption.isNotEmpty) wrapped(caption, align: PrintAlign.center);
+    for (final line in _strings(qr['lines'])) {
+      wrapped(line, align: PrintAlign.center);
+    }
+  }
+
   void block(Map<String, Object?> item) {
     final align = _align(item['align']);
     switch (item['kind']) {
@@ -172,7 +216,7 @@ List<PrintCommand> documentCommands(Map<String, Object?> document, PrinterProfil
           wrapped(line, align: align, bold: item['bold'] == true, large: item['size'] == 'l', invert: item['invert'] == true);
         }
       case 'title':
-        wrapped('${item['title'] ?? ''}', align: PrintAlign.center, bold: true, large: true);
+        wrapped('${item['title'] ?? ''}', align: PrintAlign.center, bold: true, large: item['size'] != 'm');
         final number = _string(item['number']);
         if (number != null && number.isNotEmpty) wrapped(number, align: PrintAlign.center, bold: true);
       case 'qr':
@@ -205,8 +249,13 @@ List<PrintCommand> documentCommands(Map<String, Object?> document, PrinterProfil
   }
 
   void lines(Map<String, Object?> section) {
+    final ruling = _string(section['ruling']);
+    final ruled = ruling == 'rows' || ruling == 'grid';
     if (section['layout'] == 'stacked') {
-      for (final item in _maps(section['items'])) {
+      final items = _maps(section['items']);
+      for (var i = 0; i < items.length; i++) {
+        if (ruled && i > 0) rule('-');
+        final item = items[i];
         final amount = _string(item['amount']);
         if (amount == null) {
           wrapped(named(item));
@@ -214,6 +263,10 @@ List<PrintCommand> documentCommands(Map<String, Object?> document, PrinterProfil
           for (final line in _pairLines(named(item), amount, width)) {
             text(line);
           }
+        }
+        final originalPrice = _string(item['originalPrice']);
+        if (originalPrice != null && originalPrice.isNotEmpty) {
+          wrapped('  Giá gốc $originalPrice');
         }
         for (final detail in _strings(item['details'])) {
           wrapped('  $detail');
@@ -225,15 +278,26 @@ List<PrintCommand> documentCommands(Map<String, Object?> document, PrinterProfil
     if (columns.isNotEmpty) {
       wrapped(columns.map((column) => '${column['label'] ?? ''}').join(' | '), align: PrintAlign.right, bold: true);
     }
-    for (final item in _maps(section['rows'])) {
+    final rows = _maps(section['rows']);
+    for (var i = 0; i < rows.length; i++) {
+      if (ruled && i > 0) rule('-');
+      final item = rows[i];
       wrapped(named(item));
       final cells = _strings(item['cells']);
       if (cells.isNotEmpty) wrapped(cells.join(' | '), align: PrintAlign.right);
+      final originalPrice = _string(item['originalPrice']);
+      if (originalPrice != null && originalPrice.isNotEmpty) {
+        wrapped('  Giá gốc $originalPrice');
+      }
       for (final detail in _strings(item['details'])) {
         wrapped('  $detail');
       }
     }
   }
+
+  final topMm = margins != null && margins['top'] is num ? (margins['top']! as num).toDouble() : 0.0;
+  final topFeed = topMm > 0 ? (topMm / _mmPerFeed).round() : 0;
+  if (topFeed > 0) commands.add(FeedCommand(topFeed));
 
   for (final banner in _strings(document['banners'])) {
     wrapped(banner, align: PrintAlign.center, bold: true);
@@ -247,12 +311,16 @@ List<PrintCommand> documentCommands(Map<String, Object?> document, PrinterProfil
   _maps(document['totals']).forEach(row);
   _maps(document['payments']).forEach(row);
   final payQr = document['payQr'];
-  if (payQr is Map) {
-    commands.add(QrCommand('${payQr['value'] ?? ''}', PrintAlign.center));
-    wrapped('${payQr['caption'] ?? ''}', align: PrintAlign.center);
-    for (final line in _strings(payQr['lines'])) {
-      wrapped(line, align: PrintAlign.center);
-    }
+  if (payQr is Map) printQr(payQr.cast<String, Object?>());
+  final transferQr = document['transferQr'];
+  if (transferQr is Map) printQr(transferQr.cast<String, Object?>());
+  final einvoice = document['einvoice'];
+  if (einvoice is Map) {
+    final castEinvoice = einvoice.cast<String, Object?>();
+    rule();
+    _maps(castEinvoice['rows']).forEach(row);
+    final einvoiceQr = castEinvoice['qr'];
+    if (einvoiceQr is Map) printQr(einvoiceQr.cast<String, Object?>());
   }
   for (final note in _strings(document['notes'])) {
     wrapped(note);
@@ -260,7 +328,10 @@ List<PrintCommand> documentCommands(Map<String, Object?> document, PrinterProfil
   _maps(document['footer']).forEach(block);
   final disclaimer = _string(document['disclaimer']);
   if (disclaimer != null && disclaimer.isNotEmpty) wrapped(disclaimer, align: PrintAlign.center);
-  commands.add(const FeedCommand(3));
+  final bottomMm = (margins != null && margins['bottom'] is num ? (margins['bottom']! as num).toDouble() : 0.0) +
+      (label == null && page['cut_feed_mm'] is num ? (page['cut_feed_mm']! as num).toDouble() : 0.0);
+  final extraFeed = bottomMm > 0 ? (bottomMm / _mmPerFeed).round() : 0;
+  commands.add(FeedCommand(3 + extraFeed));
   if (printer.cut) commands.add(const CutCommand());
   return commands;
 }

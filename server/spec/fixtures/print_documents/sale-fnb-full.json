@@ -1,0 +1,512 @@
+{
+  "input": {
+    "receipt": {
+      "source_type": "sale",
+      "number": "R100",
+      "issued_at": "2026-11-10T02:00:00Z",
+      "issued_late": false,
+      "disclaimer": "Không phải hóa đơn",
+      "document": {
+        "title": "PHIẾU BÁN HÀNG",
+        "currency": "VND",
+        "timezone": "Asia/Ho_Chi_Minh",
+        "at": "2026-11-10T02:00:00Z",
+        "business_date": "2026-11-10",
+        "cashier": "Thu Ngân",
+        "register": "Quầy 1",
+        "order_number": "R100",
+        "store": {
+          "name": "Cửa hàng <A&B>",
+          "address": "1 Lê Lợi",
+          "contact_phone": "0281234567",
+          "customer_support_email": "a@b.vn",
+          "url": "shop.example.test",
+          "facebook": "@shopvn",
+          "instagram": "https://instagram.com/shopvn",
+          "tax_code": "0312345678",
+          "description": "Trà & bánh tươi mỗi ngày"
+        },
+        "branch": {
+          "name": "Chi nhánh 1",
+          "code": "CN1",
+          "return_window_days": 7
+        },
+        "customer": {
+          "name": "Chị <Lan>",
+          "phone": "090***567",
+          "address": "2 Hai Bà Trưng"
+        },
+        "delivery": {
+          "deliverer": "Anh Giao",
+          "fee": "15000.0"
+        },
+        "lines": [
+          {
+            "name": "Trà & Sữa",
+            "sku": "TS-1",
+            "quantity": 2,
+            "sale_quantity": "1.5",
+            "sale_unit": "lon",
+            "unit_price": "45000.0",
+            "discount": "5000.0",
+            "net_amount": "85000.0",
+            "conversion": "1 lon = 6 chai",
+            "trace": [
+              {
+                "serial": "S1",
+                "lot_code": "L1",
+                "expiry_on": "2027-01-02"
+              },
+              {}
+            ],
+            "barcode": "8938505974192",
+            "original_price": "50000.0",
+            "note": "Ít ngọt"
+          },
+          {
+            "name": "Bánh",
+            "quantity": 1,
+            "unit_price": "1234.50",
+            "discount": "0.0",
+            "amount": "1234.50"
+          }
+        ],
+        "totals": {
+          "item_total": "90000.0",
+          "discount_total": "5000.0",
+          "additional_tax_total": "0.0",
+          "included_tax_total": "100.0",
+          "total": "100000.0"
+        },
+        "taxes": [
+          {
+            "label": "VAT",
+            "rate": "0.08",
+            "amount": "8000.0"
+          },
+          {
+            "amount": "0.0"
+          }
+        ],
+        "receipts": [
+          {
+            "method": "cash",
+            "amount": "50000.0",
+            "handed": "60000.0",
+            "change": "10000.0"
+          },
+          {
+            "method": "vietqr",
+            "amount": "20000.0",
+            "reference": "FT1"
+          },
+          {
+            "method": "bank",
+            "amount": "1.0"
+          }
+        ],
+        "paid_total": "70001.0",
+        "credit": {
+          "debt": "29999.0",
+          "due_on": "2026-12-01",
+          "pay_qr": {
+            "amount": "29999.0",
+            "currency": "VND",
+            "transfer_content": "TNR100",
+            "bank_name": "VCB",
+            "account_number": "123",
+            "account_name": "SHOP",
+            "payload": "000201"
+          }
+        },
+        "note": "Ít đá <nhé>",
+        "table": {
+          "name": "Bàn 5",
+          "area": "Sân thượng"
+        },
+        "check_in_at": "2026-11-10T00:35:00Z",
+        "order_source": "dine_in",
+        "item_count": "3",
+        "promotions": [
+          {
+            "label": "Happy Hour",
+            "amount": "5000.0"
+          }
+        ],
+        "fees": [
+          {
+            "label": "Phí phục vụ",
+            "amount": "10000.0"
+          }
+        ],
+        "customer_debt": {
+          "previous": "50000.0",
+          "total": "79999.0"
+        },
+        "transfer_qr": {
+          "amount": "29999.0",
+          "currency": "VND",
+          "transfer_content": "R100",
+          "bank_name": "VCB",
+          "account_number": "123",
+          "account_name": "SHOP",
+          "payload": "000201010212"
+        }
+      },
+      "einvoice": {
+        "status": "issued",
+        "invoice_type": "cash_register",
+        "seller_tax_code": "0312345678",
+        "number": "0000123",
+        "symbol": "1C26MPA",
+        "template_code": "1/001",
+        "lookup_code": "AB12CD34EF",
+        "cqt_code": "M1-26-ABCDE",
+        "lookup_url": "https://tracuu.example.test",
+        "buyer_url": "https://pos.example.test/pos_einvoice/token-1"
+      }
+    },
+    "print": {
+      "copy": true,
+      "copy_number": 1,
+      "printed_at": "2026-11-10T02:15:00Z"
+    },
+    "config": {
+      "schema": 1,
+      "page": {
+        "margin_mm": 3,
+        "margins": {
+          "top": 4,
+          "right": 3,
+          "bottom": 5,
+          "left": 3
+        },
+        "cut_feed_mm": 8,
+        "font": "sans",
+        "font_size": "m",
+        "line_spacing": 1.35
+      },
+      "header": [
+        {
+          "type": "business",
+          "fields": [
+            "name",
+            "tax_code",
+            "description",
+            "address",
+            "phone",
+            "branch"
+          ],
+          "align": "center"
+        },
+        {
+          "type": "title",
+          "size": "xl"
+        }
+      ],
+      "meta": {
+        "fields": [
+          "time",
+          "table",
+          "check_in",
+          "check_out",
+          "duration",
+          "order_source",
+          "cashier",
+          "register",
+          "branch",
+          "customer",
+          "printed_at",
+          "copy_number"
+        ],
+        "labels": {},
+        "table_style": "two_lines",
+        "time_format": "date"
+      },
+      "lines": {
+        "layout": "stacked",
+        "ruling": "rows",
+        "columns": [
+          "index",
+          "name",
+          "sku",
+          "barcode",
+          "unit",
+          "qty",
+          "original_price",
+          "price",
+          "discount",
+          "amount",
+          "note"
+        ],
+        "show_trace": true,
+        "show_conversion": true
+      },
+      "totals": {
+        "fields": [
+          "item_count",
+          "item_total",
+          "promotions",
+          "fees",
+          "included_tax",
+          "total"
+        ],
+        "labels": {}
+      },
+      "payments": {
+        "fields": [
+          "methods",
+          "paid_total",
+          "debt",
+          "previous_debt",
+          "customer_debt",
+          "transfer_qr"
+        ],
+        "labels": {},
+        "qr_size": "l",
+        "qr_caption": "right"
+      },
+      "einvoice": {
+        "fields": [
+          "seller_tax_code",
+          "number",
+          "symbol",
+          "lookup_code",
+          "cqt_code",
+          "qr"
+        ],
+        "labels": {},
+        "qr_size": "s",
+        "qr_caption": "above"
+      },
+      "footer": []
+    }
+  },
+  "document": {
+    "version": 1,
+    "kind": "receipt",
+    "documentType": "sale",
+    "page": {
+      "margin_mm": 3,
+      "margins": {
+        "top": 4,
+        "right": 3,
+        "bottom": 5,
+        "left": 3
+      },
+      "cut_feed_mm": 8,
+      "font": "sans",
+      "font_size": "m",
+      "line_spacing": 1.35
+    },
+    "banners": [
+      "BẢN SAO – lần 1"
+    ],
+    "header": [
+      {
+        "kind": "text",
+        "lines": [
+          "Cửa hàng <A&B>",
+          "MST: 0312345678",
+          "Trà & bánh tươi mỗi ngày",
+          "1 Lê Lợi",
+          "0281234567",
+          "Chi nhánh 1"
+        ],
+        "align": "center",
+        "bold": false,
+        "size": "m"
+      },
+      {
+        "kind": "title",
+        "title": "PHIẾU BÁN HÀNG",
+        "number": "R100",
+        "size": "xl"
+      }
+    ],
+    "meta": [
+      {
+        "label": "Thời gian",
+        "value": "10/11/2026"
+      },
+      {
+        "label": "Ngày kinh doanh",
+        "value": "10/11/2026"
+      },
+      {
+        "label": "Khu vực",
+        "value": "Sân thượng"
+      },
+      {
+        "label": "Bàn",
+        "value": "Bàn 5"
+      },
+      {
+        "label": "Giờ vào",
+        "value": "10/11/2026"
+      },
+      {
+        "label": "Giờ ra",
+        "value": "10/11/2026"
+      },
+      {
+        "label": "Thời gian phục vụ",
+        "value": "1 giờ 25 phút"
+      },
+      {
+        "label": "Thu ngân",
+        "value": "Thu Ngân"
+      },
+      {
+        "label": "Khách hàng",
+        "value": "Chị <Lan> · 090***567"
+      },
+      {
+        "label": "Giao đến",
+        "value": "2 Hai Bà Trưng",
+        "strong": true
+      },
+      {
+        "label": "Giao hàng",
+        "value": "Anh Giao",
+        "strong": true
+      },
+      {
+        "label": "Ngày in",
+        "value": "10/11/2026"
+      }
+    ],
+    "lines": {
+      "layout": "stacked",
+      "ruling": "rows",
+      "items": [
+        {
+          "index": 1,
+          "name": "Trà & Sữa (TS-1)",
+          "amount": "85.000 ₫",
+          "originalPrice": "50.000 ₫",
+          "details": [
+            "1,5 lon × 45.000 ₫",
+            "1 lon = 6 chai",
+            "Giảm 5.000 ₫",
+            "Mã vạch: 8938505974192",
+            "Serial/IMEI: S1 · Lô: L1 · HSD: 02/01/2027",
+            "* Ít ngọt"
+          ]
+        },
+        {
+          "index": 2,
+          "name": "Bánh",
+          "amount": "1.234,5 ₫",
+          "details": [
+            "1 × 1.234,5 ₫"
+          ]
+        }
+      ]
+    },
+    "totals": [
+      {
+        "label": "Tổng số lượng",
+        "value": "3"
+      },
+      {
+        "label": "Tổng tiền hàng",
+        "value": "90.000 ₫"
+      },
+      {
+        "label": "Khuyến mãi",
+        "value": "5.000 ₫"
+      },
+      {
+        "label": "Phí phục vụ",
+        "value": "10.000 ₫"
+      },
+      {
+        "label": "VAT (8%)",
+        "value": "8.000 ₫"
+      },
+      {
+        "label": "Tổng cộng",
+        "value": "100.000 ₫",
+        "strong": true
+      }
+    ],
+    "payments": [
+      {
+        "label": "Tiền mặt",
+        "value": "50.000 ₫"
+      },
+      {
+        "label": "Chuyển khoản VietQR",
+        "value": "20.000 ₫"
+      },
+      {
+        "label": "Chuyển khoản",
+        "value": "1 ₫"
+      },
+      {
+        "label": "Đã thanh toán",
+        "value": "70.001 ₫",
+        "strong": true
+      },
+      {
+        "label": "Ghi nợ được duyệt",
+        "value": "29.999 ₫",
+        "strong": true
+      },
+      {
+        "label": "Công nợ cũ",
+        "value": "50.000 ₫"
+      },
+      {
+        "label": "Tổng công nợ",
+        "value": "79.999 ₫",
+        "strong": true
+      }
+    ],
+    "payQr": null,
+    "transferQr": {
+      "value": "000201010212",
+      "caption": "Quét mã để chuyển khoản",
+      "lines": [
+        "Số tiền: 29.999 ₫",
+        "VCB · 123 · SHOP",
+        "Nội dung CK: R100"
+      ],
+      "size": "l",
+      "captionPosition": "right"
+    },
+    "einvoice": {
+      "rows": [
+        {
+          "label": "MST người bán",
+          "value": "0312345678"
+        },
+        {
+          "label": "Số hóa đơn",
+          "value": "1/0011C26MPA - 0000123"
+        },
+        {
+          "label": "Mã tra cứu",
+          "value": "AB12CD34EF"
+        },
+        {
+          "label": "Mã CQT",
+          "value": "M1-26-ABCDE"
+        }
+      ],
+      "qr": {
+        "value": "https://pos.example.test/pos_einvoice/token-1",
+        "caption": "Quét mã để nhập thông tin xuất hóa đơn",
+        "lines": [],
+        "size": "s",
+        "captionPosition": "above"
+      }
+    },
+    "notes": [
+      "Ít đá <nhé>"
+    ],
+    "footer": [],
+    "disclaimer": "Không phải hóa đơn"
+  }
+}

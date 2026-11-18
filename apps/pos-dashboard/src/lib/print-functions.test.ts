@@ -45,7 +45,9 @@ const makeStation = (
 
 describe('print functions catalogue', () => {
   it('covers every PrinterRole known to the dashboard', () => {
-    expect(new Set(coveredPrinterRoles())).toEqual(new Set(PRINTER_ROLES))
+    // Product labels are printed from the goods list, not from a function row.
+    const fromGoodsList = new Set(['product_label'])
+    expect(new Set([...coveredPrinterRoles(), ...fromGoodsList])).toEqual(new Set(PRINTER_ROLES))
   })
 
   it('hides module-gated functions when their module is off', () => {

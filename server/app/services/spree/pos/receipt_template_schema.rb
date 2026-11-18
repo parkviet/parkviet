@@ -3,6 +3,7 @@
 module Spree
   module Pos
     # Validates a print template config (schema 1) for one document type.
+    # Product labels are delegated to ProductLabelSchema.
     # Every key, block type, field, column and variable is whitelisted, and a
     # field is accepted only for a document type that carries its data. The
     # parts every document must print (copy and pre-bill banners, title and
@@ -19,13 +20,23 @@ module Spree
       MAX_TITLE_LENGTH = 60
       MAX_LABEL_LENGTH = 40
 
-      DOCUMENT_TYPES = %w[sale prebill payment_ticket return refund shift_closure].freeze
+      RECEIPT_DOCUMENT_TYPES = %w[sale prebill payment_ticket return refund shift_closure].freeze
+      PRODUCT_LABEL = 'product_label'
+      DOCUMENT_TYPES = (RECEIPT_DOCUMENT_TYPES + [PRODUCT_LABEL]).freeze
       ALIGNS = %w[left center right].freeze
       SIZES = %w[s m l].freeze
+      TITLE_SIZES = %w[m l xl].freeze
       FONTS = %w[sans mono].freeze
       LAYOUTS = %w[stacked table].freeze
+      LINE_RULINGS = %w[none rows grid].freeze
+      TIMED_STYLES = %w[duration range].freeze
+      TABLE_STYLES = %w[one_line two_lines].freeze
+      TIME_FORMATS = %w[datetime date].freeze
+      QR_SIZES = %w[s m l].freeze
+      QR_CAPTIONS = %w[below above left right].freeze
+      MARGIN_SIDES = %w[top right bottom left].freeze
       DIVIDER_STYLES = %w[solid dashed].freeze
-      BUSINESS_FIELDS = %w[name branch address phone email url facebook instagram].freeze
+      BUSINESS_FIELDS = %w[name branch address phone email tax_code description url facebook instagram].freeze
       # A QR code links to a page given here or to one of the store's own.
       QR_SOURCES = %w[url store_social].freeze
       SOCIAL_FIELDS = %w[url facebook instagram].freeze
@@ -45,7 +56,7 @@ module Spree
         'logo' => %w[type width_pct align monochrome],
         'business' => %w[type fields align],
         'text' => %w[type value align bold size],
-        'title' => %w[type label],
+        'title' => %w[type label size],
         'divider' => %w[type style],
         'spacer' => %w[type mm],
         'qr' => %w[type source value field caption align],
@@ -53,34 +64,52 @@ module Spree
         'signatures' => %w[type parties labels]
       }.freeze
 
-      TOP_KEYS = %w[schema page header meta lines totals payments footer].freeze
+      TOP_KEYS = %w[schema page header meta lines totals payments einvoice footer].freeze
       REQUIRED_KEYS = %w[schema page header footer].freeze
-      PAGE_KEYS = %w[margin_mm font font_size line_spacing copies].freeze
+      PAGE_KEYS = %w[margin_mm margins cut_feed_mm font font_size line_spacing copies].freeze
       REQUIRED_PAGE_KEYS = %w[margin_mm font font_size line_spacing].freeze
-      LINES_KEYS = %w[layout columns show_trace show_conversion].freeze
+      LINES_KEYS = %w[layout columns show_trace show_conversion ruling timed_style].freeze
+      REQUIRED_LINES_KEYS = %w[layout columns show_trace show_conversion].freeze
       FIELD_SECTION_KEYS = %w[fields labels].freeze
+      META_SECTION_KEYS = %w[fields labels table_style time_format].freeze
+      QR_SECTION_KEYS = %w[fields labels qr_size qr_caption].freeze
 
-      META_ALL = %w[time cashier register branch order_number return_number customer].freeze
-      COLUMNS_ALL = %w[index name sku unit qty price discount amount].freeze
-      TOTALS_ALL = %w[item_total discount tax included_tax total].freeze
-      # `pay_qr`: the pay-later VietQR of a debt (its label is the caption).
-      PAYMENTS_ALL = %w[methods handed change reference paid_total debt due_on pay_qr].freeze
+      META_ALL = %w[time cashier register branch order_number return_number customer table check_in check_out duration call_number order_source printed_at print_count].freeze
+      COLUMNS_ALL = %w[index name sku barcode unit qty original_price price discount amount note].freeze
+      TOTALS_ALL = %w[item_count item_total discount promotions shipping fees tax included_tax total].freeze
+      # `pay_qr` and `transfer_qr`: VietQR codes (their label is the caption).
+      PAYMENTS_ALL = %w[methods handed change reference paid_total debt previous_debt customer_debt due_on pay_qr transfer_qr].freeze
+      EINVOICE_ALL = %w[seller_tax_code number lookup_code cqt_code qr lookup_url].freeze
 
       # Sections and fields each document type has data for; a section that
       # is absent here does not exist on that document.
       SECTIONS = {
-        'sale' => { 'meta' => META_ALL, 'lines' => COLUMNS_ALL, 'totals' => TOTALS_ALL, 'payments' => PAYMENTS_ALL },
+        'sale' => {
+          'meta' => META_ALL, 'lines' => COLUMNS_ALL, 'totals' => TOTALS_ALL,
+          'payments' => PAYMENTS_ALL, 'einvoice' => EINVOICE_ALL
+        },
         'prebill' => {
-          'meta' => %w[time register branch customer], 'lines' => %w[index name sku unit qty price amount],
-          'totals' => %w[item_total discount total], 'payments' => %w[paid_total]
+          'meta' => %w[time register branch customer table check_in duration call_number order_source printed_at print_count],
+          'lines' => %w[index name sku barcode unit qty original_price price amount note],
+          'totals' => %w[item_count item_total discount promotions shipping fees total],
+          'payments' => %w[paid_total transfer_qr]
         },
         'payment_ticket' => {
-          'meta' => %w[time cashier register branch order_number customer], 'lines' => COLUMNS_ALL,
-          'totals' => %w[item_total discount tax total], 'payments' => %w[methods handed change]
+          'meta' => %w[time cashier register branch order_number customer table check_in check_out duration call_number order_source printed_at print_count],
+          'lines' => COLUMNS_ALL,
+          'totals' => TOTALS_ALL,
+          'payments' => %w[methods handed change transfer_qr]
         },
-        'return' => { 'meta' => META_ALL, 'lines' => %w[index name sku amount], 'totals' => %w[total] },
-        'refund' => { 'meta' => META_ALL, 'payments' => %w[methods reference] },
-        'shift_closure' => { 'meta' => %w[time cashier register branch] }
+        'return' => {
+          'meta' => %w[time cashier register branch order_number return_number customer order_source printed_at print_count],
+          'lines' => %w[index name sku amount note],
+          'totals' => %w[total]
+        },
+        'refund' => {
+          'meta' => %w[time cashier register branch order_number return_number customer order_source printed_at print_count],
+          'payments' => %w[methods reference]
+        },
+        'shift_closure' => { 'meta' => %w[time cashier register branch printed_at] }
       }.freeze
 
       # Payment method rows are labelled by their method.
@@ -101,7 +130,10 @@ module Spree
         end
       end
 
+      # A product label has its own config shape (ProductLabelSchema).
       def self.validate(config, document_type, root: '/config')
+        return ProductLabelSchema.validate(config, root: root) if document_type == PRODUCT_LABEL
+
         new(config, document_type, root).errors
       end
 
@@ -142,7 +174,10 @@ module Spree
         add(at('schema'), 'unsupported', "Schema must be #{VERSION}.") if config.key?('schema') && config['schema'] != VERSION
         check_page(config['page']) if config.key?('page')
         %w[header footer].each { |place| check_blocks(config[place], place) if config.key?(place) }
-        %w[meta totals payments].each { |section| check_section(config, section) { check_fields(config[section], section) } }
+        check_section(config, 'meta') { check_meta(config['meta']) }
+        check_section(config, 'totals') { check_fields(config['totals'], 'totals') }
+        check_section(config, 'payments') { check_qr_section(config['payments'], 'payments') }
+        check_section(config, 'einvoice') { check_qr_section(config['einvoice'], 'einvoice') }
         check_section(config, 'lines') { check_lines(config['lines']) }
       end
 
@@ -170,10 +205,25 @@ module Spree
         known_keys(page, PAGE_KEYS, 'page')
         REQUIRED_PAGE_KEYS.each { |key| add(at('page', key), 'missing', "#{key} is required.") unless page.key?(key) }
         check_copies(page) if page.key?('copies')
+        check_margins(page['margins']) if page.key?('margins')
         number(page, 'margin_mm', 0, 20, 'page') if page.key?('margin_mm')
+        number(page, 'cut_feed_mm', 0, 30, 'page') if page.key?('cut_feed_mm')
         number(page, 'line_spacing', 1, 1.6, 'page') if page.key?('line_spacing')
         choice(page, 'font', FONTS, 'page') if page.key?('font')
         choice(page, 'font_size', SIZES, 'page') if page.key?('font_size')
+      end
+
+      def check_margins(margins)
+        return unless object?(margins, 'page', 'margins')
+
+        known_keys(margins, MARGIN_SIDES, 'page', 'margins')
+        MARGIN_SIDES.each do |side|
+          if margins.key?(side)
+            number(margins, side, 0, 15, 'page', 'margins')
+          else
+            add(at('page', 'margins', side), 'missing', "#{side} is required.")
+          end
+        end
       end
 
       def check_copies(page)
@@ -216,6 +266,7 @@ module Spree
           check_text(block, *path)
         when 'title'
           text?(block, 'label', MAX_TITLE_LENGTH, *path) if block.key?('label')
+          choice(block, 'size', TITLE_SIZES, *path) if block.key?('size')
         when 'divider'
           choice(block, 'style', DIVIDER_STYLES, *path) if block.key?('style')
         when 'spacer'
@@ -287,31 +338,48 @@ module Spree
         return unless object?(lines, 'lines')
 
         known_keys(lines, LINES_KEYS, 'lines')
-        LINES_KEYS.each { |key| add(at('lines', key), 'missing', "#{key} is required.") unless lines.key?(key) }
+        REQUIRED_LINES_KEYS.each { |key| add(at('lines', key), 'missing', "#{key} is required.") unless lines.key?(key) }
         choice(lines, 'layout', LAYOUTS, 'lines') if lines.key?('layout')
         list(lines, 'columns', @sections.fetch('lines'), 'lines') if lines.key?('columns')
         %w[show_trace show_conversion].each { |key| boolean(lines, key, 'lines') if lines.key?(key) }
+        choice(lines, 'ruling', LINE_RULINGS, 'lines') if lines.key?('ruling')
+        choice(lines, 'timed_style', TIMED_STYLES, 'lines') if lines.key?('timed_style')
       end
 
-      def check_fields(section, name)
-        return unless object?(section, name)
+      def check_meta(section)
+        return unless check_fields(section, 'meta', allowed_keys: META_SECTION_KEYS)
+
+        choice(section, 'table_style', TABLE_STYLES, 'meta') if section.key?('table_style')
+        choice(section, 'time_format', TIME_FORMATS, 'meta') if section.key?('time_format')
+      end
+
+      def check_qr_section(section, name)
+        return unless check_fields(section, name, allowed_keys: QR_SECTION_KEYS)
+
+        choice(section, 'qr_size', QR_SIZES, name) if section.key?('qr_size')
+        choice(section, 'qr_caption', QR_CAPTIONS, name) if section.key?('qr_caption')
+      end
+
+      def check_fields(section, name, allowed_keys: FIELD_SECTION_KEYS)
+        return false unless object?(section, name)
 
         allowed = @sections.fetch(name)
-        known_keys(section, FIELD_SECTION_KEYS, name)
+        known_keys(section, allowed_keys, name)
         list(section, 'fields', allowed, name, required: true)
-        return unless section.key?('labels')
-
-        labels = section['labels']
-        return unless object?(labels, name, 'labels')
-
-        fixed = FIXED_LABELS.fetch(name, [])
-        labels.each_key do |field|
-          if !allowed.include?(field) || fixed.include?(field)
-            add(at(name, 'labels', field), 'field_unavailable', "#{field} has no label on this document.")
-          else
-            text?(labels, field, MAX_LABEL_LENGTH, name, 'labels')
+        if section.key?('labels')
+          labels = section['labels']
+          if object?(labels, name, 'labels')
+            fixed = FIXED_LABELS.fetch(name, [])
+            labels.each_key do |field|
+              if !allowed.include?(field) || fixed.include?(field)
+                add(at(name, 'labels', field), 'field_unavailable', "#{field} has no label on this document.")
+              else
+                text?(labels, field, MAX_LABEL_LENGTH, name, 'labels')
+              end
+            end
           end
         end
+        true
       end
 
       def list(hash, key, allowed, *path, required: false, present: false)

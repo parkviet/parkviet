@@ -16,7 +16,7 @@ module Spree
             READERS = %w[read_pos_orders write_pos_orders read_pos_topology write_pos_topology].freeze
             WRITERS = %w[write_pos_topology].freeze
             pos_permissions index: READERS, show: READERS, versions: WRITERS, create: WRITERS, update: WRITERS,
-                            duplicate: WRITERS, default: WRITERS, restore: WRITERS, disable: WRITERS
+                            duplicate: WRITERS, default: WRITERS, restore: WRITERS, disable: WRITERS, enable: WRITERS
 
             Template = Spree::Pos::ReceiptTemplate
             Invalid = Spree::Pos::ReceiptTemplateSchema::Invalid
@@ -74,8 +74,9 @@ module Spree
             def create
               return if channel_rejected?
 
-              paper = params.key?(:paper) ? paper!(params[:paper]) : Template::DEFAULT_PAPER
-              document_type, config = creation_source(paper)
+              document_type = creation_type
+              paper = params.key?(:paper) ? paper!(params[:paper], document_type) : Template.default_paper_for(document_type)
+              config = creation_config(document_type, paper)
               name = params.key?(:name) ? name!(params[:name]) : Template.default_name(document_type, paper)
               template = Template.transaction do
                 Template.ensure_defaults!(current_store)
@@ -99,7 +100,7 @@ module Spree
               config = params.key?(:config) ? valid_config!(template.document_type) : nil
               attributes = {}
               attributes[:name] = name!(params[:name]) if params.key?(:name)
-              attributes[:paper] = paper!(params[:paper]) if params.key?(:paper)
+              attributes[:paper] = paper!(params[:paper], template.document_type) if params.key?(:paper)
               template.with_lock do
                 editable!(template)
                 stale!(template, expected)
@@ -117,7 +118,7 @@ module Spree
               return if channel_rejected?
 
               source = template!
-              paper = params.key?(:paper) ? paper!(params[:paper]) : source.paper
+              paper = params.key?(:paper) ? paper!(params[:paper], source.document_type) : source.paper
               name = params.key?(:name) ? name!(params[:name]) : "#{source.name} (bản sao)".first(Template::MAX_NAME_LENGTH)
               template = Template.transaction do
                 Template.lock_type!(current_store, source.document_type)
@@ -195,6 +196,24 @@ module Spree
               render json: { data: template.to_pos }
             end
 
+            # Brings a disabled template back, never as the default. Refused
+            # while the type already has the most active templates allowed.
+            def enable
+              return if channel_rejected?
+
+              template = template!
+              Template.transaction do
+                Template.lock_type!(current_store, template.document_type)
+                template.reload
+                if template.disabled?
+                  Template.ensure_room!(current_store, template.document_type)
+                  template.update!(status: 'active', is_default: false, updated_by: current_user)
+                  audit!('receipt_template.enable', template, template.audit_metadata)
+                end
+              end
+              render json: { data: template.to_pos }
+            end
+
             private
 
             def administrator?
@@ -225,22 +244,25 @@ module Spree
                                                                                           details: { current_version: template.current_version })
             end
 
-            def creation_source(paper)
-              if params[:from_default].present?
-                raise Invalid.at('/config', 'unexpected', 'Give from_default or config, not both.') if params.key?(:config)
+            # The document type of a new template: `from_default`, else `document_type`.
+            def creation_type
+              return document_type!(params[:document_type], '/document_type') unless params[:from_default].present?
 
-                type = document_type!(params[:from_default], '/from_default')
-                if params[:document_type].present? && params[:document_type] != type
-                  raise Invalid.at('/document_type', 'mismatch', 'document_type must match from_default.')
-                end
+              raise Invalid.at('/config', 'unexpected', 'Give from_default or config, not both.') if params.key?(:config)
 
-                [type, Template.default_config(type, paper: paper)]
-              else
-                type = document_type!(params[:document_type], '/document_type')
-                raise Invalid.at('/config', 'missing', 'Give from_default or config.') unless params.key?(:config)
-
-                [type, valid_config!(type)]
+              type = document_type!(params[:from_default], '/from_default')
+              if params[:document_type].present? && params[:document_type] != type
+                raise Invalid.at('/document_type', 'mismatch', 'document_type must match from_default.')
               end
+
+              type
+            end
+
+            def creation_config(type, paper)
+              return Template.default_config(type, paper: paper) if params[:from_default].present?
+              raise Invalid.at('/config', 'missing', 'Give from_default or config.') unless params.key?(:config)
+
+              valid_config!(type)
             end
 
             # The config as plain JSON data, validated for the document type.
@@ -256,10 +278,11 @@ module Spree
               raise Invalid.at(pointer, 'invalid_value', "Document type must be one of #{Template::DOCUMENT_TYPES.join(', ')}.")
             end
 
-            def paper!(value)
-              return value if Template::PAPERS.include?(value)
+            def paper!(value, document_type)
+              papers = Template.papers_for(document_type)
+              return value if papers.include?(value)
 
-              raise Invalid.at('/paper', 'invalid_value', "Paper must be one of #{Template::PAPERS.join(', ')}.")
+              raise Invalid.at('/paper', 'invalid_value', "Paper must be one of #{papers.join(', ')}.")
             end
 
             def positive_integer!(value, pointer)

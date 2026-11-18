@@ -8,11 +8,12 @@ import { type PrintPlace, prebillData, snapshotData } from './data';
 import { DEFAULT_TEMPLATES } from './defaults';
 import { renderDocument } from './render';
 import {
-  DOCUMENT_TYPES,
   type PageSettings,
+  type PrintEinvoice,
   type PrintJobDocument,
   type PrintPayQr,
   type PrintRow,
+  RECEIPT_DOCUMENT_TYPES,
   type TemplateConfig,
 } from './types';
 import { TEMPLATE_VARIABLES } from './variables';
@@ -26,7 +27,7 @@ const readJson = (path: string): unknown =>
   JSON.parse(readFileSync(new URL(path, serverConfig), 'utf8'));
 
 describe('server receipt template contract', () => {
-  it.each(DOCUMENT_TYPES)('ships the same default %s template as the client', (type) => {
+  it.each(RECEIPT_DOCUMENT_TYPES)('ships the same default %s template as the client', (type) => {
     expect(readJson(`receipt_templates/${type}.json`)).toEqual(DEFAULT_TEMPLATES[type]);
   });
 
@@ -45,7 +46,7 @@ type Golden = {
   input: {
     config: TemplateConfig;
     receipt?: ReceiptSnapshot;
-    print?: { copy: boolean; copy_number: number } | null;
+    print?: { copy: boolean; copy_number: number; printed_at?: string | null } | null;
     workspace?: PosWorkspace;
     place?: PrintPlace;
     now?: string;
@@ -64,7 +65,7 @@ function render({ input }: Golden) {
     const banner = input.print?.copy
       ? t('receiptCopyBanner', { number: input.print.copy_number })
       : null;
-    return renderDocument(input.config, snapshotData(input.receipt, t), { banner });
+    return renderDocument(input.config, snapshotData(input.receipt, t, input.print), { banner });
   }
   const data = prebillData(
     input.workspace as PosWorkspace,
@@ -115,12 +116,16 @@ describe('server print document contract', () => {
       totals: true,
       payments: true,
       payQr: true,
+      transferQr: true,
+      einvoice: true,
       notes: true,
       footer: true,
       disclaimer: true,
     };
     const page: Record<keyof PageSettings, true> = {
       margin_mm: true,
+      margins: true,
+      cut_feed_mm: true,
       font: true,
       font_size: true,
       line_spacing: true,
@@ -128,11 +133,19 @@ describe('server print document contract', () => {
       label: true,
     };
     const row: Record<keyof PrintRow, true> = { label: true, value: true, strong: true };
-    const qr: Record<keyof PrintPayQr, true> = { value: true, caption: true, lines: true };
+    const qr: Record<keyof PrintPayQr, true> = {
+      value: true,
+      caption: true,
+      lines: true,
+      size: true,
+      captionPosition: true,
+    };
+    const einvoice: Record<keyof PrintEinvoice, true> = { rows: true, qr: true };
     expect(Object.keys(document).sort()).toEqual(keysOf('PrintDocument'));
     expect(Object.keys(page).sort()).toEqual(keysOf('PrintPage'));
     expect(Object.keys(row).sort()).toEqual(keysOf('PrintRow'));
     expect(Object.keys(qr).sort()).toEqual(keysOf('PrintPayQr'));
+    expect(Object.keys(einvoice).sort()).toEqual(keysOf('PrintEinvoice'));
   });
 
   it('refuses what the schema forbids', () => {

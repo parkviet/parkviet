@@ -4,6 +4,8 @@ import {
   Button,
   Checkbox,
   Label,
+  RadioGroup,
+  RadioGroupItem,
   Select,
   SelectContent,
   SelectItem,
@@ -19,6 +21,8 @@ export function Choice<T extends string>({
   disabled,
   invalid,
   describedBy,
+  hideLabel = false,
+  className,
   onChange,
 }: {
   label: string
@@ -27,12 +31,16 @@ export function Choice<T extends string>({
   disabled?: boolean
   invalid?: boolean
   describedBy?: string
+  hideLabel?: boolean
+  className?: string
   onChange: (value: T) => void
 }) {
   const id = useId()
   return (
-    <div className="grid gap-2">
-      <Label htmlFor={id}>{label}</Label>
+    <div className={['grid gap-2', className].filter(Boolean).join(' ')}>
+      <Label htmlFor={id} className={hideLabel ? 'sr-only' : undefined}>
+        {label}
+      </Label>
       <Select
         value={value}
         items={options}
@@ -50,6 +58,67 @@ export function Choice<T extends string>({
           ))}
         </SelectContent>
       </Select>
+    </div>
+  )
+}
+
+export function SegmentedChoice<T extends string>({
+  label,
+  value,
+  options,
+  disabled,
+  invalid,
+  describedBy,
+  hideLabel = false,
+  className,
+  onChange,
+}: {
+  label: string
+  value: T
+  options: readonly { value: T; label: string; disabled?: boolean }[]
+  disabled?: boolean
+  invalid?: boolean
+  describedBy?: string
+  hideLabel?: boolean
+  className?: string
+  onChange: (value: T) => void
+}) {
+  const id = useId()
+  return (
+    <div className={['grid gap-2', className].filter(Boolean).join(' ')}>
+      <Label id={`${id}-label`} className={hideLabel ? 'sr-only' : undefined}>
+        {label}
+      </Label>
+      <RadioGroup
+        className="inline-flex w-full flex-wrap gap-1 rounded-lg border border-border/70 bg-muted/50 p-1"
+        value={value}
+        disabled={disabled}
+        onValueChange={(next) => onChange(next as T)}
+        aria-labelledby={`${id}-label`}
+        aria-describedby={describedBy}
+      >
+        {options.map((option) => (
+          <div
+            key={option.value}
+            data-disabled={disabled || option.disabled || undefined}
+            className="relative flex min-w-0 flex-1 items-center justify-center rounded-md px-2.5 py-1.5 text-center text-sm text-muted-foreground transition-all hover:text-foreground has-focus-visible:ring-2 has-focus-visible:ring-blue-500/40 has-data-[checked]:bg-card has-data-[checked]:font-medium has-data-[checked]:text-foreground has-data-[checked]:shadow-xs data-[disabled=true]:opacity-50"
+          >
+            <RadioGroupItem
+              id={`${id}-${option.value}`}
+              value={option.value}
+              disabled={option.disabled}
+              aria-invalid={invalid || undefined}
+              className="absolute inset-0 z-10 size-full cursor-pointer rounded-md border-0 bg-transparent opacity-0 shadow-none"
+            />
+            <Label
+              htmlFor={`${id}-${option.value}`}
+              className="pointer-events-none truncate font-inherit text-inherit"
+            >
+              {option.label}
+            </Label>
+          </div>
+        ))}
+      </RadioGroup>
     </div>
   )
 }
@@ -77,7 +146,9 @@ export function Check({
         onCheckedChange={onChange}
         aria-describedby={describedBy}
       />
-      <Label htmlFor={id}>{children}</Label>
+      <Label htmlFor={id} className="cursor-pointer">
+        {children}
+      </Label>
     </div>
   )
 }

@@ -87,6 +87,87 @@ describe('documentCommands', () => {
     );
     expect(line).toMatchObject({ text: `A${' '.repeat(30)}B` });
   });
+
+  it('indents left/right margins, adds top/bottom/cut feeds, and prints originalPrice, ruling, transferQr and einvoice', () => {
+    const out = documentCommands(
+      {
+        ...document,
+        page: {
+          margins: { top: 8, right: 3, bottom: 4, left: 3 },
+          cut_feed_mm: 8,
+        },
+        banners: [],
+        header: [{ kind: 'title', title: 'NHỎ', number: null, size: 'm' }],
+        meta: [{ label: 'A', value: 'B' }],
+        lines: {
+          layout: 'stacked',
+          ruling: 'rows',
+          items: [
+            { index: 1, name: 'Trà', amount: '25.000 ₫', originalPrice: '35.000 ₫', details: [] },
+            { index: 2, name: 'Bánh', amount: '15.000 ₫', details: [] },
+          ],
+        },
+        totals: [],
+        payments: [],
+        payQr: null,
+        transferQr: {
+          value: '000201',
+          caption: 'Quét CK',
+          lines: ['VCB 123'],
+          captionPosition: 'above',
+        },
+        einvoice: {
+          rows: [{ label: 'Mã tra cứu', value: 'ABC123' }],
+          qr: {
+            value: 'https://tracuu.test',
+            caption: 'Tra cứu',
+            lines: [],
+            captionPosition: 'left',
+          },
+        },
+        notes: [],
+        footer: [],
+        disclaimer: null,
+      },
+      printer({ paper: '58mm' }),
+    );
+    // Top margin 8mm -> 2 feed lines
+    expect(out[0]).toEqual({ type: 'feed', lines: 2 });
+    // Title size 'm' -> large: false
+    expect(out[1]).toEqual({
+      type: 'text',
+      text: 'NHỎ',
+      align: 'center',
+      bold: true,
+      large: false,
+    });
+    // 58mm (32 cols) minus left 2 cols (3mm) minus right 2 cols (3mm) = 28 cols, left-padded by 2 spaces
+    expect(out[2]).toEqual({
+      type: 'text',
+      text: `  A${' '.repeat(26)}B`,
+      align: 'left',
+      bold: false,
+      large: false,
+    });
+    const texts = out.flatMap((cmd) => (cmd.type === 'text' ? [cmd.text] : []));
+    expect(texts).toContain('  Giá gốc 35.000 ₫');
+    // Ruling 'rows' adds a 28-char rule between the two items
+    expect(texts.filter((line) => line === `  ${'-'.repeat(28)}`).length).toBeGreaterThanOrEqual(3);
+    // captionPosition 'above' prints caption & lines BEFORE qr; 'left' prints qr BEFORE caption
+    const transferQrIdx = out.findIndex((cmd) => cmd.type === 'qr' && cmd.value === '000201');
+    const transferCaptionIdx = out.findIndex(
+      (cmd) => cmd.type === 'text' && cmd.text === 'Quét CK',
+    );
+    expect(transferCaptionIdx).toBeLessThan(transferQrIdx);
+    const einvQrIdx = out.findIndex(
+      (cmd) => cmd.type === 'qr' && cmd.value === 'https://tracuu.test',
+    );
+    const einvCaptionIdx = out.findIndex((cmd) => cmd.type === 'text' && cmd.text === 'Tra cứu');
+    expect(einvQrIdx).toBeLessThan(einvCaptionIdx);
+    // Bottom 4mm + cut_feed_mm 8mm = 12mm -> 3 extra lines + 3 base = 6 feed lines before cut
+    expect(out.at(-2)).toEqual({ type: 'feed', lines: 6 });
+    expect(out.at(-1)).toEqual({ type: 'cut' });
+  });
 });
 
 describe('Epson ePOS-Print', () => {

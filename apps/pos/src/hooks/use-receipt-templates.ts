@@ -6,10 +6,11 @@ import {
   type PrintLayout,
   printChoices,
 } from '@parkviet/pos-shared/receipt-template/selection';
-import type {
-  DocumentType,
-  PaperSize,
-  TemplateConfig,
+import {
+  isReceiptDocumentType,
+  type PaperSize,
+  type ReceiptDocumentType,
+  type TemplateConfig,
 } from '@parkviet/pos-shared/receipt-template/types';
 import { normalizeSalesSettings } from '@parkviet/pos-shared/sales-settings';
 import { useQuery } from '@tanstack/react-query';
@@ -28,7 +29,7 @@ import { useSession } from './use-session';
 
 export type ReceiptTemplate = {
   id: string;
-  document_type: DocumentType;
+  document_type: ReceiptDocumentType;
   name: string;
   paper: PaperSize;
   status: 'active' | 'disabled';
@@ -96,6 +97,14 @@ const readVersion = async (id: string, version: number) =>
     )
   ).data;
 
+// The store keeps product label templates in the same list; they are printed
+// from the POS dashboard, never at the counter, so they are dropped here.
+type StoredTemplate = Omit<ReceiptTemplate, 'document_type'> & { document_type: string };
+const receiptTemplatesOnly = (templates: StoredTemplate[]): ReceiptTemplate[] =>
+  templates.filter((template): template is ReceiptTemplate =>
+    isReceiptDocumentType(template.document_type),
+  );
+
 // Every template of the store; disabled ones only for administrators. The
 // active list is what the counter prints with: loaded when the POS opens,
 // kept for a while and refreshed when the window regains focus. Read for
@@ -114,15 +123,15 @@ export function useReceiptTemplates(
     staleTime: includeDisabled ? 0 : 5 * 60_000,
     refetchOnWindowFocus: !includeDisabled,
     queryFn: async () => {
-      const read = request<{ data: ReceiptTemplate[] }>('GET', '/pos/receipt_templates', {
+      const read = request<{ data: StoredTemplate[] }>('GET', '/pos/receipt_templates', {
         params: {
           include_disabled: includeDisabled ? '1' : undefined,
           branch_id: branchId ?? undefined,
         },
       });
-      const templates = (
-        includeDisabled ? await read : await withTimeout(read, PRINT_READ_TIMEOUT_MS)
-      ).data;
+      const templates = receiptTemplatesOnly(
+        (includeDisabled ? await read : await withTimeout(read, PRINT_READ_TIMEOUT_MS)).data,
+      );
       for (const template of templates)
         queryClient.setQueryData(versionKey(generation, template.id, template.version), template);
       return templates;
@@ -170,7 +179,7 @@ export type PrintTemplate = {
 // Loading or failing never blocks a print: the built-in template of the
 // document type stands in.
 export function usePrintTemplate(
-  documentType: DocumentType,
+  documentType: ReceiptDocumentType,
   options: { original?: PrintLayout | null; remember?: boolean; branchId?: string | null } = {},
 ): PrintTemplate {
   const { original = null, remember = false } = options;

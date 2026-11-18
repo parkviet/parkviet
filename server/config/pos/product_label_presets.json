@@ -1,0 +1,100 @@
+[
+  {
+    "code": "roll_50x30",
+    "kind": "roll",
+    "suffix": "50×30mm",
+    "label_mm": { "width": 50, "height": 30 },
+    "columns": 1,
+    "gap_mm": { "x": 0, "y": 2 },
+    "roll_width_mm": 50,
+    "compact": false
+  },
+  {
+    "code": "roll_40x30",
+    "kind": "roll",
+    "suffix": "40×30mm",
+    "label_mm": { "width": 40, "height": 30 },
+    "columns": 1,
+    "gap_mm": { "x": 0, "y": 2 },
+    "roll_width_mm": 40,
+    "compact": false
+  },
+  {
+    "code": "roll_75x25_2",
+    "kind": "roll",
+    "suffix": "75×25mm · 2 tem",
+    "label_mm": { "width": 35, "height": 25 },
+    "columns": 2,
+    "gap_mm": { "x": 3, "y": 2 },
+    "roll_width_mm": 75,
+    "compact": false
+  },
+  {
+    "code": "roll_72x22_2",
+    "kind": "roll",
+    "suffix": "72×22mm · 2 tem",
+    "label_mm": { "width": 33, "height": 22 },
+    "columns": 2,
+    "gap_mm": { "x": 3, "y": 2 },
+    "roll_width_mm": 72,
+    "compact": true
+  },
+  {
+    "code": "roll_110x22_3",
+    "kind": "roll",
+    "suffix": "110×22mm · 3 tem",
+    "label_mm": { "width": 33, "height": 22 },
+    "columns": 3,
+    "gap_mm": { "x": 2, "y": 2 },
+    "roll_width_mm": 110,
+    "compact": true
+  },
+  {
+    "code": "sheet_a4_100",
+    "kind": "sheet",
+    "suffix": "A4 · 100 tem",
+    "label_mm": { "width": 38, "height": 13.5 },
+    "columns": 5,
+    "rows": 20,
+    "gap_mm": { "x": 2.5, "y": 0.8 },
+    "sheet_mm": { "width": 210, "height": 297 },
+    "sheet_margin_mm": { "top": 6, "left": 5 },
+    "compact": false
+  },
+  {
+    "code": "sheet_a4_65",
+    "kind": "sheet",
+    "suffix": "A4 · 65 tem",
+    "label_mm": { "width": 38.1, "height": 21.2 },
+    "columns": 5,
+    "rows": 13,
+    "gap_mm": { "x": 2.5, "y": 0 },
+    "sheet_mm": { "width": 210, "height": 297 },
+    "sheet_margin_mm": { "top": 10.7, "left": 4.7 },
+    "compact": false
+  },
+  {
+    "code": "sheet_a4_180",
+    "kind": "sheet",
+    "suffix": "A4 · 180 tem",
+    "label_mm": { "width": 20.5, "height": 13.5 },
+    "columns": 9,
+    "rows": 20,
+    "gap_mm": { "x": 1.5, "y": 0.8 },
+    "sheet_mm": { "width": 210, "height": 297 },
+    "sheet_margin_mm": { "top": 6, "left": 6.7 },
+    "compact": true
+  },
+  {
+    "code": "sheet_a5_40",
+    "kind": "sheet",
+    "suffix": "A5 · 40 tem",
+    "label_mm": { "width": 33.5, "height": 19 },
+    "columns": 4,
+    "rows": 10,
+    "gap_mm": { "x": 2, "y": 0.8 },
+    "sheet_mm": { "width": 148, "height": 210 },
+    "sheet_margin_mm": { "top": 6.5, "left": 4 },
+    "compact": false
+  }
+]

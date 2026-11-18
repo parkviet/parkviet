@@ -16,9 +16,13 @@ module Spree
           return nil if invoices.empty?
 
           current = invoices.reverse.find { |row| row.status == 'issued' } || invoices.first
+          seller_tax_code = EinvoiceSetting.for_branch(current.branch)&.seller_tax_code.presence ||
+                            StoreInfo.effective(current.branch).dig(:tax_code, :value).presence ||
+                            current.seller&.dig('tax_code').presence
           {
-            status: current.status, invoice_type: current.invoice_type, number: current.number, symbol: current.symbol,
-            template_code: current.template_code, lookup_code: current.lookup_code, lookup_url: current.lookup_url,
+            status: current.status, invoice_type: current.invoice_type, seller_tax_code: seller_tax_code,
+            number: current.number, symbol: current.symbol, template_code: current.template_code,
+            cqt_code: current.cqt_code, lookup_code: current.lookup_code, lookup_url: current.lookup_url,
             buyer_url: current.buyer_link_open? ? BuyerLink.url(current) : nil
           }
         end

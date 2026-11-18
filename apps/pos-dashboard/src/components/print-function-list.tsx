@@ -1,6 +1,6 @@
 import { defaultTemplate } from '@parkviet/pos-shared/receipt-template/defaults'
 import { sampleData } from '@parkviet/pos-shared/receipt-template/sample-data'
-import type { DocumentType, PaperSize } from '@parkviet/pos-shared/receipt-template/types'
+import type { PaperSize, ReceiptDocumentType } from '@parkviet/pos-shared/receipt-template/types'
 import { posFailureKey } from '@parkviet/pos-shared/request-failure'
 import type { Printer, PrinterRole } from '@parkviet/pos-shared/types/print-adapter'
 import { usePermissions } from '@spree/dashboard-core'
@@ -389,7 +389,7 @@ function FunctionPreviewDialog({
   const { t: posT } = useTranslation('pos')
   const { branch } = useBranchScope()
   const { context } = usePosSession()
-  const documentType = row.definition.documentType as DocumentType
+  const documentType = row.definition.documentType as ReceiptDocumentType
   const effective = row.template?.effectiveTemplate
   const paper: PaperSize = effective?.paper ?? row.template?.effectiveSummary?.paper ?? '80mm'
   const config =
@@ -579,7 +579,7 @@ function ChooseTemplateDialog({
   onClose,
 }: {
   branchId: string
-  documentType: DocumentType
+  documentType: ReceiptDocumentType
   row: ResolvedPrintFunction
   templates: ReceiptTemplate[]
   onClose: () => void

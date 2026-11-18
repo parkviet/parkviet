@@ -7984,7 +7984,7 @@ components:
           type: array
           items:
             type: string
-            enum: [receipt, prebill, kitchen_ticket, void_ticket, ready_ticket, cup_label, checklist, table_qr]
+            enum: [receipt, prebill, kitchen_ticket, void_ticket, ready_ticket, cup_label, checklist, table_qr, product_label]
         print_station_device_id:
           type: [string, 'null']
         register_id:
@@ -8010,7 +8010,7 @@ components:
           type: string
         kind:
           type: string
-          enum: [receipt, prebill, kitchen_ticket, void_ticket, ready_ticket, cup_label, checklist, table_qr, test]
+          enum: [receipt, prebill, kitchen_ticket, void_ticket, ready_ticket, cup_label, checklist, table_qr, product_label, test]
         status:
           type: string
           enum: [queued, claimed, printed, failed, canceled]
@@ -8144,6 +8144,14 @@ components:
           oneOf:
             - $ref: '#/components/schemas/PrintPayQr'
             - type: 'null'
+        transferQr:
+          oneOf:
+            - $ref: '#/components/schemas/PrintPayQr'
+            - type: 'null'
+        einvoice:
+          oneOf:
+            - $ref: '#/components/schemas/PrintEinvoice'
+            - type: 'null'
         notes:
           type: array
           items:
@@ -8154,6 +8162,78 @@ components:
             $ref: '#/components/schemas/PrintBlock'
         disclaimer:
           type: [string, 'null']
+    ProductLabelDocument:
+      type: object
+      additionalProperties: false
+      description: >
+        Version 1 of the document a label printer prints for a product label
+        job (`kind: product_label`): roll stocks only. Each entry of `labels`
+        is one product's rows and the number of stickers to print. The server
+        has already chosen the barcode symbology and left out what does not
+        fit; text is plain and unescaped, so a printer language must escape it.
+        A row is `{kind: text, text, max_lines?}`,
+        `{kind: barcode, symbology: ean13 or code128, value, show_text}` or
+        `{kind: price, text, original?}`; `original` is the price before the
+        reduction, printed small above `text`.
+      required: [version, kind, page, font_size, margins, labels]
+      properties:
+        version:
+          const: 1
+        kind:
+          const: product_label
+        page:
+          type: object
+          additionalProperties: false
+          required: [label]
+          properties:
+            label:
+              type: object
+              additionalProperties: false
+              required: [width_mm, height_mm, columns, gap_mm, column_gap_mm, roll_width_mm]
+              properties:
+                width_mm:
+                  type: number
+                height_mm:
+                  type: number
+                columns:
+                  type: integer
+                  description: Stickers side by side on the roll.
+                gap_mm:
+                  type: number
+                  description: Gap between rows along the feed.
+                column_gap_mm:
+                  type: number
+                  description: Gap between the stickers of a row.
+                roll_width_mm:
+                  type: number
+        font_size:
+          type: number
+        margins:
+          type: object
+          additionalProperties: false
+          required: [top, right, bottom, left]
+          properties:
+            top:
+              type: number
+            right:
+              type: number
+            bottom:
+              type: number
+            left:
+              type: number
+        labels:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [rows, copies]
+            properties:
+              rows:
+                type: array
+                items:
+                  type: object
+              copies:
+                type: integer
     PrintPage:
       type: object
       additionalProperties: false
@@ -8161,6 +8241,23 @@ components:
       properties:
         margin_mm:
           type: number
+        margins:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [top, right, bottom, left]
+              properties:
+                top:
+                  type: number
+                right:
+                  type: number
+                bottom:
+                  type: number
+                left:
+                  type: number
+            - type: 'null'
+        cut_feed_mm:
+          type: [number, 'null']
         font:
           enum: [sans, mono]
         font_size:
@@ -8203,6 +8300,23 @@ components:
           type: array
           items:
             type: string
+        size:
+          enum: [s, m, l]
+        captionPosition:
+          enum: [below, above, left, right]
+    PrintEinvoice:
+      type: object
+      additionalProperties: false
+      required: [rows, qr]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrintRow'
+        qr:
+          oneOf:
+            - $ref: '#/components/schemas/PrintPayQr'
+            - type: 'null'
     PrintBlock:
       oneOf:
         - type: object
@@ -8289,6 +8403,8 @@ components:
               type: string
             number:
               type: [string, 'null']
+            size:
+              enum: [m, l, xl]
         - type: object
           additionalProperties: false
           required: [kind, style]
@@ -8313,6 +8429,8 @@ components:
           properties:
             layout:
               const: stacked
+            ruling:
+              enum: [none, rows, grid]
             items:
               type: array
               items:
@@ -8326,6 +8444,8 @@ components:
                     type: string
                   amount:
                     type: [string, 'null']
+                  originalPrice:
+                    type: [string, 'null']
                   details:
                     type: array
                     items:
@@ -8336,6 +8456,8 @@ components:
           properties:
             layout:
               const: table
+            ruling:
+              enum: [none, rows, grid]
             headings:
               type: object
               additionalProperties: false
@@ -8371,6 +8493,8 @@ components:
                     type: array
                     items:
                       type: string
+                  originalPrice:
+                    type: [string, 'null']
                   details:
                     type: array
                     items:
@@ -12198,58 +12322,6 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/GuestOrder'
-    EmenuSettings:
-      type: object
-      additionalProperties: false
-      required:
-        - brand_color
-        - text_color
-        - button_color
-        - banner_enabled
-        - banner_promotion_ids
-        - best_sellers_enabled
-        - best_sellers_source
-        - best_seller_item_ids
-        - best_sellers_limit
-        - best_sellers_auto_ids
-        - new_items_enabled
-        - new_item_ids
-        - min_order_interval_seconds
-        - paused
-        - payment_timing
-        - pay_methods
-        - prepay_timeout_minutes
-        - sticker_show_logo
-        - sticker_show_name
-        - sticker_store_name
-        - sticker_wifi_enabled
-        - sticker_wifi_name
-        - sticker_wifi_password
-        - sticker_greeting
-        - sticker_size
-        - sticker_custom_mm
-        - logo_url
-        - store_name
-        - vietqr_timeout_minutes
-        - vietqr_available
-      properties:
-        brand_color:
-          type: string
-        text_color:
-          type: string
-        button_color:
-          type: string
-        banner_enabled:
-          type: boolean
-        banner_promotion_ids:
-          type: array
-          items:
-            type: string
-        best_sellers_enabled:
-          type: boolean
-        best_sellers_source:
-          type: string
-          enum: [manual, auto]
     TaxProfile:
       type: object
       additionalProperties: false
@@ -12396,78 +12468,6 @@ components:
                 pattern: '^[0-9A-Za-z-]{1,20}$'
               tax_head_office:
                 type: boolean
-    TaxCatalogList:
-      type: object
-      additionalProperties: false
-      required: [basis, updated_on, verified, items]
-      properties:
-        basis:
-          type: string
-        updated_on:
-          type: string
-          format: date
-        verified:
-          type: boolean
-          description: False until the list is compared with the official one
-        items:
-          type: array
-          items:
-            type: object
-            additionalProperties: false
-            required: [code, name]
-            properties:
-              code:
-                type: string
-              name:
-                type: string
-              group:
-                type: string
-                enum: [retail, fnb, entertainment, services]
-                description: Industries only
-    TaxCatalog:
-      type: object
-      additionalProperties: false
-      required: [tax_authorities, industries]
-      properties:
-        tax_authorities:
-          $ref: '#/components/schemas/TaxCatalogList'
-        industries:
-          $ref: '#/components/schemas/TaxCatalogList'
-        best_seller_item_ids:
-          type: array
-          items:
-            type: string
-        best_sellers_limit:
-          type: integer
-        best_sellers_auto_ids:
-          type: array
-          items:
-            type: string
-        new_items_enabled:
-          type: boolean
-        new_item_ids:
-          type: array
-          items:
-            type: string
-        min_order_interval_seconds:
-          type: integer
-        paused:
-          type: boolean
-        payment_timing:
-          type: string
-          enum: [pay_after, pay_before]
-        pay_methods:
-          type: array
-          items:
-            type: string
-            enum: [vietqr, counter]
-        prepay_timeout_minutes:
-          type: integer
-        sticker_show_logo:
-          type: boolean
-        sticker_show_name:
-          type: boolean
-        sticker_store_name:
     TaxReadiness:
       type: object
       additionalProperties: false
@@ -12814,6 +12814,130 @@ components:
           type: string
         revenue_year:
           $ref: '#/components/schemas/TaxRevenueYear'
+    TaxCatalogList:
+      type: object
+      additionalProperties: false
+      required: [basis, updated_on, verified, items]
+      properties:
+        basis:
+          type: string
+        updated_on:
+          type: string
+          format: date
+        verified:
+          type: boolean
+          description: False until the list is compared with the official one
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [code, name]
+            properties:
+              code:
+                type: string
+              name:
+                type: string
+              group:
+                type: string
+                enum: [retail, fnb, entertainment, services]
+                description: Industries only
+    TaxCatalog:
+      type: object
+      additionalProperties: false
+      required: [tax_authorities, industries]
+      properties:
+        tax_authorities:
+          $ref: '#/components/schemas/TaxCatalogList'
+        industries:
+          $ref: '#/components/schemas/TaxCatalogList'
+    EmenuSettings:
+      type: object
+      additionalProperties: false
+      required:
+        - brand_color
+        - text_color
+        - button_color
+        - banner_enabled
+        - banner_promotion_ids
+        - best_sellers_enabled
+        - best_sellers_source
+        - best_seller_item_ids
+        - best_sellers_limit
+        - best_sellers_auto_ids
+        - new_items_enabled
+        - new_item_ids
+        - min_order_interval_seconds
+        - paused
+        - payment_timing
+        - pay_methods
+        - prepay_timeout_minutes
+        - sticker_show_logo
+        - sticker_show_name
+        - sticker_store_name
+        - sticker_wifi_enabled
+        - sticker_wifi_name
+        - sticker_wifi_password
+        - sticker_greeting
+        - sticker_size
+        - sticker_custom_mm
+        - logo_url
+        - store_name
+        - vietqr_timeout_minutes
+        - vietqr_available
+      properties:
+        brand_color:
+          type: string
+        text_color:
+          type: string
+        button_color:
+          type: string
+        banner_enabled:
+          type: boolean
+        banner_promotion_ids:
+          type: array
+          items:
+            type: string
+        best_sellers_enabled:
+          type: boolean
+        best_sellers_source:
+          type: string
+          enum: [manual, auto]
+        best_seller_item_ids:
+          type: array
+          items:
+            type: string
+        best_sellers_limit:
+          type: integer
+        best_sellers_auto_ids:
+          type: array
+          items:
+            type: string
+        new_items_enabled:
+          type: boolean
+        new_item_ids:
+          type: array
+          items:
+            type: string
+        min_order_interval_seconds:
+          type: integer
+        paused:
+          type: boolean
+        payment_timing:
+          type: string
+          enum: [pay_after, pay_before]
+        pay_methods:
+          type: array
+          items:
+            type: string
+            enum: [vietqr, counter]
+        prepay_timeout_minutes:
+          type: integer
+        sticker_show_logo:
+          type: boolean
+        sticker_show_name:
+          type: boolean
+        sticker_store_name:
           type: string
         sticker_wifi_enabled:
           type: boolean

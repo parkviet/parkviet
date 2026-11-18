@@ -66,14 +66,17 @@ module Spree
       end
 
       # The VietQR (NAPAS EMVCo) string banking apps scan: a transfer to an
-      # account (QRIBFTTA) with the amount and the note.
+      # account (QRIBFTTA) with the note and, when `amount` is positive, the
+      # prefilled amount (dynamic tag 01=12); without an amount, static 01=11.
       def payload(bank_bin:, account_number:, amount:, content:)
         beneficiary = [tlv('00', bank_bin), tlv('01', account_number)].join
         merchant = [tlv('00', 'A000000727'), tlv('01', beneficiary), tlv('02', 'QRIBFTTA')].join
+        positive = amount && amount.to_i.positive?
         body = [
-          tlv('00', '01'), tlv('01', '12'), tlv('38', merchant), tlv('53', '704'), tlv('54', amount.to_s),
+          tlv('00', '01'), tlv('01', positive ? '12' : '11'), tlv('38', merchant), tlv('53', '704'),
+          (tlv('54', amount.to_i.to_s) if positive),
           tlv('58', 'VN'), tlv('62', tlv('08', content)), '6304'
-        ].join
+        ].compact.join
         "#{body}#{crc16(body)}"
       end
 

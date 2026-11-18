@@ -1,8 +1,9 @@
 import type { TemplateData } from '@parkviet/pos-shared/receipt-template/data'
 import { MAX_BLOCKS } from '@parkviet/pos-shared/receipt-template/render'
 import type {
-  DocumentType,
+  PageMargins,
   PaperSize,
+  ReceiptDocumentType,
   TemplateBlock,
   TextSize,
 } from '@parkviet/pos-shared/receipt-template/types'
@@ -28,7 +29,7 @@ import { Choice, Problem } from './controls'
 export type KeyedBlock = { key: string; block: TemplateBlock }
 export const keyBlocks = (blocks: TemplateBlock[]): KeyedBlock[] =>
   blocks.map((block) => ({ key: crypto.randomUUID(), block }))
-const UNNUMBERED: readonly DocumentType[] = ['prebill', 'payment_ticket']
+const UNNUMBERED: readonly ReceiptDocumentType[] = ['prebill', 'payment_ticket']
 function newBlock(type: BlockType): TemplateBlock {
   switch (type) {
     case 'logo':
@@ -51,7 +52,11 @@ function newBlock(type: BlockType): TemplateBlock {
       return { type, parties: ['buyer', 'seller'] }
   }
 }
-export function moveBlock(list: KeyedBlock[], key: string, target: number): KeyedBlock[] | null {
+export function moveBlock<T extends { key: string }>(
+  list: T[],
+  key: string,
+  target: number,
+): T[] | null {
   const from = list.findIndex((item) => item.key === key)
   if (from < 0 || target < 0 || target >= list.length || target === from) return null
   const next = [...list]
@@ -71,6 +76,7 @@ export function BlockList({
   documentType,
   paper,
   pageSize,
+  margins,
   readOnly,
   lockedBefore = [],
   lockedAfter = [],
@@ -81,15 +87,16 @@ export function BlockList({
   place: 'header' | 'footer'
   blocks: KeyedBlock[]
   data: TemplateData
-  documentType: DocumentType
+  documentType: ReceiptDocumentType
   paper: PaperSize
   pageSize: TextSize
+  margins?: PageMargins | null
   readOnly: boolean
   lockedBefore?: string[]
   lockedAfter?: string[]
   listProblem: string | null
   problemsAt: (index: number) => BlockProblems
-  onChange: (blocks: KeyedBlock[]) => void
+  onChange: (blocks: KeyedBlock[], coalesceKey?: string) => void
 }) {
   const { t } = useTranslation('pos')
   const helpId = useId()
@@ -294,11 +301,13 @@ export function BlockList({
                 data={data}
                 paper={paper}
                 pageSize={pageSize}
+                margins={margins}
                 readOnly={readOnly}
                 problems={problems}
-                onChange={(block) =>
+                onChange={(block, coalesceField) =>
                   onChange(
                     blocks.map((other) => (other.key === item.key ? { ...other, block } : other)),
+                    coalesceField ? `${place}-${item.key}-${coalesceField}` : undefined,
                   )
                 }
               />

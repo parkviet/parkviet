@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 RSpec.describe Spree::Pos::ReceiptTemplateSchema do
-  def config_for(type)
-    Spree::Pos::ReceiptTemplate.default_config(type)
+  def config_for(type, paper: Spree::Pos::ReceiptTemplate::DEFAULT_PAPER)
+    Spree::Pos::ReceiptTemplate.default_config(type, paper: paper)
   end
 
   def errors_of(config, type = 'sale')
@@ -13,25 +13,54 @@ RSpec.describe Spree::Pos::ReceiptTemplateSchema do
     errors_of(config, type).map { |error| error[:pointer] }
   end
 
-  it 'accepts every built-in default template' do
+  it 'accepts every built-in default template on every paper of its type' do
     Spree::Pos::ReceiptTemplate::DOCUMENT_TYPES.each do |type|
-      expect(errors_of(config_for(type), type)).to eq([]), type
+      Spree::Pos::ReceiptTemplate.papers_for(type).each do |paper|
+        expect(errors_of(config_for(type, paper: paper), type)).to eq([]), "#{type} (#{paper})"
+      end
     end
   end
 
   it 'accepts every block, field and variable the schema lists' do
     config = config_for('sale')
+    config['page']['margins'] = { 'top' => 0, 'right' => 15, 'bottom' => 4.5, 'left' => 2 }
+    config['page']['cut_feed_mm'] = 10
     config['header'] = [
       { 'type' => 'logo', 'width_pct' => 40, 'align' => 'left' },
       { 'type' => 'business', 'fields' => described_class::BUSINESS_FIELDS, 'align' => 'right' },
-      { 'type' => 'title', 'label' => 'HÓA ĐƠN' },
+      { 'type' => 'title', 'label' => 'HÓA ĐƠN', 'size' => 'xl' },
       { 'type' => 'divider', 'style' => 'solid' },
       { 'type' => 'spacer', 'mm' => 4 }
     ]
+    config['meta'] = {
+      'fields' => described_class::META_ALL,
+      'labels' => { 'time' => 'Ngày', 'table' => 'Bàn' },
+      'table_style' => 'two_lines',
+      'time_format' => 'date'
+    }
+    config['lines'] = {
+      'layout' => 'table',
+      'columns' => described_class::COLUMNS_ALL,
+      'show_trace' => true,
+      'show_conversion' => true,
+      'ruling' => 'grid',
+      'timed_style' => 'range'
+    }
+    config['totals'] = { 'fields' => described_class::TOTALS_ALL, 'labels' => { 'item_count' => 'SL' } }
+    config['payments'] = {
+      'fields' => described_class::PAYMENTS_ALL,
+      'labels' => { 'debt' => 'Còn nợ', 'transfer_qr' => 'Quét QR' },
+      'qr_size' => 'l',
+      'qr_caption' => 'left'
+    }
+    config['einvoice'] = {
+      'fields' => described_class::EINVOICE_ALL,
+      'labels' => { 'qr' => 'Tra cứu HĐĐT' },
+      'qr_size' => 's',
+      'qr_caption' => 'above'
+    }
     config['footer'] = [{ 'type' => 'text', 'value' => described_class::VARIABLES.map { |name| "{#{name}}" }.join(' '),
                           'bold' => true, 'size' => 'l', 'align' => 'center' }]
-    config['meta']['labels'] = { 'time' => 'Ngày' }
-    config['payments']['labels'] = { 'debt' => 'Còn nợ' }
     expect(errors_of(config)).to eq([])
   end
 
@@ -73,6 +102,41 @@ RSpec.describe Spree::Pos::ReceiptTemplateSchema do
     expect(errors_of(huge).map { |error| error[:code] }).to eq(['too_large'])
   end
 
+  it 'validates 4-side margins, cut_feed_mm, title size, section options and einvoice availability' do
+    bad = config_for('sale')
+    bad['page']['margins'] = { 'top' => -1, 'right' => 16, 'bottom' => 0, 'extra' => 1 }
+    bad['page']['cut_feed_mm'] = 35
+    bad['header'] = [{ 'type' => 'title', 'size' => 'xxl' }]
+    bad['meta']['table_style'] = 'three_lines'
+    bad['meta']['time_format'] = 'clock'
+    bad['lines']['ruling'] = 'dotted'
+    bad['lines']['timed_style'] = 'seconds'
+    bad['payments']['qr_size'] = 'xl'
+    bad['payments']['qr_caption'] = 'inside'
+    bad['einvoice'] = { 'fields' => %w[qr bogus], 'qr_size' => 'xs', 'qr_caption' => 'diagonal' }
+    expect(errors_of(bad).map { |e| [e[:pointer], e[:code]] }).to contain_exactly(
+      ['/config/page/margins/extra', 'unknown_key'],
+      ['/config/page/margins/top', 'invalid_value'],
+      ['/config/page/margins/right', 'invalid_value'],
+      ['/config/page/margins/left', 'missing'],
+      ['/config/page/cut_feed_mm', 'invalid_value'],
+      ['/config/header/0/size', 'invalid_value'],
+      ['/config/meta/table_style', 'invalid_value'],
+      ['/config/meta/time_format', 'invalid_value'],
+      ['/config/lines/ruling', 'invalid_value'],
+      ['/config/lines/timed_style', 'invalid_value'],
+      ['/config/payments/qr_size', 'invalid_value'],
+      ['/config/payments/qr_caption', 'invalid_value'],
+      ['/config/einvoice/fields/1', 'field_unavailable'],
+      ['/config/einvoice/qr_size', 'invalid_value'],
+      ['/config/einvoice/qr_caption', 'invalid_value']
+    )
+
+    non_hash_margins = config_for('sale')
+    non_hash_margins['page']['margins'] = 5
+    expect(errors_of(non_hash_margins).map { |e| [e[:pointer], e[:code]] }).to eq([['/config/page/margins', 'invalid_type']])
+  end
+
   it 'accepts a field only for document types that carry its data' do
     closure = config_for('shift_closure')
     closure['lines'] = config_for('sale')['lines']
@@ -85,7 +149,28 @@ RSpec.describe Spree::Pos::ReceiptTemplateSchema do
     prebill = config_for('prebill')
     prebill['totals']['fields'] << 'tax'
     prebill['payments']['labels'] = { 'debt' => 'Nợ' }
-    expect(pointers(prebill, 'prebill')).to contain_exactly('/config/totals/fields/3', '/config/payments/labels/debt')
+    prebill['einvoice'] = { 'fields' => ['qr'] }
+    expect(pointers(prebill, 'prebill')).to contain_exactly(
+      "/config/totals/fields/#{prebill['totals']['fields'].length - 1}",
+      '/config/payments/labels/debt',
+      '/config/einvoice'
+    )
+
+    ticket = config_for('payment_ticket')
+    ticket['payments']['fields'] << 'customer_debt'
+    ticket['einvoice'] = { 'fields' => ['qr'] }
+    expect(errors_of(ticket, 'payment_ticket').map { |e| [e[:pointer], e[:code]] }).to contain_exactly(
+      ["/config/payments/fields/#{ticket['payments']['fields'].length - 1}", 'field_unavailable'],
+      ['/config/einvoice', 'section_unavailable']
+    )
+
+    ret = config_for('return')
+    ret['meta']['fields'] = %w[time printed_at print_count order_source table]
+    ret['lines']['columns'] = %w[name amount note barcode]
+    expect(errors_of(ret, 'return').map { |e| [e[:pointer], e[:code]] }).to contain_exactly(
+      ['/config/meta/fields/4', 'field_unavailable'],
+      ['/config/lines/columns/3', 'field_unavailable']
+    )
   end
 
   it 'keeps the title in the header once and payment method labels fixed' do

@@ -59,7 +59,9 @@ module Spree
           'address' => view[:address][:value].to_s,
           'contact_phone' => view[:phone][:value].to_s,
           'customer_support_email' => view[:contact_email][:value].to_s,
-          'tax_code' => view[:tax_code][:value].to_s
+          'tax_code' => view[:tax_code][:value].to_s,
+          'description' => view[:description][:value].to_s,
+          'logo_url' => view[:logo][:value].to_s
         }
       end
 
@@ -71,9 +73,8 @@ module Spree
         return unless record.respond_to?(:logo) && record.logo.attached?
 
         Rails.application.routes.url_helpers.cdn_image_url(record.logo)
-      rescue ArgumentError => e
-        Rails.error.report(e, handled: true)
-        nil
+      rescue ArgumentError
+        Rails.application.routes.url_helpers.rails_blob_path(record.logo, only_path: true)
       end
 
       def filled_count(profile_keys)

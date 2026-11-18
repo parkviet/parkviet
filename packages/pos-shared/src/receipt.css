@@ -123,6 +123,14 @@
   margin-top: 4px;
 }
 
+.receipt-header h2.receipt-title-m {
+  font-size: 1em;
+}
+
+.receipt-header h2.receipt-title-xl {
+  font-size: 1.35em;
+}
+
 .receipt-number {
   font-weight: 600;
 }
@@ -274,6 +282,63 @@
   font-size: 0.85em;
 }
 
+.receipt-original-price {
+  text-decoration: line-through;
+  opacity: 0.72;
+}
+
+.receipt-grid td .receipt-original-price,
+.ticket-table td .receipt-original-price {
+  display: block;
+  font-size: 0.85em;
+}
+
+/* Line ruling options: none, horizontal rows, or full bordered grid. */
+.receipt-grid.receipt-ruling-none {
+  border-top: 1px dashed #000;
+}
+
+.receipt-grid.receipt-ruling-none :is(th, td) {
+  border: 0;
+}
+
+.receipt-grid.receipt-ruling-rows :is(th, td) {
+  border: 0;
+  border-bottom: 1px dashed #000;
+}
+
+.receipt-grid.receipt-ruling-rows thead th {
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
+}
+
+.ticket-table.receipt-ruling-none,
+.ticket-table.receipt-ruling-none th {
+  border: 0;
+}
+
+.ticket-table.receipt-ruling-rows tbody + tbody {
+  border-top: 1px dashed #000;
+}
+
+.ticket-table.receipt-ruling-grid {
+  border: 1px solid #000;
+}
+
+.ticket-table.receipt-ruling-grid th {
+  border: 1px solid #000;
+  padding: 2px 4px;
+}
+
+.ticket-table.receipt-ruling-grid tbody {
+  border-top: 1px solid #000;
+}
+
+.ticket-table.receipt-ruling-grid .ticket-figures td {
+  border-top: 1px dashed #000;
+  padding: 2px 4px;
+}
+
 /* Editor preview: the part of a line past the estimated width, which the
    printer will wrap. */
 .receipt-overflow {
@@ -292,15 +357,21 @@
 
 .receipt-meta,
 .receipt-totals,
-.receipt-payments {
+.receipt-payments,
+.receipt-einvoice {
   border-top: 1px dashed #000;
   padding-top: 4px;
   margin-top: 4px;
 }
 
+.receipt-einvoice {
+  break-inside: avoid;
+}
+
 .receipt-meta div,
 .receipt-totals div,
 .receipt-payments div,
+.receipt-einvoice-rows div,
 .receipt-line-head {
   display: flex;
   justify-content: space-between;
@@ -330,6 +401,29 @@
   margin-top: 4px;
 }
 
+.receipt-lines.receipt-ruling-none {
+  border-top: 0;
+}
+
+.receipt-lines.receipt-ruling-rows li + li {
+  border-top: 1px dashed #000;
+  padding-top: 4px;
+}
+
+.receipt-lines.receipt-ruling-grid {
+  border: 1px solid #000;
+  padding: 0;
+}
+
+.receipt-lines.receipt-ruling-grid li {
+  padding: 4px 6px;
+  margin-top: 0;
+}
+
+.receipt-lines.receipt-ruling-grid li + li {
+  border-top: 1px solid #000;
+}
+
 .receipt-line-detail {
   font-size: 0.9em;
   padding-left: 8px;
@@ -340,7 +434,7 @@
   font-style: italic;
 }
 
-/* The pay-later VietQR of a credit sale, under the payments. */
+/* The pay-later VietQR, transfer VietQR, or e-invoice QR. */
 .receipt-pay-qr {
   break-inside: avoid;
   margin-top: 4px;
@@ -350,6 +444,80 @@
   font-size: 0.9em;
   overflow-wrap: anywhere;
   text-align: center;
+}
+
+.receipt-qr-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  break-inside: avoid;
+}
+
+.receipt-qr-box svg {
+  width: 30mm;
+  height: 30mm;
+  flex: none;
+}
+
+.receipt-58mm .receipt-qr-box svg {
+  width: 26mm;
+  height: 26mm;
+}
+
+.receipt-qr-box.receipt-qr-size-s svg {
+  width: 22mm;
+  height: 22mm;
+}
+
+.receipt-qr-box.receipt-qr-size-l svg {
+  width: 38mm;
+  height: 38mm;
+}
+
+.receipt-58mm .receipt-qr-box.receipt-qr-size-l svg {
+  width: 32mm;
+  height: 32mm;
+}
+
+.receipt-qr-caption-above {
+  flex-direction: column-reverse;
+}
+
+.receipt-qr-caption-right {
+  flex-direction: row;
+  justify-content: center;
+  gap: 8px;
+}
+
+.receipt-qr-caption-left {
+  flex-direction: row-reverse;
+  justify-content: center;
+  gap: 8px;
+}
+
+.receipt-qr-text {
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+  text-align: center;
+  min-width: 0;
+}
+
+.receipt-qr-text p {
+  font-size: 1em;
+}
+
+.receipt-qr-caption-right .receipt-qr-text {
+  text-align: left;
+}
+
+.receipt-qr-caption-left .receipt-qr-text {
+  text-align: right;
+}
+
+.receipt-qr-caption {
+  font-weight: 600;
 }
 
 .receipt-disclaimer {
@@ -594,15 +762,27 @@
     padding: 0;
   }
 
+  html[data-receipt-printing="a4"] .receipt-sheet.receipt-custom-margins {
+    width: 210mm;
+  }
+
   html[data-receipt-printing="a5"] .receipt-sheet {
     width: 128mm;
     max-width: none;
     padding: 0;
   }
 
+  html[data-receipt-printing="a5"] .receipt-sheet.receipt-custom-margins {
+    width: 148mm;
+  }
+
   html[data-receipt-printing="a6"] .receipt-sheet {
     width: 93mm;
     max-width: none;
     padding: 0;
+  }
+
+  html[data-receipt-printing="a6"] .receipt-sheet.receipt-custom-margins {
+    width: 105mm;
   }
 }

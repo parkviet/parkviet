@@ -64,6 +64,40 @@ module Spree
           value
         end
 
+        def document_date_only(value, zone)
+          return '—' if value.blank?
+
+          Time.iso8601(value).in_time_zone(zone).strftime('%d/%m/%Y')
+        rescue ArgumentError
+          document_date(value)
+        end
+
+        def duration_minutes(minutes)
+          return nil if minutes.nil? || minutes.negative?
+
+          hours = minutes / 60
+          rem = minutes % 60
+          if hours.zero?
+            t('receiptDurationMinutes', minutes: minutes)
+          elsif rem.zero?
+            t('receiptDurationHours', hours: hours)
+          else
+            t('receiptDurationHoursMinutes', hours: hours, minutes: rem)
+          end
+        end
+
+        def duration_between(start_iso, end_iso)
+          return nil if start_iso.blank? || end_iso.blank?
+
+          started = Time.iso8601(start_iso)
+          ended = Time.iso8601(end_iso)
+          return nil if ended < started
+
+          duration_minutes(((ended - started) / 60).floor)
+        rescue ArgumentError
+          nil
+        end
+
         def document_date(value)
           match = /\A(\d{4})-(\d{2})-(\d{2})\z/.match(value.to_s)
           match ? "#{match[3]}/#{match[2]}/#{match[1]}" : value.to_s

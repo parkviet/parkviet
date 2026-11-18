@@ -1,3 +1,4 @@
+import { RECEIPT_DOCUMENT_TYPES } from '@parkviet/pos-shared/receipt-template/types'
 import { resourceSearchSchema } from '@spree/dashboard-core'
 import { z } from 'zod'
 import { RECEIVABLE_STATUSES } from '../hooks/use-debts'
@@ -35,3 +36,15 @@ export const receivableSearchSchema = resourceSearchSchema.extend({
   status: z.enum(RECEIVABLE_STATUSES).optional().catch(undefined),
 })
 export type ReceivableSearch = z.infer<typeof receivableSearchSchema>
+
+export const receiptTemplateSearchSchema = z.object({
+  search: z.string().max(120).optional().catch(undefined),
+  type: z.enum(RECEIPT_DOCUMENT_TYPES).optional().catch(undefined),
+  paper: z.enum(['58mm', '80mm', 'a4', 'a5', 'a6']).optional().catch(undefined),
+  status: z.enum(['active', 'disabled']).optional().catch(undefined),
+  // The page's top-level tab; the receipts tab is the default.
+  tab: z.enum(['receipts', 'labels']).optional().catch(undefined),
+  // The label stock family filter of the labels tab.
+  group: z.enum(['roll1', 'roll2', 'roll3', 'a4', 'a5']).optional().catch(undefined),
+})
+export type ReceiptTemplateSearch = z.infer<typeof receiptTemplateSearchSchema>

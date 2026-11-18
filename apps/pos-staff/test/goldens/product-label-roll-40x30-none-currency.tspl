@@ -1,0 +1,17 @@
+SIZE 40 mm,30 mm
+GAP 2 mm,0 mm
+DIRECTION 1
+CLS
+TEXT 8,8,"2",0,1,1,"Sua tuoi tiet trung 1L"
+BARCODE 65,32,"EAN13",80,1,0,2,4,"8934563138165"
+TEXT 8,140,"2",0,1,1,"Hop"
+TEXT 8,164,"1",0,1,1,"Gia goc 35.000"
+TEXT 8,180,"3",0,1,1,"32.000"
+PRINT 1,1
+CLS
+TEXT 8,8,"2",0,1,1,"Sua tuoi tiet trung 1L"
+BARCODE 48,32,"128",80,1,0,2,4,"ABC-123"
+TEXT 8,140,"2",0,1,1,"Hop"
+TEXT 8,164,"1",0,1,1,"Gia goc 35.000"
+TEXT 8,180,"3",0,1,1,"32.000"
+PRINT 1,1

@@ -1,6 +1,6 @@
 import { isSheetPaper } from '@parkviet/pos-shared/paper-size'
 import type { PosModules } from '@parkviet/pos-shared/pos-modules'
-import type { DocumentType, PaperSize } from '@parkviet/pos-shared/receipt-template/types'
+import type { PaperSize, ReceiptDocumentType } from '@parkviet/pos-shared/receipt-template/types'
 import { normalizeSalesSettings, type SalesSettings } from '@parkviet/pos-shared/sales-settings'
 import type { Printer, PrinterRole } from '@parkviet/pos-shared/types/print-adapter'
 import type { CupLabelSettings, KitchenSendTrigger, KitchenStation } from '../hooks/use-kitchen'
@@ -44,7 +44,7 @@ export type PrintFunctionDefinition = {
   key: PrintFunctionKey
   role: PrinterRole | null
   routing: PrintFunctionRouting
-  documentType: DocumentType | null
+  documentType: ReceiptDocumentType | null
   module: string | null
   autoSetting: PrintFunctionAutoSetting | null
   settingsLink: PrintFunctionSettingsLink | null
@@ -176,7 +176,7 @@ export type PrintFunctionWarning =
   | { kind: 'sheet_template_disallowed'; templateName: string; paper: PaperSize }
 
 export type ResolvedTemplateInfo = {
-  documentType: DocumentType
+  documentType: ReceiptDocumentType
   branchTemplate: { id: string; name: string; paper: PaperSize } | null
   effectiveTemplate: ReceiptTemplate | null
   effectiveSummary: { id: string; name: string; paper: PaperSize } | null
@@ -256,7 +256,7 @@ function isInUse(
 }
 
 function resolveTemplate(
-  documentType: DocumentType,
+  documentType: ReceiptDocumentType,
   assignments: readonly BranchTemplateAssignment[] | null | undefined,
   templates: readonly ReceiptTemplate[] | null | undefined,
 ): ResolvedTemplateInfo | null {

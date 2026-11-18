@@ -1,5 +1,9 @@
 import type { LabelFormat } from '@parkviet/pos-shared/label-format'
-import type { DocumentType, PaperSize } from '@parkviet/pos-shared/receipt-template/types'
+import {
+  isReceiptDocumentType,
+  type PaperSize,
+  type ReceiptDocumentType,
+} from '@parkviet/pos-shared/receipt-template/types'
 import { conflictReason, describeFailure } from '@parkviet/pos-shared/request-failure'
 import { useResourceMutation } from '@spree/dashboard-core'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -61,7 +65,7 @@ export type TemplateSummary = {
   is_default: boolean
 }
 export type BranchTemplateAssignment = {
-  document_type: DocumentType
+  document_type: ReceiptDocumentType
   receipt_template: TemplateSummary | null
   effective_template: TemplateSummary | null
   uses_store_default: boolean
@@ -126,9 +130,15 @@ export const useBranchLabelFormats = (branchId: string, enabled: boolean) =>
 export const useBranchReceiptTemplates = (branchId: string, enabled: boolean) =>
   useStoreQuery(['branch-receipt-templates', branchId], enabled, async () => {
     const result = await posRequest<{
-      data: { branch_id: string; templates: BranchTemplateAssignment[] }
+      data: {
+        branch_id: string
+        templates: (Omit<BranchTemplateAssignment, 'document_type'> & { document_type: string })[]
+      }
     }>('GET', branchPath(branchId, 'receipt_templates'))
-    return result.data.templates
+    // Product labels are assigned from their own page, not as a receipt.
+    return result.data.templates.filter((row): row is BranchTemplateAssignment =>
+      isReceiptDocumentType(row.document_type),
+    )
   })
 // One write against the store's POS data; every POS query of the store is
 // refreshed afterwards. Refusals reach the caller untouched so 409 reasons

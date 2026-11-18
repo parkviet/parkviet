@@ -36,6 +36,9 @@
   "meta": {
     "fields": [
       "time",
+      "table",
+      "check_in",
+      "check_out",
       "cashier",
       "order_number",
       "return_number",
@@ -61,6 +64,7 @@
     "fields": [
       "item_total",
       "discount",
+      "shipping",
       "tax",
       "included_tax",
       "total"
@@ -77,6 +81,14 @@
       "debt",
       "due_on",
       "pay_qr"
+    ],
+    "labels": {}
+  },
+  "einvoice": {
+    "fields": [
+      "number",
+      "lookup_code",
+      "qr"
     ],
     "labels": {}
   },

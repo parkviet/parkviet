@@ -22,6 +22,8 @@ const PrintJobKindEnum _$printJobKindEnum_checklist =
     const PrintJobKindEnum._('checklist');
 const PrintJobKindEnum _$printJobKindEnum_tableQr =
     const PrintJobKindEnum._('tableQr');
+const PrintJobKindEnum _$printJobKindEnum_productLabel =
+    const PrintJobKindEnum._('productLabel');
 const PrintJobKindEnum _$printJobKindEnum_test =
     const PrintJobKindEnum._('test');
 
@@ -43,6 +45,8 @@ PrintJobKindEnum _$printJobKindEnumValueOf(String name) {
       return _$printJobKindEnum_checklist;
     case 'tableQr':
       return _$printJobKindEnum_tableQr;
+    case 'productLabel':
+      return _$printJobKindEnum_productLabel;
     case 'test':
       return _$printJobKindEnum_test;
     default:
@@ -60,6 +64,7 @@ final BuiltSet<PrintJobKindEnum> _$printJobKindEnumValues =
   _$printJobKindEnum_cupLabel,
   _$printJobKindEnum_checklist,
   _$printJobKindEnum_tableQr,
+  _$printJobKindEnum_productLabel,
   _$printJobKindEnum_test,
 ]);
 
@@ -116,6 +121,7 @@ class _$PrintJobKindEnumSerializer
     'cupLabel': 'cup_label',
     'checklist': 'checklist',
     'tableQr': 'table_qr',
+    'productLabel': 'product_label',
     'test': 'test',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
@@ -127,6 +133,7 @@ class _$PrintJobKindEnumSerializer
     'cup_label': 'cupLabel',
     'checklist': 'checklist',
     'table_qr': 'tableQr',
+    'product_label': 'productLabel',
     'test': 'test',
   };
 

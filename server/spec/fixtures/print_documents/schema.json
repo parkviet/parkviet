@@ -94,6 +94,26 @@
           }
         ]
       },
+      "transferQr": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PrintPayQr"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "einvoice": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PrintEinvoice"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
       "notes": {
         "type": "array",
         "items": {
@@ -126,6 +146,43 @@
     "properties": {
       "margin_mm": {
         "type": "number"
+      },
+      "margins": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "properties": {
+              "top": {
+                "type": "number"
+              },
+              "right": {
+                "type": "number"
+              },
+              "bottom": {
+                "type": "number"
+              },
+              "left": {
+                "type": "number"
+              }
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "cut_feed_mm": {
+        "type": [
+          "number",
+          "null"
+        ]
       },
       "font": {
         "enum": [
@@ -204,6 +261,21 @@
         "items": {
           "type": "string"
         }
+      },
+      "size": {
+        "enum": [
+          "s",
+          "m",
+          "l"
+        ]
+      },
+      "captionPosition": {
+        "enum": [
+          "below",
+          "above",
+          "left",
+          "right"
+        ]
       }
     }
   },
@@ -399,6 +471,13 @@
               "string",
               "null"
             ]
+          },
+          "size": {
+            "enum": [
+              "m",
+              "l",
+              "xl"
+            ]
           }
         }
       },
@@ -452,6 +531,13 @@
           "layout": {
             "const": "stacked"
           },
+          "ruling": {
+            "enum": [
+              "none",
+              "rows",
+              "grid"
+            ]
+          },
           "items": {
             "type": "array",
             "items": {
@@ -474,6 +560,12 @@
                   "type": "string"
                 },
                 "amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "originalPrice": {
                   "type": [
                     "string",
                     "null"
@@ -502,6 +594,13 @@
         "properties": {
           "layout": {
             "const": "table"
+          },
+          "ruling": {
+            "enum": [
+              "none",
+              "rows",
+              "grid"
+            ]
           },
           "headings": {
             "type": "object",
@@ -573,6 +672,12 @@
                     "type": "string"
                   }
                 },
+                "originalPrice": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "details": {
                   "type": "array",
                   "items": {
@@ -585,5 +690,31 @@
         }
       }
     ]
+  },
+  "PrintEinvoice": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "rows",
+      "qr"
+    ],
+    "properties": {
+      "rows": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/PrintRow"
+        }
+      },
+      "qr": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PrintPayQr"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    }
   }
 }

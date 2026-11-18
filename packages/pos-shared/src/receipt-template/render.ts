@@ -4,24 +4,39 @@ import { TEST_PRINT_BANNER } from './defaults';
 import type {
   Align,
   BusinessField,
-  DocumentType,
+  EinvoiceSection,
   FieldSection,
   LineColumn,
+  LineRuling,
   LinesSection,
+  MetaField,
+  MetaSection,
+  PageMargins,
   PageSettings,
+  PaymentsSection,
   PrintBlock,
   PrintDocument,
+  PrintEinvoice,
   PrintLines,
   PrintPayQr,
+  PrintQr,
   PrintRow,
+  PrintStackedLine,
   PrintTableColumn,
+  PrintTableRow,
   QrBlock,
+  QrCaptionPosition,
+  QrSize,
+  ReceiptDocumentType,
   SignatureParty,
   SignaturesBlock,
   SocialField,
+  TableStyle,
   TemplateBlock,
   TemplateConfig,
   TextSize,
+  TimeFormat,
+  TitleSize,
 } from './types';
 import { resolveText } from './variables';
 
@@ -52,15 +67,26 @@ export const SOCIAL_FIELDS: readonly SocialField[] = ['url', 'facebook', 'instag
 
 const ALIGNS: readonly Align[] = ['left', 'center', 'right'];
 const SIZES: readonly TextSize[] = ['s', 'm', 'l'];
+const TITLE_SIZES: readonly TitleSize[] = ['m', 'l', 'xl'];
+const TABLE_STYLES: readonly TableStyle[] = ['one_line', 'two_lines'];
+const TIME_FORMATS: readonly TimeFormat[] = ['datetime', 'date'];
+const LINE_RULINGS: readonly LineRuling[] = ['none', 'rows', 'grid'];
+const QR_SIZES: readonly QrSize[] = ['s', 'm', 'l'];
+const QR_CAPTIONS: readonly QrCaptionPosition[] = ['below', 'above', 'left', 'right'];
+const TIME_FIELDS: readonly MetaField[] = ['time', 'check_in', 'check_out', 'printed_at'];
+
 const ALL_COLUMNS: readonly LineColumn[] = [
   'index',
   'name',
   'sku',
+  'barcode',
   'unit',
   'qty',
+  'original_price',
   'price',
   'discount',
   'amount',
+  'note',
 ];
 const TABLE_COLUMNS: readonly PrintTableColumn['key'][] = ['qty', 'price', 'discount', 'amount'];
 
@@ -70,15 +96,44 @@ const pick = <T extends string>(value: unknown, allowed: readonly T[], fallback:
   typeof value === 'string' && (allowed as readonly string[]).includes(value)
     ? (value as T)
     : fallback;
+const pickOptional = <T extends string>(value: unknown, allowed: readonly T[]): T | undefined =>
+  typeof value === 'string' && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : undefined;
 const clamp = (value: unknown, min: number, max: number, fallback: number) =>
   typeof value === 'number' && Number.isFinite(value)
     ? Math.min(max, Math.max(min, value))
     : fallback;
 const textOf = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 
+function parseMargins(raw: unknown): PageMargins | undefined {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return undefined;
+  const record = raw as Record<string, unknown>;
+  if (
+    typeof record.top !== 'number' &&
+    typeof record.right !== 'number' &&
+    typeof record.bottom !== 'number' &&
+    typeof record.left !== 'number'
+  )
+    return undefined;
+  return {
+    top: clamp(record.top, 0, 15, 0),
+    right: clamp(record.right, 0, 15, 0),
+    bottom: clamp(record.bottom, 0, 15, 0),
+    left: clamp(record.left, 0, 15, 0),
+  };
+}
+
 function page(settings: Partial<PageSettings> | undefined): PageSettings {
+  const margins = parseMargins(settings?.margins);
+  const cutFeed =
+    typeof settings?.cut_feed_mm === 'number' && Number.isFinite(settings.cut_feed_mm)
+      ? clamp(settings.cut_feed_mm, 0, 30, 0)
+      : undefined;
   return {
     margin_mm: clamp(settings?.margin_mm, 0, 20, 3),
+    ...(margins !== undefined ? { margins } : {}),
+    ...(cutFeed !== undefined ? { cut_feed_mm: cutFeed } : {}),
     font: pick(settings?.font, ['sans', 'mono'] as const, 'sans'),
     font_size: pick(settings?.font_size, SIZES, 'm'),
     line_spacing: clamp(settings?.line_spacing, 1, 1.6, 1.35),
@@ -87,7 +142,10 @@ function page(settings: Partial<PageSettings> | undefined): PageSettings {
 
 // How many prints one press makes: the original and its copies, on sale
 // receipts only. Anything out of range prints once.
-export function printCopies(config: TemplateConfig | null | undefined, type: DocumentType): number {
+export function printCopies(
+  config: TemplateConfig | null | undefined,
+  type: ReceiptDocumentType,
+): number {
   const copies = config?.page?.copies;
   return type === 'sale' && Number.isInteger(copies) && copies !== undefined
     ? Math.min(MAX_COPIES, Math.max(1, copies))
@@ -157,6 +215,8 @@ export function businessLines(fields: unknown, data: TemplateData): string[] {
     address: data.store.address,
     phone: data.store.phone,
     email: data.store.email,
+    tax_code: data.store.taxCode ?? null,
+    description: data.store.description ?? null,
     url: data.store.url,
     facebook: data.store.facebook,
     instagram: data.store.instagram,
@@ -170,9 +230,15 @@ export function businessLines(fields: unknown, data: TemplateData): string[] {
 
 const isImageSource = (value: string) => /^(https?:\/\/|\/)/i.test(value);
 
-function titleBlock(label: unknown, data: TemplateData): PrintBlock {
+function titleBlock(label: unknown, size: unknown, data: TemplateData): PrintBlock {
   const custom = clip(textOf(label), MAX_TITLE_LENGTH);
-  return { kind: 'title', title: custom || data.title, number: data.number };
+  const resolvedSize = pickOptional(size, TITLE_SIZES);
+  return {
+    kind: 'title',
+    title: custom || data.title,
+    number: data.number,
+    ...(resolvedSize !== undefined ? { size: resolvedSize } : {}),
+  };
 }
 
 function resolveBlock(block: TemplateBlock, data: TemplateData): PrintBlock | null {
@@ -230,7 +296,7 @@ function resolveBlock(block: TemplateBlock, data: TemplateData): PrintBlock | nu
       };
     }
     case 'title':
-      return titleBlock(block.label, data);
+      return titleBlock(block.label, block.size, data);
     case 'divider':
       return { kind: 'divider', style: pick(block.style, ['solid', 'dashed'] as const, 'dashed') };
     case 'spacer':
@@ -240,7 +306,12 @@ function resolveBlock(block: TemplateBlock, data: TemplateData): PrintBlock | nu
   }
 }
 
-function blocks(list: unknown, data: TemplateData, place: 'header' | 'footer'): PrintBlock[] {
+function blocks(
+  list: unknown,
+  data: TemplateData,
+  place: 'header' | 'footer',
+  suppressBuyerQr = false,
+): PrintBlock[] {
   const result: PrintBlock[] = [];
   let titled = false;
   for (const block of Array.isArray(list) ? list.slice(0, MAX_BLOCKS) : []) {
@@ -254,11 +325,11 @@ function blocks(list: unknown, data: TemplateData, place: 'header' | 'footer'): 
     const resolved = resolveBlock(block as TemplateBlock, data);
     if (resolved) result.push(resolved);
   }
-  if (place === 'header' && !titled) result.push(titleBlock(undefined, data));
-  // While the sale's e-invoice still takes buyer details, the footer always
-  // ends with the QR of the buyer's own page; no template can leave it out.
+  if (place === 'header' && !titled) result.push(titleBlock(undefined, undefined, data));
+  // While the sale's e-invoice still takes buyer details and no structured
+  // `einvoice` block is rendered, the footer ends with the buyer's page QR.
   const buyerUrl = data.einvoice?.buyerUrl ?? '';
-  if (place === 'footer' && isWebUrl(buyerUrl))
+  if (place === 'footer' && !suppressBuyerQr && isWebUrl(buyerUrl))
     result.push({
       kind: 'qr',
       value: buyerUrl,
@@ -286,6 +357,7 @@ function fieldRows<F extends string>(
         enabled.has(row.field) ||
         locked.includes(row.field),
     )
+    .filter((row) => row.value.trim() !== '')
     .map((row) => {
       const custom =
         row.field !== null && !fixedLabels.includes(row.field)
@@ -296,12 +368,50 @@ function fieldRows<F extends string>(
     });
 }
 
+function metaRows(data: TemplateData, section: MetaSection | undefined): PrintRow[] {
+  const enabled = Array.isArray(section?.fields) ? new Set<string>(section.fields) : null;
+  const labels = (section?.labels ?? {}) as Partial<Record<string, unknown>>;
+  const tableStyle = pick(section?.table_style, TABLE_STYLES, 'one_line');
+  const timeFormat = pick(section?.time_format, TIME_FORMATS, 'datetime');
+  const result: PrintRow[] = [];
+
+  for (const row of data.meta) {
+    if (row.field !== null && enabled !== null && !enabled.has(row.field)) continue;
+    const custom = row.field !== null ? clip(textOf(labels[row.field]), MAX_LABEL_LENGTH) : '';
+    const label = `${custom || row.label}${row.labelSuffix ?? ''}`;
+
+    if (row.field === 'table' && tableStyle === 'two_lines' && data.table) {
+      if (data.table.area) result.push({ label: data.table.areaLabel, value: data.table.area });
+      result.push({ label, value: data.table.name });
+      continue;
+    }
+
+    const value =
+      row.field !== null &&
+      TIME_FIELDS.includes(row.field) &&
+      timeFormat === 'date' &&
+      row.dateValue
+        ? row.dateValue
+        : row.value;
+    if (value.trim() === '') continue;
+    result.push(row.strong ? { label, value, strong: true } : { label, value });
+  }
+  return result;
+}
+
 function lineName(line: LineData, columns: Set<LineColumn>) {
   return columns.has('sku') && line.sku ? `${line.name} (${line.sku})` : line.name;
 }
 
 function quantityText(line: LineData, columns: Set<LineColumn>) {
   return `${line.quantity ?? ''}${columns.has('unit') && line.unit ? ` ${line.unit}` : ''}`;
+}
+
+function timedNote(line: LineData, section: LinesSection | undefined): string[] {
+  if (!line.timedSummary) return [];
+  return [
+    section?.timed_style === 'duration' ? line.timedSummary.duration : line.timedSummary.range,
+  ];
 }
 
 function lineDetails(line: LineData, columns: Set<LineColumn>, section: LinesSection | undefined) {
@@ -315,8 +425,11 @@ function lineDetails(line: LineData, columns: Set<LineColumn>, section: LinesSec
   }
   if (section?.show_conversion !== false && line.conversion) details.push(line.conversion);
   if (columns.has('discount') && line.discountNote) details.push(line.discountNote);
+  if (columns.has('barcode') && line.barcodeText) details.push(line.barcodeText);
   if (section?.show_trace !== false) details.push(...line.trace);
+  details.push(...timedNote(line, section));
   details.push(...line.notes);
+  if (columns.has('note') && line.lineNote) details.push(line.lineNote);
   return details;
 }
 
@@ -326,6 +439,7 @@ function lines(data: TemplateData, section: LinesSection | undefined): PrintLine
       ? section.columns.filter((column) => ALL_COLUMNS.includes(column))
       : ALL_COLUMNS,
   );
+  const ruling = pickOptional(section?.ruling, LINE_RULINGS);
   const index = (position: number) => (columns.has('index') ? position + 1 : null);
   if (section?.layout === 'table') {
     const keys = TABLE_COLUMNS.filter((key) => columns.has(key));
@@ -339,43 +453,99 @@ function lines(data: TemplateData, section: LinesSection | undefined): PrintLine
             : line.amountCell;
     return {
       layout: 'table',
+      ...(ruling !== undefined ? { ruling } : {}),
       headings: {
         index: columns.has('index') ? data.lineLabels.index : null,
         name: data.lineLabels.name,
       },
       columns: keys.map((key) => ({ key, label: data.lineLabels[key] })),
-      rows: data.lines.map((line, position) => ({
-        index: index(position),
-        name: lineName(line, columns),
-        cells: keys.map((key) => cell(line, key)),
-        details: [
-          ...(section.show_conversion && line.conversion ? [line.conversion] : []),
-          ...(section.show_trace ? line.trace : []),
-          ...line.notes,
-        ],
-      })),
+      rows: data.lines.map((line, position): PrintTableRow => {
+        const orig =
+          columns.has('original_price') && line.originalPriceCell ? line.originalPriceCell : null;
+        return {
+          index: index(position),
+          name: lineName(line, columns),
+          cells: keys.map((key) => cell(line, key)),
+          ...(orig !== null ? { originalPrice: orig } : {}),
+          details: [
+            ...(section.show_conversion && line.conversion ? [line.conversion] : []),
+            ...(columns.has('barcode') && line.barcodeText ? [line.barcodeText] : []),
+            ...(section.show_trace ? line.trace : []),
+            ...timedNote(line, section),
+            ...line.notes,
+            ...(columns.has('note') && line.lineNote ? [line.lineNote] : []),
+          ],
+        };
+      }),
     };
   }
   return {
     layout: 'stacked',
-    items: data.lines.map((line, position) => ({
-      index: index(position),
-      name: lineName(line, columns),
-      amount: columns.has('amount') ? line.amount : null,
-      details: lineDetails(line, columns, section),
-    })),
+    ...(ruling !== undefined ? { ruling } : {}),
+    items: data.lines.map((line, position): PrintStackedLine => {
+      const orig = columns.has('original_price') && line.originalPrice ? line.originalPrice : null;
+      return {
+        index: index(position),
+        name: lineName(line, columns),
+        amount: columns.has('amount') ? line.amount : null,
+        ...(orig !== null ? { originalPrice: orig } : {}),
+        details: lineDetails(line, columns, section),
+      };
+    }),
+  };
+}
+
+function withQrStyle(
+  base: { value: string; caption: string; lines: string[] },
+  section: { qr_size?: unknown; qr_caption?: unknown } | undefined,
+): PrintQr {
+  const size = pickOptional(section?.qr_size, QR_SIZES);
+  const captionPosition = pickOptional(section?.qr_caption, QR_CAPTIONS);
+  return {
+    ...base,
+    ...(size !== undefined ? { size } : {}),
+    ...(captionPosition !== undefined ? { captionPosition } : {}),
   };
 }
 
 // The pay-later QR prints while the template has `pay_qr` on (a template
 // without a payments section prints everything); its label is the caption.
-function payQr(data: TemplateData, section: TemplateConfig['payments']): PrintPayQr | null {
+function payQr(data: TemplateData, section: PaymentsSection | undefined): PrintPayQr | null {
   const qr = data.payQr;
   if (!qr) return null;
   if (Array.isArray(section?.fields) && !section.fields.includes('pay_qr')) return null;
   const labels = (section?.labels ?? {}) as Partial<Record<string, unknown>>;
   const caption = clip(textOf(labels.pay_qr), MAX_LABEL_LENGTH) || qr.caption;
-  return { value: qr.value, caption, lines: qr.lines };
+  return withQrStyle({ value: qr.value, caption, lines: qr.lines }, section);
+}
+
+// Transfer VietQR prints only when the template explicitly enables `transfer_qr`.
+function transferQr(data: TemplateData, section: PaymentsSection | undefined): PrintQr | null {
+  const qr = data.transferQr;
+  if (!qr || !Array.isArray(section?.fields) || !section.fields.includes('transfer_qr'))
+    return null;
+  const labels = (section?.labels ?? {}) as Partial<Record<string, unknown>>;
+  const caption = clip(textOf(labels.transfer_qr), MAX_LABEL_LENGTH) || qr.caption;
+  return withQrStyle({ value: qr.value, caption, lines: qr.lines }, section);
+}
+
+function einvoiceSection(
+  data: TemplateData,
+  section: EinvoiceSection | undefined,
+): PrintEinvoice | null {
+  if (!Array.isArray(section?.fields) || section.fields.length === 0 || !data.einvoice) return null;
+  const rows = fieldRows(data.einvoice.rows ?? [], section);
+  const labels = (section.labels ?? {}) as Partial<Record<string, unknown>>;
+  let qr: PrintQr | null = null;
+  if (section.fields.includes('qr') && data.einvoice.qr && isWebUrl(data.einvoice.qr.value)) {
+    const caption = clip(textOf(labels.qr), MAX_LABEL_LENGTH) || data.einvoice.qr.caption;
+    qr = withQrStyle(
+      { value: data.einvoice.qr.value, caption, lines: data.einvoice.qr.lines },
+      section,
+    );
+  }
+  if (rows.length === 0 && qr === null) return null;
+  return { rows, qr };
 }
 
 export function renderDocument(
@@ -390,19 +560,23 @@ export function renderDocument(
   ]
     .map((banner) => banner?.trim() ?? '')
     .filter((banner) => banner !== '');
+  const resolvedTransferQr = transferQr(data, config?.payments);
+  const resolvedEinvoice = einvoiceSection(data, config?.einvoice);
   return {
     documentType: data.documentType,
     page: page(config?.page),
     banners,
     header: blocks(config?.header, data, 'header'),
-    meta: fieldRows(data.meta, config?.meta),
+    meta: metaRows(data, config?.meta),
     lines: lines(data, config?.lines),
     totals: fieldRows(data.totals, config?.totals, ['total']),
     // Each payment method row is labelled by its method.
     payments: fieldRows(data.payments, config?.payments, [], ['methods']),
     payQr: payQr(data, config?.payments),
+    ...(resolvedTransferQr !== null ? { transferQr: resolvedTransferQr } : {}),
+    ...(resolvedEinvoice !== null ? { einvoice: resolvedEinvoice } : {}),
     notes: data.notes,
-    footer: blocks(config?.footer, data, 'footer'),
+    footer: blocks(config?.footer, data, 'footer', resolvedEinvoice !== null),
     disclaimer: data.disclaimer,
   };
 }

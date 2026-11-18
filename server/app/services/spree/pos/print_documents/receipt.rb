@@ -9,7 +9,7 @@ module Spree
 
         def call(receipt:, print:, config:)
           banner = print && print['copy'] ? Text.t('receiptCopyBanner', number: print['copy_number']) : nil
-          Renderer.call(config, TemplateData.snapshot(receipt), banner: banner)
+          Renderer.call(config, TemplateData.snapshot(receipt, print: print), banner: banner)
         end
       end
     end
