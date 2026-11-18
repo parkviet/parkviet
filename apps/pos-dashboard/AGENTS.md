@@ -119,9 +119,8 @@ description are the store information's own fields (never copied), and branches
 appear as business locations (location code, one head office). Its pickers read
 `GET /pos/tax_catalog` (`server/config/pos/vn_tax_catalog.yml`).
 
-Tax configuration lives at `/settings/tax` (`pages/tax-config.tsx`, key `tax`, same
-access rule as store information, but the API serves topology writers only, so a reader
-sees a permission notice). It reads `GET /pos/tax_regime`, saves with `PUT` and previews
+Tax configuration lives at `/settings/tax` (`pages/tax-config.tsx`, key `tax`, shown
+and reachable to topology writers only, as the API serves no one else). It reads `GET /pos/tax_regime`, saves with `PUT` and previews
 the unsaved draft with `POST /pos/tax_regime/preview` (debounced; the server computes
 every amount, the page only formats them). Which methods, income tax methods and options
 a revenue group allows comes from that state, never from constants; pure draft logic is in

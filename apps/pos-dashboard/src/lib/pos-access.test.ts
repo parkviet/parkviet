@@ -283,6 +283,14 @@ describe('POS permission gates', () => {
     expect(visibleNav('setup', access)).toBe(false)
     expect(routeAllowed('setup', { permissionKeys: [] })).toBe(false)
   })
+  it('keeps the tax configuration to store writers', () => {
+    const reader = { permissionKeys: ['read_pos_topology'] }
+    const writer = { permissionKeys: ['write_pos_topology'] }
+    expect(visibleNav('tax', reader)).toBe(false)
+    expect(routeAllowed('tax', reader)).toBe(false)
+    expect(visibleNav('tax', writer)).toBe(true)
+    expect(visibleNav('tax-info', reader)).toBe(true)
+  })
   it('opens receivables to branch members and credit screens to credit staff', () => {
     const staff = (capabilities: string[]) => ({
       permissionKeys: ['write_pos_topology'],

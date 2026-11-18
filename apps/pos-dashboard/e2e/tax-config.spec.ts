@@ -446,10 +446,10 @@ test('field errors from the server land on the field', async ({ page }) => {
   await expect(save(page)).toBeDisabled()
 })
 
-test('a store reader is told the page needs edit permission', async ({ page }) => {
+test('a store reader cannot open the page', async ({ page }) => {
   const state = world()
   await install(page, state, { read: true, write: false })
   await page.goto('/store_1/settings/tax')
-  await expect(page.getByText('Bạn cần quyền chỉnh sửa thiết lập cửa hàng')).toBeVisible()
+  await expect(page.getByRole('alert')).toBeVisible()
   await expect(save(page)).toHaveCount(0)
 })

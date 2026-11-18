@@ -274,9 +274,11 @@ export function visibleNav(page: PosPage, access: PosAccess) {
       canManageKitchen(access) ||
       canManageResources(access)
     )
-  // Tax declaration details and the tax configuration are read by store readers
-  // and changed by writers, like the store information they share fields with.
-  if (page === 'store-info' || page === 'tax-info' || page === 'tax') return canAdminister(access)
+  // Tax declaration details are read by store readers and changed by writers,
+  // like the store information they share fields with.
+  if (page === 'store-info' || page === 'tax-info') return canAdminister(access)
+  // The tax configuration API serves store writers only.
+  if (page === 'tax') return canAdminister(access, true)
   if (page === 'setup' || page === 'store-model') return canAdminister(access, true)
   if (page === 'devices')
     return (
