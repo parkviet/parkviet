@@ -93,6 +93,9 @@ import { Route as AuthenticatedStoreIdBranchesBranchIdProductsRouteImport } from
 import { Route as AuthenticatedStoreIdBranchesBranchIdRatePlansRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/rate-plans'
 import { Route as AuthenticatedStoreIdBranchesBranchIdRegistersRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/registers'
 import { Route as AuthenticatedStoreIdBranchesBranchIdStaffRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/staff'
+import { Route as AuthenticatedStoreIdGoodsProductsIndexRouteImport } from './routes/_authenticated/$storeId/goods/products/index'
+import { Route as AuthenticatedStoreIdGoodsProductsProductIdRouteImport } from './routes/_authenticated/$storeId/goods/products/$productId'
+import { Route as AuthenticatedStoreIdGoodsProductsNewRouteImport } from './routes/_authenticated/$storeId/goods/products/new'
 import { Route as AuthenticatedStoreIdSettingsReceiptTemplatesIndexRouteImport } from './routes/_authenticated/$storeId/settings/receipt-templates/index'
 import { Route as AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRouteImport } from './routes/_authenticated/$storeId/settings/receipt-templates/$templateId'
 
@@ -594,6 +597,24 @@ const AuthenticatedStoreIdBranchesBranchIdStaffRoute =
     path: '/staff',
     getParentRoute: () => AuthenticatedStoreIdBranchesBranchIdRoute,
   } as any)
+const AuthenticatedStoreIdGoodsProductsIndexRoute =
+  AuthenticatedStoreIdGoodsProductsIndexRouteImport.update({
+    id: '/goods/products/',
+    path: '/goods/products/',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdGoodsProductsProductIdRoute =
+  AuthenticatedStoreIdGoodsProductsProductIdRouteImport.update({
+    id: '/goods/products/$productId',
+    path: '/goods/products/$productId',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdGoodsProductsNewRoute =
+  AuthenticatedStoreIdGoodsProductsNewRouteImport.update({
+    id: '/goods/products/new',
+    path: '/goods/products/new',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
 const AuthenticatedStoreIdSettingsReceiptTemplatesIndexRoute =
   AuthenticatedStoreIdSettingsReceiptTemplatesIndexRouteImport.update({
     id: '/',
@@ -690,8 +711,11 @@ export interface FileRoutesByFullPath {
   '/$storeId/branches/$branchId/rate-plans': typeof AuthenticatedStoreIdBranchesBranchIdRatePlansRoute
   '/$storeId/branches/$branchId/registers': typeof AuthenticatedStoreIdBranchesBranchIdRegistersRoute
   '/$storeId/branches/$branchId/staff': typeof AuthenticatedStoreIdBranchesBranchIdStaffRoute
+  '/$storeId/goods/products/$productId': typeof AuthenticatedStoreIdGoodsProductsProductIdRoute
+  '/$storeId/goods/products/new': typeof AuthenticatedStoreIdGoodsProductsNewRoute
   '/$storeId/settings/receipt-templates/$templateId': typeof AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRoute
   '/$storeId/branches/$branchId/': typeof AuthenticatedStoreIdBranchesBranchIdIndexRoute
+  '/$storeId/goods/products/': typeof AuthenticatedStoreIdGoodsProductsIndexRoute
   '/$storeId/settings/receipt-templates/': typeof AuthenticatedStoreIdSettingsReceiptTemplatesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -766,8 +790,11 @@ export interface FileRoutesByTo {
   '/$storeId/branches/$branchId/rate-plans': typeof AuthenticatedStoreIdBranchesBranchIdRatePlansRoute
   '/$storeId/branches/$branchId/registers': typeof AuthenticatedStoreIdBranchesBranchIdRegistersRoute
   '/$storeId/branches/$branchId/staff': typeof AuthenticatedStoreIdBranchesBranchIdStaffRoute
+  '/$storeId/goods/products/$productId': typeof AuthenticatedStoreIdGoodsProductsProductIdRoute
+  '/$storeId/goods/products/new': typeof AuthenticatedStoreIdGoodsProductsNewRoute
   '/$storeId/settings/receipt-templates/$templateId': typeof AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRoute
   '/$storeId/branches/$branchId': typeof AuthenticatedStoreIdBranchesBranchIdIndexRoute
+  '/$storeId/goods/products': typeof AuthenticatedStoreIdGoodsProductsIndexRoute
   '/$storeId/settings/receipt-templates': typeof AuthenticatedStoreIdSettingsReceiptTemplatesIndexRoute
 }
 export interface FileRoutesById {
@@ -855,8 +882,11 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/branches/$branchId/rate-plans': typeof AuthenticatedStoreIdBranchesBranchIdRatePlansRoute
   '/_authenticated/$storeId/branches/$branchId/registers': typeof AuthenticatedStoreIdBranchesBranchIdRegistersRoute
   '/_authenticated/$storeId/branches/$branchId/staff': typeof AuthenticatedStoreIdBranchesBranchIdStaffRoute
+  '/_authenticated/$storeId/goods/products/$productId': typeof AuthenticatedStoreIdGoodsProductsProductIdRoute
+  '/_authenticated/$storeId/goods/products/new': typeof AuthenticatedStoreIdGoodsProductsNewRoute
   '/_authenticated/$storeId/settings/receipt-templates/$templateId': typeof AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRoute
   '/_authenticated/$storeId/branches/$branchId/': typeof AuthenticatedStoreIdBranchesBranchIdIndexRoute
+  '/_authenticated/$storeId/goods/products/': typeof AuthenticatedStoreIdGoodsProductsIndexRoute
   '/_authenticated/$storeId/settings/receipt-templates/': typeof AuthenticatedStoreIdSettingsReceiptTemplatesIndexRoute
 }
 export interface FileRouteTypes {
@@ -944,8 +974,11 @@ export interface FileRouteTypes {
     | '/$storeId/branches/$branchId/rate-plans'
     | '/$storeId/branches/$branchId/registers'
     | '/$storeId/branches/$branchId/staff'
+    | '/$storeId/goods/products/$productId'
+    | '/$storeId/goods/products/new'
     | '/$storeId/settings/receipt-templates/$templateId'
     | '/$storeId/branches/$branchId/'
+    | '/$storeId/goods/products/'
     | '/$storeId/settings/receipt-templates/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -1020,8 +1053,11 @@ export interface FileRouteTypes {
     | '/$storeId/branches/$branchId/rate-plans'
     | '/$storeId/branches/$branchId/registers'
     | '/$storeId/branches/$branchId/staff'
+    | '/$storeId/goods/products/$productId'
+    | '/$storeId/goods/products/new'
     | '/$storeId/settings/receipt-templates/$templateId'
     | '/$storeId/branches/$branchId'
+    | '/$storeId/goods/products'
     | '/$storeId/settings/receipt-templates'
   id:
     | '__root__'
@@ -1108,8 +1144,11 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/branches/$branchId/rate-plans'
     | '/_authenticated/$storeId/branches/$branchId/registers'
     | '/_authenticated/$storeId/branches/$branchId/staff'
+    | '/_authenticated/$storeId/goods/products/$productId'
+    | '/_authenticated/$storeId/goods/products/new'
     | '/_authenticated/$storeId/settings/receipt-templates/$templateId'
     | '/_authenticated/$storeId/branches/$branchId/'
+    | '/_authenticated/$storeId/goods/products/'
     | '/_authenticated/$storeId/settings/receipt-templates/'
   fileRoutesById: FileRoutesById
 }
@@ -1709,6 +1748,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoreIdBranchesBranchIdStaffRouteImport
       parentRoute: typeof AuthenticatedStoreIdBranchesBranchIdRoute
     }
+    '/_authenticated/$storeId/goods/products/': {
+      id: '/_authenticated/$storeId/goods/products/'
+      path: '/goods/products'
+      fullPath: '/$storeId/goods/products/'
+      preLoaderRoute: typeof AuthenticatedStoreIdGoodsProductsIndexRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/goods/products/$productId': {
+      id: '/_authenticated/$storeId/goods/products/$productId'
+      path: '/goods/products/$productId'
+      fullPath: '/$storeId/goods/products/$productId'
+      preLoaderRoute: typeof AuthenticatedStoreIdGoodsProductsProductIdRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/goods/products/new': {
+      id: '/_authenticated/$storeId/goods/products/new'
+      path: '/goods/products/new'
+      fullPath: '/$storeId/goods/products/new'
+      preLoaderRoute: typeof AuthenticatedStoreIdGoodsProductsNewRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
     '/_authenticated/$storeId/settings/receipt-templates/': {
       id: '/_authenticated/$storeId/settings/receipt-templates/'
       path: '/'
@@ -2025,6 +2085,9 @@ interface AuthenticatedStoreIdRouteChildren {
   AuthenticatedStoreIdUnitsRoute: typeof AuthenticatedStoreIdUnitsRoute
   AuthenticatedStoreIdVehicleCommissionRoute: typeof AuthenticatedStoreIdVehicleCommissionRoute
   AuthenticatedStoreIdIndexRoute: typeof AuthenticatedStoreIdIndexRoute
+  AuthenticatedStoreIdGoodsProductsProductIdRoute: typeof AuthenticatedStoreIdGoodsProductsProductIdRoute
+  AuthenticatedStoreIdGoodsProductsNewRoute: typeof AuthenticatedStoreIdGoodsProductsNewRoute
+  AuthenticatedStoreIdGoodsProductsIndexRoute: typeof AuthenticatedStoreIdGoodsProductsIndexRoute
 }
 
 const AuthenticatedStoreIdRouteChildren: AuthenticatedStoreIdRouteChildren = {
@@ -2070,6 +2133,12 @@ const AuthenticatedStoreIdRouteChildren: AuthenticatedStoreIdRouteChildren = {
   AuthenticatedStoreIdVehicleCommissionRoute:
     AuthenticatedStoreIdVehicleCommissionRoute,
   AuthenticatedStoreIdIndexRoute: AuthenticatedStoreIdIndexRoute,
+  AuthenticatedStoreIdGoodsProductsProductIdRoute:
+    AuthenticatedStoreIdGoodsProductsProductIdRoute,
+  AuthenticatedStoreIdGoodsProductsNewRoute:
+    AuthenticatedStoreIdGoodsProductsNewRoute,
+  AuthenticatedStoreIdGoodsProductsIndexRoute:
+    AuthenticatedStoreIdGoodsProductsIndexRoute,
 }
 
 const AuthenticatedStoreIdRouteWithChildren =

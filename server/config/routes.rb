@@ -15,6 +15,7 @@ Rails.application.routes.draw do
             get 'catalog', to: 'catalog#index'
             get 'units', to: 'units#index'
             get 'units/variant', to: 'units#variant_units'
+            get 'units/variants', to: 'units#variants'
             put 'units/variant', to: 'units#update_variant_unit'
             post 'units', to: 'units#create'
             constraints(id: /posunit_[^\/]+/) do

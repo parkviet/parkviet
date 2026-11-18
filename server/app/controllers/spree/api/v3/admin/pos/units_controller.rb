@@ -7,8 +7,9 @@ module Spree
         module Pos
           class UnitsController < BaseController
             scoped_resource :pos_orders
-            pos_permissions index: %w[read_pos_orders read_pos_topology write_pos_topology],
+            pos_permissions index: %w[read_pos_orders read_pos_topology write_pos_topology read_products write_products],
                             variant_units: %w[read_pos_orders read_pos_topology],
+                            variants: %w[read_pos_topology write_pos_topology read_products write_products],
                             update_variant_unit: %w[write_pos_topology],
                             create: %w[write_pos_topology], update: %w[write_pos_topology],
                             disable: %w[write_pos_topology], enable: %w[write_pos_topology]
@@ -16,7 +17,8 @@ module Spree
             Unit = Spree::Pos::UnitDefinition
 
             # With `branch_id`, the units an active member of that branch sells
-            # with; without one, the store's units for topology readers.
+            # with; without one, the store's units for topology and catalog
+            # readers (the goods screens pick a product's unit from them).
             # `include_disabled=true` adds disabled units.
             def index
               return if channel_rejected?
@@ -24,7 +26,7 @@ module Spree
               if params[:branch_id].present?
                 branch = branch!(params[:branch_id])
                 raise ActiveRecord::RecordNotFound unless policy.membership_for(branch) && !policy.membership_for(branch).disabled?
-              elsif !topology_reader?
+              elsif !topology_reader? && !catalog_reader?
                 raise CanCan::AccessDenied
               end
 
@@ -108,6 +110,38 @@ module Spree
                        unit = Spree::Pos::UnitDefinition.find_by!(store: current_store, code: 'item')
                        { variant_id: variant.prefixed_id, sale_unit: 'item', base_unit: 'item', price_unit: 'item', ratio_numerator: 1, ratio_denominator: 1, tracked_mode: 'none', version: 1, status: 'default' }
                      end
+              render json: { data: data }
+            end
+
+            # The store-wide unit of each listed variant (`variant_ids`, comma
+            # separated or repeated, at most PAGE_MAX), for catalog lists that
+            # show many products at once. A variant without a configuration
+            # sells by the default `item` unit; variants of other stores are
+            # left out.
+            def variants
+              return if channel_rejected?
+
+              ids = Array(params[:variant_ids]).flat_map { |value| value.to_s.split(',') }.map(&:strip).reject(&:empty?).uniq
+              if ids.size > PAGE_MAX
+                return render_error(code: 'parameter_invalid', message: "At most #{PAGE_MAX} variants.", status: :unprocessable_content)
+              end
+
+              Spree::Pos::UnitDefinition.ensure_defaults!(current_store)
+              # Only variant ids: another resource's prefixed id decodes to a number too.
+              decoded = ids.filter_map { |id| Spree::PrefixedId.decode_prefixed_id(id) if id.start_with?('variant_') }
+              variants = Spree::Variant.joins(:product).where(id: decoded, spree_products: { store_id: current_store.id })
+              configured = Spree::Pos::VariantUnit.for_store(current_store).where(variant_id: variants.map(&:id), status: 'active')
+                                                  .includes(:sale_unit, :base_unit, :price_unit).index_by(&:variant_id)
+              item = Spree::Pos::UnitDefinition.find_by!(store: current_store, code: 'item')
+              data = variants.map do |variant|
+                record = configured[variant.id]
+                if record
+                  record.to_pos(variant: variant).merge(sale_unit_name: record.sale_unit.name)
+                else
+                  { variant_id: variant.prefixed_id, sale_unit: 'item', base_unit: 'item', price_unit: 'item', ratio_numerator: 1,
+                    ratio_denominator: 1, tracked_mode: 'none', version: 1, status: 'default', label_code: nil, sale_unit_name: item.name }
+                end
+              end
               render json: { data: data }
             end
 
@@ -233,6 +267,10 @@ module Spree
 
             def topology_reader?
               policy.permission?('read_pos_topology') || policy.permission?('write_pos_topology')
+            end
+
+            def catalog_reader?
+              policy.permission?('read_products') || policy.permission?('write_products')
             end
 
             def ratio_value(value, fallback)

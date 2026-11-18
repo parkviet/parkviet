@@ -135,5 +135,15 @@ default, never re-activated) and the product types `Hàng hoá`, `Dịch vụ`,
 `Nguyên liệu`, recognized by name without marks or case. Never ensure them on
 read. Each nav child is added to the `goods` group in `nav.ts` with its page.
 
+Products (`pages/goods-products.tsx`, `pages/goods-product-form.tsx`, pure
+mapping in `lib/goods-products.ts`, save sequence in `hooks/use-goods-products.ts`)
+list `GET /products` with two server scopes from `server/app/models/spree/product_decorator.rb`:
+`q[search_with_barcode]` (name, SKU or barcode) and `q[not_in_channel]=pos` (the
+"not on POS yet" view). Units per row come from `GET /pos/units/variants`, and a
+product's branches from `GET /pos/branches/:id/products?product_id=`. An edit
+never sends `stock_levels` (the API removes locations left out); a create that
+saved the product but failed a later step (branches, unit, image) is retried by
+saving again, which patches instead of creating a second product.
+
 Do not edit `apps/dashboard`. POS administration lives only here: do not add
 settings or setup screens back to `apps/pos`.

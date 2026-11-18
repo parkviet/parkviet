@@ -11,7 +11,9 @@ module Spree
             pos_permissions index: %w[read_pos_topology write_pos_topology]
 
             # Store products with whether this branch sells them, for managing the
-            # assortment. `assigned=true|false` narrows the list; `q` matches name or SKU.
+            # assortment. `assigned=true|false` narrows the list; `q` matches name or SKU;
+            # `product_id` answers for that one product (the goods form reads a
+            # product's branches this way).
             def index
               return if channel_rejected?
 
@@ -21,6 +23,10 @@ module Spree
               case params[:assigned].to_s
               when 'true' then scope = scope.where(id: assigned_ids)
               when 'false' then scope = scope.where.not(id: assigned_ids)
+              end
+              if params[:product_id].present?
+                product = Spree::Product.find_by_prefix_id(params[:product_id].to_s)
+                scope = scope.where(id: product&.id)
               end
               term = params[:q].to_s.strip
               if term.present?

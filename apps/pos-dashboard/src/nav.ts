@@ -39,12 +39,13 @@ const groups: { key: string; labelKey: string; icon: NavEntry['icon']; children:
     key: 'goods',
     labelKey: 'goods.nav',
     icon: Boxes,
-    // One line per screen, added as its page lands, in this order:
-    // { key: 'goods-products', labelKey: 'goods.products.title', path: '/goods/products' },
+    // One line per screen, added as its page lands, in this order after products:
     // goods-barcode-labels /goods/barcode-labels, goods-ingredients /goods/ingredients,
     // goods-price-lists /goods/price-lists, goods-categories /goods/categories,
     // goods-addons /goods/addons, goods-recipes /goods/recipes.
-    children: [],
+    children: [
+      { key: 'goods-products', labelKey: 'goods.products.title', path: '/goods/products' },
+    ],
   },
   {
     key: 'money',
