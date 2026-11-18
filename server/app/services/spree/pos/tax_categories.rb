@@ -2,62 +2,40 @@
 
 module Spree
   module Pos
-    # Vietnam VAT categories a store can attach to products. The 8% food rate
-    # and the 10% rate that replaces it on 2027-01-01 are rows, not code:
-    # ApplyTaxRateScheduleJob copies a due schedule onto the tax rate.
+    # The two VAT treatments the F&B setup step offers for new menu items,
+    # under the codes its clients send, and the store's tax options they
+    # stand for. The categories themselves are the catalog's deduction
+    # options (TaxRegimes::Sync); the 8% food rate and the 10% rate that
+    # replaces it on 2027-01-01 are a rate and its schedule, not code.
     module TaxCategories
       FOOD = 'vat_food'
       SPECIAL = 'vat_special'
-      FOOD_RATE = BigDecimal('0.08')
-      SPECIAL_RATE = BigDecimal('0.10')
-      FOOD_BECOMES_STANDARD_ON = Date.new(2027, 1, 1)
       CODES = [FOOD, SPECIAL].freeze
+      CATALOG_KEYS = TaxRegimes::Sync::LEGACY_CODES
       # What the F&B setup step proposes for new menu items, by role.
       MENU_DEFAULTS = { 'food' => FOOD, 'alcohol' => SPECIAL }.freeze
 
       module_function
 
-      # The categories the F&B setup step offers, with the rate a new store
-      # is seeded with on `on`. Constants only, no query.
+      # The codes the F&B setup step offers, with the rate each has on `on`.
+      # Catalog only, no query.
       def options(on: Date.current)
-        food_rate = on >= FOOD_BECOMES_STANDARD_ON ? SPECIAL_RATE : FOOD_RATE
-        [{ code: FOOD, rate: food_rate.to_s('F') }, { code: SPECIAL, rate: SPECIAL_RATE.to_s('F') }]
-      end
-
-      def seed!(store)
-        food = category!(store, FOOD, 'VAT thực phẩm')
-        special = category!(store, SPECIAL, 'VAT đặc biệt')
-        food_rate = rate!(store, food, 'VAT thực phẩm', FOOD_RATE)
-        rate!(store, special, 'VAT đặc biệt', SPECIAL_RATE)
-        schedule!(store, food_rate, FOOD_BECOMES_STANDARD_ON, SPECIAL_RATE)
-      end
-
-      def category!(store, code, name)
-        found = Spree::TaxCategory.find_by(store_id: store.id, tax_code: code)
-        return found if found
-
-        Spree::TaxCategory.create!(store: store, name: name, tax_code: code, description: name, is_default: false)
-      end
-
-      # Spree 6 matches a rate by country code. Vietnam is VN; a later seed
-      # leaves an existing rate's amount alone so a schedule can change it.
-      # The name holds no percentage, because a schedule changes the amount;
-      # receipts print the rate from the tax line.
-      def rate!(store, category, name, amount)
-        found = Spree::TaxRate.find_by(store_id: store.id, tax_category_id: category.id, country_code: 'VN')
-        return found if found
-
-        Spree::TaxRate.create!(
-          store: store, tax_category: category, name: name, amount: amount,
-          included_in_price: true, show_rate_in_label: false, country_code: 'VN'
-        )
-      end
-
-      def schedule!(store, tax_rate, effective_on, amount)
-        Spree::Pos::TaxRateSchedule.find_or_create_by!(tax_rate: tax_rate, effective_on: effective_on) do |row|
-          row.store = store
-          row.amount = amount
+        CODES.map do |code|
+          rate = VnTaxCatalog.deduction_rate(VnTaxCatalog.option(CATALOG_KEYS.fetch(code)), on: on)
+          { code: code, rate: rate.to_s('F') }
         end
+      end
+
+      # Gives a store its tax regime and categories once; a store that has
+      # a regime is left as it is.
+      def seed!(store)
+        TaxRegimes::Sync.adopt!(store)
+      end
+
+      # The store's live category for each setup code, by code.
+      def categories_for(store, codes)
+        keys = codes.to_h { |code| [CATALOG_KEYS.fetch(code), code] }
+        Spree::TaxCategory.where(store_id: store.id, tax_code: keys.keys).to_h { |category| [keys[category.tax_code], category] }
       end
     end
   end

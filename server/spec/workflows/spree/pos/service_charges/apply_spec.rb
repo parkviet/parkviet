@@ -64,7 +64,8 @@ RSpec.describe Spree::Pos::ServiceCharges::Apply do
     # Vietnamese VAT, matched on the market's country.
     Spree::Market.where(store_id: store.id).find_each { |market| market.update!(country_codes: ['VN']) }
     Spree::Pos::TaxCategories.seed!(store)
-    special = Spree::TaxCategory.find_by!(store: store, tax_code: Spree::Pos::TaxCategories::SPECIAL)
+    special = Spree::Pos::TaxCategories.categories_for(store, [Spree::Pos::TaxCategories::SPECIAL]).
+              fetch(Spree::Pos::TaxCategories::SPECIAL)
     branch.update!(service_charge_tax_category: special)
     order = open_table(cashier, table)
     add_dish(order, menu_product!(store, branch, price: 100_000))

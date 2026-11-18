@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_18_150100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_18_170100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -3567,6 +3567,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_150100) do
     t.check_constraint "quantity > 0 AND price_delta >= 0::numeric", name: "chk_pos_line_modifiers_values"
   end
 
+  create_table "spree_pos_line_tax_snapshots", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.bigint "order_id", null: false
+    t.bigint "line_item_id"
+    t.bigint "fee_id"
+    t.bigint "fulfillment_id"
+    t.bigint "return_operation_id"
+    t.bigint "tax_category_id"
+    t.bigint "regime_id", null: false
+    t.string "kind", limit: 16, null: false
+    t.string "rate_key", limit: 64, null: false
+    t.decimal "vat_rate", precision: 6, scale: 5
+    t.decimal "pit_rate", precision: 6, scale: 5
+    t.decimal "revenue_amount", precision: 19, scale: 4, null: false
+    t.decimal "vat_amount", precision: 19, scale: 4, null: false
+    t.decimal "pit_base_amount", precision: 19, scale: 4, null: false
+    t.decimal "pit_amount", precision: 19, scale: 4, null: false
+    t.date "business_date", null: false
+    t.datetime "created_at", null: false
+    t.index ["line_item_id"], name: "idx_pos_line_tax_snapshots_line_item"
+    t.index ["order_id"], name: "index_spree_pos_line_tax_snapshots_on_order_id"
+    t.index ["store_id", "business_date"], name: "idx_pos_line_tax_snapshots_store_date"
+    t.check_constraint "kind::text = ANY (ARRAY['item'::character varying, 'fee'::character varying, 'shipping'::character varying]::text[])", name: "chk_pos_line_tax_snapshots_kind"
+  end
+
   create_table "spree_pos_meal_accounts", force: :cascade do |t|
     t.bigint "store_id", null: false
     t.bigint "customer_profile_id", null: false
@@ -4958,6 +4983,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_150100) do
     t.index ["store_id"], name: "index_spree_pos_tax_rate_schedules_on_store_id"
     t.index ["tax_rate_id", "effective_on"], name: "idx_pos_tax_rate_schedules_rate_day", unique: true
     t.index ["tax_rate_id"], name: "index_spree_pos_tax_rate_schedules_on_tax_rate_id"
+  end
+
+  create_table "spree_pos_tax_regimes", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.boolean "enabled", default: true, null: false
+    t.string "tax_method", limit: 16, null: false
+    t.string "revenue_group", limit: 16, null: false
+    t.string "pit_method", limit: 16
+    t.decimal "pit_income_rate", precision: 6, scale: 5
+    t.bigint "default_item_tax_category_id"
+    t.bigint "default_service_fee_tax_category_id"
+    t.bigint "default_shipping_tax_category_id"
+    t.boolean "prices_include_tax", default: true, null: false
+    t.boolean "apply_reduction", default: false, null: false
+    t.boolean "threshold_warning", default: true, null: false
+    t.bigint "changed_by_id"
+    t.datetime "created_at", null: false
+    t.index ["store_id", "id"], name: "idx_pos_tax_regimes_store"
+    t.check_constraint "pit_method IS NULL OR (pit_method::text = ANY (ARRAY['revenue'::character varying, 'income'::character varying]::text[]))", name: "chk_pos_tax_regimes_pit_method"
+    t.check_constraint "revenue_group::text = ANY (ARRAY['group_1'::character varying, 'group_2'::character varying, 'group_3'::character varying, 'group_4'::character varying]::text[])", name: "chk_pos_tax_regimes_group"
+    t.check_constraint "tax_method::text = ANY (ARRAY['direct'::character varying, 'deduction'::character varying]::text[])", name: "chk_pos_tax_regimes_method"
+  end
+
+  create_table "spree_pos_tax_revenue_years", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.integer "year", null: false
+    t.decimal "revenue", precision: 19, scale: 4, default: "0.0", null: false
+    t.date "crossed_on"
+    t.string "crossed_period", limit: 8
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["store_id", "year"], name: "idx_pos_tax_revenue_years_store_year", unique: true
   end
 
   create_table "spree_pos_tender_attempts", force: :cascade do |t|
@@ -7266,6 +7323,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_150100) do
   add_foreign_key "spree_pos_line_discount_intents", "spree_pos_workspaces", column: "workspace_id"
   add_foreign_key "spree_pos_line_modifiers", "spree_pos_modifier_options", column: "modifier_option_id", on_delete: :nullify
   add_foreign_key "spree_pos_line_modifiers", "spree_pos_sale_lines", column: "sale_line_id", on_delete: :cascade
+  add_foreign_key "spree_pos_line_tax_snapshots", "spree_fees", column: "fee_id", on_delete: :nullify
+  add_foreign_key "spree_pos_line_tax_snapshots", "spree_fulfillments", column: "fulfillment_id"
+  add_foreign_key "spree_pos_line_tax_snapshots", "spree_line_items", column: "line_item_id"
+  add_foreign_key "spree_pos_line_tax_snapshots", "spree_orders", column: "order_id"
+  add_foreign_key "spree_pos_line_tax_snapshots", "spree_pos_return_operations", column: "return_operation_id"
+  add_foreign_key "spree_pos_line_tax_snapshots", "spree_pos_tax_regimes", column: "regime_id"
+  add_foreign_key "spree_pos_line_tax_snapshots", "spree_stores", column: "store_id"
+  add_foreign_key "spree_pos_line_tax_snapshots", "spree_tax_categories", column: "tax_category_id"
   add_foreign_key "spree_pos_meal_accounts", "spree_pos_customers", column: "customer_profile_id"
   add_foreign_key "spree_pos_meal_accounts", "spree_pos_meal_sponsors", column: "meal_sponsor_id"
   add_foreign_key "spree_pos_meal_accounts", "spree_pos_stored_value_accounts", column: "stored_value_account_id"
@@ -7498,6 +7563,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_150100) do
   add_foreign_key "spree_pos_tax_profiles", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_tax_rate_schedules", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_tax_rate_schedules", "spree_tax_rates", column: "tax_rate_id"
+  add_foreign_key "spree_pos_tax_regimes", "spree_admin_users", column: "changed_by_id"
+  add_foreign_key "spree_pos_tax_regimes", "spree_stores", column: "store_id"
+  add_foreign_key "spree_pos_tax_regimes", "spree_tax_categories", column: "default_item_tax_category_id"
+  add_foreign_key "spree_pos_tax_regimes", "spree_tax_categories", column: "default_service_fee_tax_category_id"
+  add_foreign_key "spree_pos_tax_regimes", "spree_tax_categories", column: "default_shipping_tax_category_id"
+  add_foreign_key "spree_pos_tax_revenue_years", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_tender_attempts", "spree_admin_users", column: "actor_id"
   add_foreign_key "spree_pos_tender_attempts", "spree_pos_branches", column: "branch_id"
   add_foreign_key "spree_pos_tender_attempts", "spree_pos_payment_methods", column: "pos_payment_method_id"

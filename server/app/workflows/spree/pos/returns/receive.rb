@@ -56,6 +56,9 @@ module Spree
               row.update!(received_quantity: row.quantity, restocked_quantity: row.condition == 'resellable' ? row.quantity : 0)
             end
             operation.update!(status: 'received', receiver: staff, received_at: Time.current)
+            # The returned revenue, and the tax a direct-method sale recorded
+            # for it, leave the year on the day of the return.
+            DirectTax.reverse(operation, rows, business_date: BusinessDay.for(operation.branch, Workspace.business_now))
             ApplyCreditNote.call(operation: operation, actor: staff)
             damaged = rows.sum(&:received_quantity) - rows.sum(&:restocked_quantity)
             AuditEntry.record!(store: store, actor: staff, action: 'return.receive', subject: operation,

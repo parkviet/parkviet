@@ -206,8 +206,8 @@ RSpec.describe 'POS onboarding', type: :request, pos_modules: :default, pos_feat
         to include('fnb.menu', 'fnb.kitchen', 'fnb.order_number', 'fnb.cup_label', 'fnb.recipes', 'fnb.delivery_platforms')
       stations = Spree::Pos::KitchenStation.where(branch: branch).order(:position)
       expect(stations.pluck(:name, :kind, :is_default)).to eq([['Bếp', 'prep', true], ['Bar', 'bar', false]])
-      food = Spree::TaxCategory.find_by!(store_id: store.id, tax_code: 'vat_food')
-      alcohol = Spree::TaxCategory.find_by!(store_id: store.id, tax_code: 'vat_special')
+      food = Spree::TaxCategory.find_by!(store_id: store.id, tax_code: 'deduction.vat_8')
+      alcohol = Spree::TaxCategory.find_by!(store_id: store.id, tax_code: 'deduction.vat_10')
       profile = Spree::Pos::StoreProfile.find_by!(store: store)
       expect(profile).to have_attributes(food_tax_category_id: food.id, alcohol_tax_category_id: alcohol.id)
 
@@ -241,7 +241,9 @@ RSpec.describe 'POS onboarding', type: :request, pos_modules: :default, pos_feat
     it 'gives new menu items the food tax default' do
       owner = staff_with(%w[write_pos_topology write_pos_orders])
       setup!(owner, cafe)
-      product = create(:product, store: store)
+      # The product factory picks a category of its own; a new product
+      # starts on the store default.
+      product = create(:product, store: store, tax_category: Spree::TaxCategory.default(store))
       post '/api/v3/admin/pos/menu_items', headers: { 'Authorization' => "Bearer #{token_for(owner)}", 'Idempotency-Key' => SecureRandom.uuid },
                                            params: { product_id: product.prefixed_id, kind: 'single' }, as: :json
       expect(response).to have_http_status(:created)

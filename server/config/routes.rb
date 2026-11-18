@@ -143,6 +143,10 @@ Rails.application.routes.draw do
             get 'tax_catalog', to: 'tax_catalogs#show'
             post 'onboarding', to: 'onboarding#create'
             get 'operations/metrics', to: 'operational_metrics#show'
+            resource :tax_regime, only: [:show, :update] do
+              post :preview
+            end
+            get 'tax_options', to: 'tax_options#index'
             get 'system_status', to: 'system_status#show'
             get 'hardware_status', to: 'hardware_status#show'
             resources :branches, only: [:index, :show, :create, :update] do

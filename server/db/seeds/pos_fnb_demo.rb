@@ -56,8 +56,9 @@ else
       end
     end
 
-    food_tax = Spree::TaxCategory.find_by(store_id: store.id, tax_code: 'vat_food')
-    drink_tax = Spree::TaxCategory.find_by(store_id: store.id, tax_code: 'vat_special')
+    taxes = Spree::Pos::TaxCategories.categories_for(store, Spree::Pos::TaxCategories::CODES)
+    food_tax = taxes[Spree::Pos::TaxCategories::FOOD]
+    drink_tax = taxes[Spree::Pos::TaxCategories::SPECIAL]
     categories = %w[Khai\ vị Món\ chính Lẩu Đồ\ uống].each_with_index.to_h do |name, index|
       [name, Spree::Pos::MenuCategory.find_or_create_by!(store: store, name: name) { |row| row.position = index }]
     end

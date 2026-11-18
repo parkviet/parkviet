@@ -6,8 +6,12 @@
 # Each top-level key is one block. Every block records what it is based on
 # (`basis`), when it was last checked (`updated_on`) and whether it has been
 # compared with the official list (`verified`). A wrong entry is fixed here
-# and in the spec, never in code. Rate blocks will be added under their own
-# keys.
+# and in the spec, never in code.
+#
+# Rates are percentages written as strings ('1.5' is 1,5%). Dates are
+# 'YYYY-MM-DD'; `valid_from` and `valid_to` bound an item (both inclusive,
+# null is open-ended), so a rate the law changes gets a new item with its own
+# range instead of an edit to the old one.
 
 # Tax offices a taxpayer files with. From 01/07/2025 the tax administration
 # is organized as one tax office per province or city (34, matching the
@@ -95,3 +99,112 @@ industries:
     - { code: '9639', group: services, name: 'Hoạt động dịch vụ phục vụ cá nhân khác chưa được phân vào đâu' }
     - { code: '4520', group: services, name: 'Bảo dưỡng, sửa chữa ô tô và xe có động cơ khác' }
     - { code: '4542', group: services, name: 'Bảo dưỡng và sửa chữa mô tô, xe máy' }
+
+# Tax options of the direct method (percentage of revenue): one per business
+# line, as a VAT rate and a personal income tax rate on revenue, each with a
+# variant whose goods or services are not subject to VAT. `industry` groups
+# the two variants in a picker. Revenue is the payment price, tax included;
+# the tax is computed on it and never added to the price.
+direct_options:
+  basis: >-
+    Luật Thuế giá trị gia tăng 48/2024/QH15; Luật Thuế thu nhập cá nhân 2025; Nghị định 68/2026/NĐ-CP
+    về thuế đối với hộ, cá nhân kinh doanh (tỷ lệ % trên doanh thu theo ngành nghề).
+  updated_on: '2026-11-18'
+  verified: false
+  items:
+    - { code: direct.goods, industry: goods, name: 'Phân phối, cung cấp hàng hoá', vat_rate: '1', pit_rate: '0.5', valid_from: '2026-01-01', valid_to: null }
+    - { code: direct.goods_vat_exempt, industry: goods, name: 'Phân phối, cung cấp hàng hoá', vat_rate: null, pit_rate: '0.5', valid_from: '2026-01-01', valid_to: null }
+    - { code: direct.service, industry: service, name: 'Dịch vụ, xây dựng không bao thầu nguyên vật liệu', vat_rate: '5', pit_rate: '2', valid_from: '2026-01-01', valid_to: null }
+    - { code: direct.service_vat_exempt, industry: service, name: 'Dịch vụ, xây dựng không bao thầu nguyên vật liệu', vat_rate: null, pit_rate: '2', valid_from: '2026-01-01', valid_to: null }
+    - { code: direct.production_transport_food, industry: production_transport_food, name: 'Sản xuất, vận tải, dịch vụ gắn với hàng hoá (gồm dịch vụ ăn uống), xây dựng có bao thầu nguyên vật liệu', vat_rate: '3', pit_rate: '1.5', valid_from: '2026-01-01', valid_to: null }
+    - { code: direct.production_transport_food_vat_exempt, industry: production_transport_food, name: 'Sản xuất, vận tải, dịch vụ gắn với hàng hoá (gồm dịch vụ ăn uống), xây dựng có bao thầu nguyên vật liệu', vat_rate: null, pit_rate: '1.5', valid_from: '2026-01-01', valid_to: null }
+    - { code: direct.other, industry: other, name: 'Hoạt động kinh doanh khác', vat_rate: '2', pit_rate: '1', valid_from: '2026-01-01', valid_to: null }
+    - { code: direct.other_vat_exempt, industry: other, name: 'Hoạt động kinh doanh khác', vat_rate: null, pit_rate: '1', valid_from: '2026-01-01', valid_to: null }
+    - { code: direct.digital_rental, industry: digital_rental, name: 'Cung cấp nội dung số, cho thuê tài sản (trừ bất động sản)', vat_rate: '5', pit_rate: '5', valid_from: '2026-01-01', valid_to: null }
+    - { code: direct.digital_rental_vat_exempt, industry: digital_rental, name: 'Cung cấp nội dung số, cho thuê tài sản (trừ bất động sản)', vat_rate: null, pit_rate: '5', valid_from: '2026-01-01', valid_to: null }
+
+# Tax options of the deduction method: one VAT treatment each. `kind` is
+# exempt (not subject to VAT), not_taxed (not declared or computed) or rate.
+# A rate option is a Spree::TaxRate named `rate_name`; the name holds no
+# percentage when a later rate changes the amount. `rate_after` is the rate
+# from the day after `valid_to`, scheduled on the store's tax rate.
+deduction_options:
+  basis: >-
+    Luật Thuế giá trị gia tăng 48/2024/QH15 (thuế suất 0%, 5%, 10%; đối tượng không chịu thuế);
+    Nghị quyết 204/2025/QH15 giảm 2% thuế suất cho nhóm hàng hoá, dịch vụ chịu thuế 10% đến hết 31/12/2026.
+  updated_on: '2026-11-18'
+  verified: false
+  items:
+    - { code: deduction.exempt, kind: exempt, name: 'Không chịu thuế GTGT', vat_rate: null, rate_name: null, valid_from: '2025-07-01', valid_to: null }
+    - { code: deduction.not_taxed, kind: not_taxed, name: 'Không kê khai, tính nộp thuế GTGT', vat_rate: null, rate_name: null, valid_from: '2025-07-01', valid_to: null }
+    - { code: deduction.vat_0, kind: rate, name: 'GTGT 0%', vat_rate: '0', rate_name: 'GTGT 0%', valid_from: '2025-07-01', valid_to: null }
+    - { code: deduction.vat_5, kind: rate, name: 'GTGT 5%', vat_rate: '5', rate_name: 'GTGT 5%', valid_from: '2025-07-01', valid_to: null }
+    - { code: deduction.vat_8, kind: rate, name: 'GTGT 8% (giảm theo Nghị quyết 204/2025/QH15)', vat_rate: '8', rate_name: 'GTGT', valid_from: '2025-07-01', valid_to: '2026-12-31', rate_after: '10' }
+    - { code: deduction.vat_10, kind: rate, name: 'GTGT 10%', vat_rate: '10', rate_name: 'GTGT 10%', valid_from: '2025-07-01', valid_to: null }
+
+# Revenue a household or individual business may earn in a calendar year
+# without paying VAT or personal income tax. Above it, VAT is due on the
+# whole year's revenue and income tax on the revenue above the threshold.
+# Warnings fire at `warning_percents` of the amount; an e-invoice must be
+# registered within `einvoice_registration_days` of the end of the
+# declaration period in which revenue first passed the threshold.
+threshold:
+  basis: >-
+    Nghị định 141/2026/NĐ-CP (ngưỡng doanh thu 1 tỷ đồng/năm của hộ, cá nhân kinh doanh); khai, nộp
+    thuế từ kỳ phát sinh doanh thu vượt ngưỡng và đăng ký hoá đơn điện tử trong 30 ngày.
+  updated_on: '2026-11-18'
+  verified: false
+  items:
+    - { code: household_revenue, name: 'Ngưỡng doanh thu năm chịu thuế', amount: '1000000000', warning_percents: ['80', '95'], einvoice_registration_days: 30, valid_from: '2026-01-01', valid_to: null }
+
+# Revenue groups an administrator picks for the store, by annual revenue:
+# above `revenue_from` up to `revenue_to` (null is unbounded). `methods` are
+# the tax methods the group may use; `pit_methods` how income tax is
+# computed (revenue: the revenue above the threshold times the option's
+# rate; income: on income at `pit_income_rate`, left to period reports).
+# The year's actual revenue decides whether tax is due, never the group.
+revenue_groups:
+  basis: >-
+    Luật Thuế thu nhập cá nhân 2025 và Nghị định 68/2026/NĐ-CP: nhóm doanh thu của hộ, cá nhân kinh
+    doanh, phương pháp tính thuế và thuế suất thu nhập 15%, 17%, 20%.
+  updated_on: '2026-11-18'
+  verified: false
+  items:
+    - { code: group_1, name: 'Doanh thu đến 1 tỷ đồng', revenue_from: '0', revenue_to: '1000000000', methods: [direct], pit_methods: [revenue], pit_income_rate: null }
+    - { code: group_2, name: 'Doanh thu trên 1 tỷ đến 3 tỷ đồng', revenue_from: '1000000000', revenue_to: '3000000000', methods: [direct], pit_methods: [revenue, income], pit_income_rate: '15' }
+    - { code: group_3, name: 'Doanh thu trên 3 tỷ đến 50 tỷ đồng', revenue_from: '3000000000', revenue_to: '50000000000', methods: [direct, deduction], pit_methods: [income], pit_income_rate: '17' }
+    - { code: group_4, name: 'Doanh thu trên 50 tỷ đồng', revenue_from: '50000000000', revenue_to: null, methods: [deduction, direct], pit_methods: [income], pit_income_rate: '20' }
+
+# Temporary VAT reductions. A direct option listed in `applies_to` is taxed
+# at `direct_rate_percent` of its VAT rate on a business date inside the
+# range, when the store turns the reduction on. The deduction method's
+# reduction is an option of its own (deduction.vat_8).
+reductions:
+  basis: >-
+    Nghị quyết 204/2025/QH15 về giảm thuế giá trị gia tăng: giảm 20% mức tỷ lệ % để tính thuế GTGT
+    cho hộ, cá nhân kinh doanh từ 01/07/2025 đến hết 31/12/2026, trừ nhóm hàng hoá, dịch vụ loại trừ.
+  updated_on: '2026-11-18'
+  verified: false
+  items:
+    - { code: nq_204_2025, name: 'Nghị quyết 204/2025/QH15', valid_from: '2025-07-01', valid_to: '2026-12-31', direct_rate_percent: '80', applies_to: [direct.goods, direct.service, direct.production_transport_food, direct.other] }
+
+# Default options proposed by the store's business profile group
+# (`group` in config/pos/business_profiles.yml), per method: the first
+# option of each list valid on the day is used. The service charge and
+# surcharges default to the goods option, because they are revenue of the
+# same activity.
+default_by_profile:
+  basis: >-
+    Dịch vụ ăn uống thuộc nhóm sản xuất, vận tải, dịch vụ gắn với hàng hoá (3% – 1,5%); bán lẻ thuộc
+    phân phối, cung cấp hàng hoá (1% – 0,5%); phí vận chuyển là hoạt động vận tải.
+  updated_on: '2026-11-18'
+  verified: false
+  items:
+    - code: fnb
+      name: 'Ăn uống, karaoke, giải trí'
+      direct: { item: [direct.production_transport_food], shipping: [direct.production_transport_food] }
+      deduction: { item: [deduction.vat_8, deduction.vat_10], shipping: [deduction.vat_8, deduction.vat_10] }
+    - code: retail
+      name: 'Bán lẻ hàng hoá'
+      direct: { item: [direct.goods], shipping: [direct.production_transport_food] }
+      deduction: { item: [deduction.vat_8, deduction.vat_10], shipping: [deduction.vat_8, deduction.vat_10] }

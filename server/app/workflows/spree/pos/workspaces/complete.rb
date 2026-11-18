@@ -118,6 +118,10 @@ module Spree
                                            receivable_id: entry&.prefixed_id, debt: debt.to_s('F') })
             OutboxEntry.record!(store: workspace.store, event_type: 'workspace.completed', aggregate: workspace,
                                 payload: { 'workspace_id' => workspace.prefixed_id, 'order_id' => order.prefixed_id })
+            # The sale counts toward the year's revenue on its business date,
+            # also when an offline sale is replayed late; a direct-method
+            # store records the tax each line owes.
+            DirectTax.record(order, business_date: workspace.business_date)
             # The e-invoice is queued with the sale and issued after it commits;
             # a provider that is down never stops the sale.
             Einvoices::Enqueue.call(workspace: workspace, staff: staff, buyer: buyer)

@@ -3953,6 +3953,137 @@ paths:
                     $ref: '#/components/schemas/TaxCatalog'
         '304':
           description: The catalog has not changed
+  /api/v3/admin/pos/tax_regime:
+    get:
+      operationId: posTaxRegime
+      description: >
+        The store's tax regime in force with its history (newest first, paged
+        by `page` and `limit`), the store's tax options and every catalog
+        option of both methods, the defaults the store's business profile
+        suggests, how many products each category holds, how many orders are
+        open, the year's revenue against the threshold and what the tax
+        declaration still lacks. `regime` is null until the store has one.
+        Needs `write_pos_topology`.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: The tax regime
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxRegimeResult'
+    put:
+      operationId: posTaxRegimeUpdate
+      description: >
+        Saves a new tax regime row and makes the store's tax categories,
+        rates and products follow it, in one transaction audited as
+        `tax_regime.change` with the number of products reassigned. Only the
+        keys sent change. Options are catalog keys; a method change without
+        them starts from the business profile's defaults, and the service
+        charge follows the goods option unless it was set apart. Changing the
+        goods default moves the products on the old default (every product
+        with `apply_to_all_products`); changing the method moves every
+        product and retires the other method's categories. A save that
+        changes nothing writes nothing. Orders already placed keep their tax.
+        Needs `write_pos_topology`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxRegimeInput'
+      responses:
+        '200':
+          description: The saved tax regime
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxRegimeResult'
+        '409':
+          description: >
+            Refused; `error.details.reason` is `parameter_invalid` for a body
+            that is not an object or an `apply_to_all_products` that is not a
+            boolean.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: >
+            Field errors: `method` or `pit_method` the revenue group does not
+            allow, an unknown `revenue_group`, an option that is not one of the
+            method's options in force (`item_option`, `service_fee_option`,
+            `shipping_option`), or a flag that is not a boolean.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v3/admin/pos/tax_regime/preview:
+    post:
+      operationId: posTaxRegimePreview
+      description: >
+        A sample order (one item of 100 000 and one delivery of 20 000) under
+        the regime the body describes over the one in force, computed as a
+        real order would be. Saves nothing. Direct: the customer pays the
+        listed amounts, nothing is printed, and each line shows the VAT and
+        income tax it owes in a year over the threshold. Deduction: each
+        line's printed VAT, backed out of the price or added on top. Needs
+        `write_pos_topology`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxRegimeInput'
+      responses:
+        '200':
+          description: The sample order
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TaxPreview'
+        '422':
+          description: Field errors, as for saving
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v3/admin/pos/tax_options:
+    get:
+      operationId: posTaxOptions
+      description: >
+        The store's tax options, the list every tax picker offers: one per
+        catalog option of the method in force, in catalog order, with the
+        category id an item keeps and the defaults it holds. Needs
+        `read_pos_topology` or `write_pos_topology`.
+      responses:
+        '200':
+          description: The tax options
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TaxOption'
   /api/v3/admin/pos/emenu_settings:
     get:
       operationId: posEmenuSettings
@@ -12204,20 +12335,7 @@ components:
               tax_head_office:
                 type: boolean
         readiness:
-          type: object
-          additionalProperties: false
-          required: [filled, total, missing]
-          properties:
-            filled:
-              type: integer
-            total:
-              type: integer
-            missing:
-              type: array
-              items:
-                type: string
-                enum: [taxpayer_name, tax_code, business_address, declaration_period, tax_authority_code,
-                       industry_code, business_area_m2, signer_name, head_office_location]
+          $ref: '#/components/schemas/TaxReadiness'
         updated_at:
           type: [string, 'null']
           format: date-time
@@ -12350,6 +12468,352 @@ components:
         sticker_show_name:
           type: boolean
         sticker_store_name:
+    TaxReadiness:
+      type: object
+      additionalProperties: false
+      required: [filled, total, missing]
+      properties:
+        filled:
+          type: integer
+        total:
+          type: integer
+        missing:
+          type: array
+          items:
+            type: string
+            enum: [taxpayer_name, tax_code, business_address, declaration_period, tax_authority_code,
+                   industry_code, business_area_m2, signer_name, head_office_location]
+    TaxOptionKey:
+      type: string
+      description: A key of the tax catalog's `direct_options` or `deduction_options`
+      pattern: '^(direct|deduction)\.[a-z0-9_]+$'
+    TaxOption:
+      type: object
+      additionalProperties: false
+      required: [tax_category_id, option, method, label, industry, industry_name, vat_rate, pit_rate, vat_exempt]
+      properties:
+        tax_category_id:
+          type: [string, 'null']
+          description: The store's category for the option; null in `available_options` before it exists
+        option:
+          $ref: '#/components/schemas/TaxOptionKey'
+        method:
+          type: string
+          enum: [direct, deduction]
+        label:
+          type: string
+          description: 'For example "GTGT 3% – TNCN 1,5%", "GTGT không chịu thuế – TNCN 2%" or "GTGT 10%"'
+        industry:
+          type: [string, 'null']
+          description: Direct options only; the two variants of a business line share it
+        industry_name:
+          type: [string, 'null']
+        vat_rate:
+          type: [string, 'null']
+          description: Fraction in force today (0.03); null when not subject to VAT or not taxed
+        pit_rate:
+          type: [string, 'null']
+          description: Income tax rate on revenue, direct options only
+        vat_exempt:
+          type: boolean
+        defaults:
+          type: array
+          description: Store options only; the regime defaults this option holds
+          items:
+            type: string
+            enum: [item, service_fee, shipping]
+    TaxRegimeDefault:
+      type: object
+      additionalProperties: false
+      required: [tax_category_id, option]
+      properties:
+        tax_category_id:
+          type: [string, 'null']
+        option:
+          oneOf:
+            - $ref: '#/components/schemas/TaxOptionKey'
+            - type: 'null'
+    TaxRegime:
+      type: object
+      additionalProperties: false
+      required: [id, enabled, method, revenue_group, pit_method, pit_income_rate, prices_include_tax, apply_reduction,
+                 threshold_warning, default_item, default_service_fee, default_shipping, changed_by_id, changed_by_name,
+                 created_at]
+      properties:
+        id:
+          type: string
+        enabled:
+          type: boolean
+          description: Off, nothing is taxed and no line tax is recorded
+        method:
+          type: string
+          enum: [direct, deduction]
+        revenue_group:
+          type: string
+          enum: [group_1, group_2, group_3, group_4]
+        pit_method:
+          type: [string, 'null']
+          enum: [revenue, income, null]
+        pit_income_rate:
+          type: [string, 'null']
+          description: Income tax rate (fraction) when income tax is computed on income
+        prices_include_tax:
+          type: boolean
+          description: Deduction method; whether listed prices include VAT
+        apply_reduction:
+          type: boolean
+          description: Direct method; apply the catalog's VAT reductions in force
+        threshold_warning:
+          type: boolean
+        default_item:
+          $ref: '#/components/schemas/TaxRegimeDefault'
+        default_service_fee:
+          $ref: '#/components/schemas/TaxRegimeDefault'
+        default_shipping:
+          $ref: '#/components/schemas/TaxRegimeDefault'
+        changed_by_id:
+          type: [string, 'null']
+        changed_by_name:
+          type: [string, 'null']
+        created_at:
+          type: string
+          format: date-time
+    TaxDefaultOptions:
+      type: object
+      additionalProperties: false
+      required: [item, service_fee, shipping]
+      properties:
+        item:
+          $ref: '#/components/schemas/TaxOptionKey'
+        service_fee:
+          $ref: '#/components/schemas/TaxOptionKey'
+        shipping:
+          $ref: '#/components/schemas/TaxOptionKey'
+    TaxRevenueYear:
+      type: object
+      additionalProperties: false
+      required: [year, revenue, threshold, ratio, warning, crossed_on, crossed_period, einvoice_deadline, tax_due,
+                 vat_amount, pit_amount, payable_amount]
+      properties:
+        year:
+          type: integer
+        revenue:
+          type: string
+          description: The year's POS revenue so far, by business date
+        threshold:
+          type: string
+        ratio:
+          type: string
+          description: Revenue over threshold, four decimals
+        warning:
+          type: [string, 'null']
+          enum: [crossed, near_80, near_95, null]
+          description: Near warnings only while the regime's threshold warning is on
+        crossed_on:
+          type: [string, 'null']
+          format: date
+          description: Business date revenue went above the threshold; null at or under it
+        crossed_period:
+          type: [string, 'null']
+          description: Declaration period of the crossing, "2026-07" (month) or "2026-Q3" (quarter)
+        einvoice_deadline:
+          type: [string, 'null']
+          format: date
+          description: End of the crossing period plus the catalog's registration days
+        tax_due:
+          type: boolean
+          description: Whether the year's revenue is above the threshold
+        vat_amount:
+          type: string
+          description: VAT the year's direct-method lines recorded
+        pit_amount:
+          type: string
+          description: Income tax on revenue the year's lines recorded
+        payable_amount:
+          type: string
+          description: vat_amount + pit_amount when tax is due, else 0
+    TaxRegimeState:
+      type: object
+      additionalProperties: false
+      required: [regime, options, available_options, suggested_defaults, revenue_groups, product_count, product_counts,
+                 open_orders, revenue_year, readiness, history]
+      properties:
+        regime:
+          oneOf:
+            - $ref: '#/components/schemas/TaxRegime'
+            - type: 'null'
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxOption'
+        available_options:
+          type: object
+          additionalProperties: false
+          required: [direct, deduction]
+          properties:
+            direct:
+              type: array
+              items:
+                $ref: '#/components/schemas/TaxOption'
+            deduction:
+              type: array
+              items:
+                $ref: '#/components/schemas/TaxOption'
+        suggested_defaults:
+          type: object
+          additionalProperties: false
+          required: [direct, deduction]
+          properties:
+            direct:
+              $ref: '#/components/schemas/TaxDefaultOptions'
+            deduction:
+              $ref: '#/components/schemas/TaxDefaultOptions'
+        revenue_groups:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [code, name, revenue_from, revenue_to, methods, pit_methods, pit_income_rate]
+            properties:
+              code:
+                type: string
+                enum: [group_1, group_2, group_3, group_4]
+              name:
+                type: string
+              revenue_from:
+                type: string
+              revenue_to:
+                type: [string, 'null']
+              methods:
+                type: array
+                items:
+                  type: string
+                  enum: [direct, deduction]
+              pit_methods:
+                type: array
+                items:
+                  type: string
+                  enum: [revenue, income]
+              pit_income_rate:
+                type: [string, 'null']
+        product_count:
+          type: integer
+        product_counts:
+          type: array
+          description: Products per tax category; a null category follows the goods default
+          items:
+            type: object
+            additionalProperties: false
+            required: [tax_category_id, option, count]
+            properties:
+              tax_category_id:
+                type: [string, 'null']
+              option:
+                type: [string, 'null']
+              count:
+                type: integer
+        open_orders:
+          type: integer
+          description: Orders being edited or parked
+        revenue_year:
+          $ref: '#/components/schemas/TaxRevenueYear'
+        readiness:
+          $ref: '#/components/schemas/TaxReadiness'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxRegime'
+    TaxRegimeResult:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: '#/components/schemas/TaxRegimeState'
+        meta:
+          $ref: '#/components/schemas/WorkspacePageMeta'
+    TaxRegimeInput:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+        method:
+          type: string
+          enum: [direct, deduction]
+        revenue_group:
+          type: string
+          enum: [group_1, group_2, group_3, group_4]
+        pit_method:
+          type: string
+          enum: [revenue, income]
+          description: Group 2 chooses; other groups have one
+        item_option:
+          $ref: '#/components/schemas/TaxOptionKey'
+        service_fee_option:
+          $ref: '#/components/schemas/TaxOptionKey'
+        shipping_option:
+          $ref: '#/components/schemas/TaxOptionKey'
+        prices_include_tax:
+          type: boolean
+        apply_reduction:
+          type: boolean
+        threshold_warning:
+          type: boolean
+        apply_to_all_products:
+          type: boolean
+          description: Saving only; move every product to the goods default, not just those on the old one
+    TaxPreview:
+      type: object
+      additionalProperties: false
+      required: [enabled, method, prices_include_tax, lines, customer_total, vat_total, pit_total, revenue_year]
+      properties:
+        enabled:
+          type: boolean
+        method:
+          type: string
+          enum: [direct, deduction]
+        prices_include_tax:
+          type: boolean
+        lines:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [kind, option, label, amount, customer_amount, vat_rate, vat_amount, pit_rate, pit_amount, printed]
+            properties:
+              kind:
+                type: string
+                enum: [item, shipping]
+              option:
+                $ref: '#/components/schemas/TaxOptionKey'
+              label:
+                type: string
+              amount:
+                type: string
+                description: Listed amount
+              customer_amount:
+                type: string
+                description: What the customer pays for the line
+              vat_rate:
+                type: [string, 'null']
+              vat_amount:
+                type: [string, 'null']
+                description: Direct, owed in a year over the threshold; deduction, printed
+              pit_rate:
+                type: [string, 'null']
+              pit_amount:
+                type: [string, 'null']
+              printed:
+                type: boolean
+                description: Whether the tax is a line on the receipt
+        customer_total:
+          type: string
+        vat_total:
+          type: string
+        pit_total:
+          type: string
+        revenue_year:
+          $ref: '#/components/schemas/TaxRevenueYear'
           type: string
         sticker_wifi_enabled:
           type: boolean

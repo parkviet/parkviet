@@ -8,7 +8,7 @@ RSpec.describe Spree::Pos::ApplyTaxRateScheduleJob, type: :job do
     store = create(:store, default_currency: 'VND', supported_currencies: 'VND')
     Spree::Pos::TaxCategories.seed!(store)
     Spree::Pos::TaxCategories.seed!(store)
-    food = Spree::TaxCategory.find_by!(store: store, tax_code: 'vat_food')
+    food = Spree::TaxCategory.find_by!(store: store, tax_code: 'deduction.vat_8')
     rate = Spree::TaxRate.find_by!(store: store, tax_category: food)
     expect(rate.amount).to eq(BigDecimal('0.08'))
 
@@ -32,7 +32,7 @@ RSpec.describe Spree::Pos::ApplyTaxRateScheduleJob, type: :job do
   it 'seeds a label that stays true after the amount changes' do
     store = create(:store, default_currency: 'VND', supported_currencies: 'VND')
     Spree::Pos::TaxCategories.seed!(store)
-    rate = Spree::TaxRate.find_by!(store: store, tax_category: Spree::TaxCategory.find_by!(store: store, tax_code: 'vat_food'))
+    rate = Spree::TaxRate.find_by!(store: store, tax_category: Spree::TaxCategory.find_by!(store: store, tax_code: 'deduction.vat_8'))
     expect(rate.adjustment_label(included: true)).not_to match(/\d/)
   end
 

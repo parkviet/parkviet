@@ -94,7 +94,7 @@ module Spree
           taxes = fnb['tax_categories']
           if taxes
             TaxCategories.seed!(store)
-            categories = Spree::TaxCategory.where(store_id: store.id, tax_code: taxes.values).index_by(&:tax_code)
+            categories = TaxCategories.categories_for(store, taxes.values.uniq)
             store_profile.update!(food_tax_category: categories[taxes['food']], alcohol_tax_category: categories[taxes['alcohol']])
           end
           result = { stations: stations, tax_defaults: store_profile.tax_defaults, kitchen_send_trigger: branch.kitchen_send_trigger }
