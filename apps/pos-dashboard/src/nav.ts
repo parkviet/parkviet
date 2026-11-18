@@ -46,6 +46,11 @@ const groups: { key: string; labelKey: string; icon: NavEntry['icon']; children:
     children: [
       { key: 'goods-products', labelKey: 'goods.products.title', path: '/goods/products' },
       {
+        key: 'goods-barcode-labels',
+        labelKey: 'goods.barcodeLabels.title',
+        path: '/goods/barcode-labels',
+      },
+      {
         key: 'goods-ingredients',
         labelKey: 'goods.ingredients.title',
         path: '/goods/ingredients',

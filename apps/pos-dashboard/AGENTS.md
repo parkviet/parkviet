@@ -168,6 +168,17 @@ branch `VariantUnitEditor` through a branch selling the product. The price-list
 card writes Spree prices (`/prices/bulk_upsert`, `bulk_destroy`, `min_quantity`
 breaks on lists with a volume rule) on its own and refreshes only price reads.
 
+Barcode labels (`pages/goods-barcode-labels.tsx` at `/goods/barcode-labels`, pick rules
+in `lib/goods-barcode-labels.ts`, reads in `hooks/use-goods-barcode-labels.ts`) pick
+variants sold at the selected branch from `GET /pos/catalog` (search, or Enter in the
+search box: an exact `barcode=true` hit is added, again for one more label) and set a
+count per row (0 leaves a row out; "by stock" keeps rows without stock unchanged). The
+selling price is the variant's base price (`/prices`, `price_list_id_null`); the
+catalog's POS channel price shows as the promotional price when a price list changes
+it. Printing opens the shared `components/product-label/print-labels-dialog.tsx`, which
+owns templates, label stocks, barcodes and the print station; this page adds none.
+The list belongs to one branch and is cleared when the branch changes.
+
 Price lists (`pages/goods-price-lists.tsx`, `pages/goods-price-list-form.tsx` at
 `/goods/price-lists/new` and `/$priceListId`, pure rules in `lib/goods-price-list-form.ts`,
 reads and saves in `hooks/use-goods-price-lists.ts`) are Spree price lists. The tabs
