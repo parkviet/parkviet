@@ -45,7 +45,8 @@ function PosShell() {
     path.includes('/settings') &&
     !path.includes('/settings/receipt-templates') &&
     !path.includes('/settings/store-info') &&
-    !path.includes('/settings/tax-info')
+    !path.includes('/settings/tax-info') &&
+    !path.endsWith('/settings/tax')
   return (
     <PosSessionContext.Provider value={value}>
       <PosNavigation />

@@ -119,6 +119,15 @@ description are the store information's own fields (never copied), and branches
 appear as business locations (location code, one head office). Its pickers read
 `GET /pos/tax_catalog` (`server/config/pos/vn_tax_catalog.yml`).
 
+Tax configuration lives at `/settings/tax` (`pages/tax-config.tsx`, key `tax`, same
+access rule as store information, but the API serves topology writers only, so a reader
+sees a permission notice). It reads `GET /pos/tax_regime`, saves with `PUT` and previews
+the unsaved draft with `POST /pos/tax_regime/preview` (debounced; the server computes
+every amount, the page only formats them). Which methods, income tax methods and options
+a revenue group allows comes from that state, never from constants; pure draft logic is in
+`schemas/tax-regime.ts`. Changing the method, or a default option, asks for confirmation
+first (`components/tax-config-confirm.tsx`, with "apply to all products" for defaults).
+
 ## Goods ("Hàng hoá")
 
 The Goods group (`/goods/*`; `/products` stays the redirect to the branch

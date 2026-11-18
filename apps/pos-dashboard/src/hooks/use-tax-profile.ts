@@ -71,9 +71,19 @@ const text = (value: unknown): string | null =>
 const isRequired = (value: unknown): value is TaxRequiredField =>
   (TAX_REQUIRED as readonly unknown[]).includes(value)
 
+export type TaxReadiness = TaxProfileRecord['readiness']
+
+export function normalizeReadiness(value: unknown): TaxReadiness {
+  const readiness = record(value)
+  return {
+    filled: typeof readiness.filled === 'number' ? readiness.filled : 0,
+    total: typeof readiness.total === 'number' ? readiness.total : TAX_REQUIRED.length,
+    missing: Array.isArray(readiness.missing) ? readiness.missing.filter(isRequired) : [],
+  }
+}
+
 export function normalizeTaxProfile(value: unknown): TaxProfileRecord {
   const row = record(value)
-  const readiness = record(row.readiness)
   const period = text(row.declaration_period)
   return {
     id: text(row.id),
@@ -112,11 +122,7 @@ export function normalizeTaxProfile(value: unknown): TaxProfileRecord {
         },
       ]
     }),
-    readiness: {
-      filled: typeof readiness.filled === 'number' ? readiness.filled : 0,
-      total: typeof readiness.total === 'number' ? readiness.total : TAX_REQUIRED.length,
-      missing: Array.isArray(readiness.missing) ? readiness.missing.filter(isRequired) : [],
-    },
+    readiness: normalizeReadiness(row.readiness),
   }
 }
 
