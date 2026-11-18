@@ -273,6 +273,125 @@ RSpec.describe 'POS sales channel', type: :request, pos_channel: :manual do
     expect(line_total).to eq('100.0')
   end
 
+  # A customer-group price list: the list of an active catalog assigned to a
+  # group, the way the POS dashboard sets it up.
+  def group_price(name, amount, breaks = {})
+    group = Spree::CustomerGroup.create!(store: store, name: name)
+    catalog = Spree::Catalog.create!(store: store, name: name, active: true,
+                                     price_list: Spree::PriceList.new(store: store, name: name, status: 'active', match_policy: 'all'))
+    Spree::CatalogAssignment.create!(catalog: catalog, assignable: group)
+    list = catalog.reload.price_list
+    Spree::Price.create!(variant: product.default_variant, price_list: list, currency: 'VND', amount: amount)
+    breaks.each do |min_quantity, price|
+      Spree::Price.create!(variant: product.default_variant, price_list: list, currency: 'VND', amount: price, min_quantity: min_quantity)
+    end
+    group
+  end
+
+  def profile_in(group = nil)
+    customer = create(:customer)
+    Spree::CustomerGroupUser.create!(customer_group: group, customer: customer) if group
+    Spree::Pos::CustomerProfile.create!(store: store, created_by: user, name: customer.email, email: customer.email, customer: customer)
+  end
+
+  def assign_customer(workspace, profile, revision:)
+    if profile
+      command(workspace, 'customer', revision: revision, profile_id: profile.prefixed_id)
+    else
+      command(workspace, 'customer/clear', revision: revision)
+    end
+  end
+
+  def line_prices
+    response.parsed_body.dig('data', 'line_items').map { |line| line['price'] }
+  end
+
+  it 'reprices list-priced lines by each quantity when a customer is attached, changed and removed' do
+    publish
+    vip = group_price('VIP', 80, 5 => 70)
+    wholesale = group_price('Wholesale', 90)
+    workspace = draft
+    add(workspace, quantity: 2)
+    add(workspace, revision: 1, quantity: 5)
+    expect(line_prices).to eq(%w[100.0 100.0])
+    expect(line_total).to eq('700.0')
+
+    assign_customer(workspace, profile_in(vip), revision: 2)
+    expect(response).to have_http_status(:ok)
+    expect(line_prices).to eq(%w[80.0 70.0])
+    expect(line_total).to eq('510.0')
+    expect(workspace.order.reload.total).to eq(510)
+
+    assign_customer(workspace, profile_in(wholesale), revision: 3)
+    expect(line_prices).to eq(%w[90.0 90.0])
+    expect(line_total).to eq('630.0')
+
+    assign_customer(workspace, profile_in, revision: 4)
+    expect(line_prices).to eq(%w[100.0 100.0])
+
+    assign_customer(workspace, profile_in(vip), revision: 5)
+    assign_customer(workspace, nil, revision: 6)
+    expect(response).to have_http_status(:ok)
+    expect(line_prices).to eq(%w[100.0 100.0])
+    expect(line_total).to eq('700.0')
+  end
+
+  it 'follows the attached customer group breaks on later quantity changes and merges' do
+    publish
+    vip = group_price('VIP', 80, 5 => 70)
+    workspace = draft
+    add(workspace, merge: true)
+    assign_customer(workspace, profile_in(vip), revision: 1)
+    expect(line_prices).to eq(%w[80.0])
+    update_line(workspace, revision: 2, quantity: 5)
+    expect(response).to have_http_status(:ok)
+    expect(line_prices).to eq(%w[70.0])
+    add(workspace, revision: 3, quantity: 1, merge: true)
+    expect(line_prices).to eq(%w[70.0])
+    expect(response.parsed_body.dig('data', 'line_items', 0, 'quantity')).to eq(6)
+    update_line(workspace, revision: 4, quantity: 2)
+    expect(line_prices).to eq(%w[80.0])
+    expect(line_total).to eq('160.0')
+  end
+
+  it 'keeps an overridden line and skips menu lines when the customer changes' do
+    publish
+    vip = group_price('VIP', 80)
+    workspace = draft
+    add(workspace)
+    sale_line = Spree::Pos::SaleLine.find_by!(workspace: workspace)
+    sale_line.line_item.update!(price: 95)
+    sale_line.update!(unit_price: 95, line_price: 95)
+    assign_customer(workspace, profile_in(vip), revision: 1)
+    expect(response).to have_http_status(:ok)
+    expect(sale_line.reload.unit_price).to eq(95)
+    expect(line_prices).to eq(%w[95.0])
+
+    sale_line.update!(kind: 'menu', unit_price: 100, line_price: 100)
+    sale_line.line_item.update!(price: 100)
+    assign_customer(workspace, nil, revision: 2)
+    assign_customer(workspace, profile_in(vip), revision: 3)
+    expect(sale_line.reload.unit_price).to eq(100)
+  end
+
+  it 'refuses to change the customer while a tender holds the snapshot and keeps line prices' do
+    publish
+    vip = group_price('VIP', 80)
+    workspace = draft
+    add(workspace)
+    method = Spree::Pos::PosPaymentMethod.create!(store: store, code: 'cash', name: 'Tien mat', kind: 'cash', status: 'active')
+    Spree::Pos::TenderAttempt.create!(
+      store: store, workspace: workspace, branch: branch, register: register, shift: workspace.shift,
+      pos_payment_method: method, actor: user, status: 'prepared', amount: 100,
+      order_total_snapshot: 100, currency: 'VND', workspace_revision: 1
+    )
+    assign_customer(workspace, profile_in(vip), revision: 1)
+    expect(response).to have_http_status(:conflict)
+    expect(reason).to eq('snapshot_locked')
+    expect(Spree::Pos::SaleLine.find_by!(workspace: workspace).unit_price).to eq(100)
+    expect(workspace.order.reload.total).to eq(100)
+  end
+
   it 'evaluates automatic promotions against the order POS channel, not the ambient request channel' do
     publish
     promotion = create(:promotion, store: store, code: nil, kind: 'automatic', name: 'POS campaign')

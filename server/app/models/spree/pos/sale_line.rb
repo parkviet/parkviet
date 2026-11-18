@@ -44,8 +44,9 @@ module Spree
         Digest::SHA256.hexdigest(parts.join('|'))
       end
 
-      def merge_key_now
-        self.class.build_merge_key(variant_id: variant_id, kind: kind, unit_price: line_price, sale_unit_code: sale_unit_code,
+      # The key this line merges on, at its own price or at `unit_price`.
+      def merge_key_now(unit_price: line_price)
+        self.class.build_merge_key(variant_id: variant_id, kind: kind, unit_price: unit_price, sale_unit_code: sale_unit_code,
                                    lot_code: lot_code, serial_codes: serial_codes, tracked_mode: tracked_mode,
                                    expiry_on: expiry_on&.iso8601, modifier_signature: modifier_signature)
       end

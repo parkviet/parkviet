@@ -32,7 +32,13 @@ module Spree
         def self.assign!(workspace, staff, profile)
           # Credit is approved for one customer; a different (or no) customer voids it.
           Credit::Release.call(workspace: workspace, actor: staff, reason: 'customer_changed') if profile&.id != workspace.pos_customer_id
-          workspace.order.update!(customer: profile&.customer, email: profile&.email)
+          order = workspace.order
+          # Lines on the list price follow the new buyer's price lists (a
+          # customer group's catalog), each at its own quantity.
+          repriced = SalesChannel.reprice_for_buyer!(order) do
+            order.update!(customer: profile&.customer, email: profile&.email)
+          end
+          ApplyDiscount.recalculate!(workspace) if repriced
           workspace.update!(pos_customer: profile, revision: workspace.revision + 1)
         end
 

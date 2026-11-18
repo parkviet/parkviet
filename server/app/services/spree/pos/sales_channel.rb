@@ -63,20 +63,54 @@ module Spree
       # list price for that quantity follows the list, so an overridden or
       # otherwise set price is never replaced.
       def reprice_line!(sale_line, was:)
-        quantity = line_quantity(sale_line)
-        # A whole base unit charges its own price per base unit; anything else
-        # is not a list price this can follow.
-        return if quantity.nil? || was.nil? || sale_line.unit_price != sale_line.line_price
-
         order = sale_line.order
-        before = price(sale_line.variant, store: order.store, currency: order.currency, order: order, quantity: was)&.amount
-        return if before.nil? || before != sale_line.unit_price
+        follow_list!(sale_line, order: order) if following_list?(sale_line, order: order, quantity: was)
+      end
 
-        now = price(sale_line.variant, store: order.store, currency: order.currency, order: order, quantity: quantity)&.amount
-        return if now.nil? || now == sale_line.unit_price
+      # Re-prices the lines that follow the list price when the block changes
+      # who the order is for. Which lines follow is judged with the pricing
+      # before the change, so an overridden or otherwise set price stays; the
+      # new price is the new buyer's for each line's own quantity. A followed
+      # line is keyed again at the new buyer's one-unit price, so the same
+      # item added later still merges into it.
+      # @return [Boolean] whether any line changed
+      def reprice_for_buyer!(order)
+        following = Spree::Pos::SaleLine.where(order_id: order.id).includes(:line_item, :variant).order(:id).select do |sale_line|
+          following_list?(sale_line, order: order, quantity: line_quantity(sale_line))
+        end
+        yield
+        following.map { |sale_line| follow_list!(sale_line, order: order, rekey: true) }.any?
+      end
 
-        sale_line.line_item.update!(price: now)
-        sale_line.update!(unit_price: now, line_price: now)
+      # Whether a line charges the list price of `quantity` units under the
+      # order's pricing now. A whole base unit charges its own price per base
+      # unit; anything else is not a list price a line can follow.
+      def following_list?(sale_line, order:, quantity:)
+        return false if line_quantity(sale_line).nil? || quantity.nil? || sale_line.unit_price != sale_line.line_price
+
+        before = price(sale_line.variant, store: order.store, currency: order.currency, order: order, quantity: quantity)&.amount
+        !before.nil? && before == sale_line.unit_price
+      end
+
+      # Puts a followed line on the list price of its own quantity.
+      # @return [Boolean] whether the line changed
+      def follow_list!(sale_line, order:, rekey: false)
+        variant = sale_line.variant
+        now = price(variant, store: order.store, currency: order.currency, order: order, quantity: line_quantity(sale_line))&.amount
+        return false if now.nil?
+
+        attributes = {}
+        attributes.merge!(unit_price: now, line_price: now) unless now == sale_line.unit_price
+        if rekey
+          single = price(variant, store: order.store, currency: order.currency, order: order, quantity: 1)&.amount
+          key = single && sale_line.merge_key_now(unit_price: single)
+          attributes[:merge_key] = key if key && key != sale_line.merge_key
+        end
+        return false if attributes.empty?
+
+        sale_line.line_item.update!(price: now) if attributes.key?(:unit_price)
+        sale_line.update!(attributes)
+        attributes.key?(:unit_price)
       end
 
       def validate_order!(workspace)
