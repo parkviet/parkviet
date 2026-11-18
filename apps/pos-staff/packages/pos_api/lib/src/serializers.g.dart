@@ -104,6 +104,24 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(EinvoiceSummaryRevenueLevelEnum.serializer)
       ..add(EinvoiceTotals.serializer)
       ..add(EinvoiceTotalsTaxesInner.serializer)
+      ..add(EmenuCategory.serializer)
+      ..add(EmenuCategoryResult.serializer)
+      ..add(EmenuItem.serializer)
+      ..add(EmenuMenuCategoryInput.serializer)
+      ..add(EmenuMenuImportInput.serializer)
+      ..add(EmenuMenuInput.serializer)
+      ..add(EmenuMenuResult.serializer)
+      ..add(EmenuSettings.serializer)
+      ..add(EmenuSettingsBestSellersSourceEnum.serializer)
+      ..add(EmenuSettingsInput.serializer)
+      ..add(EmenuSettingsInputBestSellersSourceEnum.serializer)
+      ..add(EmenuSettingsInputPayMethodsEnum.serializer)
+      ..add(EmenuSettingsInputPaymentTimingEnum.serializer)
+      ..add(EmenuSettingsInputStickerSizeEnum.serializer)
+      ..add(EmenuSettingsPayMethodsEnum.serializer)
+      ..add(EmenuSettingsPaymentTimingEnum.serializer)
+      ..add(EmenuSettingsResult.serializer)
+      ..add(EmenuSettingsStickerSizeEnum.serializer)
       ..add(ErrorResponse.serializer)
       ..add(ErrorResponseError.serializer)
       ..add(ErrorResponseErrorDetails.serializer)
@@ -114,6 +132,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(GuestOrderItemOutcomeEnum.serializer)
       ..add(GuestOrderList.serializer)
       ..add(GuestOrderModifier.serializer)
+      ..add(GuestOrderPayMethodEnum.serializer)
       ..add(GuestOrderRejectInput.serializer)
       ..add(GuestOrderResult.serializer)
       ..add(GuestOrderStatusEnum.serializer)
@@ -512,6 +531,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ReservationInputSource_Enum.serializer)
       ..add(ReservationList.serializer)
       ..add(ReservationListMeta.serializer)
+      ..add(ReservationPeriod.serializer)
       ..add(ReservationResult.serializer)
       ..add(ReservationSeat.serializer)
       ..add(ReservationSeatInput.serializer)
@@ -545,6 +565,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ResourceResult.serializer)
       ..add(ResourceShapeEnum.serializer)
       ..add(ResourceStatusEnum.serializer)
+      ..add(SalesSettings.serializer)
+      ..add(SalesSettingsCartOrderEnum.serializer)
+      ..add(SalesSettingsPaymentChimeEnum.serializer)
       ..add(ServiceChargeWaiveInput.serializer)
       ..add(StaffRef.serializer)
       ..add(StationRoute.serializer)
@@ -579,6 +602,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(TableSettingsInputQrOrderModeEnum.serializer)
       ..add(TableSettingsInputServiceChargeAppliesToEnum.serializer)
       ..add(TableSettingsQrOrderModeEnum.serializer)
+      ..add(TableSettingsReservationPeriodsSourceEnum.serializer)
       ..add(TableSettingsResult.serializer)
       ..add(TableSettingsServiceChargeAppliesToEnum.serializer)
       ..add(TableSplitInput.serializer)
@@ -698,16 +722,6 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList, const [const FullType(CatalogItem)]),
           () => ListBuilder<CatalogItem>())
       ..addBuilderFactory(
-          const FullType(BuiltList, const [const FullType(CourseLabel)]),
-          () => ListBuilder<CourseLabel>())
-      ..addBuilderFactory(
-          const FullType(BuiltList,
-              const [const FullType(TableSettingsServiceChargeAppliesToEnum)]),
-          () => ListBuilder<TableSettingsServiceChargeAppliesToEnum>())
-      ..addBuilderFactory(
-          const FullType(BuiltList, const [const FullType(TableTaxCategory)]),
-          () => ListBuilder<TableTaxCategory>())
-      ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(CupLabelSettingsFieldsEnum)]),
           () => ListBuilder<CupLabelSettingsFieldsEnum>())
@@ -745,6 +759,16 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(
               BuiltList, const [const FullType(EinvoiceTotalsTaxesInner)]),
           () => ListBuilder<EinvoiceTotalsTaxesInner>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(EmenuCategory)]),
+          () => ListBuilder<EmenuCategory>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(EmenuItem)]),
+          () => ListBuilder<EmenuItem>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(EmenuMenuCategoryInput)]),
+          () => ListBuilder<EmenuMenuCategoryInput>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(GuestOrder)]),
           () => ListBuilder<GuestOrder>())
@@ -1099,6 +1123,22 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList, const [const FullType(ReservationDeposit)]),
           () => ListBuilder<ReservationDeposit>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ReservationPeriod)]),
+          () => ListBuilder<ReservationPeriod>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ReservationPeriod)]),
+          () => ListBuilder<ReservationPeriod>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(CourseLabel)]),
+          () => ListBuilder<CourseLabel>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(TableSettingsServiceChargeAppliesToEnum)]),
+          () => ListBuilder<TableSettingsServiceChargeAppliesToEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(TableTaxCategory)]),
+          () => ListBuilder<TableTaxCategory>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(Resource)]),
           () => ListBuilder<Resource>())
       ..addBuilderFactory(
@@ -1122,6 +1162,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(StockAlert)]),
           () => ListBuilder<StockAlert>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(String)]),
           () => ListBuilder<String>())
@@ -1217,6 +1260,35 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList, const [const FullType(String)]),
           () => ListBuilder<String>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(EmenuSettingsInputPayMethodsEnum)]),
+          () => ListBuilder<EmenuSettingsInputPayMethodsEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(EmenuSettingsPayMethodsEnum)]),
+          () => ListBuilder<EmenuSettingsPayMethodsEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
+      ..addBuilderFactory(
           const FullType(
               BuiltMap, const [const FullType(String), const FullType(bool)]),
           () => MapBuilder<String, bool>())
@@ -1231,6 +1303,9 @@ Serializers _$serializers = (Serializers().toBuilder()
             const FullType(TableSettingsInputServiceChargeAppliesToEnum)
           ]),
           () => ListBuilder<TableSettingsInputServiceChargeAppliesToEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ReservationPeriod)]),
+          () => ListBuilder<ReservationPeriod>())
       ..addBuilderFactory(
           const FullType(BuiltList,
               const [const FullType(TableSettingsInputCourseLabelsInner)]),

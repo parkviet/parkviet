@@ -20,7 +20,9 @@ part 'guest_order.g.dart';
 /// * [tableName] - The table and the letter of its order.
 /// * [areaId]
 /// * [status]
-/// * [automatic] - Accepted by the branch's straight-to-kitchen mode.
+/// * [automatic] - Accepted by the branch's straight-to-kitchen mode or prepay webhook.
+/// * [prepaid]
+/// * [payMethod]
 /// * [items]
 /// * [quotedTotal]
 /// * [currency]
@@ -39,7 +41,7 @@ abstract class GuestOrder implements Built<GuestOrder, GuestOrderBuilder> {
   String get branchId;
 
   @BuiltValueField(wireName: r'workspace_id')
-  String get workspaceId;
+  String? get workspaceId;
 
   @BuiltValueField(wireName: r'resource_id')
   String get resourceId;
@@ -53,11 +55,18 @@ abstract class GuestOrder implements Built<GuestOrder, GuestOrderBuilder> {
 
   @BuiltValueField(wireName: r'status')
   GuestOrderStatusEnum get status;
-  // enum statusEnum {  pending,  accepted,  rejected,  expired,  };
+  // enum statusEnum {  pending,  awaiting_payment,  accepted,  rejected,  expired,  canceled,  };
 
-  /// Accepted by the branch's straight-to-kitchen mode.
+  /// Accepted by the branch's straight-to-kitchen mode or prepay webhook.
   @BuiltValueField(wireName: r'automatic')
   bool get automatic;
+
+  @BuiltValueField(wireName: r'prepaid')
+  bool get prepaid;
+
+  @BuiltValueField(wireName: r'pay_method')
+  GuestOrderPayMethodEnum? get payMethod;
+  // enum payMethodEnum {  vietqr,  counter,  ,  };
 
   @BuiltValueField(wireName: r'items')
   BuiltList<GuestOrderItem> get items;
@@ -120,10 +129,12 @@ class _$GuestOrderSerializer implements PrimitiveSerializer<GuestOrder> {
       specifiedType: const FullType(String),
     );
     yield r'workspace_id';
-    yield serializers.serialize(
-      object.workspaceId,
-      specifiedType: const FullType(String),
-    );
+    yield object.workspaceId == null
+        ? null
+        : serializers.serialize(
+            object.workspaceId,
+            specifiedType: const FullType.nullable(String),
+          );
     yield r'resource_id';
     yield serializers.serialize(
       object.resourceId,
@@ -151,6 +162,18 @@ class _$GuestOrderSerializer implements PrimitiveSerializer<GuestOrder> {
       object.automatic,
       specifiedType: const FullType(bool),
     );
+    yield r'prepaid';
+    yield serializers.serialize(
+      object.prepaid,
+      specifiedType: const FullType(bool),
+    );
+    yield r'pay_method';
+    yield object.payMethod == null
+        ? null
+        : serializers.serialize(
+            object.payMethod,
+            specifiedType: const FullType.nullable(GuestOrderPayMethodEnum),
+          );
     yield r'items';
     yield serializers.serialize(
       object.items,
@@ -246,8 +269,9 @@ class _$GuestOrderSerializer implements PrimitiveSerializer<GuestOrder> {
         case r'workspace_id':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.workspaceId = valueDes;
           break;
         case r'resource_id':
@@ -285,6 +309,21 @@ class _$GuestOrderSerializer implements PrimitiveSerializer<GuestOrder> {
             specifiedType: const FullType(bool),
           ) as bool;
           result.automatic = valueDes;
+          break;
+        case r'prepaid':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.prepaid = valueDes;
+          break;
+        case r'pay_method':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(GuestOrderPayMethodEnum),
+          ) as GuestOrderPayMethodEnum?;
+          if (valueDes == null) continue;
+          result.payMethod = valueDes;
           break;
         case r'items':
           final valueDes = serializers.deserialize(
@@ -386,12 +425,17 @@ class _$GuestOrderSerializer implements PrimitiveSerializer<GuestOrder> {
 class GuestOrderStatusEnum extends EnumClass {
   @BuiltValueEnumConst(wireName: r'pending')
   static const GuestOrderStatusEnum pending = _$guestOrderStatusEnum_pending;
+  @BuiltValueEnumConst(wireName: r'awaiting_payment')
+  static const GuestOrderStatusEnum awaitingPayment =
+      _$guestOrderStatusEnum_awaitingPayment;
   @BuiltValueEnumConst(wireName: r'accepted')
   static const GuestOrderStatusEnum accepted = _$guestOrderStatusEnum_accepted;
   @BuiltValueEnumConst(wireName: r'rejected')
   static const GuestOrderStatusEnum rejected = _$guestOrderStatusEnum_rejected;
   @BuiltValueEnumConst(wireName: r'expired')
   static const GuestOrderStatusEnum expired = _$guestOrderStatusEnum_expired;
+  @BuiltValueEnumConst(wireName: r'canceled')
+  static const GuestOrderStatusEnum canceled = _$guestOrderStatusEnum_canceled;
 
   static Serializer<GuestOrderStatusEnum> get serializer =>
       _$guestOrderStatusEnumSerializer;
@@ -402,4 +446,23 @@ class GuestOrderStatusEnum extends EnumClass {
       _$guestOrderStatusEnumValues;
   static GuestOrderStatusEnum valueOf(String name) =>
       _$guestOrderStatusEnumValueOf(name);
+}
+
+class GuestOrderPayMethodEnum extends EnumClass {
+  @BuiltValueEnumConst(wireName: r'vietqr')
+  static const GuestOrderPayMethodEnum vietqr =
+      _$guestOrderPayMethodEnum_vietqr;
+  @BuiltValueEnumConst(wireName: r'counter')
+  static const GuestOrderPayMethodEnum counter =
+      _$guestOrderPayMethodEnum_counter;
+
+  static Serializer<GuestOrderPayMethodEnum> get serializer =>
+      _$guestOrderPayMethodEnumSerializer;
+
+  const GuestOrderPayMethodEnum._(String name) : super(name);
+
+  static BuiltSet<GuestOrderPayMethodEnum> get values =>
+      _$guestOrderPayMethodEnumValues;
+  static GuestOrderPayMethodEnum valueOf(String name) =>
+      _$guestOrderPayMethodEnumValueOf(name);
 }

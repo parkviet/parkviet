@@ -3,9 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { toggleLanguage } from './i18n';
 import { GuestApiError, guestApi, SESSION_ENDED } from './lib/api';
 import { addLine, type CartLine, itemCount, orderBody, setQuantity } from './lib/cart';
+import { applyTheme, isOrderQrActive, isValidPrepayMethod, remainingSeconds } from './lib/emenu';
 import { errorKey, keepsKey } from './lib/errors';
 import { forgetCode, readCode, readToken, saveToken, takeCodeFromAddress } from './lib/session';
-import type { GuestMenu, GuestRequest, GuestSession, GuestTable, MenuItem } from './lib/types';
+import type {
+  GuestMenu,
+  GuestRequest,
+  GuestSession,
+  GuestTable,
+  MenuItem,
+  PaymentQr,
+} from './lib/types';
 import { CartScreen } from './screens/cart-screen';
 import { ItemScreen } from './screens/item-screen';
 import { MenuScreen } from './screens/menu-screen';
@@ -43,14 +51,39 @@ export function App() {
   const [tab, setTab] = useState<Tab>('menu');
   const [item, setItem] = useState<MenuItem | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [savedPrepay, setSavedPrepay] = useState<{ orderId: string; lines: CartLine[] } | null>(
+    null,
+  );
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ text: string; failed: boolean } | null>(null);
+  const [payMethod, setPayMethod] = useState<'vietqr' | 'counter' | null>(null);
+  const [bill, setBill] = useState<PaymentQr | null>(null);
+  const [waitUntil, setWaitUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   // One key per cart: a retry after a lost answer replays the same order.
   const orderKey = useRef<string | null>(null);
   // Starts once per page load, also under StrictMode's second effect run.
   const started = useRef(false);
   // This tab held a session, so an ended one reads "scan again".
   const hadSession = useRef(false);
+  const menuRef = useRef<GuestMenu | null>(null);
+  const tableRef = useRef<GuestTable | null>(null);
+
+  const updateMenu = useCallback((next: GuestMenu | null) => {
+    menuRef.current = next;
+    setMenu(next);
+  }, []);
+
+  const markPaused = useCallback(() => {
+    updateMenu(null);
+    setItem(null);
+    setBill(null);
+    setPhase((current) =>
+      current.kind === 'ready'
+        ? { kind: 'ready', session: { ...current.session, paused: true } }
+        : current,
+    );
+  }, [updateMenu]);
 
   const begin = useCallback(
     async (code: string | null) => {
@@ -60,8 +93,24 @@ export function App() {
         // only to try again at a table that is not open yet.
         if (session.status === 'open') forgetCode();
         hadSession.current = true;
+        if (session.paused) {
+          updateMenu(null);
+          setItem(null);
+          setPhase({ kind: 'ready', session });
+          return;
+        }
         setPhase({ kind: 'ready', session });
-        setMenu(await guestApi.menu());
+        try {
+          updateMenu(await guestApi.menu());
+        } catch (menuError) {
+          if (menuError instanceof GuestApiError && menuError.code === 'emenu_paused') {
+            updateMenu(null);
+            setItem(null);
+            setPhase({ kind: 'ready', session: { ...session, paused: true } });
+            return;
+          }
+          throw menuError;
+        }
       } catch (error) {
         if (error instanceof GuestApiError && error.code === 'table_code_invalid') {
           forgetCode();
@@ -78,7 +127,7 @@ export function App() {
         }
       }
     },
-    [t],
+    [t, updateMenu],
   );
 
   useEffect(() => {
@@ -89,28 +138,131 @@ export function App() {
   }, [begin]);
 
   const session = phase.kind === 'ready' ? phase.session : null;
+  const sessionId = session?.id ?? null;
 
   // The table and this phone's orders, every few seconds while visible.
   useEffect(() => {
-    if (!session) return;
+    if (!sessionId) return;
     let stopped = false;
+    let inFlight = false;
     const read = async () => {
-      if (document.visibilityState === 'hidden') return;
+      if (stopped || inFlight || document.visibilityState === 'hidden') return;
+      inFlight = true;
       try {
-        const next = await guestApi.table();
-        if (!stopped) setTable(next);
+        const [next, live] = await Promise.all([guestApi.table(), guestApi.session()]);
+        if (stopped) return;
+        tableRef.current = next;
+        setTable(next);
+        if (live.paused) {
+          updateMenu(null);
+          setItem(null);
+          setBill(null);
+          setPhase({ kind: 'ready', session: live });
+        } else if (!menuRef.current) {
+          try {
+            const loaded = await guestApi.menu();
+            if (stopped) return;
+            updateMenu(loaded);
+            setPhase({ kind: 'ready', session: live });
+          } catch (menuError) {
+            if (stopped) return;
+            if (menuError instanceof GuestApiError && menuError.code === 'emenu_paused') {
+              updateMenu(null);
+              setPhase({ kind: 'ready', session: { ...live, paused: true } });
+            } else if (
+              menuError instanceof GuestApiError &&
+              SESSION_ENDED.includes(menuError.code)
+            ) {
+              void begin(null);
+            } else {
+              setPhase({ kind: 'ready', session: live });
+            }
+          }
+        } else {
+          setPhase({ kind: 'ready', session: live });
+        }
       } catch (error) {
         if (!stopped && error instanceof GuestApiError && SESSION_ENDED.includes(error.code))
           void begin(null);
+      } finally {
+        inFlight = false;
       }
     };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void read();
+    };
     void read();
-    const timer = setInterval(read, POLL_MS);
+    const timer = setInterval(() => void read(), POLL_MS);
+    document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
       stopped = true;
       clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [session, begin]);
+  }, [sessionId, begin, updateMenu]);
+
+  useEffect(() => {
+    applyTheme(document.documentElement, menu?.theme);
+  }, [menu]);
+
+  useEffect(() => {
+    if (waitUntil === null) return;
+    const tick = () => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= waitUntil) setWaitUntil(null);
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [waitUntil]);
+
+  const hasExpiringPrepay = Boolean(
+    table?.orders.some(
+      (order) =>
+        order.status === 'awaiting_payment' &&
+        Boolean(order.payment?.expires_at) &&
+        isOrderQrActive(order.payment?.expires_at, now),
+    ),
+  );
+
+  useEffect(() => {
+    if (!hasExpiringPrepay) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [hasExpiringPrepay]);
+
+  useEffect(() => {
+    if (!savedPrepay || !table) return;
+    const tracked = table.orders.find((row) => row.id === savedPrepay.orderId);
+    if (tracked?.status === 'accepted') {
+      setSavedPrepay(null);
+      setNotice({ text: t('sent'), failed: false });
+    }
+  }, [savedPrepay, table, t]);
+
+  useEffect(() => {
+    if (!bill || !table) return;
+    const due = Number(table.due ?? 0);
+    if (due <= 0) {
+      setBill(null);
+      setNotice({ text: t('billPaid'), failed: false });
+      return;
+    }
+    const qrDue = Number(bill.due ?? bill.amount);
+    if (Number.isFinite(qrDue) && due !== qrDue) {
+      setBill(null);
+      void guestApi
+        .billPayment()
+        .then((fresh) => {
+          const latestDue = Number(tableRef.current?.due ?? 0);
+          if (latestDue > 0 && Number(fresh.due ?? fresh.amount) === latestDue) {
+            setBill(fresh);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [bill, table, t]);
 
   const changeCart = (next: CartLine[]) => {
     orderKey.current = null;
@@ -118,48 +270,165 @@ export function App() {
   };
 
   const send = async () => {
-    if (busy || cart.length === 0) return;
+    if (busy || cart.length === 0 || !menu) return;
+    const prepay = menu.payment?.timing === 'pay_before';
+    if (prepay && !isValidPrepayMethod(menu.payment, payMethod)) return;
+    const submittedLines = cart;
     setBusy(true);
     setNotice(null);
     orderKey.current ??= crypto.randomUUID();
     try {
-      await guestApi.submitOrder(orderBody(cart), orderKey.current);
+      const order = await guestApi.submitOrder(
+        { ...orderBody(cart), ...(prepay && payMethod ? { payment: payMethod } : {}) },
+        orderKey.current,
+      );
       orderKey.current = null;
+      setWaitUntil(null);
       setCart([]);
-      setNotice({ text: t('sent'), failed: false });
+      if (order.status === 'awaiting_payment') {
+        setSavedPrepay({ orderId: order.id, lines: submittedLines });
+        setNow(Date.now());
+      } else {
+        setSavedPrepay(null);
+      }
+      setNotice({
+        text: t(order.status === 'awaiting_payment' ? 'awaitingPayment' : 'sent'),
+        failed: false,
+      });
       setTab('table');
-      setTable(await guestApi.table());
+      const nextTable = await guestApi.table();
+      tableRef.current = nextTable;
+      setTable(nextTable);
     } catch (error) {
       if (!keepsKey(error)) orderKey.current = null;
-      if (error instanceof GuestApiError && SESSION_ENDED.includes(error.code)) void begin(null);
-      else setNotice({ text: t(errorKey(error)), failed: true });
+      if (error instanceof GuestApiError && error.code === 'emenu_paused') {
+        markPaused();
+        return;
+      }
+      if (error instanceof GuestApiError && error.code === 'order_too_soon') {
+        const seconds = Number(error.details.retry_after_seconds);
+        const retrySeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : 1;
+        const ts = Date.now();
+        setNow(ts);
+        setWaitUntil(ts + retrySeconds * 1000);
+        return;
+      }
+      if (error instanceof GuestApiError && SESSION_ENDED.includes(error.code)) {
+        void begin(null);
+        return;
+      }
+      setNotice({ text: t(errorKey(error)), failed: true });
       if (error instanceof GuestApiError && error.code === 'item_sold_out')
-        setMenu(await guestApi.menu().catch(() => menu));
+        updateMenu(await guestApi.menu().catch(() => menuRef.current));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const cancelOrder = async (orderId: string) => {
+    if (busy) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const canceled = await guestApi.cancelOrder(orderId);
+      if (savedPrepay?.orderId === orderId && canceled.status === 'canceled') {
+        setCart((current) => (current.length > 0 ? current : savedPrepay.lines));
+        orderKey.current = null;
+        setSavedPrepay(null);
+      }
+      const nextTable = await guestApi.table();
+      tableRef.current = nextTable;
+      setTable(nextTable);
+    } catch (error) {
+      if (error instanceof GuestApiError && SESSION_ENDED.includes(error.code)) {
+        void begin(null);
+      } else {
+        setNotice({ text: t(errorKey(error)), failed: true });
+        const nextTable = await guestApi.table().catch(() => null);
+        if (nextTable) {
+          tableRef.current = nextTable;
+          setTable(nextTable);
+        }
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const restorePrepay = () => {
+    if (!savedPrepay) return;
+    changeCart(savedPrepay.lines);
+    setSavedPrepay(null);
+    setTab('cart');
+  };
+
+  const payBill = async () => {
+    if (busy) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      setBill(await guestApi.billPayment());
+    } catch (error) {
+      if (error instanceof GuestApiError && error.code === 'emenu_paused') {
+        markPaused();
+      } else if (error instanceof GuestApiError && SESSION_ENDED.includes(error.code)) {
+        void begin(null);
+      } else {
+        setNotice({ text: t(errorKey(error)), failed: true });
+      }
     } finally {
       setBusy(false);
     }
   };
 
   const request = async (kind: GuestRequest['kind']) => {
+    if (busy) return;
     setBusy(true);
     setNotice(null);
     try {
       await guestApi.request(kind);
-      setTable(await guestApi.table());
+      const nextTable = await guestApi.table();
+      tableRef.current = nextTable;
+      setTable(nextTable);
     } catch (error) {
-      setNotice({ text: t(errorKey(error)), failed: true });
+      if (error instanceof GuestApiError && SESSION_ENDED.includes(error.code)) {
+        void begin(null);
+      } else {
+        setNotice({ text: t(errorKey(error)), failed: true });
+      }
     } finally {
       setBusy(false);
     }
   };
 
+  const storeName = session ? menu?.theme?.store_name || session.branch.store_name : null;
+  const logoUrl = menu?.theme?.logo_url ?? null;
+
   const header = (
     <header className="bar">
-      <h1>
-        {session
-          ? t('tableTitle', { name: session.table.name, branch: session.branch.name })
-          : t('title')}
-      </h1>
+      <div className="brand-head">
+        {logoUrl ? (
+          <img
+            className="logo"
+            src={logoUrl}
+            alt={storeName ?? ''}
+            referrerPolicy="no-referrer"
+            data-testid="store-logo"
+          />
+        ) : null}
+        <div className="brand-titles">
+          {storeName ? (
+            <span className="store-name" data-testid="store-name">
+              {storeName}
+            </span>
+          ) : null}
+          <h1>
+            {session
+              ? t('tableTitle', { name: session.table.name, branch: session.branch.name })
+              : t('title')}
+          </h1>
+        </div>
+      </div>
       <button type="button" className="link" onClick={toggleLanguage}>
         {t('language')}
       </button>
@@ -196,13 +465,20 @@ export function App() {
     );
   }
 
-  const ordering = session.status === 'open';
+  const ordering = session.status === 'open' && !session.paused;
   const count = itemCount(cart);
+  const waitSeconds = remainingSeconds(waitUntil, now);
 
   return (
     <div className="page">
       {header}
-      {ordering ? (
+      {session.paused ? (
+        tab === 'table' ? (
+          <p className="banner warning" role="status" data-testid="paused">
+            {t('paused')}
+          </p>
+        ) : null
+      ) : ordering ? (
         <p className="muted banner">
           {t(session.approval === 'direct_to_kitchen' ? 'approvalDirect' : 'approvalStaff')}
         </p>
@@ -214,13 +490,38 @@ export function App() {
           </button>
         </div>
       )}
+      {waitSeconds > 0 ? (
+        <p className="error" role="status" data-testid="order-wait">
+          {t('error_order_too_soon', { seconds: waitSeconds })}
+        </p>
+      ) : null}
       {notice ? (
         <p className={notice.failed ? 'error' : 'notice'} role={notice.failed ? 'alert' : 'status'}>
           {notice.text}
         </p>
       ) : null}
       <main>
-        {!menu ? (
+        {session.paused ? (
+          tab === 'table' ? (
+            <TableScreen
+              session={session}
+              table={table}
+              payment={menu?.payment}
+              now={now}
+              busy={busy}
+              bill={bill}
+              restorableOrderId={cart.length === 0 ? (savedPrepay?.orderId ?? null) : null}
+              onPayVietqr={() => void payBill()}
+              onCancelOrder={(orderId) => void cancelOrder(orderId)}
+              onRestoreOrder={restorePrepay}
+              onRequest={(kind) => void request(kind)}
+            />
+          ) : (
+            <div className="paused-card" role="status" data-testid="paused">
+              <p>{t('paused')}</p>
+            </div>
+          )
+        ) : !menu ? (
           <p role="status">{t('loading')}</p>
         ) : item ? (
           <ItemScreen
@@ -238,13 +539,29 @@ export function App() {
           <CartScreen
             cart={cart}
             currency={menu.currency}
-            canSend={ordering}
+            canSend={ordering && waitSeconds === 0}
+            waitSeconds={waitSeconds}
             sending={busy}
+            payment={menu.payment}
+            method={payMethod}
+            onMethod={setPayMethod}
             onQuantity={(key, quantity) => changeCart(setQuantity(cart, key, quantity))}
             onSend={() => void send()}
           />
         ) : (
-          <TableScreen session={session} table={table} busy={busy} onRequest={request} />
+          <TableScreen
+            session={session}
+            table={table}
+            payment={menu.payment}
+            now={now}
+            busy={busy}
+            bill={bill}
+            restorableOrderId={cart.length === 0 ? (savedPrepay?.orderId ?? null) : null}
+            onPayVietqr={() => void payBill()}
+            onCancelOrder={(orderId) => void cancelOrder(orderId)}
+            onRestoreOrder={restorePrepay}
+            onRequest={(kind) => void request(kind)}
+          />
         )}
       </main>
       <nav className="tabs" aria-label={t('title')}>

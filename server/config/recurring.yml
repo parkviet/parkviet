@@ -85,6 +85,10 @@ production:
   pos_expire_bottle_keeps:
     class: Spree::Pos::BottleKeeps::ExpireJob
     schedule: 15 4 * * * Asia/Ho_Chi_Minh
+  # POS electronic menu: cancel a prepay order whose transfer window closed.
+  pos_expire_emenu_prepay:
+    class: Spree::Pos::Emenu::ExpirePrepayJob
+    schedule: every minute
   # POS coach visits past their window close and keep their commission
   # (never pays).
   pos_close_stale_vehicle_visits:

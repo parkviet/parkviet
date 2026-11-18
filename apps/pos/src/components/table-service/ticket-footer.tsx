@@ -84,9 +84,14 @@ export function TicketFooter({
   const chargedOnTop =
     Boolean(charge?.applies && !charge.waived && charge.rate) ||
     (active.totals?.taxes ?? []).length > 0;
-  const payTotal = clock
-    ? String(Number(active.totals?.total ?? 0) + Number(clock))
-    : (active.totals?.total ?? '0');
+  const allocated = active.financial?.allocated ?? '0';
+  const hasPaid = Number(allocated) > 0;
+  const remaining =
+    active.financial?.remaining ??
+    String(Math.max(0, Number(active.totals?.total ?? 0) - Number(allocated)));
+  const basePay = hasPaid ? remaining : (active.totals?.total ?? '0');
+  const payTotal = clock ? String(Number(basePay) + Number(clock)) : basePay;
+  const paidInFull = hasPaid && Number(payTotal) <= 0;
   const placed = [
     placement.seat ? t('ticketSeat', { seat: placement.seat }) : null,
     placement.course ? courseName(placement.course) : null,
@@ -103,11 +108,15 @@ export function TicketFooter({
               time: formatMoney(clock, currency),
               items: formatMoney(active.totals.item_total, currency),
             })}
+            {hasPaid ? ` · ${t('ticketPaid', { amount: formatMoney(allocated, currency) })}` : ''}
           </span>
         ) : active.totals ? (
           <span>
             {t('ticketSubtotal', { amount: formatMoney(active.totals.item_total, currency) })}
+            {hasPaid ? ` · ${t('ticketPaid', { amount: formatMoney(allocated, currency) })}` : ''}
           </span>
+        ) : hasPaid ? (
+          <span>{t('ticketPaid', { amount: formatMoney(allocated, currency) })}</span>
         ) : null}
       </p>
       {canHold && placed.length > 0 ? (
@@ -164,9 +173,13 @@ export function TicketFooter({
           <small>
             {clock
               ? t(chargedOnTop ? 'ticketPayEstimateBeforeCharges' : 'ticketPayEstimate')
-              : t(tabMode && isTab(active) ? 'ticketCloseTab' : 'ticketPay')}
+              : tabMode && isTab(active)
+                ? t('ticketCloseTab')
+                : hasPaid && !paidInFull
+                  ? t('ticketPayRemaining')
+                  : t('ticketPay')}
           </small>{' '}
-          <b>{formatMoney(payTotal, currency)}</b>
+          <b>{paidInFull ? t('ticketPaidInFull') : formatMoney(payTotal, currency)}</b>
         </button>
       </div>
     </footer>

@@ -10,9 +10,16 @@ export type GuestSession = {
   approval: 'staff_approval' | 'direct_to_kitchen';
   // A room billed by play time: the bill adds the time played.
   timed: boolean;
+  paused: boolean;
 };
 
-export type MenuCategory = { id: string; name: string; position: number; color: string | null };
+export type MenuCategory = {
+  id: string;
+  name: string;
+  position: number;
+  color: string | null;
+  image_url?: string | null;
+};
 
 export type MenuVariant = {
   id: string;
@@ -51,15 +58,53 @@ export type ModifierGroup = {
   options: ModifierOption[];
 };
 
+export type GuestTheme = {
+  brand_color: string;
+  text_color: string;
+  button_color: string;
+  logo_url: string | null;
+  store_name: string;
+};
+
 export type GuestMenu = {
   currency: string;
   etag: string;
   categories: MenuCategory[];
   items: MenuItem[];
   modifier_groups: ModifierGroup[];
+  theme?: GuestTheme;
+  sections?: {
+    banner: { id: string; name: string }[];
+    best_sellers: string[];
+    new_items: string[];
+  };
+  payment?: {
+    timing: 'pay_after' | 'pay_before';
+    methods: Array<'vietqr' | 'counter'>;
+    vietqr_available: boolean;
+  };
 };
 
-export type GuestOrderStatus = 'pending' | 'accepted' | 'rejected' | 'expired';
+export type PaymentQr = {
+  payload: string;
+  amount: string;
+  currency: string;
+  transfer_content: string;
+  bank_bin?: string;
+  bank_name?: string | null;
+  account_number?: string;
+  account_name?: string | null;
+  image_url?: string | null;
+  due?: string;
+};
+
+export type GuestOrderStatus =
+  | 'pending'
+  | 'awaiting_payment'
+  | 'accepted'
+  | 'rejected'
+  | 'expired'
+  | 'canceled';
 
 export type GuestOrder = {
   id: string;
@@ -77,6 +122,11 @@ export type GuestOrder = {
   quoted_total: string;
   currency: string;
   created_at: string;
+  payment?: {
+    method: 'vietqr' | 'counter';
+    expires_at: string | null;
+    qr: PaymentQr | null;
+  } | null;
 };
 
 export type GuestRequest = {
@@ -98,6 +148,8 @@ export type TableLine = {
 export type GuestTable = {
   lines: TableLine[];
   subtotal: string | null;
+  paid?: string;
+  due?: string;
   has_timed: boolean;
   orders: GuestOrder[];
   requests: GuestRequest[];

@@ -6,7 +6,9 @@ import {
   GUEST_ORDER_REASONS,
   type GuestOrder,
   type GuestRequest,
+  pendingGuestOrders,
   REJECT_PRESETS,
+  recentPrepaidOrders,
   waitingCount,
 } from '../lib/guest-orders';
 import { conflictReason, describeFailure } from '../lib/request-failure';
@@ -36,8 +38,11 @@ export function GuestOrderTray({
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState('');
+  const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
   const { orders, requests, accept, reject, done } = useGuestOrders(branchId, true);
-  const pending = (orders.data ?? []).filter((order) => order.status === 'pending');
+  const allOrders = orders.data ?? [];
+  const pending = pendingGuestOrders(allOrders);
+  const prepaid = recentPrepaidOrders(allOrders, Date.now(), dismissed);
   const calls = (requests.data ?? []).filter((request) => request.status === 'open');
   const waiting = waitingCount(pending, calls);
   const busy = accept.isPending || reject.isPending || done.isPending;
@@ -69,6 +74,12 @@ export function GuestOrderTray({
               {t('guestTrayWaiting', { count: waiting })}
             </span>
           ) : null}
+          {prepaid.length > 0 ? (
+            <span className="badge" data-testid="guest-tray-prepaid-badge">
+              {' '}
+              {t('guestTrayPrepaidCount', { count: prepaid.length })}
+            </span>
+          ) : null}
         </button>
       </div>
       {open ? (
@@ -76,7 +87,7 @@ export function GuestOrderTray({
           <p className="muted">{t('waiting')}</p>
         ) : orders.isError || requests.isError ? (
           <p role="alert">{t('guestTrayFailed')}</p>
-        ) : waiting === 0 ? (
+        ) : waiting === 0 && prepaid.length === 0 ? (
           <p className="muted">{t('guestTrayEmpty')}</p>
         ) : (
           <>
@@ -108,6 +119,26 @@ export function GuestOrderTray({
                   />
                 ))}
               </ul>
+            ) : null}
+            {prepaid.length > 0 ? (
+              <div data-testid="guest-prepaid-section">
+                <p className="muted">{t('guestPrepaidSection')}</p>
+                <ul className="platform-orders" data-testid="guest-prepaid-orders">
+                  {prepaid.map((order) => (
+                    <GuestPrepaidOrderRow
+                      key={order.id}
+                      order={order}
+                      onDismiss={() =>
+                        setDismissed((prev) => {
+                          const next = new Set(prev);
+                          next.add(order.id);
+                          return next;
+                        })
+                      }
+                    />
+                  ))}
+                </ul>
+              </div>
             ) : null}
           </>
         )
@@ -193,6 +224,22 @@ function GuestRequestRow({
   );
 }
 
+function GuestOrderItems({ items }: { items: GuestOrder['items'] }) {
+  return (
+    <ul className="platform-order-items">
+      {items.map((item, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: the server sends items in a fixed order
+        <li key={index}>
+          {item.quantity} × {item.name}
+          {item.size ? ` (${item.size})` : ''}
+          {item.options.length > 0 ? ` · ${item.options.join(', ')}` : ''}
+          {item.note ? ` · ${item.note}` : ''}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function GuestOrderRow({
   order,
   busy,
@@ -215,18 +262,10 @@ function GuestOrderRow({
     >
       <p>
         <strong>{order.table_name}</strong> · {formatMoney(order.quoted_total, order.currency)}
+        {order.prepaid ? ` · ${t('guestPrepaid')}` : ''}
+        {order.pay_method === 'counter' ? ` · ${t('guestPayAtCounter')}` : ''}
       </p>
-      <ul className="platform-order-items">
-        {order.items.map((item, index) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: the server sends items in a fixed order
-          <li key={index}>
-            {item.quantity} × {item.name}
-            {item.size ? ` (${item.size})` : ''}
-            {item.options.length > 0 ? ` · ${item.options.join(', ')}` : ''}
-            {item.note ? ` · ${item.note}` : ''}
-          </li>
-        ))}
-      </ul>
+      <GuestOrderItems items={order.items} />
       <div className="platform-order-actions">
         <button
           type="button"
@@ -245,6 +284,30 @@ function GuestOrderRow({
           onClick={onReject}
         >
           {t('guestReject')}
+        </button>
+      </div>
+    </li>
+  );
+}
+
+function GuestPrepaidOrderRow({ order, onDismiss }: { order: GuestOrder; onDismiss: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <li
+      className="platform-order"
+      data-status={order.status}
+      data-testid={`guest-order-${order.id}`}
+    >
+      <p>
+        <strong>{order.table_name}</strong> · {formatMoney(order.quoted_total, order.currency)}{' '}
+        <span className="order-source-tag" data-testid={`guest-prepaid-badge-${order.id}`}>
+          {t('guestPrepaid')}
+        </span>
+      </p>
+      <GuestOrderItems items={order.items} />
+      <div className="platform-order-actions">
+        <button type="button" data-testid={`guest-dismiss-${order.id}`} onClick={onDismiss}>
+          {t('guestPrepaidDismiss')}
         </button>
       </div>
     </li>

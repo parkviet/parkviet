@@ -26,13 +26,14 @@ module Spree
 
         module_function
 
-        def resolve(branch:, variant:, selections:, now:, currency:, order: nil, note: nil, menu_item: nil, base_price: nil)
+        def resolve(branch:, variant:, selections:, now:, currency:, order: nil, note: nil, menu_item: nil, base_price: nil,
+                    allow_hidden: false)
           item = menu_item || MenuItem.for_variant(branch.store, variant)
           raise Conflict.new('This item is not on the menu.', reason: 'modifier_unknown') if item.nil?
 
           schedule = nil
           if base_price.nil?
-            base_price, schedule = scheduled_price(branch, item, variant, now)
+            base_price, schedule = scheduled_price(branch, item, variant, now, allow_hidden: allow_hidden)
             base_price ||= list_price!(branch, variant, currency, order)
           end
           options = picked_options(item, selections)
@@ -53,14 +54,20 @@ module Spree
         # [price or nil, schedule] for the item's size from the running
         # schedules: a row for the size beats a row for every size. Raises
         # when a running schedule hides the item.
-        def scheduled_price(branch, item, variant, now, schedules: nil)
+        def scheduled_price(branch, item, variant, now, schedules: nil, allow_hidden: false)
           rows = (schedules || running_schedules(branch, now)).flat_map do |schedule|
             schedule.menu_schedule_items.select { |row| row.menu_item_id == item.id && (row.variant_id.nil? || row.variant_id == variant.id) }.
               map { |row| [schedule, row] }
           end
           if rows.any? { |_, row| row.hidden }
-            raise Conflict.new('This item is not on the menu right now.', reason: 'menu_item_hidden',
-                                                                          details: { menu_item_id: item.prefixed_id })
+            # The counter drops a hidden item. The electronic menu may still
+            # sell it, at its list price, without changing the counter's read.
+            unless allow_hidden
+              raise Conflict.new('This item is not on the menu right now.', reason: 'menu_item_hidden',
+                                                                            details: { menu_item_id: item.prefixed_id })
+            end
+
+            rows = rows.reject { |_, row| row.hidden }
           end
 
           priced = rows.select { |_, row| row.price }.min_by { |_, row| row.variant_id ? 0 : 1 }

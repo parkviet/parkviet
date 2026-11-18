@@ -17,7 +17,7 @@ module Spree
         module_function
 
         # @return [Hash] 'workspace' and the 'sale_line_ids' this batch wrote or grew
-        def call(workspace:, staff:, key:, items:, append_batch_id: nil, device: nil)
+        def call(workspace:, staff:, key:, items:, append_batch_id: nil, device: nil, allow_hidden: false, allow_emenu: false)
           batch = batch_id!(append_batch_id)
           rows = items!(items)
           payload = { 'command' => COMMAND, 'append_batch_id' => batch, 'items' => rows }
@@ -37,6 +37,7 @@ module Spree
               # Buffet dishes are free on their cover and never merge across covers.
               LineBuilder.add!(workspace: workspace, staff: staff, variant_id: row['variant_id'], quantity: row['quantity'],
                                modifiers: row['modifiers'], note: row['note'], merge: cover.nil?,
+                               allow_hidden: allow_hidden, allow_emenu: allow_emenu,
                                merge_scope: scope.where(course: course[:course], seat: course[:seat], course_status: course[:course_status]),
                                server_price: cover && BigDecimal('0'),
                                attributes: { added_by: staff, added_device: device, append_batch_id: batch,

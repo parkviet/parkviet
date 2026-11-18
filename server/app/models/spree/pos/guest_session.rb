@@ -2,11 +2,12 @@
 
 module Spree
   module Pos
-    # One guest phone at a table. Bound to the order that was open at the
-    # table when the code was scanned: it orders onto that order only, and
-    # stops working when the order is completed or canceled, after TTL, or
-    # when the table's code is rotated. Without an open order it reads the
-    # menu and calls staff, nothing else. Only token digests are stored.
+    # One guest phone at a table. In pay-after mode it binds to the order open
+    # at the table when the code was scanned: it orders onto that order only,
+    # and stops working when the order closes, after TTL, or when the table's
+    # code is rotated. In pay-before mode each submission makes its own order
+    # at the table as long as a shift is open, so subsequent rounds never lock
+    # on an earlier payment. Only token digests are stored.
     class GuestSession < Record
       self.table_name = 'spree_pos_guest_sessions'
       has_prefix_id :posguest
@@ -56,12 +57,21 @@ module Spree
       end
 
       def usable?(now = Time.current)
-        revoked_at.nil? && expires_at > now && table_code.active? && (workspace_id.nil? || order_open?)
+        revoked_at.nil? && expires_at > now && table_code.active? && (prepay_mode? || workspace_id.nil? || order_open?)
       end
 
-      # The guest can order: the session is bound to an order still open.
+      def prepay_mode?
+        EmenuSettings.of(branch)['payment_timing'] == 'pay_before'
+      end
+
+      # The guest can order: bound to an open table order in pay-after mode,
+      # or at an available table with an open shift in pay-before mode.
       def ordering?
-        workspace_id.present? && order_open?
+        if prepay_mode?
+          resource.active? && resource.manual_status == 'available' && !Emenu::Qr.open_shift(branch).nil?
+        else
+          workspace_id.present? && order_open?
+        end
       end
 
       def order_open?

@@ -3,8 +3,10 @@
 This Vite + React app is what a guest's phone opens from the QR code on a
 table or in a room: the menu, an item with its options, the cart, and "Bàn
 của tôi" (this phone's orders, the table's lines, calling staff, asking for
-the bill). It takes no money and never writes to a table's order: guests'
-orders wait for staff (`server/app/workflows/spree/pos/guest_orders/`).
+the bill). Guests pay only through the guest API's VietQR codes. Their orders
+wait for staff, or they pay before the kitchen starts
+(`server/app/workflows/spree/pos/guest_orders/`). Paying the open bill also
+uses VietQR on this page when the branch allows it.
 
 - The server serves the build at `/table/` (`server/Dockerfile`,
   `Spree::Pos::TableOrderAppController`), same origin as the guest API.

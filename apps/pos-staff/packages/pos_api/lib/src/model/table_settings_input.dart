@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:pos_api/src/model/table_settings_input_course_labels_inner.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:pos_api/src/model/reservation_period.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -24,6 +25,10 @@ part 'table_settings_input.g.dart';
 /// * [seatedAlertMinutes] - Minutes before the floor flags a long-seated table; null turns the alert off.
 /// * [reservationGraceMinutes]
 /// * [reservationDurationMinutes]
+/// * [reservationPeriods] - Periods may not overlap, and each must last longer than both buffers together.
+/// * [reservationOpenBufferMinutes]
+/// * [reservationCloseBufferMinutes]
+/// * [reservationMinLeadMinutes]
 /// * [reservationFeeProductId]
 /// * [courseLabels] - Names of courses 1, 2, 3… in order; replaces them all.
 @BuiltValue()
@@ -66,6 +71,19 @@ abstract class TableSettingsInput
 
   @BuiltValueField(wireName: r'reservation_duration_minutes')
   int? get reservationDurationMinutes;
+
+  /// Periods may not overlap, and each must last longer than both buffers together.
+  @BuiltValueField(wireName: r'reservation_periods')
+  BuiltList<ReservationPeriod>? get reservationPeriods;
+
+  @BuiltValueField(wireName: r'reservation_open_buffer_minutes')
+  int? get reservationOpenBufferMinutes;
+
+  @BuiltValueField(wireName: r'reservation_close_buffer_minutes')
+  int? get reservationCloseBufferMinutes;
+
+  @BuiltValueField(wireName: r'reservation_min_lead_minutes')
+  int? get reservationMinLeadMinutes;
 
   @BuiltValueField(wireName: r'reservation_fee_product_id')
   String? get reservationFeeProductId;
@@ -173,6 +191,34 @@ class _$TableSettingsInputSerializer
       yield r'reservation_duration_minutes';
       yield serializers.serialize(
         object.reservationDurationMinutes,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.reservationPeriods != null) {
+      yield r'reservation_periods';
+      yield serializers.serialize(
+        object.reservationPeriods,
+        specifiedType: const FullType(BuiltList, [FullType(ReservationPeriod)]),
+      );
+    }
+    if (object.reservationOpenBufferMinutes != null) {
+      yield r'reservation_open_buffer_minutes';
+      yield serializers.serialize(
+        object.reservationOpenBufferMinutes,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.reservationCloseBufferMinutes != null) {
+      yield r'reservation_close_buffer_minutes';
+      yield serializers.serialize(
+        object.reservationCloseBufferMinutes,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.reservationMinLeadMinutes != null) {
+      yield r'reservation_min_lead_minutes';
+      yield serializers.serialize(
+        object.reservationMinLeadMinutes,
         specifiedType: const FullType(int),
       );
     }
@@ -304,6 +350,39 @@ class _$TableSettingsInputSerializer
           ) as int?;
           if (valueDes == null) continue;
           result.reservationDurationMinutes = valueDes;
+          break;
+        case r'reservation_periods':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(
+                BuiltList, [FullType(ReservationPeriod)]),
+          ) as BuiltList<ReservationPeriod>?;
+          if (valueDes == null) continue;
+          result.reservationPeriods.replace(valueDes);
+          break;
+        case r'reservation_open_buffer_minutes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.reservationOpenBufferMinutes = valueDes;
+          break;
+        case r'reservation_close_buffer_minutes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.reservationCloseBufferMinutes = valueDes;
+          break;
+        case r'reservation_min_lead_minutes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.reservationMinLeadMinutes = valueDes;
           break;
         case r'reservation_fee_product_id':
           final valueDes = serializers.deserialize(

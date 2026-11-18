@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:pos_api/src/model/context_store.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:pos_api/src/model/sales_settings.dart';
 import 'package:pos_api/src/model/context_branch.dart';
 import 'package:pos_api/src/model/context_staff.dart';
 import 'package:pos_api/src/model/context_administration.dart';
@@ -22,6 +23,7 @@ part 'context.g.dart';
 /// * [store]
 /// * [administration]
 /// * [einvoiceType] - E-invoice the store issues for completed orders; the counter offers buyer details unless it is none.
+/// * [salesSettings]
 /// * [modules] - The selected branch's POS modules by key (such as `fnb.bottle_keep`), on or off.
 /// * [branches] - Branches this person may see, with what their screens need.
 @BuiltValue()
@@ -43,6 +45,9 @@ abstract class Context implements Built<Context, ContextBuilder> {
   @BuiltValueField(wireName: r'einvoice_type')
   ContextEinvoiceTypeEnum? get einvoiceType;
   // enum einvoiceTypeEnum {  none,  cash_register,  coded,  };
+
+  @BuiltValueField(wireName: r'sales_settings')
+  SalesSettings? get salesSettings;
 
   /// The selected branch's POS modules by key (such as `fnb.bottle_keep`), on or off.
   @BuiltValueField(wireName: r'modules')
@@ -100,6 +105,13 @@ class _$ContextSerializer implements PrimitiveSerializer<Context> {
       yield serializers.serialize(
         object.einvoiceType,
         specifiedType: const FullType(ContextEinvoiceTypeEnum),
+      );
+    }
+    if (object.salesSettings != null) {
+      yield r'sales_settings';
+      yield serializers.serialize(
+        object.salesSettings,
+        specifiedType: const FullType(SalesSettings),
       );
     }
     if (object.modules != null) {
@@ -177,6 +189,14 @@ class _$ContextSerializer implements PrimitiveSerializer<Context> {
           ) as ContextEinvoiceTypeEnum?;
           if (valueDes == null) continue;
           result.einvoiceType = valueDes;
+          break;
+        case r'sales_settings':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(SalesSettings),
+          ) as SalesSettings?;
+          if (valueDes == null) continue;
+          result.salesSettings.replace(valueDes);
           break;
         case r'modules':
           final valueDes = serializers.deserialize(

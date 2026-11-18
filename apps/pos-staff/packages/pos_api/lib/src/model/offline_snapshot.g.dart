@@ -20,6 +20,8 @@ class _$OfflineSnapshot extends OfflineSnapshot {
   @override
   final OfflineSnapshotOffline offline;
   @override
+  final SalesSettings salesSettings;
+  @override
   final Menu? menu;
   @override
   final String etag;
@@ -38,6 +40,7 @@ class _$OfflineSnapshot extends OfflineSnapshot {
       required this.staff,
       this.shift,
       required this.offline,
+      required this.salesSettings,
       this.menu,
       required this.etag,
       required this.generatedAt,
@@ -60,6 +63,7 @@ class _$OfflineSnapshot extends OfflineSnapshot {
         staff == other.staff &&
         shift == other.shift &&
         offline == other.offline &&
+        salesSettings == other.salesSettings &&
         menu == other.menu &&
         etag == other.etag &&
         generatedAt == other.generatedAt &&
@@ -75,6 +79,7 @@ class _$OfflineSnapshot extends OfflineSnapshot {
     _$hash = $jc(_$hash, staff.hashCode);
     _$hash = $jc(_$hash, shift.hashCode);
     _$hash = $jc(_$hash, offline.hashCode);
+    _$hash = $jc(_$hash, salesSettings.hashCode);
     _$hash = $jc(_$hash, menu.hashCode);
     _$hash = $jc(_$hash, etag.hashCode);
     _$hash = $jc(_$hash, generatedAt.hashCode);
@@ -92,6 +97,7 @@ class _$OfflineSnapshot extends OfflineSnapshot {
           ..add('staff', staff)
           ..add('shift', shift)
           ..add('offline', offline)
+          ..add('salesSettings', salesSettings)
           ..add('menu', menu)
           ..add('etag', etag)
           ..add('generatedAt', generatedAt)
@@ -136,6 +142,12 @@ class OfflineSnapshotBuilder
   set offline(OfflineSnapshotOfflineBuilder? offline) =>
       _$this._offline = offline;
 
+  SalesSettingsBuilder? _salesSettings;
+  SalesSettingsBuilder get salesSettings =>
+      _$this._salesSettings ??= SalesSettingsBuilder();
+  set salesSettings(SalesSettingsBuilder? salesSettings) =>
+      _$this._salesSettings = salesSettings;
+
   MenuBuilder? _menu;
   MenuBuilder get menu => _$this._menu ??= MenuBuilder();
   set menu(MenuBuilder? menu) => _$this._menu = menu;
@@ -166,6 +178,7 @@ class OfflineSnapshotBuilder
       _staff = $v.staff.toBuilder();
       _shift = $v.shift?.toBuilder();
       _offline = $v.offline.toBuilder();
+      _salesSettings = $v.salesSettings.toBuilder();
       _menu = $v.menu?.toBuilder();
       _etag = $v.etag;
       _generatedAt = $v.generatedAt;
@@ -199,6 +212,7 @@ class OfflineSnapshotBuilder
             staff: staff.build(),
             shift: _shift?.build(),
             offline: offline.build(),
+            salesSettings: salesSettings.build(),
             menu: _menu?.build(),
             etag: BuiltValueNullFieldError.checkNotNull(
                 etag, r'OfflineSnapshot', 'etag'),
@@ -222,6 +236,8 @@ class OfflineSnapshotBuilder
         _shift?.build();
         _$failedField = 'offline';
         offline.build();
+        _$failedField = 'salesSettings';
+        salesSettings.build();
         _$failedField = 'menu';
         _menu?.build();
       } catch (e) {

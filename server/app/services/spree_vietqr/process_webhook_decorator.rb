@@ -12,7 +12,8 @@ module SpreeVietqr
 
     def confirm_topup(transaction, event)
       super || Spree::Pos::Collections::ReceiveTransfer.call(transaction: transaction, webhook_event: event,
-                                                             payment_method: @payment_method)
+                                                             payment_method: @payment_method) ||
+        Spree::Pos::Emenu::ReceivePrepay.call(transaction: transaction, webhook_event: event, payment_method: @payment_method)
     end
   end
 
@@ -28,7 +29,8 @@ module SpreeVietqr
       provider = Providers::Registry.resolve(@event.provider).new(payment_method: @payment_method,
                                                                   receiving_account: @event.receiving_account)
       transaction = provider.parse_transaction(@event.raw_payload.with_indifferent_access)
-      Spree::Pos::Collections::ReceiveTransfer.call(transaction: transaction, webhook_event: @event, payment_method: @payment_method)
+      Spree::Pos::Collections::ReceiveTransfer.call(transaction: transaction, webhook_event: @event, payment_method: @payment_method) ||
+        Spree::Pos::Emenu::ReceivePrepay.call(transaction: transaction, webhook_event: @event, payment_method: @payment_method)
     rescue StandardError => e
       @event.mark_status!('error', error: e.message)
       false

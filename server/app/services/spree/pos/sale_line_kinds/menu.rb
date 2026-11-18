@@ -17,7 +17,7 @@ module Spree
 
         # A Menu::Pricing::Result when the line sells as `menu`, nil when it
         # sells as before. `modifiers` nil means none were sent.
-        def resolve(workspace:, variant:, modifiers:, note:)
+        def resolve(workspace:, variant:, modifiers:, note:, allow_hidden: false)
           attached = !modifiers.nil? || note.present?
           branch = workspace.branch
           unless ModulePolicy.enabled?(branch, MODULE)
@@ -36,7 +36,8 @@ module Spree
           now = Workspace.business_now
           ensure_available!(branch, item, now)
           Pos::Menu::Pricing.resolve(branch: branch, variant: variant, selections: modifiers, now: now, note: note,
-                                     currency: workspace.order.currency, order: workspace.order, menu_item: item)
+                                     currency: workspace.order.currency, order: workspace.order, menu_item: item,
+                                     allow_hidden: allow_hidden)
         end
 
         def ensure_available!(branch, item, now)

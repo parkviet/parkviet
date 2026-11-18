@@ -19,7 +19,7 @@ module Spree
         # which device, in which batch).
         def add!(workspace:, staff:, variant_id:, quantity: nil, sale_quantity: nil, sale_unit_code: nil, lot_code: nil, expiry_on: nil,
                  serial_codes: nil, price_override: nil, merge: nil, measurement_event_id: nil, label_barcode: nil, modifiers: nil,
-                 note: nil, merge_scope: nil, server_price: nil, attributes: {})
+                 note: nil, merge_scope: nil, server_price: nil, attributes: {}, allow_hidden: false, allow_emenu: false)
           SalesChannel.validate_order!(workspace)
           expiry_on = parse_expiry!(expiry_on)
           label = read_label!(workspace, label_barcode, variant_id) if label_barcode.present?
@@ -31,7 +31,7 @@ module Spree
             merge = false
             raise Conflict, 'A scale label already carries its price.' if price_override.present?
           end
-          variant = authorized_variant!(workspace, variant_id)
+          variant = authorized_variant!(workspace, variant_id, allow_emenu: allow_emenu && label.nil?)
           # Shares the row lock taken when unit configuration changes, so a
           # first sale and a reconfiguration cannot interleave.
           Spree::Variant.where(id: variant.id).lock('FOR SHARE').load
@@ -42,7 +42,8 @@ module Spree
           OnHandGuard.ensure_added!(workspace, variant, base_quantity, kind: kind)
           raise Conflict, 'A scale label line takes no options.' if label && (!modifiers.nil? || note.present?)
 
-          menu = label ? nil : SaleLineKinds::Menu.resolve(workspace: workspace, variant: variant, modifiers: modifiers, note: note)
+          menu = label ? nil : SaleLineKinds::Menu.resolve(workspace: workspace, variant: variant, modifiers: modifiers, note: note,
+                                                                 allow_hidden: allow_hidden)
           if menu
             raise Conflict.new('A menu item is priced by the menu.', reason: 'menu_price_fixed') if price_override.present?
             raise Conflict.new('Menu items are sold by count.', reason: 'menu_count_only') unless kind == 'ordinary'
@@ -251,8 +252,9 @@ module Spree
           label
         end
 
-        def authorized_variant!(workspace, variant_id)
-          Workspaces::ManageLineItem.sellable_variant!(branch: workspace.branch, variant: Spree::Variant.find_by_prefix_id(variant_id.to_s))
+        def authorized_variant!(workspace, variant_id, allow_emenu: false)
+          Workspaces::ManageLineItem.sellable_variant!(branch: workspace.branch, variant: Spree::Variant.find_by_prefix_id(variant_id.to_s),
+                                                       allow_emenu: allow_emenu)
         end
 
         # Counts are whole numbers: a JSON 1.9 or "1.5" is rejected, never truncated.

@@ -6,6 +6,38 @@ part of 'table_settings.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const TableSettingsReservationPeriodsSourceEnum
+    _$tableSettingsReservationPeriodsSourceEnum_branch =
+    const TableSettingsReservationPeriodsSourceEnum._('branch');
+const TableSettingsReservationPeriodsSourceEnum
+    _$tableSettingsReservationPeriodsSourceEnum_openingHours =
+    const TableSettingsReservationPeriodsSourceEnum._('openingHours');
+const TableSettingsReservationPeriodsSourceEnum
+    _$tableSettingsReservationPeriodsSourceEnum_none =
+    const TableSettingsReservationPeriodsSourceEnum._('none');
+
+TableSettingsReservationPeriodsSourceEnum
+    _$tableSettingsReservationPeriodsSourceEnumValueOf(String name) {
+  switch (name) {
+    case 'branch':
+      return _$tableSettingsReservationPeriodsSourceEnum_branch;
+    case 'openingHours':
+      return _$tableSettingsReservationPeriodsSourceEnum_openingHours;
+    case 'none':
+      return _$tableSettingsReservationPeriodsSourceEnum_none;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<TableSettingsReservationPeriodsSourceEnum>
+    _$tableSettingsReservationPeriodsSourceEnumValues = BuiltSet<
+        TableSettingsReservationPeriodsSourceEnum>(const <TableSettingsReservationPeriodsSourceEnum>[
+  _$tableSettingsReservationPeriodsSourceEnum_branch,
+  _$tableSettingsReservationPeriodsSourceEnum_openingHours,
+  _$tableSettingsReservationPeriodsSourceEnum_none,
+]);
+
 const TableSettingsQrOrderModeEnum
     _$tableSettingsQrOrderModeEnum_staffApproval =
     const TableSettingsQrOrderModeEnum._('staffApproval');
@@ -82,12 +114,49 @@ final BuiltSet<TableSettingsServiceChargeAppliesToEnum>
   _$tableSettingsServiceChargeAppliesToEnum_timed,
 ]);
 
+Serializer<TableSettingsReservationPeriodsSourceEnum>
+    _$tableSettingsReservationPeriodsSourceEnumSerializer =
+    _$TableSettingsReservationPeriodsSourceEnumSerializer();
 Serializer<TableSettingsQrOrderModeEnum>
     _$tableSettingsQrOrderModeEnumSerializer =
     _$TableSettingsQrOrderModeEnumSerializer();
 Serializer<TableSettingsServiceChargeAppliesToEnum>
     _$tableSettingsServiceChargeAppliesToEnumSerializer =
     _$TableSettingsServiceChargeAppliesToEnumSerializer();
+
+class _$TableSettingsReservationPeriodsSourceEnumSerializer
+    implements PrimitiveSerializer<TableSettingsReservationPeriodsSourceEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'branch': 'branch',
+    'openingHours': 'opening_hours',
+    'none': 'none',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'branch': 'branch',
+    'opening_hours': 'openingHours',
+    'none': 'none',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    TableSettingsReservationPeriodsSourceEnum
+  ];
+  @override
+  final String wireName = 'TableSettingsReservationPeriodsSourceEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          TableSettingsReservationPeriodsSourceEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  TableSettingsReservationPeriodsSourceEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      TableSettingsReservationPeriodsSourceEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
 
 class _$TableSettingsQrOrderModeEnumSerializer
     implements PrimitiveSerializer<TableSettingsQrOrderModeEnum> {
@@ -164,6 +233,22 @@ class _$TableSettings extends TableSettings {
   @override
   final int reservationDurationMinutes;
   @override
+  final BuiltList<ReservationPeriod>? reservationPeriods;
+  @override
+  final BuiltList<ReservationPeriod>? reservationEffectivePeriods;
+  @override
+  final TableSettingsReservationPeriodsSourceEnum? reservationPeriodsSource;
+  @override
+  final int? reservationOpenBufferMinutes;
+  @override
+  final int? reservationCloseBufferMinutes;
+  @override
+  final int? reservationMinLeadMinutes;
+  @override
+  final String? businessDayCutoff;
+  @override
+  final String? timezone;
+  @override
   final String? reservationFeeProductId;
   @override
   final BuiltList<CourseLabel> courseLabels;
@@ -201,6 +286,14 @@ class _$TableSettings extends TableSettings {
   _$TableSettings._(
       {required this.reservationGraceMinutes,
       required this.reservationDurationMinutes,
+      this.reservationPeriods,
+      this.reservationEffectivePeriods,
+      this.reservationPeriodsSource,
+      this.reservationOpenBufferMinutes,
+      this.reservationCloseBufferMinutes,
+      this.reservationMinLeadMinutes,
+      this.businessDayCutoff,
+      this.timezone,
       this.reservationFeeProductId,
       required this.courseLabels,
       this.bottleKeepDays,
@@ -230,6 +323,14 @@ class _$TableSettings extends TableSettings {
     return other is TableSettings &&
         reservationGraceMinutes == other.reservationGraceMinutes &&
         reservationDurationMinutes == other.reservationDurationMinutes &&
+        reservationPeriods == other.reservationPeriods &&
+        reservationEffectivePeriods == other.reservationEffectivePeriods &&
+        reservationPeriodsSource == other.reservationPeriodsSource &&
+        reservationOpenBufferMinutes == other.reservationOpenBufferMinutes &&
+        reservationCloseBufferMinutes == other.reservationCloseBufferMinutes &&
+        reservationMinLeadMinutes == other.reservationMinLeadMinutes &&
+        businessDayCutoff == other.businessDayCutoff &&
+        timezone == other.timezone &&
         reservationFeeProductId == other.reservationFeeProductId &&
         courseLabels == other.courseLabels &&
         bottleKeepDays == other.bottleKeepDays &&
@@ -252,6 +353,14 @@ class _$TableSettings extends TableSettings {
     var _$hash = 0;
     _$hash = $jc(_$hash, reservationGraceMinutes.hashCode);
     _$hash = $jc(_$hash, reservationDurationMinutes.hashCode);
+    _$hash = $jc(_$hash, reservationPeriods.hashCode);
+    _$hash = $jc(_$hash, reservationEffectivePeriods.hashCode);
+    _$hash = $jc(_$hash, reservationPeriodsSource.hashCode);
+    _$hash = $jc(_$hash, reservationOpenBufferMinutes.hashCode);
+    _$hash = $jc(_$hash, reservationCloseBufferMinutes.hashCode);
+    _$hash = $jc(_$hash, reservationMinLeadMinutes.hashCode);
+    _$hash = $jc(_$hash, businessDayCutoff.hashCode);
+    _$hash = $jc(_$hash, timezone.hashCode);
     _$hash = $jc(_$hash, reservationFeeProductId.hashCode);
     _$hash = $jc(_$hash, courseLabels.hashCode);
     _$hash = $jc(_$hash, bottleKeepDays.hashCode);
@@ -276,6 +385,14 @@ class _$TableSettings extends TableSettings {
     return (newBuiltValueToStringHelper(r'TableSettings')
           ..add('reservationGraceMinutes', reservationGraceMinutes)
           ..add('reservationDurationMinutes', reservationDurationMinutes)
+          ..add('reservationPeriods', reservationPeriods)
+          ..add('reservationEffectivePeriods', reservationEffectivePeriods)
+          ..add('reservationPeriodsSource', reservationPeriodsSource)
+          ..add('reservationOpenBufferMinutes', reservationOpenBufferMinutes)
+          ..add('reservationCloseBufferMinutes', reservationCloseBufferMinutes)
+          ..add('reservationMinLeadMinutes', reservationMinLeadMinutes)
+          ..add('businessDayCutoff', businessDayCutoff)
+          ..add('timezone', timezone)
           ..add('reservationFeeProductId', reservationFeeProductId)
           ..add('courseLabels', courseLabels)
           ..add('bottleKeepDays', bottleKeepDays)
@@ -308,6 +425,52 @@ class TableSettingsBuilder
   int? get reservationDurationMinutes => _$this._reservationDurationMinutes;
   set reservationDurationMinutes(int? reservationDurationMinutes) =>
       _$this._reservationDurationMinutes = reservationDurationMinutes;
+
+  ListBuilder<ReservationPeriod>? _reservationPeriods;
+  ListBuilder<ReservationPeriod> get reservationPeriods =>
+      _$this._reservationPeriods ??= ListBuilder<ReservationPeriod>();
+  set reservationPeriods(ListBuilder<ReservationPeriod>? reservationPeriods) =>
+      _$this._reservationPeriods = reservationPeriods;
+
+  ListBuilder<ReservationPeriod>? _reservationEffectivePeriods;
+  ListBuilder<ReservationPeriod> get reservationEffectivePeriods =>
+      _$this._reservationEffectivePeriods ??= ListBuilder<ReservationPeriod>();
+  set reservationEffectivePeriods(
+          ListBuilder<ReservationPeriod>? reservationEffectivePeriods) =>
+      _$this._reservationEffectivePeriods = reservationEffectivePeriods;
+
+  TableSettingsReservationPeriodsSourceEnum? _reservationPeriodsSource;
+  TableSettingsReservationPeriodsSourceEnum? get reservationPeriodsSource =>
+      _$this._reservationPeriodsSource;
+  set reservationPeriodsSource(
+          TableSettingsReservationPeriodsSourceEnum?
+              reservationPeriodsSource) =>
+      _$this._reservationPeriodsSource = reservationPeriodsSource;
+
+  int? _reservationOpenBufferMinutes;
+  int? get reservationOpenBufferMinutes => _$this._reservationOpenBufferMinutes;
+  set reservationOpenBufferMinutes(int? reservationOpenBufferMinutes) =>
+      _$this._reservationOpenBufferMinutes = reservationOpenBufferMinutes;
+
+  int? _reservationCloseBufferMinutes;
+  int? get reservationCloseBufferMinutes =>
+      _$this._reservationCloseBufferMinutes;
+  set reservationCloseBufferMinutes(int? reservationCloseBufferMinutes) =>
+      _$this._reservationCloseBufferMinutes = reservationCloseBufferMinutes;
+
+  int? _reservationMinLeadMinutes;
+  int? get reservationMinLeadMinutes => _$this._reservationMinLeadMinutes;
+  set reservationMinLeadMinutes(int? reservationMinLeadMinutes) =>
+      _$this._reservationMinLeadMinutes = reservationMinLeadMinutes;
+
+  String? _businessDayCutoff;
+  String? get businessDayCutoff => _$this._businessDayCutoff;
+  set businessDayCutoff(String? businessDayCutoff) =>
+      _$this._businessDayCutoff = businessDayCutoff;
+
+  String? _timezone;
+  String? get timezone => _$this._timezone;
+  set timezone(String? timezone) => _$this._timezone = timezone;
 
   String? _reservationFeeProductId;
   String? get reservationFeeProductId => _$this._reservationFeeProductId;
@@ -398,6 +561,15 @@ class TableSettingsBuilder
     if ($v != null) {
       _reservationGraceMinutes = $v.reservationGraceMinutes;
       _reservationDurationMinutes = $v.reservationDurationMinutes;
+      _reservationPeriods = $v.reservationPeriods?.toBuilder();
+      _reservationEffectivePeriods =
+          $v.reservationEffectivePeriods?.toBuilder();
+      _reservationPeriodsSource = $v.reservationPeriodsSource;
+      _reservationOpenBufferMinutes = $v.reservationOpenBufferMinutes;
+      _reservationCloseBufferMinutes = $v.reservationCloseBufferMinutes;
+      _reservationMinLeadMinutes = $v.reservationMinLeadMinutes;
+      _businessDayCutoff = $v.businessDayCutoff;
+      _timezone = $v.timezone;
       _reservationFeeProductId = $v.reservationFeeProductId;
       _courseLabels = $v.courseLabels.toBuilder();
       _bottleKeepDays = $v.bottleKeepDays;
@@ -444,6 +616,14 @@ class TableSettingsBuilder
                 reservationDurationMinutes,
                 r'TableSettings',
                 'reservationDurationMinutes'),
+            reservationPeriods: _reservationPeriods?.build(),
+            reservationEffectivePeriods: _reservationEffectivePeriods?.build(),
+            reservationPeriodsSource: reservationPeriodsSource,
+            reservationOpenBufferMinutes: reservationOpenBufferMinutes,
+            reservationCloseBufferMinutes: reservationCloseBufferMinutes,
+            reservationMinLeadMinutes: reservationMinLeadMinutes,
+            businessDayCutoff: businessDayCutoff,
+            timezone: timezone,
             reservationFeeProductId: reservationFeeProductId,
             courseLabels: courseLabels.build(),
             bottleKeepDays: bottleKeepDays,
@@ -464,6 +644,11 @@ class TableSettingsBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'reservationPeriods';
+        _reservationPeriods?.build();
+        _$failedField = 'reservationEffectivePeriods';
+        _reservationEffectivePeriods?.build();
+
         _$failedField = 'courseLabels';
         courseLabels.build();
 

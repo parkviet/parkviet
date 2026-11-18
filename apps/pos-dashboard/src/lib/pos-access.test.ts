@@ -148,7 +148,7 @@ describe('POS permission gates', () => {
       ...manager,
       context: { ...manager.context, capabilities: ['pos.kitchen.manage'] },
     }
-    expect(tabs(kitchenManager)).toEqual(['overview', 'kitchen'])
+    expect(tabs(kitchenManager)).toEqual(['overview', 'features', 'kitchen'])
     expect(routeAllowed('branch', kitchenManager)).toBe(true)
     const cook = {
       ...manager,
@@ -169,7 +169,11 @@ describe('POS permission gates', () => {
     })
     const tabs = (access: Parameters<typeof branchTabs>[0]) =>
       branchTabs(access).map((tab) => tab.key)
-    expect(tabs(staff(['pos.resource.manage'], true))).toEqual(['overview', 'floorPlan'])
+    expect(tabs(staff(['pos.resource.manage'], true))).toEqual([
+      'overview',
+      'features',
+      'floorPlan',
+    ])
     expect(routeAllowed('branch', staff(['pos.resource.manage'], false))).toBe(true)
     expect(routeAllowed('branch-floor-plan', staff(['pos.resource.manage'], false))).toBe(false)
     expect(canManageResources(staff(['pos.resource.manage'], true))).toBe(true)
@@ -356,5 +360,43 @@ describe('POS permission gates', () => {
     expect(routeAllowed('einvoice-settings', staff(['pos.einvoice.manage'], 'coded'))).toBe(false)
     expect(routeAllowed('einvoice-settings', { permissionKeys: ['write_pos_topology'] })).toBe(true)
     expect(routeAllowed('einvoice-settings', { permissionKeys: ['read_pos_topology'] })).toBe(false)
+  })
+  it('offers the e-Menu tab while the branch runs QR ordering', () => {
+    const staff = (capabilities: string[], qrOrder: boolean, permissionKeys: string[] = []) => ({
+      permissionKeys,
+      context: {
+        selection: { branch_id: 'b', register_id: null },
+        capabilities,
+        modules: { 'fnb.qr_order': qrOrder },
+      } as unknown as PosContext,
+    })
+    const tabs = (access: Parameters<typeof branchTabs>[0]) =>
+      branchTabs(access).map((tab) => tab.key)
+
+    // Store administrators (read and write)
+    expect(visibleNav('branch-emenu', staff([], true, ['write_pos_topology']))).toBe(true)
+    expect(routeAllowed('branch-emenu', staff([], true, ['read_pos_topology']))).toBe(true)
+    expect(tabs(staff([], true, ['write_pos_topology']))).toContain('emenu')
+    expect(visibleNav('branch-emenu', staff([], false, ['write_pos_topology']))).toBe(false)
+    expect(routeAllowed('branch-emenu', staff([], false, ['write_pos_topology']))).toBe(false)
+
+    // Branch manager
+    expect(visibleNav('branch-emenu', staff(['pos.topology.manage'], true))).toBe(true)
+    expect(routeAllowed('branch-emenu', staff(['pos.topology.manage'], true))).toBe(true)
+    expect(tabs(staff(['pos.topology.manage'], true))).toContain('emenu')
+    expect(visibleNav('branch-emenu', staff(['pos.topology.manage'], false))).toBe(false)
+    expect(routeAllowed('branch-emenu', staff(['pos.topology.manage'], false))).toBe(false)
+
+    // Resource manager
+    expect(visibleNav('branch-emenu', staff(['pos.resource.manage'], true))).toBe(true)
+    expect(routeAllowed('branch-emenu', staff(['pos.resource.manage'], true))).toBe(true)
+    expect(tabs(staff(['pos.resource.manage'], true))).toContain('emenu')
+    expect(visibleNav('branch-emenu', staff(['pos.resource.manage'], false))).toBe(false)
+    expect(routeAllowed('branch-emenu', staff(['pos.resource.manage'], false))).toBe(false)
+
+    // Cashier
+    expect(visibleNav('branch-emenu', staff(['pos.shift.open'], true))).toBe(false)
+    expect(routeAllowed('branch-emenu', staff(['pos.shift.open'], true))).toBe(false)
+    expect(tabs(staff(['pos.shift.open'], true))).not.toContain('emenu')
   })
 })

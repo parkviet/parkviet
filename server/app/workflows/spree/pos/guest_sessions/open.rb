@@ -3,12 +3,11 @@
 module Spree
   module Pos
     module GuestSessions
-      # A guest scans a table's code. The code orders nothing: it opens a
-      # session bound to the order open at the table now, or, at a table
-      # with no open order, a session that reads the menu and calls staff
-      # only. Each session ends with its order, after four hours or when
-      # the code is rotated, so a photo of the sticker from an earlier
-      # visit never orders onto the next guests' bill.
+      # A guest scans a table's code. The code orders nothing: in pay-after
+      # mode it opens a session bound to the order open at the table now (or a
+      # menu-only session when none is open). In pay-before mode the session
+      # stays unbound (`workspace_id: nil`) so each round creates and settles
+      # its own order.
       module Open
         Result = Data.define(:session, :token)
 
@@ -21,7 +20,8 @@ module Spree
           return if code.nil? || !code.resource.active? || !GuestOrders::Guard.enabled?(code.branch)
 
           token = GuestSession.new_token
-          workspace = GuestOrders::Guard.open_order(code.resource)
+          prepay = EmenuSettings.of(code.branch)['payment_timing'] == 'pay_before'
+          workspace = prepay ? nil : GuestOrders::Guard.open_order(code.resource)
           now = Time.current
           session = GuestSession.create!(
             store: code.store, branch: code.branch, table_code: code, resource: code.resource, workspace: workspace,

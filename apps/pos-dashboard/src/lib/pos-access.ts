@@ -32,6 +32,7 @@ export type PosPage =
   | 'branch-printing'
   | 'branch-kitchen'
   | 'branch-floor-plan'
+  | 'branch-emenu'
   | 'branch-platforms'
   | 'branch-rate-plans'
   | 'branch-hardware'
@@ -216,6 +217,11 @@ export function visibleNav(page: PosPage, access: PosAccess) {
       runsResources(access) &&
       (canAdminister(access) || canManageResources(access) || canManageBranch(access))
     )
+  if (page === 'branch-emenu')
+    return (
+      access.context?.modules?.['fnb.qr_order'] === true &&
+      (canAdminister(access) || canManageBranch(access) || canManageResources(access))
+    )
   if (page === 'features' || page === 'business-model')
     return (
       canAdminister(access) ||
@@ -268,6 +274,7 @@ export const BRANCH_TABS = [
   { key: 'printing', page: 'branch-printing', path: '/printing' },
   { key: 'kitchen', page: 'branch-kitchen', path: '/kitchen' },
   { key: 'floorPlan', page: 'branch-floor-plan', path: '/floor-plan' },
+  { key: 'emenu', page: 'branch-emenu', path: '/emenu' },
   { key: 'platforms', page: 'branch-platforms', path: '/platforms' },
   { key: 'ratePlans', page: 'branch-rate-plans', path: '/rate-plans' },
   { key: 'hardware', page: 'branch-hardware', path: '/hardware' },

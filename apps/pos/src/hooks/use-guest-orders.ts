@@ -17,11 +17,15 @@ export function guestRequestsKey(generation: number, branchId: string | null) {
   return ['pos', 'guest-requests', generation, branchId] as const;
 }
 
-async function read(path: string, branchId: string | null) {
+async function read(
+  path: string,
+  branchId: string | null,
+  params: Record<string, string | undefined> = {},
+) {
   try {
     return (
       await session.request<{ data: unknown }>('GET', path, {
-        params: { branch_id: branchId ?? undefined, limit: '50' },
+        params: { branch_id: branchId ?? undefined, limit: '50', ...params },
       })
     ).data;
   } catch (error) {
@@ -38,9 +42,9 @@ function command(path: string, body: Record<string, unknown> = {}) {
   });
 }
 
-// The counter's QR tray: guests' orders waiting for staff and their open
-// requests (call staff, the bill). `guest_order.*` and `guest_request.*`
-// invalidate both through the branch stream (lib/realtime).
+// The counter's QR tray: guests' orders waiting for staff, recent prepaid
+// orders sent straight to the kitchen, and open requests (call staff, the bill).
+// `guest_order.*` and `guest_request.*` invalidate both through the branch stream.
 export function useGuestOrders(branchId: string | null, enabled: boolean) {
   const snapshot = useSession();
   const realtime = useRealtimeStatus();
@@ -53,7 +57,22 @@ export function useGuestOrders(branchId: string | null, enabled: boolean) {
     queryKey: ordersKey,
     enabled: active,
     refetchInterval,
-    queryFn: async () => normalizeGuestOrders(await read('/pos/guest_orders', branchId)),
+    queryFn: async () => {
+      const [pending, accepted] = await Promise.all([
+        read('/pos/guest_orders', branchId, { status: 'pending', limit: '50' }),
+        read('/pos/guest_orders', branchId, { status: 'accepted', limit: '20' }),
+      ]);
+      const combined = [
+        ...(Array.isArray(pending) ? pending : []),
+        ...(Array.isArray(accepted) ? accepted : []),
+      ];
+      const seen = new Set<string>();
+      return normalizeGuestOrders(combined).filter((order) => {
+        if (seen.has(order.id)) return false;
+        seen.add(order.id);
+        return true;
+      });
+    },
   });
   const requests = useQuery({
     queryKey: requestsKey,

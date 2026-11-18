@@ -17,6 +17,7 @@ part 'cup_label_settings.g.dart';
 /// * [size] - Label size in millimetres, width x height.
 /// * [fields] - Optional fields that print; the item and \"n/N\" always print.
 /// * [pickupMinutes] - How long a ready call number stays on the call board.
+/// * [autoPrint] - Print a cup label automatically when the order is sent to the kitchen or completed.
 /// * [moduleEnabled] - Whether `fnb.cup_label` is on at the branch.
 /// * [sizes]
 /// * [availableFields]
@@ -42,6 +43,10 @@ abstract class CupLabelSettings
   /// How long a ready call number stays on the call board.
   @BuiltValueField(wireName: r'pickup_minutes')
   int get pickupMinutes;
+
+  /// Print a cup label automatically when the order is sent to the kitchen or completed.
+  @BuiltValueField(wireName: r'auto_print')
+  bool? get autoPrint;
 
   /// Whether `fnb.cup_label` is on at the branch.
   @BuiltValueField(wireName: r'module_enabled')
@@ -107,6 +112,13 @@ class _$CupLabelSettingsSerializer
       object.pickupMinutes,
       specifiedType: const FullType(int),
     );
+    if (object.autoPrint != null) {
+      yield r'auto_print';
+      yield serializers.serialize(
+        object.autoPrint,
+        specifiedType: const FullType(bool),
+      );
+    }
     yield r'module_enabled';
     yield serializers.serialize(
       object.moduleEnabled,
@@ -183,6 +195,14 @@ class _$CupLabelSettingsSerializer
             specifiedType: const FullType(int),
           ) as int;
           result.pickupMinutes = valueDes;
+          break;
+        case r'auto_print':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.autoPrint = valueDes;
           break;
         case r'module_enabled':
           final valueDes = serializers.deserialize(

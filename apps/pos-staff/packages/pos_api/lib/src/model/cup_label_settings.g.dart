@@ -160,6 +160,8 @@ class _$CupLabelSettings extends CupLabelSettings {
   @override
   final int pickupMinutes;
   @override
+  final bool? autoPrint;
+  @override
   final bool moduleEnabled;
   @override
   final BuiltList<String> sizes;
@@ -176,6 +178,7 @@ class _$CupLabelSettings extends CupLabelSettings {
       required this.size,
       required this.fields,
       required this.pickupMinutes,
+      this.autoPrint,
       required this.moduleEnabled,
       required this.sizes,
       required this.availableFields})
@@ -197,6 +200,7 @@ class _$CupLabelSettings extends CupLabelSettings {
         size == other.size &&
         fields == other.fields &&
         pickupMinutes == other.pickupMinutes &&
+        autoPrint == other.autoPrint &&
         moduleEnabled == other.moduleEnabled &&
         sizes == other.sizes &&
         availableFields == other.availableFields;
@@ -210,6 +214,7 @@ class _$CupLabelSettings extends CupLabelSettings {
     _$hash = $jc(_$hash, size.hashCode);
     _$hash = $jc(_$hash, fields.hashCode);
     _$hash = $jc(_$hash, pickupMinutes.hashCode);
+    _$hash = $jc(_$hash, autoPrint.hashCode);
     _$hash = $jc(_$hash, moduleEnabled.hashCode);
     _$hash = $jc(_$hash, sizes.hashCode);
     _$hash = $jc(_$hash, availableFields.hashCode);
@@ -225,6 +230,7 @@ class _$CupLabelSettings extends CupLabelSettings {
           ..add('size', size)
           ..add('fields', fields)
           ..add('pickupMinutes', pickupMinutes)
+          ..add('autoPrint', autoPrint)
           ..add('moduleEnabled', moduleEnabled)
           ..add('sizes', sizes)
           ..add('availableFields', availableFields))
@@ -259,6 +265,10 @@ class CupLabelSettingsBuilder
   set pickupMinutes(int? pickupMinutes) =>
       _$this._pickupMinutes = pickupMinutes;
 
+  bool? _autoPrint;
+  bool? get autoPrint => _$this._autoPrint;
+  set autoPrint(bool? autoPrint) => _$this._autoPrint = autoPrint;
+
   bool? _moduleEnabled;
   bool? get moduleEnabled => _$this._moduleEnabled;
   set moduleEnabled(bool? moduleEnabled) =>
@@ -286,6 +296,7 @@ class CupLabelSettingsBuilder
       _size = $v.size;
       _fields = $v.fields.toBuilder();
       _pickupMinutes = $v.pickupMinutes;
+      _autoPrint = $v.autoPrint;
       _moduleEnabled = $v.moduleEnabled;
       _sizes = $v.sizes.toBuilder();
       _availableFields = $v.availableFields.toBuilder();
@@ -320,6 +331,7 @@ class CupLabelSettingsBuilder
             fields: fields.build(),
             pickupMinutes: BuiltValueNullFieldError.checkNotNull(
                 pickupMinutes, r'CupLabelSettings', 'pickupMinutes'),
+            autoPrint: autoPrint,
             moduleEnabled: BuiltValueNullFieldError.checkNotNull(
                 moduleEnabled, r'CupLabelSettings', 'moduleEnabled'),
             sizes: sizes.build(),

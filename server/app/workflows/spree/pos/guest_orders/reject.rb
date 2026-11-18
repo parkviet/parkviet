@@ -16,15 +16,16 @@ module Spree
           raise Conflict.new('A reason is required.', reason: 'reason_required') if note.blank?
           raise Conflict.new('Reason is too long.', reason: 'reason_invalid') if note.length > REASON_MAX
 
-          workspace = guest_order.workspace
+          store = guest_order.store
+          branch = guest_order.branch
           payload = { 'command' => COMMAND, 'guest_order_id' => guest_order.prefixed_id, 'reason' => note }
-          CommandExecutor.call(store: workspace.store, actor: staff, key: key, payload: payload,
-                               authorize: -> { Guard.decide!(workspace.store, staff, workspace.branch) }) do
+          CommandExecutor.call(store: store, actor: staff, key: key, payload: payload,
+                               authorize: -> { Guard.decide!(store, staff, branch) }) do
             guest_order.lock!
             Accept.pending!(guest_order)
             guest_order.update!(status: 'rejected', decided_by: staff, decided_at: Time.current, reject_reason: note)
-            AuditEntry.record!(store: workspace.store, actor: staff, action: 'guest_order.reject', subject: guest_order,
-                               metadata: { workspace_id: workspace.prefixed_id, reason: note, automatic: false })
+            AuditEntry.record!(store: store, actor: staff, action: 'guest_order.reject', subject: guest_order,
+                               metadata: { workspace_id: guest_order.workspace&.prefixed_id, reason: note, automatic: false }.compact)
             Accept.announce!(guest_order)
             { 'guest_order' => guest_order.to_pos }
           end

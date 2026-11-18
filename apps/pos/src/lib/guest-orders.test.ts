@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeGuestOrders, normalizeGuestRequests, waitingCount } from './guest-orders';
+import {
+  normalizeGuestOrders,
+  normalizeGuestRequests,
+  pendingGuestOrders,
+  RECENT_PREPAID_WINDOW_MS,
+  recentPrepaidOrders,
+  waitingCount,
+} from './guest-orders';
 
 describe('guest orders from the table QR', () => {
   it('reads orders with their options, outcomes and defaults, skipping rows without an id', () => {
@@ -55,10 +62,11 @@ describe('guest orders from the table QR', () => {
     expect(normalizeGuestOrders(undefined)).toEqual([]);
   });
 
-  it('counts pending orders and open requests as waiting for staff', () => {
+  it('counts pending orders and open requests as waiting for staff, excluding awaiting_payment and accepted', () => {
     const orders = normalizeGuestOrders([
       { id: 'a', status: 'pending' },
-      { id: 'b', status: 'accepted' },
+      { id: 'b', status: 'accepted', prepaid: true },
+      { id: 'c', status: 'awaiting_payment', pay_method: 'vietqr' },
     ]);
     const requests = normalizeGuestRequests([
       { id: 'r1', kind: 'call_staff', status: 'open' },
@@ -67,5 +75,89 @@ describe('guest orders from the table QR', () => {
     ]);
     expect(requests).toHaveLength(2);
     expect(waitingCount(orders, requests)).toBe(2);
+  });
+
+  it('keeps pay_before counter orders with null workspace_id and parses pay_method', () => {
+    const orders = normalizeGuestOrders([
+      {
+        id: 'posguestorder_counter',
+        workspace_id: null,
+        resource_id: 'res_2',
+        table_name: 'Bàn 2',
+        status: 'pending',
+        pay_method: 'counter',
+      },
+      {
+        id: 'posguestorder_other',
+        workspace_id: 'ws_2',
+        status: 'pending',
+        pay_method: 'unknown',
+      },
+    ]);
+    expect(orders[0]).toMatchObject({
+      id: 'posguestorder_counter',
+      workspace_id: null,
+      pay_method: 'counter',
+      prepaid: false,
+    });
+    expect(orders[1]).toMatchObject({
+      id: 'posguestorder_other',
+      workspace_id: 'ws_2',
+      pay_method: null,
+    });
+    expect(pendingGuestOrders(orders).map((row) => row.id)).toEqual([
+      'posguestorder_counter',
+      'posguestorder_other',
+    ]);
+  });
+
+  it('filters pending and recent prepaid accepted orders while excluding awaiting_payment', () => {
+    const now = Date.parse('2026-11-18T03:30:00Z');
+    const orders = normalizeGuestOrders([
+      {
+        id: 'wait_qr',
+        status: 'awaiting_payment',
+        prepaid: false,
+        pay_method: 'vietqr',
+        created_at: '2026-11-18T03:29:00Z',
+      },
+      {
+        id: 'pending_counter',
+        workspace_id: null,
+        status: 'pending',
+        pay_method: 'counter',
+        created_at: '2026-11-18T03:28:00Z',
+      },
+      {
+        id: 'paid_recent',
+        status: 'accepted',
+        automatic: true,
+        prepaid: true,
+        pay_method: 'vietqr',
+        decided_at: '2026-11-18T03:20:00Z',
+        created_at: '2026-11-18T03:19:00Z',
+      },
+      {
+        id: 'paid_old',
+        status: 'accepted',
+        automatic: true,
+        prepaid: true,
+        pay_method: 'vietqr',
+        decided_at: new Date(now - RECENT_PREPAID_WINDOW_MS - 1000).toISOString(),
+        created_at: '2026-11-18T02:00:00Z',
+      },
+      {
+        id: 'accepted_unpaid',
+        status: 'accepted',
+        automatic: false,
+        prepaid: false,
+        decided_at: '2026-11-18T03:25:00Z',
+        created_at: '2026-11-18T03:24:00Z',
+      },
+    ]);
+
+    expect(pendingGuestOrders(orders).map((row) => row.id)).toEqual(['pending_counter']);
+    expect(recentPrepaidOrders(orders, now).map((row) => row.id)).toEqual(['paid_recent']);
+    expect(recentPrepaidOrders(orders, now, new Set(['paid_recent']))).toEqual([]);
   });
 });

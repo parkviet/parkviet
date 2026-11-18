@@ -10,29 +10,38 @@ const TOKEN = 'guest-session-token-0123456789';
 
 type Api = {
   status: 'open' | 'table_closed';
+  paused: boolean;
+  menuOverride?: Record<string, unknown>;
   orders: Record<string, unknown>[];
   requests: Record<string, unknown>[];
+  paid: string;
+  due: string;
+  retryAfterSeconds: number;
+  pauseOnSubmit: boolean;
+  billQr: Record<string, unknown> | null;
+  canceledIds: string[];
   submitted: { body: Record<string, unknown>; key: string | null }[];
   authorizations: (string | null)[];
 };
 
-const session = (status: Api['status']) => ({
+const session = (api: Api) => ({
   id: 'posguest_1',
-  status,
+  status: api.status,
   expires_at: '2026-11-12T16:00:00Z',
   table: { name: 'Bàn 4', kind: 'table' },
   branch: { name: 'Quận 1', store_name: 'Quán Trà' },
   currency: 'VND',
   approval: 'staff_approval',
   timed: false,
+  paused: api.paused,
 });
 
 const menu = {
   currency: 'VND',
   etag: 'e1',
   categories: [
-    { id: 'cat_tea', name: 'Trà', position: 1, color: null },
-    { id: 'cat_cake', name: 'Bánh', position: 2, color: null },
+    { id: 'cat_tea', name: 'Trà', position: 1, color: '#0b6e4f' },
+    { id: 'cat_cake', name: 'Bánh', position: 2, color: '#c2410c' },
   ],
   items: [
     {
@@ -100,45 +109,152 @@ async function install(page: Page, api: Api) {
     if (path === '/session' && method === 'POST') {
       const body = request.postDataJSON() as { table_code?: string };
       if (body.table_code !== CODE)
-        return route.fulfill({ status: 404, json: { error: { code: 'table_code_invalid', message: 'x' } } });
-      return route.fulfill({ status: 201, json: { data: { ...session(api.status), token: TOKEN } } });
+        return route.fulfill({
+          status: 404,
+          json: { error: { code: 'table_code_invalid', message: 'x' } },
+        });
+      return route.fulfill({ status: 201, json: { data: { ...session(api), token: TOKEN } } });
     }
     if (request.headers().authorization !== `Guest ${TOKEN}`)
-      return route.fulfill({ status: 401, json: { error: { code: 'session_invalid', message: 'x' } } });
-    if (path === '/session') return route.fulfill({ json: { data: session(api.status) } });
-    if (path === '/menu') return route.fulfill({ json: { data: menu } });
-    if (path === '/order')
+      return route.fulfill({
+        status: 401,
+        json: { error: { code: 'session_invalid', message: 'x' } },
+      });
+    if (path === '/session') return route.fulfill({ json: { data: session(api) } });
+    if (path === '/menu') {
+      if (api.paused)
+        return route.fulfill({
+          status: 409,
+          json: { error: { code: 'emenu_paused', message: 'Ordering is paused.' } },
+        });
+      return route.fulfill({ json: { data: { ...menu, ...api.menuOverride } } });
+    }
+    if (path === '/order') {
+      const hasAccepted = api.orders.some((order) => order.status === 'accepted');
       return route.fulfill({
         json: {
           data: {
-            lines: api.orders.some((order) => order.status === 'accepted')
-              ? [{ name: 'Trà đào', size: 'L', quantity: '2.0', options: ['50%', 'Trân châu'], amount: '80000.0', kitchen: 'sent' }]
+            lines: hasAccepted
+              ? [
+                  {
+                    name: 'Trà đào',
+                    size: 'L',
+                    quantity: '2.0',
+                    options: ['50%', 'Trân châu'],
+                    amount: '80000.0',
+                    kitchen: 'sent',
+                  },
+                ]
               : [],
-            subtotal: api.orders.some((order) => order.status === 'accepted') ? '80000.0' : null,
+            subtotal: hasAccepted ? '80000.0' : null,
+            paid: api.paid,
+            due: api.due,
             has_timed: false,
             orders: api.orders,
             requests: api.requests,
           },
         },
       });
-    if (path === '/guest_orders') {
+    }
+    const cancelMatch = path.match(/^\/guest_orders\/([^/]+)\/cancel$/);
+    if (cancelMatch && method === 'POST') {
+      const orderId = cancelMatch[1];
+      api.canceledIds.push(orderId);
+      let updated: Record<string, unknown> | null = null;
+      api.orders = api.orders.map((row) => {
+        if (row.id !== orderId) return row;
+        updated = { ...row, status: 'canceled', payment: null };
+        return updated;
+      });
+      if (!updated)
+        return route.fulfill({
+          status: 404,
+          json: { error: { code: 'not_found', message: 'x' } },
+        });
+      return route.fulfill({ json: { data: updated } });
+    }
+    if (path === '/guest_orders' && method === 'POST') {
+      if (api.paused || api.pauseOnSubmit) {
+        api.paused = true;
+        return route.fulfill({
+          status: 409,
+          json: { error: { code: 'emenu_paused', message: 'Ordering is paused.' } },
+        });
+      }
+      if (api.retryAfterSeconds > 0) {
+        const seconds = api.retryAfterSeconds;
+        api.retryAfterSeconds = 0;
+        return route.fulfill({
+          status: 429,
+          json: {
+            error: {
+              code: 'order_too_soon',
+              message: 'Too soon',
+              details: { retry_after_seconds: seconds },
+            },
+          },
+        });
+      }
       const body = request.postDataJSON() as Record<string, unknown>;
       api.submitted.push({ body, key: request.headers()['idempotency-key'] ?? null });
-      const order = {
-        id: 'posguestorder_1',
-        status: 'pending',
+      const nextIndex = api.orders.length + 1;
+      const isVietqrPrepay = body.payment === 'vietqr';
+      const order: Record<string, unknown> = {
+        id: `posguestorder_${nextIndex}`,
+        status: isVietqrPrepay ? 'awaiting_payment' : 'pending',
         reject_reason: null,
-        items: [{ name: 'Trà đào', size: 'L', quantity: 2, amount: '80000.0', options: ['50%', 'Trân châu'] }],
+        items: [
+          {
+            name: 'Trà đào',
+            size: 'L',
+            quantity: 2,
+            amount: '80000.0',
+            options: ['50%', 'Trân châu'],
+          },
+        ],
         quoted_total: '80000.0',
         currency: 'VND',
         created_at: '2026-11-12T12:00:00Z',
+        payment: isVietqrPrepay
+          ? {
+              method: 'vietqr',
+              expires_at: new Date(Date.now() + 10 * 60_000).toISOString(),
+              qr: {
+                payload: `00020101021238570010A000000727012700069704360110012345678953037045405800005802VN62100806PVGO${nextIndex}6304ABCD`,
+                amount: '80000.0',
+                currency: 'VND',
+                transfer_content: `PV GO${nextIndex}`,
+                bank_name: 'Vietcombank',
+                account_number: '0123456789',
+                account_name: 'QUAN TRA',
+              },
+            }
+          : null,
       };
-      api.orders = [order];
+      api.orders = [...api.orders, order];
       return route.fulfill({ status: 201, json: { data: order } });
+    }
+    if (path === '/bill_payment' && method === 'POST') {
+      if (api.paused)
+        return route.fulfill({
+          status: 409,
+          json: { error: { code: 'emenu_paused', message: 'Ordering is paused.' } },
+        });
+      if (!api.billQr)
+        return route.fulfill({
+          status: 409,
+          json: { error: { code: 'nothing_to_pay', message: 'Nothing to pay.' } },
+        });
+      return route.fulfill({ json: { data: api.billQr } });
     }
     if (path === '/requests') {
       const body = request.postDataJSON() as { kind: string };
-      const row = { id: 'posguestreq_1', kind: body.kind, status: 'open', created_at: '2026-11-12T12:01:00Z' };
+      const row = {
+        id: 'posguestreq_1',
+        kind: body.kind,
+        status: 'open',
+        created_at: '2026-11-12T12:01:00Z',
+      };
       api.requests = [row];
       return route.fulfill({ status: 201, json: { data: row } });
     }
@@ -148,13 +264,22 @@ async function install(page: Page, api: Api) {
 
 const newApi = (status: Api['status'] = 'open'): Api => ({
   status,
+  paused: false,
   orders: [],
   requests: [],
+  paid: '0.0',
+  due: '0.0',
+  retryAfterSeconds: 0,
+  pauseOnSubmit: false,
+  billQr: null,
+  canceledIds: [],
   submitted: [],
   authorizations: [],
 });
 
-test('orders a dish with options, waits for staff, then sees it sent to the kitchen', async ({ page }) => {
+test('orders a dish with options, waits for staff, then sees it sent to the kitchen', async ({
+  page,
+}) => {
   const api = newApi();
   await install(page, api);
   await page.goto(`/table/t/${CODE}`);
@@ -259,10 +384,193 @@ test('refuses a code that no longer works and asks for a scan without one', asyn
   const api = newApi();
   await install(page, api);
   await page.goto('/table/t/AAAAAAAAAAAAAAAAAAAAAA');
-  await expect(page.getByTestId('phase')).toHaveText('Mã QR này không còn dùng được. Nhờ nhân viên giúp nhé.');
+  await expect(page.getByTestId('phase')).toHaveText(
+    'Mã QR này không còn dùng được. Nhờ nhân viên giúp nhé.',
+  );
 
   await page.goto('/table/');
   await expect(page.getByTestId('phase')).toHaveText(
     'Hãy quét mã QR dán trên bàn để xem thực đơn và gọi món.',
   );
+});
+
+test('blocks menu viewing while paused, loads theme and menu when unpaused, and handles emenu_paused on submit', async ({
+  page,
+}) => {
+  const api = newApi();
+  api.paused = true;
+  api.menuOverride = {
+    theme: {
+      brand_color: '#c2410c',
+      text_color: '#111827',
+      button_color: '#facc15',
+      logo_url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"/>',
+      store_name: 'Trà Sữa Parkviet',
+    },
+    sections: {
+      banner: [{ id: 'prm_1', name: 'Mua 2 tặng 1 khung giờ vàng' }],
+      best_sellers: ['mi_tea'],
+      new_items: [],
+    },
+  };
+  await install(page, api);
+  await page.goto(`/table/t/${CODE}`);
+
+  await expect(page.getByTestId('paused')).toHaveText('Quán đang tạm dừng nhận đơn.');
+  await expect(page.getByTestId('menu-item-mi_tea')).toHaveCount(0);
+  await page.getByTestId('tab-cart').click();
+  await expect(page.getByTestId('paused')).toBeVisible();
+  await expect(page.getByTestId('send-order')).toHaveCount(0);
+
+  // Staff resume ordering: next poll loads the menu, theme, logo, banners and rails.
+  await page.getByTestId('tab-menu').click();
+  api.paused = false;
+  await expect(page.getByTestId('paused')).toHaveCount(0, { timeout: 8_000 });
+  await expect(page.getByTestId('store-logo')).toBeVisible();
+  await expect(page.getByTestId('store-name')).toHaveText('Trà Sữa Parkviet');
+  await expect(page.getByTestId('banners')).toContainText('Mua 2 tặng 1 khung giờ vàng');
+  await expect(page.getByTestId('best-sellers')).toContainText('Trà đào');
+  await expect(page.getByRole('button', { name: 'Tất cả' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+
+  // Staff pause right before guest submits: 409 emenu_paused switches back to paused screen.
+  await page.getByTestId('menu-item-mi_tea').click();
+  await page.getByLabel('100%').check();
+  await page.getByTestId('add-to-cart').click();
+  await page.getByTestId('tab-cart').click();
+  api.pauseOnSubmit = true;
+  await page.getByTestId('send-order').click();
+  await expect(page.getByTestId('paused')).toHaveText('Quán đang tạm dừng nhận đơn.');
+  await expect(page.getByTestId('send-order')).toHaveCount(0);
+});
+
+test('prepay VietQR shows QR and transfer details, cancels back to cart, and polls until paid', async ({
+  page,
+}) => {
+  const api = newApi();
+  api.menuOverride = {
+    payment: {
+      timing: 'pay_before',
+      methods: ['vietqr', 'counter'],
+      vietqr_available: true,
+    },
+  };
+  await install(page, api);
+  await page.goto(`/table/t/${CODE}`);
+
+  await page.getByTestId('menu-item-mi_tea').click();
+  await page.getByRole('radio', { name: /^L / }).check();
+  await page.getByLabel('50%').check();
+  await page.getByLabel('Trân châu').check();
+  await page.getByRole('button', { name: 'Thêm', exact: true }).click();
+  await page.getByTestId('add-to-cart').click();
+
+  await page.getByTestId('tab-cart').click();
+  await expect(page.getByTestId('send-order')).toBeDisabled();
+  await page.getByLabel('VietQR').check();
+  await expect(page.getByTestId('send-order')).toBeEnabled();
+  await page.getByTestId('send-order').click();
+
+  // Order 1 is awaiting_payment with VietQR and cancel button.
+  const firstQr = page.getByTestId('order-qr-posguestorder_1');
+  await expect(firstQr).toBeVisible();
+  await expect(firstQr.locator('svg.qr')).toBeVisible();
+  await expect(firstQr).toContainText('80.000');
+  await expect(firstQr).toContainText('PV GO1');
+  await expect(firstQr).toContainText('Vietcombank · 0123456789 · QUAN TRA');
+
+  // Canceling unpaid prepay calls POST /guest_orders/:id/cancel and restores items to cart.
+  await page.getByTestId('cancel-order-posguestorder_1').click();
+  expect(api.canceledIds).toEqual(['posguestorder_1']);
+  await expect(page.getByTestId('order-posguestorder_1')).toContainText('Đã hủy');
+  await expect(firstQr).toHaveCount(0);
+  await expect(page.getByTestId('tab-cart')).toContainText('(2)');
+
+  // Resubmit with VietQR -> bank transfer arrives -> order auto-accepts on poll.
+  await page.getByTestId('tab-cart').click();
+  await page.getByTestId('send-order').click();
+  const secondQr = page.getByTestId('order-qr-posguestorder_2');
+  await expect(secondQr).toContainText('PV GO2');
+
+  api.orders = api.orders.map((row) =>
+    row.id === 'posguestorder_2' ? { ...row, status: 'accepted' } : row,
+  );
+  await expect(page.getByTestId('order-posguestorder_2')).toContainText('Đã gửi bếp', {
+    timeout: 8_000,
+  });
+  await expect(secondQr).toHaveCount(0);
+  await expect(page.getByTestId('table-lines')).toContainText('2 × Trà đào (L)');
+});
+
+test('counts down order_too_soon on Send button and pays the open bill via VietQR', async ({
+  page,
+}) => {
+  const api = newApi();
+  api.retryAfterSeconds = 2;
+  api.menuOverride = {
+    payment: {
+      timing: 'pay_after',
+      methods: ['vietqr', 'counter'],
+      vietqr_available: true,
+    },
+  };
+  await install(page, api);
+  await page.goto(`/table/t/${CODE}`);
+
+  await page.getByTestId('menu-item-mi_tea').click();
+  await page.getByRole('radio', { name: /^L / }).check();
+  await page.getByLabel('50%').check();
+  await page.getByLabel('Trân châu').check();
+  await page.getByRole('button', { name: 'Thêm', exact: true }).click();
+  await page.getByTestId('add-to-cart').click();
+
+  await page.getByTestId('tab-cart').click();
+  await page.getByTestId('send-order').click();
+
+  // 429 order_too_soon shows countdown on both banner and button, never uninterpolated {{seconds}}.
+  await expect(page.getByTestId('order-wait')).toContainText(/Đợi \d+ giây/);
+  await expect(page.locator('body')).not.toContainText('{{seconds}}');
+  await expect(page.getByTestId('send-order')).toBeDisabled();
+  await expect(page.getByTestId('send-order')).toHaveText(/Gửi đơn \(\d+s\)/);
+
+  // Countdown finishes -> button re-enables and order goes through.
+  await expect(page.getByTestId('send-order')).toBeEnabled({ timeout: 5_000 });
+  await expect(page.getByTestId('send-order')).toHaveText('Gửi đơn');
+  await page.getByTestId('send-order').click();
+
+  // Staff accept and open bill owes 80.000 VND.
+  api.orders = [{ ...api.orders[0], status: 'accepted' }];
+  api.due = '80000.0';
+  api.billQr = {
+    payload:
+      '00020101021238570010A000000727012700069704360110012345678953037045405800005802VN62100806PVBAN46304ABCD',
+    amount: '80000.0',
+    due: '80000.0',
+    currency: 'VND',
+    transfer_content: 'PV BAN4',
+    bank_name: 'Vietcombank',
+    account_number: '0123456789',
+    account_name: 'QUAN TRA',
+  };
+
+  await expect(page.getByTestId('amount-due')).toContainText('80.000', { timeout: 8_000 });
+  await page.getByTestId('pay-bill').click();
+  await expect(page.getByTestId('pay-choices')).toBeVisible();
+  await page.getByTestId('pay-vietqr').click();
+
+  const billQr = page.getByTestId('bill-qr');
+  await expect(billQr.locator('svg.qr')).toBeVisible();
+  await expect(billQr).toContainText('80.000');
+  await expect(billQr).toContainText('PV BAN4');
+  await expect(billQr).toContainText('Vietcombank · 0123456789 · QUAN TRA');
+
+  // Webhook settles the bill: next poll clears the QR and announces payment.
+  api.due = '0.0';
+  api.paid = '80000.0';
+  await expect(billQr).toHaveCount(0, { timeout: 8_000 });
+  await expect(page.getByTestId('amount-due')).toHaveCount(0);
+  await expect(page.getByTestId('amount-paid')).toContainText('80.000');
+  await expect(page.getByText('Đã thanh toán', { exact: true })).toBeVisible();
 });

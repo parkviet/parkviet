@@ -42,10 +42,14 @@ module Spree
           return false if order.nil? || order.store_id != payment_method&.store_id
 
           debit = ReceivableEntry.find_by(order_id: order.id, kind: 'debit')
-          return false if debit.nil? || debit.currency != PayLater::CURRENCY
+          if debit
+            return false if debit.currency != PayLater::CURRENCY
 
-          book!(order, debit, amount)
-          true
+            book!(order, debit, amount)
+            return true
+          end
+
+          Emenu::ReceiveBill.call(order: order, amount: amount, transaction: transaction, event: event)
         rescue Conflict => e
           Rails.logger.info("[Spree::Pos::Collections::ReceiveTransfer] #{event.prefixed_id} left unmatched: #{e.message}")
           false

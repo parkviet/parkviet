@@ -10,7 +10,7 @@ module Spree
           # the person accepting and sends them to the kitchen.
           class GuestOrdersController < BaseController
             scoped_resource :pos_orders
-            STATUSES = %w[pending accepted rejected expired].freeze
+            STATUSES = %w[pending accepted rejected expired canceled].freeze
 
             def index
               branch = branch!(params[:branch_id])
@@ -20,7 +20,10 @@ module Spree
               return render_error(code: 'parameter_invalid', message: 'Unknown status.', status: :unprocessable_content) unless STATUSES.include?(status)
 
               scope = if status == 'pending'
-                        scope.pending.joins(:workspace).where(spree_pos_workspaces: { operational_status: Spree::Pos::Workspace::OPEN_STATUSES })
+                        scope.pending.left_joins(:workspace).where(
+                          'spree_pos_guest_orders.workspace_id IS NULL OR spree_pos_workspaces.operational_status IN (?)',
+                          Spree::Pos::Workspace::OPEN_STATUSES
+                        )
                       else
                         scope.where(status: status).where(created_at: 1.day.ago..)
                       end

@@ -13,6 +13,12 @@ const KNOWN = [
   'modifier_unknown',
   'note_too_long',
   'guest_order_invalid',
+  'emenu_paused',
+  'order_too_soon',
+  'payment_required',
+  'payment_unavailable',
+  'vietqr_unavailable',
+  'nothing_to_pay',
 ];
 
 export function errorKey(error: unknown): string {
@@ -24,6 +30,7 @@ export function errorKey(error: unknown): string {
 // (nothing was recorded) or needs a new one (the cart must change first).
 export function keepsKey(error: unknown): boolean {
   return (
-    error instanceof GuestApiError && (error.code === 'network' || error.code === 'rate_limited')
+    error instanceof GuestApiError &&
+    (error.code === 'network' || error.code === 'rate_limited' || error.code === 'order_too_soon')
   );
 }

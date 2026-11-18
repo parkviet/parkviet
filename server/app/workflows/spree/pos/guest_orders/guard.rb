@@ -22,6 +22,28 @@ module Spree
           raise Conflict.new('This branch does not take orders from the table QR.', reason: 'qr_order_unavailable')
         end
 
+        # Menu and new orders stop while the branch has paused the electronic menu.
+        def require_open!(branch)
+          require!(branch)
+          raise Conflict.new('Ordering is paused.', reason: 'emenu_paused') if EmenuSettings.of(branch)['paused']
+        end
+
+        # The same table cannot send another order until the branch's gap has passed.
+        def interval!(branch, resource)
+          seconds = EmenuSettings.of(branch)['min_order_interval_seconds'].to_i
+          return if seconds <= 0
+
+          last = GuestOrder.where(resource_id: resource.id).where.not(status: 'canceled').order(created_at: :desc).pick(:created_at)
+          return if last.nil?
+
+          elapsed = Time.current - last
+          return if elapsed >= seconds
+
+          wait = (seconds - elapsed).ceil
+          raise Conflict.new('Wait before ordering again.', reason: 'order_too_soon', retry_after_seconds: wait,
+                                                             details: { 'retry_after_seconds' => wait })
+        end
+
         # Accepting or rejecting a guest's order.
         def decide!(store, staff, branch)
           policy = AccessPolicy.new(store: store, staff: staff)

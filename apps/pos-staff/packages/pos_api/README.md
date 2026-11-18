@@ -126,6 +126,12 @@ Class | Method | HTTP request | Description
 [*DefaultApi*](doc/DefaultApi.md) | [**posEinvoiceSettingsSave**](doc/DefaultApi.md#poseinvoicesettingssave) | **PUT** /api/v3/admin/pos/einvoice_settings | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posEinvoiceSummary**](doc/DefaultApi.md#poseinvoicesummary) | **GET** /api/v3/admin/pos/einvoices/summary | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posEinvoices**](doc/DefaultApi.md#poseinvoices) | **GET** /api/v3/admin/pos/einvoices | 
+[*DefaultApi*](doc/DefaultApi.md) | [**posEmenuMenu**](doc/DefaultApi.md#posemenumenu) | **GET** /api/v3/admin/pos/emenu_menu | 
+[*DefaultApi*](doc/DefaultApi.md) | [**posEmenuMenuImage**](doc/DefaultApi.md#posemenumenuimage) | **POST** /api/v3/admin/pos/emenu_menu/image | 
+[*DefaultApi*](doc/DefaultApi.md) | [**posEmenuMenuImport**](doc/DefaultApi.md#posemenumenuimport) | **POST** /api/v3/admin/pos/emenu_menu/import | 
+[*DefaultApi*](doc/DefaultApi.md) | [**posEmenuMenuUpdate**](doc/DefaultApi.md#posemenumenuupdate) | **PUT** /api/v3/admin/pos/emenu_menu | 
+[*DefaultApi*](doc/DefaultApi.md) | [**posEmenuSettings**](doc/DefaultApi.md#posemenusettings) | **GET** /api/v3/admin/pos/emenu_settings | 
+[*DefaultApi*](doc/DefaultApi.md) | [**posEmenuSettingsUpdate**](doc/DefaultApi.md#posemenusettingsupdate) | **PUT** /api/v3/admin/pos/emenu_settings | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posGuestOrderAccept**](doc/DefaultApi.md#posguestorderaccept) | **POST** /api/v3/admin/pos/guest_orders/{id}/accept | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posGuestOrderList**](doc/DefaultApi.md#posguestorderlist) | **GET** /api/v3/admin/pos/guest_orders | 
 [*DefaultApi*](doc/DefaultApi.md) | [**posGuestOrderReject**](doc/DefaultApi.md#posguestorderreject) | **POST** /api/v3/admin/pos/guest_orders/{id}/reject | 
@@ -357,6 +363,16 @@ Class | Method | HTTP request | Description
  - [EinvoiceSummaryRevenue](doc/EinvoiceSummaryRevenue.md)
  - [EinvoiceTotals](doc/EinvoiceTotals.md)
  - [EinvoiceTotalsTaxesInner](doc/EinvoiceTotalsTaxesInner.md)
+ - [EmenuCategory](doc/EmenuCategory.md)
+ - [EmenuCategoryResult](doc/EmenuCategoryResult.md)
+ - [EmenuItem](doc/EmenuItem.md)
+ - [EmenuMenuCategoryInput](doc/EmenuMenuCategoryInput.md)
+ - [EmenuMenuImportInput](doc/EmenuMenuImportInput.md)
+ - [EmenuMenuInput](doc/EmenuMenuInput.md)
+ - [EmenuMenuResult](doc/EmenuMenuResult.md)
+ - [EmenuSettings](doc/EmenuSettings.md)
+ - [EmenuSettingsInput](doc/EmenuSettingsInput.md)
+ - [EmenuSettingsResult](doc/EmenuSettingsResult.md)
  - [ErrorResponse](doc/ErrorResponse.md)
  - [ErrorResponseError](doc/ErrorResponseError.md)
  - [ErrorResponseErrorDetails](doc/ErrorResponseErrorDetails.md)
@@ -675,6 +691,7 @@ Class | Method | HTTP request | Description
  - [ReservationInput](doc/ReservationInput.md)
  - [ReservationList](doc/ReservationList.md)
  - [ReservationListMeta](doc/ReservationListMeta.md)
+ - [ReservationPeriod](doc/ReservationPeriod.md)
  - [ReservationResult](doc/ReservationResult.md)
  - [ReservationSeat](doc/ReservationSeat.md)
  - [ReservationSeatInput](doc/ReservationSeatInput.md)
@@ -692,6 +709,7 @@ Class | Method | HTTP request | Description
  - [ResourceNextReservation](doc/ResourceNextReservation.md)
  - [ResourceRef](doc/ResourceRef.md)
  - [ResourceResult](doc/ResourceResult.md)
+ - [SalesSettings](doc/SalesSettings.md)
  - [ServiceChargeWaiveInput](doc/ServiceChargeWaiveInput.md)
  - [StaffRef](doc/StaffRef.md)
  - [StationRoute](doc/StationRoute.md)

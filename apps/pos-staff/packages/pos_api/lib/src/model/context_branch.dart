@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:pos_api/src/model/sales_settings.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -16,6 +17,7 @@ part 'context_branch.g.dart';
 /// * [id]
 /// * [name]
 /// * [voidReasons] - Reasons a sent item may be voided for; `khac` with a note is always offered.
+/// * [salesSettings]
 @BuiltValue()
 abstract class ContextBranch
     implements Built<ContextBranch, ContextBranchBuilder> {
@@ -28,6 +30,9 @@ abstract class ContextBranch
   /// Reasons a sent item may be voided for; `khac` with a note is always offered.
   @BuiltValueField(wireName: r'void_reasons')
   BuiltList<String>? get voidReasons;
+
+  @BuiltValueField(wireName: r'sales_settings')
+  SalesSettings? get salesSettings;
 
   ContextBranch._();
 
@@ -69,6 +74,13 @@ class _$ContextBranchSerializer implements PrimitiveSerializer<ContextBranch> {
       yield serializers.serialize(
         object.voidReasons,
         specifiedType: const FullType(BuiltList, [FullType(String)]),
+      );
+    }
+    if (object.salesSettings != null) {
+      yield r'sales_settings';
+      yield serializers.serialize(
+        object.salesSettings,
+        specifiedType: const FullType(SalesSettings),
       );
     }
   }
@@ -118,6 +130,14 @@ class _$ContextBranchSerializer implements PrimitiveSerializer<ContextBranch> {
           ) as BuiltList<String>?;
           if (valueDes == null) continue;
           result.voidReasons.replace(valueDes);
+          break;
+        case r'sales_settings':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(SalesSettings),
+          ) as SalesSettings?;
+          if (valueDes == null) continue;
+          result.salesSettings.replace(valueDes);
           break;
         default:
           unhandled.add(key);

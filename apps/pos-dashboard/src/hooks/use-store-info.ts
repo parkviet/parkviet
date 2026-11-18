@@ -124,6 +124,18 @@ export function saveBranchInfo(branchId: string, body: Record<string, unknown>) 
   return posRequest<{ data?: unknown }>('PATCH', `/pos/branches/${branchId}/info`, { body })
 }
 
+export function uploadBranchLogo(branchId: string, file: File) {
+  const form = new FormData()
+  form.append('logo', file)
+  return posRequest<{ data?: unknown }>('POST', `/pos/branches/${branchId}/info/logo`, {
+    body: form,
+  })
+}
+
+export function clearBranchLogo(branchId: string) {
+  return posRequest<{ data?: unknown }>('DELETE', `/pos/branches/${branchId}/info/logo`)
+}
+
 export type AdminUnit = { code: string; name: string; kind: string }
 
 export function useProvinces(enabled: boolean) {

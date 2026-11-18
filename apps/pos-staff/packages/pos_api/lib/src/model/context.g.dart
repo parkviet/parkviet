@@ -79,6 +79,8 @@ class _$Context extends Context {
   @override
   final ContextEinvoiceTypeEnum? einvoiceType;
   @override
+  final SalesSettings? salesSettings;
+  @override
   final BuiltMap<String, bool>? modules;
   @override
   final BuiltList<ContextBranch>? branches;
@@ -92,6 +94,7 @@ class _$Context extends Context {
       required this.store,
       required this.administration,
       this.einvoiceType,
+      this.salesSettings,
       this.modules,
       this.branches})
       : super._();
@@ -111,6 +114,7 @@ class _$Context extends Context {
         store == other.store &&
         administration == other.administration &&
         einvoiceType == other.einvoiceType &&
+        salesSettings == other.salesSettings &&
         modules == other.modules &&
         branches == other.branches;
   }
@@ -123,6 +127,7 @@ class _$Context extends Context {
     _$hash = $jc(_$hash, store.hashCode);
     _$hash = $jc(_$hash, administration.hashCode);
     _$hash = $jc(_$hash, einvoiceType.hashCode);
+    _$hash = $jc(_$hash, salesSettings.hashCode);
     _$hash = $jc(_$hash, modules.hashCode);
     _$hash = $jc(_$hash, branches.hashCode);
     _$hash = $jf(_$hash);
@@ -137,6 +142,7 @@ class _$Context extends Context {
           ..add('store', store)
           ..add('administration', administration)
           ..add('einvoiceType', einvoiceType)
+          ..add('salesSettings', salesSettings)
           ..add('modules', modules)
           ..add('branches', branches))
         .toString();
@@ -171,6 +177,12 @@ class ContextBuilder implements Builder<Context, ContextBuilder> {
   set einvoiceType(ContextEinvoiceTypeEnum? einvoiceType) =>
       _$this._einvoiceType = einvoiceType;
 
+  SalesSettingsBuilder? _salesSettings;
+  SalesSettingsBuilder get salesSettings =>
+      _$this._salesSettings ??= SalesSettingsBuilder();
+  set salesSettings(SalesSettingsBuilder? salesSettings) =>
+      _$this._salesSettings = salesSettings;
+
   MapBuilder<String, bool>? _modules;
   MapBuilder<String, bool> get modules =>
       _$this._modules ??= MapBuilder<String, bool>();
@@ -194,6 +206,7 @@ class ContextBuilder implements Builder<Context, ContextBuilder> {
       _store = $v.store.toBuilder();
       _administration = $v.administration.toBuilder();
       _einvoiceType = $v.einvoiceType;
+      _salesSettings = $v.salesSettings?.toBuilder();
       _modules = $v.modules?.toBuilder();
       _branches = $v.branches?.toBuilder();
       _$v = null;
@@ -224,6 +237,7 @@ class ContextBuilder implements Builder<Context, ContextBuilder> {
             store: store.build(),
             administration: administration.build(),
             einvoiceType: einvoiceType,
+            salesSettings: _salesSettings?.build(),
             modules: _modules?.build(),
             branches: _branches?.build(),
           );
@@ -239,6 +253,8 @@ class ContextBuilder implements Builder<Context, ContextBuilder> {
         _$failedField = 'administration';
         administration.build();
 
+        _$failedField = 'salesSettings';
+        _salesSettings?.build();
         _$failedField = 'modules';
         _modules?.build();
         _$failedField = 'branches';

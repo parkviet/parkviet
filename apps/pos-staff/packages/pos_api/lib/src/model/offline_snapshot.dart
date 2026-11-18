@@ -7,6 +7,7 @@ import 'package:pos_api/src/model/offline_snapshot_branch.dart';
 import 'package:pos_api/src/model/menu.dart';
 import 'package:pos_api/src/model/offline_snapshot_staff.dart';
 import 'package:pos_api/src/model/offline_snapshot_offline.dart';
+import 'package:pos_api/src/model/sales_settings.dart';
 import 'package:pos_api/src/model/offline_snapshot_register.dart';
 import 'package:pos_api/src/model/offline_snapshot_store.dart';
 import 'package:pos_api/src/model/offline_snapshot_shift.dart';
@@ -24,6 +25,7 @@ part 'offline_snapshot.g.dart';
 /// * [staff]
 /// * [shift]
 /// * [offline]
+/// * [salesSettings]
 /// * [menu]
 /// * [etag]
 /// * [generatedAt]
@@ -48,6 +50,9 @@ abstract class OfflineSnapshot
 
   @BuiltValueField(wireName: r'offline')
   OfflineSnapshotOffline get offline;
+
+  @BuiltValueField(wireName: r'sales_settings')
+  SalesSettings get salesSettings;
 
   @BuiltValueField(wireName: r'menu')
   Menu? get menu;
@@ -119,6 +124,11 @@ class _$OfflineSnapshotSerializer
     yield serializers.serialize(
       object.offline,
       specifiedType: const FullType(OfflineSnapshotOffline),
+    );
+    yield r'sales_settings';
+    yield serializers.serialize(
+      object.salesSettings,
+      specifiedType: const FullType(SalesSettings),
     );
     yield r'menu';
     yield object.menu == null
@@ -209,6 +219,13 @@ class _$OfflineSnapshotSerializer
             specifiedType: const FullType(OfflineSnapshotOffline),
           ) as OfflineSnapshotOffline;
           result.offline.replace(valueDes);
+          break;
+        case r'sales_settings':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(SalesSettings),
+          ) as SalesSettings;
+          result.salesSettings.replace(valueDes);
           break;
         case r'menu':
           final valueDes = serializers.deserialize(

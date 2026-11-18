@@ -53,20 +53,43 @@ module Spree
                                   actor: staff, source: resource, document: document(branch, resource, url))
         end
 
-        # The sticker as PrintDocument v1: the place, the table and its QR.
+        # The sticker as PrintDocument v1, laid out as the e-Menu tab shows
+        # it: logo, shop name, table, the QR with the greeting under it, then
+        # the Wi-Fi. The roll width is the printer's paper (58 or 80 mm).
         # A server on the shop's LAN is reached only from its Wi-Fi.
         def document(branch, resource, url)
+          settings = EmenuSettings.of(branch)
+          brand = EmenuSettings.brand(branch)
+          name = settings['sticker_store_name'].presence || brand['store_name']
+          logo = brand['logo_url']
+          header = []
+          if settings['sticker_show_logo'] && logo&.match?(%r{\A(https?://|/)}i)
+            header << { 'kind' => 'image', 'src' => logo, 'alt' => name, 'widthPct' => 40, 'align' => 'center', 'monochrome' => true }
+          end
+          table_title = [resource.area&.name, resource.name].compact_blank.join(' – ')
+          header << { 'kind' => 'title', 'title' => name, 'number' => nil } if settings['sticker_show_name']
+          header << { 'kind' => 'title', 'title' => table_title, 'number' => nil }
           PrintDocuments.wrap('table_qr', {
                                 'documentType' => nil, 'page' => Kitchen::TicketDocument::PAGE, 'banners' => [],
-                                'header' => [{ 'kind' => 'title', 'title' => StoreInfo.printable(branch)&.dig('name').presence || branch.store.name, 'number' => nil },
-                                             { 'kind' => 'title', 'title' => resource.name, 'number' => nil }],
-                                'meta' => [{ 'label' => 'Chi nhánh', 'value' => branch.name }],
+                                'header' => header, 'meta' => [],
                                 'lines' => { 'layout' => 'stacked', 'items' => [] },
                                 'totals' => [], 'payments' => [], 'payQr' => nil,
-                                'notes' => ['Quét mã để xem thực đơn và gọi món', 'Hãy kết nối Wi-Fi của quán trước khi quét'],
-                                'footer' => [{ 'kind' => 'qr', 'value' => url, 'caption' => 'Scan to order', 'align' => 'center' }],
+                                'notes' => [],
+                                'footer' => [qr_block(settings, url), *wifi_block(settings)],
                                 'disclaimer' => nil
                               })
+        end
+
+        def qr_block(settings, url)
+          { 'kind' => 'qr', 'value' => url, 'caption' => settings['sticker_greeting'].presence, 'align' => 'center' }
+        end
+
+        def wifi_block(settings)
+          return [] unless settings['sticker_wifi_enabled'] && settings['sticker_wifi_name'].present?
+
+          lines = ["Wi-Fi: #{settings['sticker_wifi_name']}"]
+          lines << "Mật khẩu: #{settings['sticker_wifi_password']}" if settings['sticker_wifi_password'].present?
+          [{ 'kind' => 'text', 'lines' => lines, 'align' => 'center', 'bold' => false, 'size' => 'm' }]
         end
       end
     end

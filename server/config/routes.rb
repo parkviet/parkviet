@@ -278,6 +278,12 @@ Rails.application.routes.draw do
             get 'guest_requests', to: 'guest_requests#index'
             post 'guest_requests/:id/done', to: 'guest_requests#done'
             put 'table_settings', to: 'table_settings#update'
+            get 'emenu_settings', to: 'emenu_settings#show'
+            put 'emenu_settings', to: 'emenu_settings#update'
+            get 'emenu_menu', to: 'emenu_menu#show'
+            put 'emenu_menu', to: 'emenu_menu#update'
+            post 'emenu_menu/import', to: 'emenu_menu#import'
+            post 'emenu_menu/image', to: 'emenu_menu#image'
             # Self-ordering kiosks: a branch's settings and kiosks, a kiosk's shift,
             # and the kiosk orders left for the counter.
             get 'kiosk_settings', to: 'kiosk_settings#show'
@@ -584,6 +590,8 @@ Rails.application.routes.draw do
   get 'api/v3/pos_guest/menu', to: 'spree/pos/guest_views#menu', defaults: { format: 'json' }
   get 'api/v3/pos_guest/order', to: 'spree/pos/guest_views#order', defaults: { format: 'json' }
   post 'api/v3/pos_guest/guest_orders', to: 'spree/pos/guest_views#create_order', defaults: { format: 'json' }
+  post 'api/v3/pos_guest/guest_orders/:id/cancel', to: 'spree/pos/guest_views#cancel_order', defaults: { format: 'json' }
+  post 'api/v3/pos_guest/bill_payment', to: 'spree/pos/guest_views#bill_payment', defaults: { format: 'json' }
   post 'api/v3/pos_guest/requests', to: 'spree/pos/guest_views#create_request', defaults: { format: 'json' }
 
   post 'api/v3/pos_device/pair', to: 'spree/pos/device_api/pairings#create', defaults: { format: 'json' }

@@ -1,5 +1,12 @@
 import { readToken } from './session';
-import type { GuestMenu, GuestOrder, GuestRequest, GuestSession, GuestTable } from './types';
+import type {
+  GuestMenu,
+  GuestOrder,
+  GuestRequest,
+  GuestSession,
+  GuestTable,
+  PaymentQr,
+} from './types';
 
 const BASE = '/api/v3/pos_guest';
 
@@ -9,6 +16,7 @@ export class GuestApiError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
+    readonly details: Record<string, unknown> = {},
   ) {
     super(message);
   }
@@ -42,13 +50,14 @@ async function call<T>(
   }
   const json = (await response.json().catch(() => null)) as {
     data?: T;
-    error?: { code?: string; message?: string };
+    error?: { code?: string; message?: string; details?: Record<string, unknown> };
   } | null;
   if (!response.ok || !json || json.data === undefined)
     throw new GuestApiError(
       response.status,
       json?.error?.code ?? 'unknown',
       json?.error?.message ?? response.statusText,
+      json?.error?.details ?? {},
     );
   return json.data;
 }
@@ -64,6 +73,8 @@ export const guestApi = {
   table: () => call<GuestTable>('GET', '/order'),
   submitOrder: (body: unknown, key: string) =>
     call<GuestOrder>('POST', '/guest_orders', { body, key }),
+  cancelOrder: (id: string) => call<GuestOrder>('POST', `/guest_orders/${id}/cancel`, { body: {} }),
   request: (kind: GuestRequest['kind']) =>
     call<GuestRequest>('POST', '/requests', { body: { kind } }),
+  billPayment: () => call<PaymentQr>('POST', '/bill_payment', { body: {} }),
 };

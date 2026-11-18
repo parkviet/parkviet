@@ -28,7 +28,6 @@ import { SectionNav } from '../components/section-nav'
 import { ModelCard, ModelNotice, ModelSelect, ModelState } from '../components/setup/model-ui'
 import { ToggleRow } from '../components/toggle-row'
 import { setFeature, useBranchFeatures } from '../hooks/use-branch-features'
-import { QR_ORDER_MODES, useTableSettings } from '../hooks/use-floor-plan'
 import { useKioskSettings, useKioskWrite } from '../hooks/use-kiosk-settings'
 import { useKitchenSettings, useKitchenWrite } from '../hooks/use-kitchen'
 import { refreshBusinessModel } from '../hooks/use-onboarding'
@@ -538,26 +537,9 @@ function KitchenTrigger() {
 
 function QrModeField() {
   const { t } = useTranslation()
-  const { branch, access, modules } = useBranchScope()
-  const settings = useTableSettings(branch.id)
-  if (modules?.['fnb.qr_order'] !== true || !settings.data) return null
-  return (
-    <ModelSelect
-      label={t('floorPlan.qrOrderMode')}
-      value={settings.data.qr_order_mode}
-      disabled={!access.write}
-      options={QR_ORDER_MODES.map((mode) => ({
-        value: mode,
-        label: t(`floorPlan.qrMode_${mode}`),
-      }))}
-      onChange={(mode) =>
-        void posRequest('PUT', '/pos/table_settings', {
-          body: { branch_id: branch.id, qr_order_mode: mode },
-          idempotencyKey: crypto.randomUUID(),
-        })
-      }
-    />
-  )
+  const { branch, modules, storeId } = useBranchScope()
+  if (modules?.['fnb.qr_order'] !== true) return null
+  return <SetupLink storeId={storeId} branchId={branch.id} tab="emenu" label={t('emenu.moved')} />
 }
 
 function KioskKitchenField() {

@@ -14,18 +14,23 @@ export type GuestOrderItem = {
   reason: string | null;
 };
 
+export type GuestPayMethod = 'vietqr' | 'counter';
+
 export type GuestOrder = {
   id: string;
-  workspace_id: string;
+  workspace_id: string | null;
   resource_id: string;
   table_name: string;
   area_id: string | null;
   status: string;
   automatic: boolean;
+  prepaid: boolean;
+  pay_method: GuestPayMethod | null;
   items: GuestOrderItem[];
   quoted_total: string;
   currency: string;
   reject_reason: string | null;
+  decided_at: string | null;
   created_at: string;
 };
 
@@ -52,12 +57,17 @@ export const GUEST_ORDER_REASONS = [
 // Quick reasons offered when rejecting; staff may also type their own.
 export const REJECT_PRESETS = ['sold_out', 'kitchen_closed', 'ask_staff'] as const;
 
+// Auto-accepted prepaid orders stay visible in the tray for half an hour unless dismissed.
+export const RECENT_PREPAID_WINDOW_MS = 30 * 60_000;
+
 type Row = Record<string, unknown>;
 const record = (value: unknown): Row | null =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Row) : null;
 const text = (value: unknown) => (typeof value === 'string' ? value : '');
 const textOrNull = (value: unknown) => (typeof value === 'string' && value ? value : null);
 const rows = (value: unknown) => (Array.isArray(value) ? value : []);
+const payMethod = (value: unknown): GuestPayMethod | null =>
+  value === 'vietqr' || value === 'counter' ? value : null;
 
 function item(value: unknown): GuestOrderItem | null {
   const row = record(value);
@@ -87,12 +97,14 @@ export function normalizeGuestOrders(value: unknown): GuestOrder[] {
     return [
       {
         id: row.id,
-        workspace_id: text(row.workspace_id),
+        workspace_id: textOrNull(row.workspace_id),
         resource_id: text(row.resource_id),
         table_name: text(row.table_name),
         area_id: textOrNull(row.area_id),
         status: text(row.status),
         automatic: row.automatic === true,
+        prepaid: row.prepaid === true,
+        pay_method: payMethod(row.pay_method),
         items: rows(row.items).flatMap((line) => {
           const parsed = item(line);
           return parsed ? [parsed] : [];
@@ -100,9 +112,28 @@ export function normalizeGuestOrders(value: unknown): GuestOrder[] {
         quoted_total: text(row.quoted_total) || '0',
         currency: text(row.currency) || 'VND',
         reject_reason: textOrNull(row.reject_reason),
+        decided_at: textOrNull(row.decided_at),
         created_at: text(row.created_at),
       },
     ];
+  });
+}
+
+// Orders waiting for staff approval; `awaiting_payment` orders stay out.
+export function pendingGuestOrders(orders: GuestOrder[]): GuestOrder[] {
+  return orders.filter((order) => order.status === 'pending');
+}
+
+// Recent prepaid orders that went straight to the kitchen and have not been dismissed.
+export function recentPrepaidOrders(
+  orders: GuestOrder[],
+  now: number,
+  dismissed: ReadonlySet<string> = new Set(),
+): GuestOrder[] {
+  return orders.filter((order) => {
+    if (order.status !== 'accepted' || !order.prepaid || dismissed.has(order.id)) return false;
+    const at = Date.parse(order.decided_at ?? order.created_at);
+    return Number.isNaN(at) || now - at <= RECENT_PREPAID_WINDOW_MS;
   });
 }
 

@@ -13,11 +13,17 @@ class _$ContextBranch extends ContextBranch {
   final String name;
   @override
   final BuiltList<String>? voidReasons;
+  @override
+  final SalesSettings? salesSettings;
 
   factory _$ContextBranch([void Function(ContextBranchBuilder)? updates]) =>
       (ContextBranchBuilder()..update(updates))._build();
 
-  _$ContextBranch._({required this.id, required this.name, this.voidReasons})
+  _$ContextBranch._(
+      {required this.id,
+      required this.name,
+      this.voidReasons,
+      this.salesSettings})
       : super._();
   @override
   ContextBranch rebuild(void Function(ContextBranchBuilder) updates) =>
@@ -32,7 +38,8 @@ class _$ContextBranch extends ContextBranch {
     return other is ContextBranch &&
         id == other.id &&
         name == other.name &&
-        voidReasons == other.voidReasons;
+        voidReasons == other.voidReasons &&
+        salesSettings == other.salesSettings;
   }
 
   @override
@@ -41,6 +48,7 @@ class _$ContextBranch extends ContextBranch {
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, name.hashCode);
     _$hash = $jc(_$hash, voidReasons.hashCode);
+    _$hash = $jc(_$hash, salesSettings.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -50,7 +58,8 @@ class _$ContextBranch extends ContextBranch {
     return (newBuiltValueToStringHelper(r'ContextBranch')
           ..add('id', id)
           ..add('name', name)
-          ..add('voidReasons', voidReasons))
+          ..add('voidReasons', voidReasons)
+          ..add('salesSettings', salesSettings))
         .toString();
   }
 }
@@ -73,6 +82,12 @@ class ContextBranchBuilder
   set voidReasons(ListBuilder<String>? voidReasons) =>
       _$this._voidReasons = voidReasons;
 
+  SalesSettingsBuilder? _salesSettings;
+  SalesSettingsBuilder get salesSettings =>
+      _$this._salesSettings ??= SalesSettingsBuilder();
+  set salesSettings(SalesSettingsBuilder? salesSettings) =>
+      _$this._salesSettings = salesSettings;
+
   ContextBranchBuilder() {
     ContextBranch._defaults(this);
   }
@@ -83,6 +98,7 @@ class ContextBranchBuilder
       _id = $v.id;
       _name = $v.name;
       _voidReasons = $v.voidReasons?.toBuilder();
+      _salesSettings = $v.salesSettings?.toBuilder();
       _$v = null;
     }
     return this;
@@ -111,12 +127,15 @@ class ContextBranchBuilder
             name: BuiltValueNullFieldError.checkNotNull(
                 name, r'ContextBranch', 'name'),
             voidReasons: _voidReasons?.build(),
+            salesSettings: _salesSettings?.build(),
           );
     } catch (_) {
       late String _$failedField;
       try {
         _$failedField = 'voidReasons';
         _voidReasons?.build();
+        _$failedField = 'salesSettings';
+        _salesSettings?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'ContextBranch', _$failedField, e.toString());

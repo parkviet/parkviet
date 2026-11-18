@@ -6,6 +6,7 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:pos_api/src/model/tip_split_rule.dart';
 import 'package:pos_api/src/model/table_tax_category.dart';
+import 'package:pos_api/src/model/reservation_period.dart';
 import 'package:pos_api/src/model/course_label.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -17,6 +18,14 @@ part 'table_settings.g.dart';
 /// Properties:
 /// * [reservationGraceMinutes] - How long a booking waits past its time before it is a no-show.
 /// * [reservationDurationMinutes] - The length of a booking when none is given.
+/// * [reservationPeriods] - The branch's own service periods, the same every day, sorted from the business day's cutoff. An end before the start runs past midnight. Empty uses the opening hours.
+/// * [reservationEffectivePeriods] - The periods bookings follow - the branch's own, or the opening hours as one period, or none (any time).
+/// * [reservationPeriodsSource]
+/// * [reservationOpenBufferMinutes] - Minutes after a period opens before its first booking.
+/// * [reservationCloseBufferMinutes] - Minutes before a period closes after its last booking.
+/// * [reservationMinLeadMinutes] - How far ahead of now a booking must start. Staff bookings outside the rules are only warned about.
+/// * [businessDayCutoff] - When the branch's business day starts, HH:MM.
+/// * [timezone] - The branch's IANA time zone.
 /// * [reservationFeeProductId] - The service sold when a deposit is kept (priced with its tax included).
 /// * [courseLabels]
 /// * [bottleKeepDays] - How many days a guest's bottle is kept.
@@ -42,6 +51,38 @@ abstract class TableSettings
   /// The length of a booking when none is given.
   @BuiltValueField(wireName: r'reservation_duration_minutes')
   int get reservationDurationMinutes;
+
+  /// The branch's own service periods, the same every day, sorted from the business day's cutoff. An end before the start runs past midnight. Empty uses the opening hours.
+  @BuiltValueField(wireName: r'reservation_periods')
+  BuiltList<ReservationPeriod>? get reservationPeriods;
+
+  /// The periods bookings follow - the branch's own, or the opening hours as one period, or none (any time).
+  @BuiltValueField(wireName: r'reservation_effective_periods')
+  BuiltList<ReservationPeriod>? get reservationEffectivePeriods;
+
+  @BuiltValueField(wireName: r'reservation_periods_source')
+  TableSettingsReservationPeriodsSourceEnum? get reservationPeriodsSource;
+  // enum reservationPeriodsSourceEnum {  branch,  opening_hours,  none,  };
+
+  /// Minutes after a period opens before its first booking.
+  @BuiltValueField(wireName: r'reservation_open_buffer_minutes')
+  int? get reservationOpenBufferMinutes;
+
+  /// Minutes before a period closes after its last booking.
+  @BuiltValueField(wireName: r'reservation_close_buffer_minutes')
+  int? get reservationCloseBufferMinutes;
+
+  /// How far ahead of now a booking must start. Staff bookings outside the rules are only warned about.
+  @BuiltValueField(wireName: r'reservation_min_lead_minutes')
+  int? get reservationMinLeadMinutes;
+
+  /// When the branch's business day starts, HH:MM.
+  @BuiltValueField(wireName: r'business_day_cutoff')
+  String? get businessDayCutoff;
+
+  /// The branch's IANA time zone.
+  @BuiltValueField(wireName: r'timezone')
+  String? get timezone;
 
   /// The service sold when a deposit is kept (priced with its tax included).
   @BuiltValueField(wireName: r'reservation_fee_product_id')
@@ -135,6 +176,63 @@ class _$TableSettingsSerializer implements PrimitiveSerializer<TableSettings> {
       object.reservationDurationMinutes,
       specifiedType: const FullType(int),
     );
+    if (object.reservationPeriods != null) {
+      yield r'reservation_periods';
+      yield serializers.serialize(
+        object.reservationPeriods,
+        specifiedType: const FullType(BuiltList, [FullType(ReservationPeriod)]),
+      );
+    }
+    if (object.reservationEffectivePeriods != null) {
+      yield r'reservation_effective_periods';
+      yield serializers.serialize(
+        object.reservationEffectivePeriods,
+        specifiedType: const FullType(BuiltList, [FullType(ReservationPeriod)]),
+      );
+    }
+    if (object.reservationPeriodsSource != null) {
+      yield r'reservation_periods_source';
+      yield serializers.serialize(
+        object.reservationPeriodsSource,
+        specifiedType:
+            const FullType(TableSettingsReservationPeriodsSourceEnum),
+      );
+    }
+    if (object.reservationOpenBufferMinutes != null) {
+      yield r'reservation_open_buffer_minutes';
+      yield serializers.serialize(
+        object.reservationOpenBufferMinutes,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.reservationCloseBufferMinutes != null) {
+      yield r'reservation_close_buffer_minutes';
+      yield serializers.serialize(
+        object.reservationCloseBufferMinutes,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.reservationMinLeadMinutes != null) {
+      yield r'reservation_min_lead_minutes';
+      yield serializers.serialize(
+        object.reservationMinLeadMinutes,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.businessDayCutoff != null) {
+      yield r'business_day_cutoff';
+      yield serializers.serialize(
+        object.businessDayCutoff,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.timezone != null) {
+      yield r'timezone';
+      yield serializers.serialize(
+        object.timezone,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'reservation_fee_product_id';
     yield object.reservationFeeProductId == null
         ? null
@@ -271,6 +369,73 @@ class _$TableSettingsSerializer implements PrimitiveSerializer<TableSettings> {
             specifiedType: const FullType(int),
           ) as int;
           result.reservationDurationMinutes = valueDes;
+          break;
+        case r'reservation_periods':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(
+                BuiltList, [FullType(ReservationPeriod)]),
+          ) as BuiltList<ReservationPeriod>?;
+          if (valueDes == null) continue;
+          result.reservationPeriods.replace(valueDes);
+          break;
+        case r'reservation_effective_periods':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(
+                BuiltList, [FullType(ReservationPeriod)]),
+          ) as BuiltList<ReservationPeriod>?;
+          if (valueDes == null) continue;
+          result.reservationEffectivePeriods.replace(valueDes);
+          break;
+        case r'reservation_periods_source':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(
+                TableSettingsReservationPeriodsSourceEnum),
+          ) as TableSettingsReservationPeriodsSourceEnum?;
+          if (valueDes == null) continue;
+          result.reservationPeriodsSource = valueDes;
+          break;
+        case r'reservation_open_buffer_minutes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.reservationOpenBufferMinutes = valueDes;
+          break;
+        case r'reservation_close_buffer_minutes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.reservationCloseBufferMinutes = valueDes;
+          break;
+        case r'reservation_min_lead_minutes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.reservationMinLeadMinutes = valueDes;
+          break;
+        case r'business_day_cutoff':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.businessDayCutoff = valueDes;
+          break;
+        case r'timezone':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.timezone = valueDes;
           break;
         case r'reservation_fee_product_id':
           final valueDes = serializers.deserialize(
@@ -418,6 +583,28 @@ class _$TableSettingsSerializer implements PrimitiveSerializer<TableSettings> {
     );
     return result.build();
   }
+}
+
+class TableSettingsReservationPeriodsSourceEnum extends EnumClass {
+  @BuiltValueEnumConst(wireName: r'branch')
+  static const TableSettingsReservationPeriodsSourceEnum branch =
+      _$tableSettingsReservationPeriodsSourceEnum_branch;
+  @BuiltValueEnumConst(wireName: r'opening_hours')
+  static const TableSettingsReservationPeriodsSourceEnum openingHours =
+      _$tableSettingsReservationPeriodsSourceEnum_openingHours;
+  @BuiltValueEnumConst(wireName: r'none')
+  static const TableSettingsReservationPeriodsSourceEnum none =
+      _$tableSettingsReservationPeriodsSourceEnum_none;
+
+  static Serializer<TableSettingsReservationPeriodsSourceEnum> get serializer =>
+      _$tableSettingsReservationPeriodsSourceEnumSerializer;
+
+  const TableSettingsReservationPeriodsSourceEnum._(String name) : super(name);
+
+  static BuiltSet<TableSettingsReservationPeriodsSourceEnum> get values =>
+      _$tableSettingsReservationPeriodsSourceEnumValues;
+  static TableSettingsReservationPeriodsSourceEnum valueOf(String name) =>
+      _$tableSettingsReservationPeriodsSourceEnumValueOf(name);
 }
 
 /// How guests' orders from the table QR are taken.

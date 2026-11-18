@@ -1,9 +1,11 @@
 :root {
   color-scheme: light;
+  --brand: #0b6e4f;
   --ink: #1d1d1f;
   --muted: #6b6b70;
   --line: #e3e3e6;
   --accent: #0b6e4f;
+  --accent-ink: #ffffff;
   --danger: #b42318;
   --warn-bg: #fff4d6;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -38,13 +40,44 @@ body {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
+  border-top: 3px solid var(--brand);
   border-bottom: 1px solid var(--line);
   background: #fff;
+}
+
+.brand-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.brand-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.store-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--brand);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .bar h1 {
   margin: 0;
   font-size: 1.05rem;
+}
+
+.logo {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  object-fit: contain;
 }
 
 main {
@@ -72,10 +105,180 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.qr {
+  display: block;
+  width: 12rem;
+  height: 12rem;
+  margin: 0 auto 0.5rem;
+  background: #fff;
+}
+
+.qr-card {
+  margin: 0.75rem 0;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: #fafafa;
+  text-align: center;
+}
+
+.qr-amount {
+  margin: 0.25rem 0;
+  font-size: 1.1rem;
+  color: var(--accent);
+}
+
+.qr-meta {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.qr-expiry {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+}
+
+.order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.search {
+  width: 100%;
+  min-height: 2.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  font: inherit;
+}
+
+.banner-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.banner-list li {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--brand);
+  border-radius: 0.6rem;
+  background: #f5f9f7;
+  background: color-mix(in srgb, var(--brand) 10%, #ffffff);
+  font-weight: 600;
+}
+
+.rail-section {
+  margin-bottom: 1rem;
+}
+
+.rail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.rail-head h2 {
+  margin: 0.5rem 0;
+}
+
+.rail-list {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0 0 0.35rem;
+  list-style: none;
+  overflow-x: auto;
+}
+
+.rail-list.expanded {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow-x: visible;
+}
+
+.rail-list li {
+  flex: 0 0 9.5rem;
+  min-width: 0;
+}
+
+.rail-list.expanded li {
+  flex: initial;
+}
+
+.rail-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.rail-card img {
+  width: 100%;
+  height: 5.5rem;
+  border-radius: 0.45rem;
+  object-fit: cover;
+}
+
+.rail-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.92rem;
+}
+
+.paused-card {
+  margin: 1rem 0;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  background: var(--warn-bg);
+  text-align: center;
+  font-weight: 600;
+}
+
+.paused-card p {
+  margin: 0;
+}
+
+.pay-methods {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.pay-methods label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+}
+
+.pay-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background: #fafafa;
+}
+
 button.primary {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink, #fff);
   font-weight: 600;
 }
 
@@ -96,6 +299,7 @@ button.link {
 button:focus-visible,
 input:focus-visible {
   outline: 3px solid #7cc4a8;
+  outline-color: color-mix(in srgb, var(--accent) 55%, #ffffff);
   outline-offset: 2px;
 }
 
@@ -156,6 +360,25 @@ main .error {
 .chips button {
   flex: none;
   border-radius: 999px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.chip-thumb {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.chip-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
 }
 
 .chips button[aria-pressed='true'] {

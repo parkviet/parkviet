@@ -85,6 +85,16 @@ import 'package:pos_api/src/model/einvoice_summary.dart';
 import 'package:pos_api/src/model/einvoice_summary_revenue.dart';
 import 'package:pos_api/src/model/einvoice_totals.dart';
 import 'package:pos_api/src/model/einvoice_totals_taxes_inner.dart';
+import 'package:pos_api/src/model/emenu_category.dart';
+import 'package:pos_api/src/model/emenu_category_result.dart';
+import 'package:pos_api/src/model/emenu_item.dart';
+import 'package:pos_api/src/model/emenu_menu_category_input.dart';
+import 'package:pos_api/src/model/emenu_menu_import_input.dart';
+import 'package:pos_api/src/model/emenu_menu_input.dart';
+import 'package:pos_api/src/model/emenu_menu_result.dart';
+import 'package:pos_api/src/model/emenu_settings.dart';
+import 'package:pos_api/src/model/emenu_settings_input.dart';
+import 'package:pos_api/src/model/emenu_settings_result.dart';
 import 'package:pos_api/src/model/error_response.dart';
 import 'package:pos_api/src/model/error_response_error.dart';
 import 'package:pos_api/src/model/error_response_error_details.dart';
@@ -403,6 +413,7 @@ import 'package:pos_api/src/model/reservation_deposit_resolve_input.dart';
 import 'package:pos_api/src/model/reservation_input.dart';
 import 'package:pos_api/src/model/reservation_list.dart';
 import 'package:pos_api/src/model/reservation_list_meta.dart';
+import 'package:pos_api/src/model/reservation_period.dart';
 import 'package:pos_api/src/model/reservation_result.dart';
 import 'package:pos_api/src/model/reservation_seat.dart';
 import 'package:pos_api/src/model/reservation_seat_input.dart';
@@ -420,6 +431,7 @@ import 'package:pos_api/src/model/resource_manual_status_input.dart';
 import 'package:pos_api/src/model/resource_next_reservation.dart';
 import 'package:pos_api/src/model/resource_ref.dart';
 import 'package:pos_api/src/model/resource_result.dart';
+import 'package:pos_api/src/model/sales_settings.dart';
 import 'package:pos_api/src/model/service_charge_waive_input.dart';
 import 'package:pos_api/src/model/staff_ref.dart';
 import 'package:pos_api/src/model/station_route.dart';
@@ -572,6 +584,16 @@ part 'serializers.g.dart';
   EinvoiceSummaryRevenue,
   EinvoiceTotals,
   EinvoiceTotalsTaxesInner,
+  EmenuCategory,
+  EmenuCategoryResult,
+  EmenuItem,
+  EmenuMenuCategoryInput,
+  EmenuMenuImportInput,
+  EmenuMenuInput,
+  EmenuMenuResult,
+  EmenuSettings,
+  EmenuSettingsInput,
+  EmenuSettingsResult,
   ErrorResponse,
   ErrorResponseError,
   ErrorResponseErrorDetails,
@@ -893,6 +915,7 @@ part 'serializers.g.dart';
   ReservationInput,
   ReservationList,
   ReservationListMeta,
+  ReservationPeriod,
   ReservationResult,
   ReservationSeat,
   ReservationSeatInput,
@@ -910,6 +933,7 @@ part 'serializers.g.dart';
   ResourceNextReservation,
   ResourceRef,
   ResourceResult,
+  SalesSettings,
   ServiceChargeWaiveInput,
   StaffRef,
   StationRoute,
@@ -993,6 +1017,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PrintLinesOneOfItemsInner)]),
         () => ListBuilder<PrintLinesOneOfItemsInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(EmenuCategory)]),
+        () => ListBuilder<EmenuCategory>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(KitchenSendSummary)]),
@@ -1088,6 +1116,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(KitchenTicketItemModifier)]),
         () => ListBuilder<KitchenTicketItemModifier>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ReservationPeriod)]),
+        () => ListBuilder<ReservationPeriod>(),
       )
       ..addBuilderFactory(
         const FullType(
@@ -1215,6 +1247,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<KitchenHistoryItem>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(EmenuMenuCategoryInput)]),
+        () => ListBuilder<EmenuMenuCategoryInput>(),
+      )
+      ..addBuilderFactory(
         const FullType(
             BuiltList, [FullType(TableSettingsInputCourseLabelsInner)]),
         () => ListBuilder<TableSettingsInputCourseLabelsInner>(),
@@ -1319,6 +1355,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ModifierGroup)]),
         () => ListBuilder<ModifierGroup>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(EmenuItem)]),
+        () => ListBuilder<EmenuItem>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(TableCodeEntry)]),

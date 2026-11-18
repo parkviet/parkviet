@@ -7,8 +7,9 @@ info:
     apps/table-order, served by the same server at /table). The code printed
     on the table opens a session; every other call takes
     `Authorization: Guest <token>`, never a staff token, an API key or a URL
-    parameter. Guests' orders wait for staff, or go straight to the kitchen
-    within the branch's limits; no money is taken here. Responses are sent
+    parameter. Guests' orders wait for staff, go straight to the kitchen
+    within the branch's limits, or settle via a VietQR transfer reported by
+    the bank webhook. Responses are sent
     with `Cache-Control: no-store` and `Referrer-Policy: no-referrer`.
     Errors are `{ error: { code, message, details } }`; `code` is one of
     `table_code_invalid`, `session_invalid`, `session_expired`,
@@ -16,7 +17,9 @@ info:
     `item_unavailable`, `too_many_pending`, `guest_order_invalid`,
     `modifier_min`, `modifier_max`, `modifier_unknown`, `note_too_long`,
     `idempotency_key_required`, `idempotency_key_reused`,
-    `guest_request_invalid` or `rate_limited`.
+    `guest_request_invalid`, `rate_limited`, `emenu_paused`, `order_too_soon`,
+    `payment_required`, `payment_unavailable`, `vietqr_unavailable`,
+    `nothing_to_pay`, `guest_order_decided` or `not_found`.
 paths:
   /api/v3/pos_guest/session:
     post:
@@ -86,6 +89,8 @@ paths:
                     $ref: '#/components/schemas/GuestMenu'
         '401':
           $ref: '#/components/responses/GuestError'
+        '409':
+          $ref: '#/components/responses/GuestError'
   /api/v3/pos_guest/order:
     get:
       operationId: guestTable
@@ -104,6 +109,30 @@ paths:
                   data:
                     $ref: '#/components/schemas/GuestTable'
         '401':
+          $ref: '#/components/responses/GuestError'
+  /api/v3/pos_guest/bill_payment:
+    post:
+      operationId: guestBillPayment
+      description: >
+        A VietQR for what the open table still owes, when the branch takes
+        payment after the meal and VietQR is one of the methods. Paying at
+        the counter stays a request to staff.
+      responses:
+        '200':
+          description: The transfer
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/GuestPaymentQr'
+        '401':
+          $ref: '#/components/responses/GuestError'
+        '409':
+          $ref: '#/components/responses/GuestError'
+        '429':
           $ref: '#/components/responses/GuestError'
   /api/v3/pos_guest/guest_orders:
     post:
@@ -137,6 +166,35 @@ paths:
                   data:
                     $ref: '#/components/schemas/GuestOrder'
         '401':
+          $ref: '#/components/responses/GuestError'
+        '409':
+          $ref: '#/components/responses/GuestError'
+        '429':
+          $ref: '#/components/responses/GuestError'
+  /api/v3/pos_guest/guest_orders/{id}/cancel:
+    post:
+      operationId: guestOrderCancel
+      description: Cancels an unpaid prepay order (`awaiting_payment`) of this guest session.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The canceled order
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/GuestOrder'
+        '401':
+          $ref: '#/components/responses/GuestError'
+        '404':
           $ref: '#/components/responses/GuestError'
         '409':
           $ref: '#/components/responses/GuestError'
@@ -209,7 +267,7 @@ components:
     GuestSession:
       type: object
       additionalProperties: true
-      required: [id, status, expires_at, table, branch, currency, approval, timed]
+      required: [id, status, expires_at, table, branch, currency, approval, timed, paused]
       properties:
         id:
           type: string
@@ -247,10 +305,13 @@ components:
         timed:
           type: boolean
           description: The table is a room billed by play time.
+        paused:
+          type: boolean
+          description: The branch has paused ordering. The session still opens.
     GuestMenu:
       type: object
       additionalProperties: false
-      required: [currency, categories, items, modifier_groups, etag]
+      required: [currency, categories, items, modifier_groups, etag, theme, sections, payment]
       properties:
         currency:
           type: string
@@ -268,10 +329,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GuestModifierGroup'
+        theme:
+          $ref: '#/components/schemas/GuestTheme'
+        sections:
+          $ref: '#/components/schemas/GuestSections'
+        payment:
+          $ref: '#/components/schemas/GuestPayment'
     GuestMenuCategory:
       type: object
       additionalProperties: false
-      required: [id, name, position, color]
+      required: [id, name, position, color, image_url]
       properties:
         id:
           type: string
@@ -280,6 +347,8 @@ components:
         position:
           type: integer
         color:
+          type: [string, 'null']
+        image_url:
           type: [string, 'null']
     GuestMenuItem:
       type: object
@@ -399,6 +468,10 @@ components:
                     quantity:
                       type: integer
                       minimum: 1
+        payment:
+          type: [string, 'null']
+          enum: [vietqr, counter, null]
+          description: Payment choice when the branch runs `pay_before`.
     GuestOrder:
       type: object
       additionalProperties: false
@@ -408,7 +481,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, accepted, rejected, expired]
+          enum: [pending, awaiting_payment, accepted, rejected, expired, canceled]
         reject_reason:
           type: [string, 'null']
         items:
@@ -422,6 +495,21 @@ components:
         created_at:
           type: string
           format: date-time
+        payment:
+          type: [object, 'null']
+          additionalProperties: false
+          required: [method, expires_at, qr]
+          properties:
+            method:
+              type: string
+              enum: [vietqr, counter]
+            expires_at:
+              type: [string, 'null']
+              format: date-time
+            qr:
+              oneOf:
+                - $ref: '#/components/schemas/GuestPaymentQr'
+                - type: 'null'
     GuestOrderItem:
       type: object
       additionalProperties: false
@@ -444,10 +532,89 @@ components:
           type: array
           items:
             type: string
+    GuestTheme:
+      type: object
+      additionalProperties: false
+      required: [brand_color, text_color, button_color, logo_url, store_name]
+      properties:
+        brand_color:
+          type: string
+        text_color:
+          type: string
+        button_color:
+          type: string
+        logo_url:
+          type: [string, 'null']
+        store_name:
+          type: string
+    GuestSections:
+      type: object
+      additionalProperties: false
+      required: [banner, best_sellers, new_items]
+      properties:
+        banner:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name]
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+        best_sellers:
+          type: array
+          items:
+            type: string
+        new_items:
+          type: array
+          items:
+            type: string
+    GuestPayment:
+      type: object
+      additionalProperties: false
+      required: [timing, methods, vietqr_available]
+      properties:
+        timing:
+          type: string
+          enum: [pay_after, pay_before]
+        methods:
+          type: array
+          items:
+            type: string
+            enum: [vietqr, counter]
+        vietqr_available:
+          type: boolean
+    GuestPaymentQr:
+      type: object
+      additionalProperties: false
+      required: [amount, currency, transfer_content, payload, bank_bin, bank_name, account_number, account_name, image_url]
+      properties:
+        amount:
+          type: string
+        currency:
+          type: string
+        transfer_content:
+          type: string
+        payload:
+          type: string
+        bank_bin:
+          type: string
+        bank_name:
+          type: [string, 'null']
+        account_number:
+          type: string
+        account_name:
+          type: [string, 'null']
+        image_url:
+          type: [string, 'null']
+        due:
+          type: string
     GuestTable:
       type: object
       additionalProperties: false
-      required: [lines, subtotal, has_timed, orders, requests]
+      required: [lines, subtotal, paid, due, has_timed, orders, requests]
       properties:
         lines:
           type: array
@@ -456,6 +623,10 @@ components:
         subtotal:
           type: [string, 'null']
           description: Items at their menu price, before discounts and charges; play time not included.
+        paid:
+          type: string
+        due:
+          type: string
         has_timed:
           type: boolean
           description: The order has play time, priced when the bill is made.

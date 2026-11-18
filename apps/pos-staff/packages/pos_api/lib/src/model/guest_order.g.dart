@@ -8,23 +8,31 @@ part of 'guest_order.dart';
 
 const GuestOrderStatusEnum _$guestOrderStatusEnum_pending =
     const GuestOrderStatusEnum._('pending');
+const GuestOrderStatusEnum _$guestOrderStatusEnum_awaitingPayment =
+    const GuestOrderStatusEnum._('awaitingPayment');
 const GuestOrderStatusEnum _$guestOrderStatusEnum_accepted =
     const GuestOrderStatusEnum._('accepted');
 const GuestOrderStatusEnum _$guestOrderStatusEnum_rejected =
     const GuestOrderStatusEnum._('rejected');
 const GuestOrderStatusEnum _$guestOrderStatusEnum_expired =
     const GuestOrderStatusEnum._('expired');
+const GuestOrderStatusEnum _$guestOrderStatusEnum_canceled =
+    const GuestOrderStatusEnum._('canceled');
 
 GuestOrderStatusEnum _$guestOrderStatusEnumValueOf(String name) {
   switch (name) {
     case 'pending':
       return _$guestOrderStatusEnum_pending;
+    case 'awaitingPayment':
+      return _$guestOrderStatusEnum_awaitingPayment;
     case 'accepted':
       return _$guestOrderStatusEnum_accepted;
     case 'rejected':
       return _$guestOrderStatusEnum_rejected;
     case 'expired':
       return _$guestOrderStatusEnum_expired;
+    case 'canceled':
+      return _$guestOrderStatusEnum_canceled;
     default:
       throw ArgumentError(name);
   }
@@ -33,27 +41,57 @@ GuestOrderStatusEnum _$guestOrderStatusEnumValueOf(String name) {
 final BuiltSet<GuestOrderStatusEnum> _$guestOrderStatusEnumValues =
     BuiltSet<GuestOrderStatusEnum>(const <GuestOrderStatusEnum>[
   _$guestOrderStatusEnum_pending,
+  _$guestOrderStatusEnum_awaitingPayment,
   _$guestOrderStatusEnum_accepted,
   _$guestOrderStatusEnum_rejected,
   _$guestOrderStatusEnum_expired,
+  _$guestOrderStatusEnum_canceled,
+]);
+
+const GuestOrderPayMethodEnum _$guestOrderPayMethodEnum_vietqr =
+    const GuestOrderPayMethodEnum._('vietqr');
+const GuestOrderPayMethodEnum _$guestOrderPayMethodEnum_counter =
+    const GuestOrderPayMethodEnum._('counter');
+
+GuestOrderPayMethodEnum _$guestOrderPayMethodEnumValueOf(String name) {
+  switch (name) {
+    case 'vietqr':
+      return _$guestOrderPayMethodEnum_vietqr;
+    case 'counter':
+      return _$guestOrderPayMethodEnum_counter;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<GuestOrderPayMethodEnum> _$guestOrderPayMethodEnumValues =
+    BuiltSet<GuestOrderPayMethodEnum>(const <GuestOrderPayMethodEnum>[
+  _$guestOrderPayMethodEnum_vietqr,
+  _$guestOrderPayMethodEnum_counter,
 ]);
 
 Serializer<GuestOrderStatusEnum> _$guestOrderStatusEnumSerializer =
     _$GuestOrderStatusEnumSerializer();
+Serializer<GuestOrderPayMethodEnum> _$guestOrderPayMethodEnumSerializer =
+    _$GuestOrderPayMethodEnumSerializer();
 
 class _$GuestOrderStatusEnumSerializer
     implements PrimitiveSerializer<GuestOrderStatusEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
     'pending': 'pending',
+    'awaitingPayment': 'awaiting_payment',
     'accepted': 'accepted',
     'rejected': 'rejected',
     'expired': 'expired',
+    'canceled': 'canceled',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'pending': 'pending',
+    'awaiting_payment': 'awaitingPayment',
     'accepted': 'accepted',
     'rejected': 'rejected',
     'expired': 'expired',
+    'canceled': 'canceled',
   };
 
   @override
@@ -73,13 +111,42 @@ class _$GuestOrderStatusEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
+class _$GuestOrderPayMethodEnumSerializer
+    implements PrimitiveSerializer<GuestOrderPayMethodEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'vietqr': 'vietqr',
+    'counter': 'counter',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'vietqr': 'vietqr',
+    'counter': 'counter',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[GuestOrderPayMethodEnum];
+  @override
+  final String wireName = 'GuestOrderPayMethodEnum';
+
+  @override
+  Object serialize(Serializers serializers, GuestOrderPayMethodEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  GuestOrderPayMethodEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      GuestOrderPayMethodEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$GuestOrder extends GuestOrder {
   @override
   final String id;
   @override
   final String branchId;
   @override
-  final String workspaceId;
+  final String? workspaceId;
   @override
   final String resourceId;
   @override
@@ -90,6 +157,10 @@ class _$GuestOrder extends GuestOrder {
   final GuestOrderStatusEnum status;
   @override
   final bool automatic;
+  @override
+  final bool prepaid;
+  @override
+  final GuestOrderPayMethodEnum? payMethod;
   @override
   final BuiltList<GuestOrderItem> items;
   @override
@@ -115,12 +186,14 @@ class _$GuestOrder extends GuestOrder {
   _$GuestOrder._(
       {required this.id,
       required this.branchId,
-      required this.workspaceId,
+      this.workspaceId,
       required this.resourceId,
       required this.tableName,
       this.areaId,
       required this.status,
       required this.automatic,
+      required this.prepaid,
+      this.payMethod,
       required this.items,
       required this.quotedTotal,
       required this.currency,
@@ -150,6 +223,8 @@ class _$GuestOrder extends GuestOrder {
         areaId == other.areaId &&
         status == other.status &&
         automatic == other.automatic &&
+        prepaid == other.prepaid &&
+        payMethod == other.payMethod &&
         items == other.items &&
         quotedTotal == other.quotedTotal &&
         currency == other.currency &&
@@ -172,6 +247,8 @@ class _$GuestOrder extends GuestOrder {
     _$hash = $jc(_$hash, areaId.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
     _$hash = $jc(_$hash, automatic.hashCode);
+    _$hash = $jc(_$hash, prepaid.hashCode);
+    _$hash = $jc(_$hash, payMethod.hashCode);
     _$hash = $jc(_$hash, items.hashCode);
     _$hash = $jc(_$hash, quotedTotal.hashCode);
     _$hash = $jc(_$hash, currency.hashCode);
@@ -196,6 +273,8 @@ class _$GuestOrder extends GuestOrder {
           ..add('areaId', areaId)
           ..add('status', status)
           ..add('automatic', automatic)
+          ..add('prepaid', prepaid)
+          ..add('payMethod', payMethod)
           ..add('items', items)
           ..add('quotedTotal', quotedTotal)
           ..add('currency', currency)
@@ -243,6 +322,15 @@ class GuestOrderBuilder implements Builder<GuestOrder, GuestOrderBuilder> {
   bool? _automatic;
   bool? get automatic => _$this._automatic;
   set automatic(bool? automatic) => _$this._automatic = automatic;
+
+  bool? _prepaid;
+  bool? get prepaid => _$this._prepaid;
+  set prepaid(bool? prepaid) => _$this._prepaid = prepaid;
+
+  GuestOrderPayMethodEnum? _payMethod;
+  GuestOrderPayMethodEnum? get payMethod => _$this._payMethod;
+  set payMethod(GuestOrderPayMethodEnum? payMethod) =>
+      _$this._payMethod = payMethod;
 
   ListBuilder<GuestOrderItem>? _items;
   ListBuilder<GuestOrderItem> get items =>
@@ -297,6 +385,8 @@ class GuestOrderBuilder implements Builder<GuestOrder, GuestOrderBuilder> {
       _areaId = $v.areaId;
       _status = $v.status;
       _automatic = $v.automatic;
+      _prepaid = $v.prepaid;
+      _payMethod = $v.payMethod;
       _items = $v.items.toBuilder();
       _quotedTotal = $v.quotedTotal;
       _currency = $v.currency;
@@ -332,8 +422,7 @@ class GuestOrderBuilder implements Builder<GuestOrder, GuestOrderBuilder> {
             id: BuiltValueNullFieldError.checkNotNull(id, r'GuestOrder', 'id'),
             branchId: BuiltValueNullFieldError.checkNotNull(
                 branchId, r'GuestOrder', 'branchId'),
-            workspaceId: BuiltValueNullFieldError.checkNotNull(
-                workspaceId, r'GuestOrder', 'workspaceId'),
+            workspaceId: workspaceId,
             resourceId: BuiltValueNullFieldError.checkNotNull(
                 resourceId, r'GuestOrder', 'resourceId'),
             tableName: BuiltValueNullFieldError.checkNotNull(
@@ -343,6 +432,9 @@ class GuestOrderBuilder implements Builder<GuestOrder, GuestOrderBuilder> {
                 status, r'GuestOrder', 'status'),
             automatic: BuiltValueNullFieldError.checkNotNull(
                 automatic, r'GuestOrder', 'automatic'),
+            prepaid: BuiltValueNullFieldError.checkNotNull(
+                prepaid, r'GuestOrder', 'prepaid'),
+            payMethod: payMethod,
             items: items.build(),
             quotedTotal: BuiltValueNullFieldError.checkNotNull(
                 quotedTotal, r'GuestOrder', 'quotedTotal'),

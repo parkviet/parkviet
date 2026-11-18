@@ -3874,6 +3874,122 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TableSettingsResult'
+  /api/v3/admin/pos/emenu_settings:
+    get:
+      operationId: posEmenuSettings
+      description: Reads a branch's electronic menu settings, brand details and auto best-seller IDs.
+      parameters:
+        - $ref: '#/components/parameters/ReportBranch'
+      responses:
+        '200':
+          description: The electronic menu settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmenuSettingsResult'
+    put:
+      operationId: posEmenuSettingsUpdate
+      description: Patches a branch's electronic menu settings. Unknown keys or invalid values return 422.
+      parameters:
+        - $ref: '#/components/parameters/KitchenIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmenuSettingsInput'
+      responses:
+        '200':
+          description: The updated electronic menu settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmenuSettingsResult'
+        '422':
+          description: Validation error on an option or referenced ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v3/admin/pos/emenu_menu:
+    get:
+      operationId: posEmenuMenu
+      description: Reads a branch's electronic menu categories and item placements.
+      parameters:
+        - $ref: '#/components/parameters/ReportBranch'
+      responses:
+        '200':
+          description: The branch's electronic menu categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmenuMenuResult'
+    put:
+      operationId: posEmenuMenuUpdate
+      description: Replaces a branch's electronic menu categories and item placements in one transaction.
+      parameters:
+        - $ref: '#/components/parameters/KitchenIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmenuMenuInput'
+      responses:
+        '200':
+          description: The updated electronic menu categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmenuMenuResult'
+        '422':
+          description: Validation error on categories or items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v3/admin/pos/emenu_menu/import:
+    post:
+      operationId: posEmenuMenuImport
+      description: Copies the branch's counter categories and QR-orderable items into the electronic menu.
+      parameters:
+        - $ref: '#/components/parameters/KitchenIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmenuMenuImportInput'
+      responses:
+        '200':
+          description: The imported electronic menu categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmenuMenuResult'
+  /api/v3/admin/pos/emenu_menu/image:
+    post:
+      operationId: posEmenuMenuImage
+      description: Attaches a PNG or JPEG image (at most 2 MB) to an electronic menu category.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmenuCategoryImageInput'
+      responses:
+        '200':
+          description: The updated category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmenuCategoryResult'
+        '422':
+          description: Invalid image format or size
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v3/admin/pos/tables/{resource_id}/open:
     post:
       operationId: posTableOpen
@@ -5041,7 +5157,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [pending, accepted, rejected, expired]
+            enum: [pending, accepted, rejected, expired, canceled]
         - name: workspace_id
           in: query
           required: false
@@ -11794,14 +11910,14 @@ components:
       type: object
       additionalProperties: false
       required: [id, branch_id, workspace_id, resource_id, table_name, area_id, status, automatic, items, quoted_total, currency,
-                 item_count, reject_reason, decided_by_id, decided_by_name, decided_at, created_at]
+                 item_count, reject_reason, decided_by_id, decided_by_name, decided_at, created_at, prepaid, pay_method]
       properties:
         id:
           type: string
         branch_id:
           type: string
         workspace_id:
-          type: string
+          type: [string, 'null']
         resource_id:
           type: string
         table_name:
@@ -11811,10 +11927,15 @@ components:
           type: [string, 'null']
         status:
           type: string
-          enum: [pending, accepted, rejected, expired]
+          enum: [pending, awaiting_payment, accepted, rejected, expired, canceled]
         automatic:
           type: boolean
-          description: Accepted by the branch's straight-to-kitchen mode.
+          description: Accepted by the branch's straight-to-kitchen mode or prepay webhook.
+        prepaid:
+          type: boolean
+        pay_method:
+          type: [string, 'null']
+          enum: [vietqr, counter, null]
         items:
           type: array
           items:
@@ -11854,6 +11975,274 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/GuestOrder'
+    EmenuSettings:
+      type: object
+      additionalProperties: false
+      required:
+        - brand_color
+        - text_color
+        - button_color
+        - banner_enabled
+        - banner_promotion_ids
+        - best_sellers_enabled
+        - best_sellers_source
+        - best_seller_item_ids
+        - best_sellers_limit
+        - best_sellers_auto_ids
+        - new_items_enabled
+        - new_item_ids
+        - min_order_interval_seconds
+        - paused
+        - payment_timing
+        - pay_methods
+        - prepay_timeout_minutes
+        - sticker_show_logo
+        - sticker_show_name
+        - sticker_store_name
+        - sticker_wifi_enabled
+        - sticker_wifi_name
+        - sticker_wifi_password
+        - sticker_greeting
+        - sticker_size
+        - sticker_custom_mm
+        - logo_url
+        - store_name
+        - vietqr_timeout_minutes
+        - vietqr_available
+      properties:
+        brand_color:
+          type: string
+        text_color:
+          type: string
+        button_color:
+          type: string
+        banner_enabled:
+          type: boolean
+        banner_promotion_ids:
+          type: array
+          items:
+            type: string
+        best_sellers_enabled:
+          type: boolean
+        best_sellers_source:
+          type: string
+          enum: [manual, auto]
+        best_seller_item_ids:
+          type: array
+          items:
+            type: string
+        best_sellers_limit:
+          type: integer
+        best_sellers_auto_ids:
+          type: array
+          items:
+            type: string
+        new_items_enabled:
+          type: boolean
+        new_item_ids:
+          type: array
+          items:
+            type: string
+        min_order_interval_seconds:
+          type: integer
+        paused:
+          type: boolean
+        payment_timing:
+          type: string
+          enum: [pay_after, pay_before]
+        pay_methods:
+          type: array
+          items:
+            type: string
+            enum: [vietqr, counter]
+        prepay_timeout_minutes:
+          type: integer
+        sticker_show_logo:
+          type: boolean
+        sticker_show_name:
+          type: boolean
+        sticker_store_name:
+          type: string
+        sticker_wifi_enabled:
+          type: boolean
+        sticker_wifi_name:
+          type: string
+        sticker_wifi_password:
+          type: string
+        sticker_greeting:
+          type: string
+        sticker_size:
+          type: string
+          enum: ['60', '80', '100', custom]
+        sticker_custom_mm:
+          type: integer
+        logo_url:
+          type: [string, 'null']
+        store_name:
+          type: string
+        vietqr_timeout_minutes:
+          type: integer
+        vietqr_available:
+          type: boolean
+    EmenuSettingsResult:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/EmenuSettings'
+    EmenuSettingsInput:
+      type: object
+      required: [branch_id]
+      properties:
+        branch_id:
+          type: string
+        brand_color:
+          type: string
+        text_color:
+          type: string
+        button_color:
+          type: string
+        banner_enabled:
+          type: boolean
+        banner_promotion_ids:
+          type: array
+          items:
+            type: string
+        best_sellers_enabled:
+          type: boolean
+        best_sellers_source:
+          type: string
+          enum: [manual, auto]
+        best_seller_item_ids:
+          type: array
+          items:
+            type: string
+        best_sellers_limit:
+          type: integer
+        new_items_enabled:
+          type: boolean
+        new_item_ids:
+          type: array
+          items:
+            type: string
+        min_order_interval_seconds:
+          type: integer
+        paused:
+          type: boolean
+        payment_timing:
+          type: string
+          enum: [pay_after, pay_before]
+        pay_methods:
+          type: array
+          items:
+            type: string
+            enum: [vietqr, counter]
+        prepay_timeout_minutes:
+          type: integer
+        sticker_show_logo:
+          type: boolean
+        sticker_show_name:
+          type: boolean
+        sticker_store_name:
+          type: string
+        sticker_wifi_enabled:
+          type: boolean
+        sticker_wifi_name:
+          type: string
+        sticker_wifi_password:
+          type: string
+        sticker_greeting:
+          type: string
+        sticker_size:
+          type: string
+          enum: ['60', '80', '100', custom]
+        sticker_custom_mm:
+          type: integer
+    EmenuItem:
+      type: object
+      additionalProperties: false
+      required: [id, menu_item_id, position]
+      properties:
+        id:
+          type: string
+        menu_item_id:
+          type: string
+        position:
+          type: integer
+    EmenuCategory:
+      type: object
+      additionalProperties: false
+      required: [id, name, position, color, image_url, items]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        position:
+          type: integer
+        color:
+          type: [string, 'null']
+        image_url:
+          type: [string, 'null']
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmenuItem'
+    EmenuMenuResult:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmenuCategory'
+    EmenuCategoryResult:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/EmenuCategory'
+    EmenuMenuCategoryInput:
+      type: object
+      required: [name, items]
+      properties:
+        id:
+          type: [string, 'null']
+        name:
+          type: string
+        color:
+          type: [string, 'null']
+        items:
+          type: array
+          items:
+            type: string
+    EmenuMenuInput:
+      type: object
+      required: [branch_id, categories]
+      properties:
+        branch_id:
+          type: string
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmenuMenuCategoryInput'
+    EmenuMenuImportInput:
+      type: object
+      required: [branch_id]
+      properties:
+        branch_id:
+          type: string
+    EmenuCategoryImageInput:
+      type: object
+      required: [branch_id, category_id, image]
+      properties:
+        branch_id:
+          type: string
+        category_id:
+          type: string
+        image:
+          type: string
+          format: binary
     GuestOrderAcceptMeta:
       type: object
       properties:

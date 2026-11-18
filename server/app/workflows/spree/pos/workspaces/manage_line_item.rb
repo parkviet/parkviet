@@ -185,12 +185,20 @@ module Spree
           public
 
           # One rule for every path that puts a variant on a branch's sale.
-          def sellable_variant!(branch:, variant:)
+          # Electronic-menu items explicitly placed in `spree_pos_emenu_items`
+          # of the branch may sell even when omitted from counter `BranchProduct`.
+          def sellable_variant!(branch:, variant:, allow_emenu: false)
             product = variant&.product
             now = Time.current
+            in_branch = product && BranchProduct.exists?(branch_id: branch.id, product_id: variant.product_id) &&
+                        SalesChannel.sellable_products(branch.store).exists?(id: product.id)
+            on_emenu = allow_emenu && product && MenuItem.for_store(branch.store).active.exists?(product_id: product.id) &&
+                       EmenuItem.joins(:emenu_category, :menu_item).exists?(
+                         spree_pos_emenu_categories: { branch_id: branch.id },
+                         spree_pos_menu_items: { product_id: product.id }
+                       )
             raise ActiveRecord::RecordNotFound if variant.nil? || product.nil? || product.store_id != branch.store_id ||
-              product.status != 'active' || !BranchProduct.exists?(branch_id: branch.id, product_id: variant.product_id) ||
-              !SalesChannel.sellable_products(branch.store).exists?(id: product.id) ||
+              product.status != 'active' || (!in_branch && !on_emenu) ||
               (variant.is_master? && Spree::Variant.where(product_id: product.id, is_master: false).exists?) ||
               (product.available_on.present? && product.available_on > now) ||
               (product.discontinue_on.present? && product.discontinue_on <= now) ||

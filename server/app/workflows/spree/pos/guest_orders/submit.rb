@@ -3,17 +3,10 @@
 module Spree
   module Pos
     module GuestOrders
-      # A guest sends items from their phone. Nothing reaches the table's
-      # order here: the items wait as a pending guest order for staff. Every
-      # price is read from the menu on the server; a price the phone sends is
-      # never read. The same idempotency key of the same phone returns the
-      # order it made; with other items it is refused.
-      #
-      # A guest has no staff identity, so this is not a CommandExecutor
-      # command: the guest order row is its own receipt (unique per session
-      # and key). At a branch sending guest orders straight to the kitchen,
-      # an order within the limits is then accepted on behalf of the person
-      # whose shift holds the table's order (Accept, automatic).
+      # A guest sends items from their phone. In pay-after mode the items wait
+      # as a pending guest order for staff (or auto-accept within limits). In
+      # pay-before mode with VietQR, the order waits in `awaiting_payment`
+      # until the bank webhook settles it onto its own dine-in order.
       module Submit
         MAX_ROWS = 20
         MAX_QUANTITY = 20
@@ -22,20 +15,22 @@ module Spree
         module_function
 
         # @return [GuestOrder]
-        def call(session:, key:, items:)
+        def call(session:, key:, items:, payment: nil)
           key = key.to_s
           raise Conflict.new('Idempotency-Key is required.', reason: 'idempotency_key_required') if key.blank? || key.length > 200
 
           rows = normalize!(items)
           digest = Digest::SHA256.hexdigest(rows.to_json)
+          fresh = false
           order = GuestOrder.transaction do
             session.lock!
             existing = GuestOrder.find_by(guest_session_id: session.id, idempotency_key: key)
             next replay!(existing, digest) if existing
 
-            create!(session, key, rows, digest)
+            fresh = true
+            create!(session, key, rows, digest, payment)
           end
-          auto_accept(order) if order.previously_new_record?
+          auto_accept(order) if fresh && order.status == 'pending' && EmenuSettings.of(order.branch)['payment_timing'] != 'pay_before'
           order.reload
         end
 
@@ -45,32 +40,58 @@ module Spree
           raise Conflict.new('Idempotency key was reused with different items.', reason: 'idempotency_key_reused')
         end
 
-        def create!(session, key, rows, digest)
+        def create!(session, key, rows, digest, payment)
           branch = session.branch
-          Guard.require!(branch)
+          Guard.require_open!(branch)
+          session.resource.lock!
+          Guard.interval!(branch, session.resource)
           raise Conflict.new('The table has no open order.', reason: 'table_closed') unless session.ordering?
-          if GuestOrder.pending.where(guest_session_id: session.id).count >= GuestOrder::MAX_PENDING
+          if GuestOrder.where(guest_session_id: session.id, status: %w[pending awaiting_payment]).count >= GuestOrder::MAX_PENDING
             raise Conflict.new('Wait until staff confirm your earlier orders.', reason: 'too_many_pending')
           end
 
-          workspace = session.workspace
-          quoted = quote!(branch, workspace, rows)
+          settings = EmenuSettings.of(branch)
+          prepay = settings['payment_timing'] == 'pay_before'
+          choice = pay_choice(branch, settings, payment)
+          workspace = prepay ? nil : session.workspace
+          currency = workspace&.order&.currency || branch.store.default_currency
+          quoted = quote!(branch, workspace, currency, rows)
+          status = choice == 'vietqr' && prepay ? 'awaiting_payment' : 'pending'
           order = GuestOrder.create!(
             store: session.store, branch: branch, guest_session: session, workspace: workspace, resource: session.resource,
-            items: quoted, quoted_total: quoted.sum { |row| BigDecimal(row['amount']) }, currency: workspace.order.currency,
+            items: quoted, quoted_total: quoted.sum { |row| BigDecimal(row['amount']) }, currency: currency,
             item_count: quoted.sum { |row| row['quantity'] }, idempotency_key: key, request_digest: digest,
-            append_batch_id: SecureRandom.uuid
+            append_batch_id: SecureRandom.uuid, status: status, pay_method: choice
           )
-          Realtime.publish(branch, 'guest_order.created', id: order.prefixed_id,
-                                                          refs: { workspace_id: workspace.prefixed_id, resource_id: session.resource.prefixed_id })
+          if status == 'awaiting_payment'
+            order.update!(payment_code: Emenu::Qr.code_for(order), payment_expires_at: Time.current + EmenuSettings.prepay_wait(branch, settings))
+          else
+            Realtime.publish(branch, 'guest_order.created',
+                             id: order.prefixed_id,
+                             refs: { workspace_id: workspace&.prefixed_id, resource_id: session.resource.prefixed_id }.compact)
+          end
           order
+        end
+
+        # Pay-before needs a method the branch allows. Pay-after ignores one.
+        def pay_choice(branch, settings, payment)
+          return nil unless settings['payment_timing'] == 'pay_before'
+
+          choice = payment.to_s
+          raise Conflict.new('Choose how to pay.', reason: 'payment_required') unless settings['pay_methods'].include?(choice)
+          if choice == 'vietqr' && PayLater.receiving_account(branch.store, branch).nil?
+            raise Conflict.new('VietQR is not available.', reason: 'vietqr_unavailable')
+          end
+
+          choice
         end
 
         # Prices and names from the server's menu, with the options checked
         # against the item's groups (min, max, required).
-        def quote!(branch, workspace, rows)
+        def quote!(branch, workspace, currency, rows)
           menu = GuestMenu.variants(branch)
           now = Workspace.business_now
+          emenu = GuestMenu.emenu?(branch)
           rows.map do |row|
             item_row = menu[row['variant_id']]
             unless item_row
@@ -82,7 +103,8 @@ module Spree
 
             variant = Spree::Variant.find_by_prefix_id(row['variant_id'])
             pricing = Menu::Pricing.resolve(branch: branch, variant: variant, selections: row['modifiers'] || [], now: now,
-                                            note: row['note'], currency: workspace.order.currency, order: workspace.order)
+                                            note: row['note'], currency: currency, order: workspace&.order,
+                                            allow_hidden: emenu)
             size = item_row[:variants].find { |entry| entry[:id] == row['variant_id'] }
             {
               'variant_id' => row['variant_id'], 'menu_item_id' => item_row[:id], 'name' => item_row[:name], 'size' => size[:name],
@@ -143,6 +165,8 @@ module Spree
         # Straight to the kitchen within the branch's limits; anything else,
         # or an order that cannot be added right now, waits for staff.
         def auto_accept(order)
+          return if order.workspace.nil?
+
           branch = order.branch
           return unless branch.qr_order_mode == 'direct_to_kitchen' && branch.qr_order_auto_limit
           return if order.quoted_total > branch.qr_order_auto_limit || order.item_count > branch.qr_order_auto_max_items

@@ -185,6 +185,14 @@ class _$TableSettingsInput extends TableSettingsInput {
   @override
   final int? reservationDurationMinutes;
   @override
+  final BuiltList<ReservationPeriod>? reservationPeriods;
+  @override
+  final int? reservationOpenBufferMinutes;
+  @override
+  final int? reservationCloseBufferMinutes;
+  @override
+  final int? reservationMinLeadMinutes;
+  @override
   final String? reservationFeeProductId;
   @override
   final BuiltList<TableSettingsInputCourseLabelsInner>? courseLabels;
@@ -205,6 +213,10 @@ class _$TableSettingsInput extends TableSettingsInput {
       this.seatedAlertMinutes,
       this.reservationGraceMinutes,
       this.reservationDurationMinutes,
+      this.reservationPeriods,
+      this.reservationOpenBufferMinutes,
+      this.reservationCloseBufferMinutes,
+      this.reservationMinLeadMinutes,
       this.reservationFeeProductId,
       this.courseLabels})
       : super._();
@@ -232,6 +244,10 @@ class _$TableSettingsInput extends TableSettingsInput {
         seatedAlertMinutes == other.seatedAlertMinutes &&
         reservationGraceMinutes == other.reservationGraceMinutes &&
         reservationDurationMinutes == other.reservationDurationMinutes &&
+        reservationPeriods == other.reservationPeriods &&
+        reservationOpenBufferMinutes == other.reservationOpenBufferMinutes &&
+        reservationCloseBufferMinutes == other.reservationCloseBufferMinutes &&
+        reservationMinLeadMinutes == other.reservationMinLeadMinutes &&
         reservationFeeProductId == other.reservationFeeProductId &&
         courseLabels == other.courseLabels;
   }
@@ -250,6 +266,10 @@ class _$TableSettingsInput extends TableSettingsInput {
     _$hash = $jc(_$hash, seatedAlertMinutes.hashCode);
     _$hash = $jc(_$hash, reservationGraceMinutes.hashCode);
     _$hash = $jc(_$hash, reservationDurationMinutes.hashCode);
+    _$hash = $jc(_$hash, reservationPeriods.hashCode);
+    _$hash = $jc(_$hash, reservationOpenBufferMinutes.hashCode);
+    _$hash = $jc(_$hash, reservationCloseBufferMinutes.hashCode);
+    _$hash = $jc(_$hash, reservationMinLeadMinutes.hashCode);
     _$hash = $jc(_$hash, reservationFeeProductId.hashCode);
     _$hash = $jc(_$hash, courseLabels.hashCode);
     _$hash = $jf(_$hash);
@@ -270,6 +290,10 @@ class _$TableSettingsInput extends TableSettingsInput {
           ..add('seatedAlertMinutes', seatedAlertMinutes)
           ..add('reservationGraceMinutes', reservationGraceMinutes)
           ..add('reservationDurationMinutes', reservationDurationMinutes)
+          ..add('reservationPeriods', reservationPeriods)
+          ..add('reservationOpenBufferMinutes', reservationOpenBufferMinutes)
+          ..add('reservationCloseBufferMinutes', reservationCloseBufferMinutes)
+          ..add('reservationMinLeadMinutes', reservationMinLeadMinutes)
           ..add('reservationFeeProductId', reservationFeeProductId)
           ..add('courseLabels', courseLabels))
         .toString();
@@ -339,6 +363,28 @@ class TableSettingsInputBuilder
   set reservationDurationMinutes(int? reservationDurationMinutes) =>
       _$this._reservationDurationMinutes = reservationDurationMinutes;
 
+  ListBuilder<ReservationPeriod>? _reservationPeriods;
+  ListBuilder<ReservationPeriod> get reservationPeriods =>
+      _$this._reservationPeriods ??= ListBuilder<ReservationPeriod>();
+  set reservationPeriods(ListBuilder<ReservationPeriod>? reservationPeriods) =>
+      _$this._reservationPeriods = reservationPeriods;
+
+  int? _reservationOpenBufferMinutes;
+  int? get reservationOpenBufferMinutes => _$this._reservationOpenBufferMinutes;
+  set reservationOpenBufferMinutes(int? reservationOpenBufferMinutes) =>
+      _$this._reservationOpenBufferMinutes = reservationOpenBufferMinutes;
+
+  int? _reservationCloseBufferMinutes;
+  int? get reservationCloseBufferMinutes =>
+      _$this._reservationCloseBufferMinutes;
+  set reservationCloseBufferMinutes(int? reservationCloseBufferMinutes) =>
+      _$this._reservationCloseBufferMinutes = reservationCloseBufferMinutes;
+
+  int? _reservationMinLeadMinutes;
+  int? get reservationMinLeadMinutes => _$this._reservationMinLeadMinutes;
+  set reservationMinLeadMinutes(int? reservationMinLeadMinutes) =>
+      _$this._reservationMinLeadMinutes = reservationMinLeadMinutes;
+
   String? _reservationFeeProductId;
   String? get reservationFeeProductId => _$this._reservationFeeProductId;
   set reservationFeeProductId(String? reservationFeeProductId) =>
@@ -370,6 +416,10 @@ class TableSettingsInputBuilder
       _seatedAlertMinutes = $v.seatedAlertMinutes;
       _reservationGraceMinutes = $v.reservationGraceMinutes;
       _reservationDurationMinutes = $v.reservationDurationMinutes;
+      _reservationPeriods = $v.reservationPeriods?.toBuilder();
+      _reservationOpenBufferMinutes = $v.reservationOpenBufferMinutes;
+      _reservationCloseBufferMinutes = $v.reservationCloseBufferMinutes;
+      _reservationMinLeadMinutes = $v.reservationMinLeadMinutes;
       _reservationFeeProductId = $v.reservationFeeProductId;
       _courseLabels = $v.courseLabels?.toBuilder();
       _$v = null;
@@ -407,6 +457,10 @@ class TableSettingsInputBuilder
             seatedAlertMinutes: seatedAlertMinutes,
             reservationGraceMinutes: reservationGraceMinutes,
             reservationDurationMinutes: reservationDurationMinutes,
+            reservationPeriods: _reservationPeriods?.build(),
+            reservationOpenBufferMinutes: reservationOpenBufferMinutes,
+            reservationCloseBufferMinutes: reservationCloseBufferMinutes,
+            reservationMinLeadMinutes: reservationMinLeadMinutes,
             reservationFeeProductId: reservationFeeProductId,
             courseLabels: _courseLabels?.build(),
           );
@@ -415,6 +469,9 @@ class TableSettingsInputBuilder
       try {
         _$failedField = 'serviceChargeAppliesTo';
         _serviceChargeAppliesTo?.build();
+
+        _$failedField = 'reservationPeriods';
+        _reservationPeriods?.build();
 
         _$failedField = 'courseLabels';
         _courseLabels?.build();
