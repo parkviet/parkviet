@@ -34,11 +34,12 @@ const CONNECTIONS: readonly PrinterConnection[] = [
 ]
 const STATION: readonly PrinterConnection[] = ['escpos_lan', 'escpos_bluetooth', 'sunmi_builtin']
 const ADDRESSED: readonly PrinterConnection[] = ['epson_epos', 'star_webprnt', 'escpos_lan']
-const ROLES: readonly PrinterRole[] = [
+export const PRINTER_ROLES: readonly PrinterRole[] = [
   'receipt',
   'prebill',
   'kitchen_ticket',
   'void_ticket',
+  'ready_ticket',
   'cup_label',
   'checklist',
   'table_qr',
@@ -226,7 +227,7 @@ export function BranchPrinters() {
     setDraft((current) => (current ? { ...current, ...patch } : current))
 
   return (
-    <ModelCard title={t('branchPrinters.title')} id="branch-printers" icon={<PrinterIcon />}>
+    <ModelCard title={t('branchPrinters.title')} id="printing-printers" icon={<PrinterIcon />}>
       <p className="text-sm text-muted-foreground">{t('branchPrinters.intro')}</p>
       <ModelNotice notice={notice} />
       {printers.isPending ? (
@@ -384,7 +385,7 @@ export function BranchPrinters() {
           </div>
           <fieldset className="grid gap-2 sm:grid-cols-2">
             <legend className="mb-2 text-sm font-medium">{t('branchPrinters.roles')}</legend>
-            {ROLES.map((role) => (
+            {PRINTER_ROLES.map((role) => (
               <ModelCheck
                 key={role}
                 checked={draft.roles.includes(role)}

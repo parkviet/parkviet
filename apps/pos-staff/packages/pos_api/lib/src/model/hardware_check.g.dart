@@ -12,6 +12,8 @@ const HardwareCheckKeyEnum _$hardwareCheckKeyEnum_kitchenPrinter =
     const HardwareCheckKeyEnum._('kitchenPrinter');
 const HardwareCheckKeyEnum _$hardwareCheckKeyEnum_cupLabelPrinter =
     const HardwareCheckKeyEnum._('cupLabelPrinter');
+const HardwareCheckKeyEnum _$hardwareCheckKeyEnum_readyTicketPrinter =
+    const HardwareCheckKeyEnum._('readyTicketPrinter');
 const HardwareCheckKeyEnum _$hardwareCheckKeyEnum_kitchenStations =
     const HardwareCheckKeyEnum._('kitchenStations');
 const HardwareCheckKeyEnum _$hardwareCheckKeyEnum_printStation =
@@ -31,6 +33,8 @@ HardwareCheckKeyEnum _$hardwareCheckKeyEnumValueOf(String name) {
       return _$hardwareCheckKeyEnum_kitchenPrinter;
     case 'cupLabelPrinter':
       return _$hardwareCheckKeyEnum_cupLabelPrinter;
+    case 'readyTicketPrinter':
+      return _$hardwareCheckKeyEnum_readyTicketPrinter;
     case 'kitchenStations':
       return _$hardwareCheckKeyEnum_kitchenStations;
     case 'printStation':
@@ -51,6 +55,7 @@ final BuiltSet<HardwareCheckKeyEnum> _$hardwareCheckKeyEnumValues =
   _$hardwareCheckKeyEnum_receiptPrinter,
   _$hardwareCheckKeyEnum_kitchenPrinter,
   _$hardwareCheckKeyEnum_cupLabelPrinter,
+  _$hardwareCheckKeyEnum_readyTicketPrinter,
   _$hardwareCheckKeyEnum_kitchenStations,
   _$hardwareCheckKeyEnum_printStation,
   _$hardwareCheckKeyEnum_customerDisplay,
@@ -96,6 +101,7 @@ class _$HardwareCheckKeyEnumSerializer
     'receiptPrinter': 'receipt_printer',
     'kitchenPrinter': 'kitchen_printer',
     'cupLabelPrinter': 'cup_label_printer',
+    'readyTicketPrinter': 'ready_ticket_printer',
     'kitchenStations': 'kitchen_stations',
     'printStation': 'print_station',
     'customerDisplay': 'customer_display',
@@ -106,6 +112,7 @@ class _$HardwareCheckKeyEnumSerializer
     'receipt_printer': 'receiptPrinter',
     'kitchen_printer': 'kitchenPrinter',
     'cup_label_printer': 'cupLabelPrinter',
+    'ready_ticket_printer': 'readyTicketPrinter',
     'kitchen_stations': 'kitchenStations',
     'print_station': 'printStation',
     'customer_display': 'customerDisplay',

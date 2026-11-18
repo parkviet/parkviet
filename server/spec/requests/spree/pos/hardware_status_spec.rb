@@ -58,7 +58,8 @@ RSpec.describe 'POS hardware status API', type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.headers['Cache-Control']).to include('no-store')
     expect(checks(data)).to include('receipt_printer' => 'attention', 'kitchen_printer' => 'not_needed',
-                                    'cup_label_printer' => 'not_needed', 'kitchen_stations' => 'not_needed',
+                                    'cup_label_printer' => 'not_needed', 'ready_ticket_printer' => 'not_needed',
+                                    'kitchen_stations' => 'not_needed',
                                     'print_station' => 'not_needed', 'einvoice' => 'not_needed')
     expect(data['printers']).to eq([])
     expect(data['einvoice']).to include('type' => 'none', 'configured' => false)
@@ -95,8 +96,15 @@ RSpec.describe 'POS hardware status API', type: :request do
     Spree::Pos::Device.where(branch: branch, mode: 'print_station').update_all(last_seen_at: Time.current)
     print_job(kitchen, 'printed')
     data = status_for(admin)
-    expect(checks(data)).to include('kitchen_printer' => 'ok', 'kitchen_stations' => 'ok', 'print_station' => 'ok')
+    expect(checks(data)).to include('kitchen_printer' => 'ok', 'kitchen_stations' => 'ok', 'print_station' => 'ok',
+                                    'ready_ticket_printer' => 'not_needed')
     expect(data['devices'].map { |row| [row['mode'], row['online']] }).to contain_exactly(['kds', true], ['print_station', true])
+
+    branch.update!(sales_settings: { 'auto_print_ready_ticket' => true })
+    expect(checks(status_for(admin))['ready_ticket_printer']).to eq('attention')
+    ready_p = printer('Trả món', ['ready_ticket'])
+    print_job(ready_p, 'printed')
+    expect(checks(status_for(admin))['ready_ticket_printer']).to eq('ok')
   end
 
   it 'counts a paired customer display only while it is live' do

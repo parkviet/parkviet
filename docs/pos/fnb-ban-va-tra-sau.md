@@ -7,7 +7,7 @@ Hướng dẫn cho chủ quán dùng ba ngành phục vụ tại bàn: **Quán �
 - **Cửa hàng mới:** ở **Thiết lập cửa hàng**, chọn **Nhà hàng** hoặc **Bar, Pub & Club**: hai ngành này luôn có bàn. Chọn **Quán ăn** thì bước **Thiết lập quán** hỏi "Quán có bàn phục vụ không?"; trả lời có thì chi nhánh bật thêm sơ đồ bàn, gọi món tại bàn, trả tiền sau và phí phục vụ.
 - **Chi nhánh đã có:** đổi ngành ở **Cấu hình → Chi nhánh → Mô hình kinh doanh**. Bản xem trước liệt kê module sẽ bật, hỏi về bàn khi ngành cho chọn, và đề nghị tạo khu bếp mặc định nếu chi nhánh chưa có khu nào. Không có gì tự áp khi chưa bấm áp dụng.
 - **Quầy ghi đơn tại bàn:** phục vụ tại bàn cần một quầy. Đơn bàn được ghi vào ca đang mở ở quầy đó, và thu ngân của quầy đó nhận tiền các bàn. Wizard dùng quầy đầu tiên của chi nhánh (đặt tên ở bước Chi nhánh); trang Mô hình kinh doanh bắt chọn một quầy nếu chi nhánh chưa có. Đổi lại ở tab **Sơ đồ bàn** của chi nhánh.
-- **Gửi bếp:** nhà hàng và bar mặc định gửi bếp khi phục vụ hoặc thu ngân bấm **Báo bếp**. Mỗi lần báo bếp chỉ gửi phần món mới gọi thêm. Đổi ở tab **Bếp & bar**.
+- **Gửi bếp:** nhà hàng và bar mặc định gửi bếp khi phục vụ hoặc thu ngân bấm **Báo bếp** (ngoài ra có thể chọn gửi ngay mỗi lần lưu đơn hoặc gửi khi hoàn tất thanh toán). Mỗi lần báo bếp chỉ gửi phần món mới gọi thêm. Đổi ở tab **In ấn** (mục **Tự động in**).
 - **Phí phục vụ:** nhà hàng gợi ý 5%. Sửa mức phí và loại thuế của phí ở tab **Sơ đồ bàn**. Để trống thì không thu.
 
 ## 2. Sơ đồ bàn
@@ -42,9 +42,9 @@ Chi nhánh bật sơ đồ bàn (Nhà hàng, Quán ăn có bàn) mở màn bán 
 
 ## 4. Máy in
 
-Khai báo máy in ở tab **In ấn**, rồi gán máy in bếp cho từng khu ở tab **Bếp & bar**.
+Tab **In ấn** của chi nhánh gom ba phần: **Tự động in** (cách gửi bếp, tự động in tạm tính, hoá đơn, tem món, phiếu huỷ món, phiếu trả món, và công tắc cho phép in hoá đơn khổ giấy rời A4/A5), **Máy in** (khai báo máy in), và **Chức năng in** (xem từng loại chứng từ đang in ra máy nào, bằng mẫu nào, chọn nhanh máy in hoặc mẫu in). Máy in bếp cho từng khu vẫn gán ở tab **Bếp & bar**.
 
-Máy in ESC/POS qua mạng LAN cần một **trạm in**: một máy Android chạy ParkViet Nhân viên ở mode trạm in, cùng mạng với máy in. Trạm in nhận lệnh in từ server và in phiếu bếp, phiếu hủy món, phiếu tạm tính và phiếu gọi món. Tab **Phần cứng** cho biết từng máy in đã in thành công chưa, và khu bếp nào chưa có màn bếp hay máy in.
+Máy in ESC/POS qua mạng LAN cần một **trạm in**: một máy Android chạy ParkViet Nhân viên ở mode trạm in, cùng mạng với máy in. Trạm in nhận lệnh in từ server và in phiếu bếp, phiếu hủy món, phiếu trả món, phiếu tạm tính và phiếu gọi món. Tab **Phần cứng** cho biết từng máy in đã in thành công chưa, và khu bếp nào chưa có màn bếp hay máy in.
 
 ## 5. Ghép máy phục vụ, màn bếp, trạm in
 

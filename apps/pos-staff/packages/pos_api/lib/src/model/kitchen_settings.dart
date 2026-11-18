@@ -13,7 +13,7 @@ part 'kitchen_settings.g.dart';
 ///
 /// Properties:
 /// * [branchId]
-/// * [kitchenSendTrigger] - `on_complete` sends what is left as the sale completes; `manual` waits for \"send to kitchen\".
+/// * [kitchenSendTrigger] - `on_complete` sends what is left as the sale completes; `on_save` sends unsent items when an open order is saved; `manual` waits for \"send to kitchen\".
 /// * [moduleEnabled] - Whether `fnb.kitchen` is on at the branch.
 /// * [voidReasons] - Reasons a sent item may be voided for, in order; `khac` with a note is always offered.
 @BuiltValue()
@@ -22,10 +22,10 @@ abstract class KitchenSettings
   @BuiltValueField(wireName: r'branch_id')
   String get branchId;
 
-  /// `on_complete` sends what is left as the sale completes; `manual` waits for \"send to kitchen\".
+  /// `on_complete` sends what is left as the sale completes; `on_save` sends unsent items when an open order is saved; `manual` waits for \"send to kitchen\".
   @BuiltValueField(wireName: r'kitchen_send_trigger')
   KitchenSettingsKitchenSendTriggerEnum get kitchenSendTrigger;
-  // enum kitchenSendTriggerEnum {  on_complete,  manual,  };
+  // enum kitchenSendTriggerEnum {  on_complete,  on_save,  manual,  };
 
   /// Whether `fnb.kitchen` is on at the branch.
   @BuiltValueField(wireName: r'module_enabled')
@@ -164,11 +164,14 @@ class _$KitchenSettingsSerializer
   }
 }
 
-/// `on_complete` sends what is left as the sale completes; `manual` waits for \"send to kitchen\".
+/// `on_complete` sends what is left as the sale completes; `on_save` sends unsent items when an open order is saved; `manual` waits for \"send to kitchen\".
 class KitchenSettingsKitchenSendTriggerEnum extends EnumClass {
   @BuiltValueEnumConst(wireName: r'on_complete')
   static const KitchenSettingsKitchenSendTriggerEnum onComplete =
       _$kitchenSettingsKitchenSendTriggerEnum_onComplete;
+  @BuiltValueEnumConst(wireName: r'on_save')
+  static const KitchenSettingsKitchenSendTriggerEnum onSave =
+      _$kitchenSettingsKitchenSendTriggerEnum_onSave;
   @BuiltValueEnumConst(wireName: r'manual')
   static const KitchenSettingsKitchenSendTriggerEnum manual =
       _$kitchenSettingsKitchenSendTriggerEnum_manual;

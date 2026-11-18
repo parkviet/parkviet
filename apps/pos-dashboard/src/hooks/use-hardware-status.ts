@@ -11,6 +11,7 @@ export const HARDWARE_CHECKS = [
   'receipt_printer',
   'kitchen_printer',
   'cup_label_printer',
+  'ready_ticket_printer',
   'kitchen_stations',
   'print_station',
   'customer_display',

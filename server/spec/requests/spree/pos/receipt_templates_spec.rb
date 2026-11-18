@@ -6,7 +6,8 @@ require_relative '../../../support/pos_trace_helpers'
 
 # HTTP contract for store print templates: who reads and who changes them,
 # schema validation with pointers, optimistic versioning, the single default
-# per document type, disable-not-delete and the audit trail.
+# per document type, five seeded paper sizes per type, disable-not-delete and
+# the audit trail.
 RSpec.describe 'POS receipt templates API', type: :request do
   include PosShiftHelpers
   include PosTraceHelpers
@@ -52,18 +53,31 @@ RSpec.describe 'POS receipt templates API', type: :request do
     Spree::Pos::AuditEntry.where(store_id: store.id, action: action)
   end
 
-  it 'lets branch members read the defaults and versions but refuses every write' do
+  it 'seeds all five paper sizes per document type, lets branch members read, and refuses every write' do
     list = call(cashier, :get, 'receipt_templates')
     expect(response).to have_http_status(:ok)
-    expect(list['data'].map { |row| row['document_type'] }).to match_array(Spree::Pos::ReceiptTemplate::DOCUMENT_TYPES)
-    sale = list['data'].find { |row| row['document_type'] == 'sale' }
+    expect(list['data'].map { |row| row['document_type'] }.uniq).to match_array(Spree::Pos::ReceiptTemplate::DOCUMENT_TYPES)
+    Spree::Pos::ReceiptTemplate::DOCUMENT_TYPES.each do |type|
+      group = list['data'].select { |row| row['document_type'] == type }
+      expect(group.map { |row| row['paper'] }).to match_array(Spree::Pos::ReceiptTemplate::PAPERS)
+      expect(group.select { |row| row['is_default'] }.map { |row| row['paper'] }).to eq(['80mm'])
+    end
+    sale = list['data'].find { |row| row['document_type'] == 'sale' && row['is_default'] }
     expect(sale).to include('name' => 'Phiếu bán hàng', 'paper' => '80mm', 'status' => 'active', 'is_default' => true,
                             'current_version' => 1, 'version' => 1, 'updated_by' => nil)
     expect(sale['id']).to start_with('postpl_')
     expect(sale['config']).to eq(Spree::Pos::ReceiptTemplate.default_config('sale'))
 
+    sale_a4 = list['data'].find { |row| row['document_type'] == 'sale' && row['paper'] == 'a4' }
+    expect(sale_a4).to include('name' => 'Phiếu bán hàng (A4)', 'is_default' => false)
+    expect(sale_a4['config']).to eq(Spree::Pos::ReceiptTemplate.default_config('sale', paper: 'a4'))
+    expect(sale_a4.dig('config', 'lines', 'layout')).to eq('table')
+    expect(sale_a4.dig('config', 'lines', 'ruling')).to eq('grid')
+
     expect(call(cashier, :get, "receipt_templates/#{sale['id']}", { version: 1 })['data']['version']).to eq(1)
-    expect(call(cashier, :get, 'receipt_templates', { document_type: 'refund' })['data'].map { |row| row['document_type'] }).to eq(['refund'])
+    refunds = call(cashier, :get, 'receipt_templates', { document_type: 'refund' })['data']
+    expect(refunds.map { |row| row['document_type'] }.uniq).to eq(['refund'])
+    expect(refunds.map { |row| row['paper'] }).to match_array(Spree::Pos::ReceiptTemplate::PAPERS)
 
     writes = [
       [:post, 'receipt_templates', { from_default: 'sale' }],
@@ -80,7 +94,7 @@ RSpec.describe 'POS receipt templates API', type: :request do
     end
     call(cashier, :get, 'receipt_templates', { include_disabled: 1 })
     expect(response).to have_http_status(:forbidden)
-    expect(Spree::Pos::ReceiptTemplate.for_store(store).count).to eq(6)
+    expect(Spree::Pos::ReceiptTemplate.for_store(store).count).to eq(30)
     expect(Spree::Pos::AuditEntry.where("action LIKE 'receipt_template.%'")).to be_empty
   end
 
@@ -100,22 +114,22 @@ RSpec.describe 'POS receipt templates API', type: :request do
   it "answers not found for another store's template" do
     other = create(:store, default_currency: 'VND', supported_currencies: 'VND')
     Spree::Pos::ReceiptTemplate.ensure_defaults!(other)
-    foreign = Spree::Pos::ReceiptTemplate.for_store(other).find_by!(document_type: 'sale').prefixed_id
+    foreign = Spree::Pos::ReceiptTemplate.for_store(other).find_by!(document_type: 'sale', is_default: true).prefixed_id
     [[:get, "receipt_templates/#{foreign}", {}], [:get, "receipt_templates/#{foreign}/versions", {}],
      [:patch, "receipt_templates/#{foreign}", { expected_version: 1, name: 'X' }],
      [:post, "receipt_templates/#{foreign}/duplicate", {}], [:post, "receipt_templates/#{foreign}/disable", {}]].each do |verb, path, body|
       call(admin, verb, path, body)
       expect(response).to have_http_status(:not_found), "#{verb} #{path}"
     end
-    expect(Spree::Pos::ReceiptTemplate.for_store(other).find_by!(document_type: 'sale').name).to eq('Phiếu bán hàng')
+    expect(Spree::Pos::ReceiptTemplate.for_store(other).find_by!(document_type: 'sale', is_default: true).name).to eq('Phiếu bán hàng')
   end
 
-  it 'creates templates from the built-in default or a config, up to five active per type' do
-    created = call(admin, :post, 'receipt_templates', { from_default: 'sale', name: 'K58', paper: '58mm' })['data']
+  it 'creates templates from the built-in default or a config, up to ten active per type' do
+    created = call(admin, :post, 'receipt_templates', { from_default: 'sale', name: 'K58 Quầy 2', paper: '58mm' })['data']
     expect(response).to have_http_status(:created)
-    expect(created).to include('document_type' => 'sale', 'name' => 'K58', 'paper' => '58mm', 'is_default' => false,
+    expect(created).to include('document_type' => 'sale', 'name' => 'K58 Quầy 2', 'paper' => '58mm', 'is_default' => false,
                                'current_version' => 1, 'updated_by' => include('id' => admin.prefixed_id))
-    expect(created['config']).to eq(Spree::Pos::ReceiptTemplate.default_config('sale'))
+    expect(created['config']).to eq(Spree::Pos::ReceiptTemplate.default_config('sale', paper: '58mm'))
 
     config = Spree::Pos::ReceiptTemplate.default_config('prebill')
     config['footer'] = [{ 'type' => 'text', 'value' => 'Hẹn gặp lại tại {branch.name}', 'align' => 'center' }, { 'type' => 'spacer', 'mm' => 3 }]
@@ -123,12 +137,12 @@ RSpec.describe 'POS receipt templates API', type: :request do
     expect(response).to have_http_status(:created)
     expect(custom).to include('name' => 'Phiếu tạm tính', 'paper' => '80mm', 'config' => config)
 
-    3.times { call(admin, :post, 'receipt_templates', { from_default: 'sale' }) }
+    4.times { call(admin, :post, 'receipt_templates', { from_default: 'sale' }) }
     call(admin, :post, 'receipt_templates', { from_default: 'sale' })
     expect(response).to have_http_status(:conflict)
-    expect(response.parsed_body.dig('error', 'details')).to include('reason' => 'template_limit_reached', 'limit' => 5)
-    expect(Spree::Pos::ReceiptTemplate.for_store(store).active.where(document_type: 'sale').count).to eq(5)
-    expect(audits('receipt_template.create').count).to eq(5)
+    expect(response.parsed_body.dig('error', 'details')).to include('reason' => 'template_limit_reached', 'limit' => 10)
+    expect(Spree::Pos::ReceiptTemplate.for_store(store).active.where(document_type: 'sale').count).to eq(10)
+    expect(audits('receipt_template.create').count).to eq(6)
     expect(audits('receipt_template.create').first.metadata).to include('id' => created['id'], 'version' => 1)
   end
 
@@ -169,7 +183,7 @@ RSpec.describe 'POS receipt templates API', type: :request do
     call(admin, :post, "receipt_templates/#{sale['id']}/duplicate", { name: 'x' * 61 })
     expect(error_pointers).to eq(['/name'])
     expect(Spree::Pos::ReceiptTemplate.find_by_prefix_id(sale['id']).current_version).to eq(1)
-    expect(Spree::Pos::ReceiptTemplate.for_store(store).count).to eq(6)
+    expect(Spree::Pos::ReceiptTemplate.for_store(store).count).to eq(30)
   end
 
   it 'saves QR, barcode, signature blocks and sale copies, and refuses a QR link that is not http(s)' do
@@ -232,8 +246,13 @@ RSpec.describe 'POS receipt templates API', type: :request do
     expect(audits('receipt_template.update').count).to eq(2)
   end
 
-  it 'duplicates, moves the default, restores versions and disables without deleting' do
-    sale = default_of('sale')
+  it 'duplicates, moves the default, restores versions, respects disabled seeded papers and disables without deleting' do
+    initial_sales = call(admin, :get, 'receipt_templates', { document_type: 'sale' })['data']
+    sale = initial_sales.find { |row| row['is_default'] }
+    initial_sales.reject { |row| row['id'] == sale['id'] }.each do |other|
+      call(admin, :post, "receipt_templates/#{other['id']}/disable")
+    end
+
     edited = sale['config'].merge('footer' => [{ 'type' => 'divider', 'style' => 'solid' }])
     call(admin, :patch, "receipt_templates/#{sale['id']}", { expected_version: 1, config: edited })
 
@@ -259,10 +278,11 @@ RSpec.describe 'POS receipt templates API', type: :request do
     disabled = call(admin, :post, "receipt_templates/#{copy['id']}/disable")['data']
     expect(disabled).to include('status' => 'disabled', 'is_default' => false)
     expect(call(admin, :get, "receipt_templates/#{sale['id']}")['data']['is_default']).to be(true)
-    expect(audits('receipt_template.disable').first.metadata).to include('new_default_id' => sale['id'])
+    expect(audits('receipt_template.disable').last.metadata).to include('new_default_id' => sale['id'])
+    # Disabled seeded paper sizes stay disabled on subsequent reads.
     expect(call(admin, :get, 'receipt_templates', { document_type: 'sale' })['data'].map { |row| row['id'] }).to eq([sale['id']])
     all = call(admin, :get, 'receipt_templates', { document_type: 'sale', include_disabled: 1 })['data']
-    expect(all.map { |row| row['id'] }).to contain_exactly(sale['id'], copy['id'])
+    expect(all.map { |row| row['id'] }).to match_array(initial_sales.map { |row| row['id'] } + [copy['id']])
     expect(call(cashier, :get, "receipt_templates/#{copy['id']}")['data']['status']).to eq('disabled')
 
     call(admin, :patch, "receipt_templates/#{copy['id']}", { expected_version: 1, name: 'Lại' })
@@ -273,9 +293,23 @@ RSpec.describe 'POS receipt templates API', type: :request do
     expect(response).to have_http_status(:conflict)
     expect(response.parsed_body.dig('error', 'details', 'reason')).to eq('template_default_required')
 
-    expect(Spree::Pos::ReceiptTemplate.for_store(store).where(document_type: 'sale').count).to eq(2)
+    expect(Spree::Pos::ReceiptTemplate.for_store(store).where(document_type: 'sale').count).to eq(6)
     expect(audits('receipt_template.duplicate').first.metadata).to include('source_id' => sale['id'], 'source_version' => 2)
     expect(audits('receipt_template.restore').first.metadata).to include('restored_version' => 1, 'version' => 3)
-    expect(audits('receipt_template.disable').count).to eq(1)
+    expect(audits('receipt_template.disable').count).to eq(5)
+  end
+
+  it 'marks branch_default and branch_override distinctly when listing templates for a branch' do
+    sale = default_of('sale')
+    rows_without = call(cashier, :get, 'receipt_templates', { document_type: 'sale', branch_id: branch.prefixed_id })['data']
+    expect(rows_without.length).to eq(5)
+    without_override = rows_without.find { |row| row['id'] == sale['id'] }
+    expect(without_override).to include('branch_default' => true, 'branch_override' => false)
+    expect(rows_without.reject { |row| row['id'] == sale['id'] }).to all(include('branch_default' => false, 'branch_override' => false))
+
+    call(admin, :put, "branches/#{branch.prefixed_id}/receipt_templates", { templates: { sale: sale['id'] } })
+    with_override = call(cashier, :get, 'receipt_templates', { document_type: 'sale', branch_id: branch.prefixed_id })['data'].
+                    find { |row| row['id'] == sale['id'] }
+    expect(with_override).to include('branch_default' => true, 'branch_override' => true)
   end
 end

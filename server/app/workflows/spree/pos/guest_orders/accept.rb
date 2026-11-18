@@ -55,7 +55,7 @@ module Spree
             emenu = GuestMenu.emenu?(branch)
             added = Workspaces::AppendItems.call(workspace: workspace, staff: staff, key: "#{key}:append", device: device,
                                                  append_batch_id: guest_order.append_batch_id, items: kept.map { |row| append_row(row) },
-                                                 allow_hidden: emenu, allow_emenu: emenu)
+                                                 allow_hidden: emenu, allow_emenu: emenu, send_kitchen: false)
             tickets = Kitchen::Send.call(workspace: workspace, actor: staff, send_key: "guest_order:#{guest_order.prefixed_id}", device: device,
                                          scope: SaleLine.where(id: added['sale_line_ids'].map { |id| SaleLine.find_by_prefix_id!(id).id }))
             workspace.update!(revision: workspace.revision + 1) if tickets.any?

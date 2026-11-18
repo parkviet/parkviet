@@ -1,8 +1,8 @@
 import { formatMoney } from '@parkviet/pos-shared/money';
 import type { Platform } from '@parkviet/pos-shared/platform-orders';
 import { contextFeature } from '@parkviet/pos-shared/pos-features';
-import { normalizeSalesSettings } from '@parkviet/pos-shared/sales-settings';
 import { rateLabel } from '@parkviet/pos-shared/receipt-template/data';
+import { normalizeSalesSettings } from '@parkviet/pos-shared/sales-settings';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSellingWorkspace } from '../hooks/use-selling-workspace';
@@ -892,7 +892,7 @@ export function WorkspaceTabsView({ selling }: { selling: SellingWorkspace }) {
                       workspace={active}
                       manual={
                         data.branches.find((row) => row.id === active.branch_id)
-                          ?.kitchen_send_trigger === 'manual'
+                          ?.kitchen_send_trigger !== 'on_complete'
                       }
                       // Anyone serving a table or a bar tab sends its
                       // additions; a counter order is sent by the person holding it.

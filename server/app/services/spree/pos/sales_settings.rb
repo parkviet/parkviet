@@ -28,7 +28,9 @@ module Spree
         'inline_variants' => false,
         'scheduled_delivery' => false,
         'auto_print_prebill' => false,
-        'print_void_tickets' => true
+        'print_void_tickets' => true,
+        'auto_print_ready_ticket' => false,
+        'allow_sheet_receipts' => true
       }.freeze
       ENUMS = {
         'cart_order' => %w[newest_first oldest_first],

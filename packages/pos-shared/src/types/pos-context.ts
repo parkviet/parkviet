@@ -1,6 +1,6 @@
 import type { PosFeatureFlags } from '../pos-features';
-import type { SalesSettings } from '../sales-settings';
 import type { PosBranchProfile, PosModules, PosModuleUsage, PosOnboarding } from '../pos-modules';
+import type { SalesSettings } from '../sales-settings';
 import type { LotSelection, SaleLineTrace, WorkspaceTrace } from '../traceability';
 
 // Where a sale came from. A fixed list, kept in step with the server's ORDER_SOURCES:
@@ -52,8 +52,8 @@ export type PosBranch = {
   // Wall-clock time the business day rolls, HH:MM. Missing means 04:00.
   business_day_cutoff?: string;
   staff_session_idle_minutes?: number;
-  // When menu lines reach the kitchen: as the sale completes, or on "send".
-  kitchen_send_trigger?: 'on_complete' | 'manual';
+  // When menu lines reach the kitchen: as the sale completes, as an open order is saved, or on "send".
+  kitchen_send_trigger?: 'on_complete' | 'on_save' | 'manual';
   sales_settings?: SalesSettings;
   // Reasons a sent item may be voided for; `khac` (other) always needs a note.
   void_reasons?: string[];

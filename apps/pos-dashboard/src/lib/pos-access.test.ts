@@ -128,7 +128,7 @@ describe('POS permission gates', () => {
         capabilities: ['pos.topology.manage'],
       } as PosContext,
     }
-    expect(tabs(manager)).toEqual(['overview', 'features', 'platforms', 'hardware'])
+    expect(tabs(manager)).toEqual(['overview', 'features', 'printing', 'platforms', 'hardware'])
     expect(routeAllowed('branch', manager)).toBe(true)
     expect(visibleNav('branch', manager)).toBe(true)
     expect(visibleNav('branch', { permissionKeys: ['read_pos_topology'] })).toBe(false)
@@ -148,7 +148,7 @@ describe('POS permission gates', () => {
       ...manager,
       context: { ...manager.context, capabilities: ['pos.kitchen.manage'] },
     }
-    expect(tabs(kitchenManager)).toEqual(['overview', 'features', 'kitchen'])
+    expect(tabs(kitchenManager)).toEqual(['overview', 'features', 'printing', 'kitchen'])
     expect(routeAllowed('branch', kitchenManager)).toBe(true)
     const cook = {
       ...manager,

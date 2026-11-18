@@ -52,7 +52,10 @@ const document = {
   credit: null,
 };
 
-async function install(page: Page, { copies }: { copies?: number } = {}) {
+async function install(
+  page: Page,
+  { copies, allowSheetReceipts }: { copies?: number; allowSheetReceipts?: boolean } = {},
+) {
   const templates = receiptTemplateApi([
     { id: 'postpl_a', type: 'sale', name: 'Bán hàng K80', paper: '80mm', isDefault: true, footer: 'Mẫu A bản 1', copies },
     { id: 'postpl_b', type: 'sale', name: 'Bán hàng A4', paper: 'a4', footer: 'Mẫu B', marginMm: 10 },
@@ -101,12 +104,15 @@ async function install(page: Page, { copies }: { copies?: number } = {}) {
     if (path === '/pos/context') {
       const branch = url.searchParams.get('branch_id');
       const register = url.searchParams.get('register_id');
+      const salesSettings =
+        allowSheetReceipts === undefined ? undefined : { allow_sheet_receipts: allowSheetReceipts };
       return route.fulfill({
         json: {
           staff: { id: 'stf_1', email: 'staff@example.test', full_name: 'Lan' },
           store: { id: 'store_1', name: 'Park Việt', currency: 'VND', locale: 'vi', timezone: 'Asia/Ho_Chi_Minh' },
           capabilities: branch ? ['pos.shift.open', 'pos.payment.collect'] : [],
-          branches: [{ id: 'br_1', name: 'Chi nhánh 1', status: 'active' }],
+          branches: [{ id: 'br_1', name: 'Chi nhánh 1', status: 'active', sales_settings: salesSettings }],
+          sales_settings: salesSettings,
           registers: branch ? [{ id: 'reg_1', branch_id: 'br_1', name: 'Quầy 1', status: 'active' }] : [],
           shift: register ? { id: 'sh_1', owner_id: 'stf_1', opening_float: '0', currency: 'VND' } : null,
           selection: { branch_id: branch, register_id: register },
@@ -415,4 +421,20 @@ test('reopening the print popup after a print starts from the printed receipt', 
   await expect(page.getByTestId('receipt-sheet')).toContainText('BẢN SAO – lần 2');
   await expect(page.getByTestId('receipt-copies-note')).toHaveCount(0);
   expect(lookups).toBe(2);
+});
+
+test('when allow_sheet_receipts is off, the print popup hides A4 templates and ignores a remembered A4', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('parkviet-pos:receipt-template:sale', 'postpl_b');
+  });
+  await install(page, { allowSheetReceipts: false });
+  await login(page);
+  await openReceipt(page);
+  // Only 1 roll template remains: TemplatePicker hides when choices.length <= 1, and K80 is selected.
+  await expect(page.getByRole('radio', { name: /Bán hàng A4/ })).toHaveCount(0);
+  const sheet = page.getByTestId('receipt-sheet');
+  await expect(sheet).toHaveAttribute('data-paper', '80mm');
+  await expect(sheet).toContainText('Mẫu A bản 1');
 });

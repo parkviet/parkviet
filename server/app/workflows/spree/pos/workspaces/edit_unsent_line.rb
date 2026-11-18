@@ -26,6 +26,7 @@ module Spree
             sale_line = seat_only ? current_line!(workspace, sale_line_id, row_version) : unsent_line!(workspace, sale_line_id, row_version)
             base_quantity = quantity.nil? ? nil : ManageLineItem.change_quantity!(workspace, sale_line, quantity, nil)
             place!(sale_line, place) if place.any?
+            Kitchen::Send.on_save(workspace: workspace, actor: staff, key: key) unless seat_only
             workspace.update!(revision: workspace.revision + 1)
             AuditEntry.record!(store: workspace.store, actor: staff, action: 'workspace.item.update', subject: workspace,
                                metadata: { sale_line_id: sale_line.prefixed_id, quantity: base_quantity, placement: place,

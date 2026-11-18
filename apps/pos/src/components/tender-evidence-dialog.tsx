@@ -144,7 +144,7 @@ export function TenderEvidenceDialog({
   const handedId = useId();
   const tipId = useId();
   // The store's current default payment ticket template, on its paper.
-  const template = usePrintTemplate('payment_ticket');
+  const template = usePrintTemplate('payment_ticket', { branchId: workspace.branch_id });
   const { paper } = template;
   const [printError, setPrintError] = useState('');
   const ticket = invoiceTicketPrintDocument(

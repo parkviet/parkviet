@@ -57,7 +57,7 @@ abstract class Printer implements Built<Printer, PrinterBuilder> {
 
   @BuiltValueField(wireName: r'roles')
   BuiltList<PrinterRolesEnum> get roles;
-  // enum rolesEnum {  receipt,  prebill,  kitchen_ticket,  void_ticket,  cup_label,  checklist,  table_qr,  };
+  // enum rolesEnum {  receipt,  prebill,  kitchen_ticket,  void_ticket,  ready_ticket,  cup_label,  checklist,  table_qr,  };
 
   @BuiltValueField(wireName: r'print_station_device_id')
   String? get printStationDeviceId;
@@ -393,6 +393,8 @@ class PrinterRolesEnum extends EnumClass {
       _$printerRolesEnum_kitchenTicket;
   @BuiltValueEnumConst(wireName: r'void_ticket')
   static const PrinterRolesEnum voidTicket = _$printerRolesEnum_voidTicket;
+  @BuiltValueEnumConst(wireName: r'ready_ticket')
+  static const PrinterRolesEnum readyTicket = _$printerRolesEnum_readyTicket;
   @BuiltValueEnumConst(wireName: r'cup_label')
   static const PrinterRolesEnum cupLabel = _$printerRolesEnum_cupLabel;
   @BuiltValueEnumConst(wireName: r'checklist')

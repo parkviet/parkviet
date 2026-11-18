@@ -193,12 +193,15 @@ export function SetupFnbStep({
           label={t('setup.shopTrigger')}
           value={shop.trigger}
           hint={t(`setup.shopTriggerHint_${shop.trigger}`)}
-          options={(['on_complete', 'manual'] as const).map((value) => ({
+          options={(['on_complete', 'on_save', 'manual'] as const).map((value) => ({
             value,
             label: t(`setup.shopTrigger_${value}`),
           }))}
           onChange={(value) =>
-            dispatch({ type: 'shop-trigger', value: value === 'manual' ? 'manual' : 'on_complete' })
+            dispatch({
+              type: 'shop-trigger',
+              value: value === 'manual' || value === 'on_save' ? value : 'on_complete',
+            })
           }
         />
       ) : null}

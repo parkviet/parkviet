@@ -25,6 +25,8 @@ part 'sales_settings.g.dart';
 /// * [scheduledDelivery] - Show a delivery date and time on a delivery order. The order's business date stays the shift's date.
 /// * [autoPrintPrebill] - Print a pre-bill when an unpaid order is parked or sent to the kitchen. A branch that records pre-bills prints automatically only the first time.
 /// * [printVoidTickets] - Queue a void ticket for the kitchen station printer. When false the void still shows on the kitchen screen and stays on the order.
+/// * [autoPrintReadyTicket] - Queue a runner ready ticket when kitchen items move to `ready` on a kitchen screen.
+/// * [allowSheetReceipts] - Offer sheet-paper templates (A4, A5, A6) in the counter print dialog, printed through the browser print dialog.
 @BuiltValue()
 abstract class SalesSettings
     implements Built<SalesSettings, SalesSettingsBuilder> {
@@ -73,6 +75,14 @@ abstract class SalesSettings
   @BuiltValueField(wireName: r'print_void_tickets')
   bool? get printVoidTickets;
 
+  /// Queue a runner ready ticket when kitchen items move to `ready` on a kitchen screen.
+  @BuiltValueField(wireName: r'auto_print_ready_ticket')
+  bool? get autoPrintReadyTicket;
+
+  /// Offer sheet-paper templates (A4, A5, A6) in the counter print dialog, printed through the browser print dialog.
+  @BuiltValueField(wireName: r'allow_sheet_receipts')
+  bool? get allowSheetReceipts;
+
   SalesSettings._();
 
   factory SalesSettings([void updates(SalesSettingsBuilder b)]) =
@@ -92,7 +102,9 @@ abstract class SalesSettings
     ..inlineVariants = false
     ..scheduledDelivery = false
     ..autoPrintPrebill = false
-    ..printVoidTickets = true;
+    ..printVoidTickets = true
+    ..autoPrintReadyTicket = false
+    ..allowSheetReceipts = true;
 
   @BuiltValueSerializer(custom: true)
   static Serializer<SalesSettings> get serializer =>
@@ -199,6 +211,20 @@ class _$SalesSettingsSerializer implements PrimitiveSerializer<SalesSettings> {
       yield r'print_void_tickets';
       yield serializers.serialize(
         object.printVoidTickets,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.autoPrintReadyTicket != null) {
+      yield r'auto_print_ready_ticket';
+      yield serializers.serialize(
+        object.autoPrintReadyTicket,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.allowSheetReceipts != null) {
+      yield r'allow_sheet_receipts';
+      yield serializers.serialize(
+        object.allowSheetReceipts,
         specifiedType: const FullType(bool),
       );
     }
@@ -331,6 +357,22 @@ class _$SalesSettingsSerializer implements PrimitiveSerializer<SalesSettings> {
           ) as bool?;
           if (valueDes == null) continue;
           result.printVoidTickets = valueDes;
+          break;
+        case r'auto_print_ready_ticket':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.autoPrintReadyTicket = valueDes;
+          break;
+        case r'allow_sheet_receipts':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.allowSheetReceipts = valueDes;
           break;
         default:
           unhandled.add(key);

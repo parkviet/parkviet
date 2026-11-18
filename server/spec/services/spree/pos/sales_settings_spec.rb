@@ -24,17 +24,22 @@ RSpec.describe Spree::Pos::SalesSettings do
       expect(merged).to include('show_stock' => false, 'payment_chime' => 'off', 'allow_oversell' => true)
     end
 
-    it 'accepts the four selling switches and rejects a value that is not boolean' do
+    it 'accepts the selling switches and rejects a value that is not boolean' do
       expect(described_class.normalize(nil)).to include(
-        'inline_variants' => false, 'scheduled_delivery' => false, 'auto_print_prebill' => false, 'print_void_tickets' => true
+        'inline_variants' => false, 'scheduled_delivery' => false, 'auto_print_prebill' => false,
+        'print_void_tickets' => true, 'auto_print_ready_ticket' => false, 'allow_sheet_receipts' => true
       )
       merged = described_class.merge({}, 'inline_variants' => true, 'scheduled_delivery' => true,
-                                          'auto_print_prebill' => true, 'print_void_tickets' => false)
+                                          'auto_print_prebill' => true, 'print_void_tickets' => false,
+                                          'auto_print_ready_ticket' => true, 'allow_sheet_receipts' => false)
       expect(merged).to include(
-        'inline_variants' => true, 'scheduled_delivery' => true, 'auto_print_prebill' => true, 'print_void_tickets' => false,
+        'inline_variants' => true, 'scheduled_delivery' => true, 'auto_print_prebill' => true,
+        'print_void_tickets' => false, 'auto_print_ready_ticket' => true, 'allow_sheet_receipts' => false,
         'allow_oversell' => true
       )
       expect { described_class.merge({}, 'print_void_tickets' => 'yes') }.to raise_error(described_class::Invalid)
+      expect { described_class.merge({}, 'auto_print_ready_ticket' => 'yes') }.to raise_error(described_class::Invalid)
+      expect { described_class.merge({}, 'allow_sheet_receipts' => 1) }.to raise_error(described_class::Invalid)
       expect { described_class.merge({}, 'inline_variants' => 1) }.to raise_error(described_class::Invalid)
     end
   end

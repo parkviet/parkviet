@@ -65,6 +65,7 @@ export type PrinterRole =
   | 'prebill'
   | 'kitchen_ticket'
   | 'void_ticket'
+  | 'ready_ticket'
   | 'cup_label'
   | 'checklist'
   | 'table_qr';

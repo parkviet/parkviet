@@ -53,7 +53,7 @@ export function PrebillDialog({
   const { t } = useTranslation();
   const card = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  const template = usePrintTemplate('prebill');
+  const template = usePrintTemplate('prebill', { branchId: workspace.branch_id });
   const { paper } = template;
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');

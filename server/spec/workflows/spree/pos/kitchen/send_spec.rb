@@ -128,4 +128,30 @@ RSpec.describe Spree::Pos::Kitchen::Send do
     expect { ticket.items.first.update!(quantity: 5) }.to raise_error(ActiveRecord::RecordInvalid)
     expect(ticket.items.first.update!(status: 'preparing')).to be(true)
   end
+
+  it 'keeps quick counter items unsent on `on_save` until the draft is parked or paid' do
+    branch.update!(kitchen_send_trigger: 'on_save')
+    add_menu(sale, size(milk_tea))
+    expect(tickets_of(sale)).to be_empty
+
+    Spree::Pos::Workspaces::ChangeStatus.call(
+      workspace: sale.workspace.reload, staff: sale.cashier, status: 'parked',
+      revision: sale.workspace.revision, lease_generation: sale.workspace.lease_generation,
+      editor_id: sale.editor_id, key: SecureRandom.uuid
+    )
+    expect(tickets_of(sale).size).to eq(1)
+    expect(menu_lines(sale).sole.kitchen_sent_quantity).to eq(1)
+
+    Spree::Pos::Workspaces::ChangeStatus.call(
+      workspace: sale.workspace.reload, staff: sale.cashier, status: 'editing',
+      revision: sale.workspace.revision, lease_generation: sale.workspace.lease_generation,
+      editor_id: sale.editor_id, key: SecureRandom.uuid
+    )
+    add_menu(sale, size(beer))
+    expect(tickets_of(sale).size).to eq(1)
+
+    described_class.on_complete(workspace: sale.workspace.reload, actor: sale.cashier)
+    expect(tickets_of(sale).size).to eq(2)
+    expect(tickets_of(sale).last.items.sole.name).to eq('Bia')
+  end
 end

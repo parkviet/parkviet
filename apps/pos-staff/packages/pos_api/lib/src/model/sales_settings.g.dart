@@ -144,6 +144,10 @@ class _$SalesSettings extends SalesSettings {
   final bool? autoPrintPrebill;
   @override
   final bool? printVoidTickets;
+  @override
+  final bool? autoPrintReadyTicket;
+  @override
+  final bool? allowSheetReceipts;
 
   factory _$SalesSettings([void Function(SalesSettingsBuilder)? updates]) =>
       (SalesSettingsBuilder()..update(updates))._build();
@@ -161,7 +165,9 @@ class _$SalesSettings extends SalesSettings {
       this.inlineVariants,
       this.scheduledDelivery,
       this.autoPrintPrebill,
-      this.printVoidTickets})
+      this.printVoidTickets,
+      this.autoPrintReadyTicket,
+      this.allowSheetReceipts})
       : super._();
   @override
   SalesSettings rebuild(void Function(SalesSettingsBuilder) updates) =>
@@ -186,7 +192,9 @@ class _$SalesSettings extends SalesSettings {
         inlineVariants == other.inlineVariants &&
         scheduledDelivery == other.scheduledDelivery &&
         autoPrintPrebill == other.autoPrintPrebill &&
-        printVoidTickets == other.printVoidTickets;
+        printVoidTickets == other.printVoidTickets &&
+        autoPrintReadyTicket == other.autoPrintReadyTicket &&
+        allowSheetReceipts == other.allowSheetReceipts;
   }
 
   @override
@@ -205,6 +213,8 @@ class _$SalesSettings extends SalesSettings {
     _$hash = $jc(_$hash, scheduledDelivery.hashCode);
     _$hash = $jc(_$hash, autoPrintPrebill.hashCode);
     _$hash = $jc(_$hash, printVoidTickets.hashCode);
+    _$hash = $jc(_$hash, autoPrintReadyTicket.hashCode);
+    _$hash = $jc(_$hash, allowSheetReceipts.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -224,7 +234,9 @@ class _$SalesSettings extends SalesSettings {
           ..add('inlineVariants', inlineVariants)
           ..add('scheduledDelivery', scheduledDelivery)
           ..add('autoPrintPrebill', autoPrintPrebill)
-          ..add('printVoidTickets', printVoidTickets))
+          ..add('printVoidTickets', printVoidTickets)
+          ..add('autoPrintReadyTicket', autoPrintReadyTicket)
+          ..add('allowSheetReceipts', allowSheetReceipts))
         .toString();
   }
 }
@@ -294,6 +306,16 @@ class SalesSettingsBuilder
   set printVoidTickets(bool? printVoidTickets) =>
       _$this._printVoidTickets = printVoidTickets;
 
+  bool? _autoPrintReadyTicket;
+  bool? get autoPrintReadyTicket => _$this._autoPrintReadyTicket;
+  set autoPrintReadyTicket(bool? autoPrintReadyTicket) =>
+      _$this._autoPrintReadyTicket = autoPrintReadyTicket;
+
+  bool? _allowSheetReceipts;
+  bool? get allowSheetReceipts => _$this._allowSheetReceipts;
+  set allowSheetReceipts(bool? allowSheetReceipts) =>
+      _$this._allowSheetReceipts = allowSheetReceipts;
+
   SalesSettingsBuilder() {
     SalesSettings._defaults(this);
   }
@@ -314,6 +336,8 @@ class SalesSettingsBuilder
       _scheduledDelivery = $v.scheduledDelivery;
       _autoPrintPrebill = $v.autoPrintPrebill;
       _printVoidTickets = $v.printVoidTickets;
+      _autoPrintReadyTicket = $v.autoPrintReadyTicket;
+      _allowSheetReceipts = $v.allowSheetReceipts;
       _$v = null;
     }
     return this;
@@ -348,6 +372,8 @@ class SalesSettingsBuilder
           scheduledDelivery: scheduledDelivery,
           autoPrintPrebill: autoPrintPrebill,
           printVoidTickets: printVoidTickets,
+          autoPrintReadyTicket: autoPrintReadyTicket,
+          allowSheetReceipts: allowSheetReceipts,
         );
     replace(_$result);
     return _$result;

@@ -10,6 +10,9 @@ const PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum
     _$posKitchenSettingsUpdateRequestKitchenSendTriggerEnum_onComplete =
     const PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum._('onComplete');
 const PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum
+    _$posKitchenSettingsUpdateRequestKitchenSendTriggerEnum_onSave =
+    const PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum._('onSave');
+const PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum
     _$posKitchenSettingsUpdateRequestKitchenSendTriggerEnum_manual =
     const PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum._('manual');
 
@@ -19,6 +22,8 @@ PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum
   switch (name) {
     case 'onComplete':
       return _$posKitchenSettingsUpdateRequestKitchenSendTriggerEnum_onComplete;
+    case 'onSave':
+      return _$posKitchenSettingsUpdateRequestKitchenSendTriggerEnum_onSave;
     case 'manual':
       return _$posKitchenSettingsUpdateRequestKitchenSendTriggerEnum_manual;
     default:
@@ -30,6 +35,7 @@ final BuiltSet<PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum>
     _$posKitchenSettingsUpdateRequestKitchenSendTriggerEnumValues = BuiltSet<
         PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum>(const <PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum>[
   _$posKitchenSettingsUpdateRequestKitchenSendTriggerEnum_onComplete,
+  _$posKitchenSettingsUpdateRequestKitchenSendTriggerEnum_onSave,
   _$posKitchenSettingsUpdateRequestKitchenSendTriggerEnum_manual,
 ]);
 
@@ -43,10 +49,12 @@ class _$PosKitchenSettingsUpdateRequestKitchenSendTriggerEnumSerializer
             PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
     'onComplete': 'on_complete',
+    'onSave': 'on_save',
     'manual': 'manual',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'on_complete': 'onComplete',
+    'on_save': 'onSave',
     'manual': 'manual',
   };
 

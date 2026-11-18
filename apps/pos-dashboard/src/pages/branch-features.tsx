@@ -1,22 +1,20 @@
 import { branchSettingVisible } from '@parkviet/pos-shared/module-registry'
 import { POS_FEATURES, type PosFeature } from '@parkviet/pos-shared/pos-features'
 import { describeFailure, failureStatus, posFailureKey } from '@parkviet/pos-shared/request-failure'
-import { normalizeSalesSettings, type SalesSettings } from '@parkviet/pos-shared/sales-settings'
 import type { PosBranch } from '@parkviet/pos-shared/types/pos-context'
-import { useStore } from '@spree/dashboard-core'
-import { Button } from '@spree/dashboard-ui'
+import { usePermissions, useStore } from '@spree/dashboard-core'
 import {
   ListChecksIcon,
-  PrinterIcon,
   ReceiptTextIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
   StoreIcon,
 } from '@spree/dashboard-ui/icons'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { createContext, type ReactNode, useContext, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { SalesDraftProvider, SalesFields, SalesSaveBar } from '../components/branch-auto-print'
 import { useBranchScope } from '../components/branch-detail'
 import { BranchLabelFormats } from '../components/branch-label-formats'
 import {
@@ -25,15 +23,13 @@ import {
   featureChangeText,
 } from '../components/feature-switch-row'
 import { SectionNav } from '../components/section-nav'
-import { ModelCard, ModelNotice, ModelSelect, ModelState } from '../components/setup/model-ui'
+import { ModelCard, ModelNotice, ModelState } from '../components/setup/model-ui'
 import { ToggleRow } from '../components/toggle-row'
 import { setFeature, useBranchFeatures } from '../hooks/use-branch-features'
 import { useKioskSettings, useKioskWrite } from '../hooks/use-kiosk-settings'
-import { useKitchenSettings, useKitchenWrite } from '../hooks/use-kitchen'
 import { refreshBusinessModel } from '../hooks/use-onboarding'
 import { usePosSession } from '../hooks/use-pos-session'
-import { posRequest } from '../lib/pos-request'
-import { posKey } from '../lib/query-keys'
+import { routeAllowed } from '../lib/pos-access'
 import { BranchModuleSwitches } from './business-model'
 
 const RULE_FEATURES = [
@@ -59,6 +55,7 @@ const ORDER_FEATURES = ['qr_order'] as const satisfies readonly PosFeature[]
 // reads while measured goods are on.
 export function BranchFeaturesTab() {
   const { t } = useTranslation()
+  const { permissionKeys } = usePermissions()
   const { context } = usePosSession()
   const { branch, access, branchWrite, modules, storeId } = useBranchScope()
   const sections = [
@@ -66,10 +63,10 @@ export function BranchFeaturesTab() {
     ['features-rules', 'rules'],
     ['features-display', 'display'],
     ['features-utilities', 'utilities'],
-    ['features-auto-print', 'print'],
     ['features-orders', 'orders'],
   ].map(([id, key]) => ({ id, label: t(`featuresSections.${key}`) }))
   const measured = branchSettingVisible({ ...context.data, modules }, 'label-formats')
+  const printingAllowed = routeAllowed('branch-printing', { permissionKeys, context: context.data })
   return (
     <SalesDraftProvider branch={branch} storeId={storeId} canWrite={branchWrite || access.write}>
       <div className="flex items-start gap-6">
@@ -123,18 +120,19 @@ export function BranchFeaturesTab() {
             <FeatureList features={UTILITY_FEATURES} listLabel={t('featuresSections.utilities')} />
             <SalesFields keys={['order_note', 'coupons', 'payment_chime']} />
           </ModelCard>
-          <ModelCard
-            title={t('featuresSections.print')}
-            id="features-auto-print"
-            icon={<PrinterIcon />}
-          >
-            <p className="text-sm text-muted-foreground">{t('featuresSections.printIntro')}</p>
-            <KitchenTrigger />
-            <SalesFields
-              keys={['auto_print_receipt', 'auto_print_prebill', 'print_void_tickets']}
-            />
-            <CupAutoPrint />
-          </ModelCard>
+          <p className="text-sm text-muted-foreground">
+            {printingAllowed ? (
+              <Link
+                to={`/${storeId}/branches/${branch.id}/printing` as string}
+                hash="printing-auto"
+                className="underline"
+              >
+                {t('branchPrinting.movedFromFeatures')}
+              </Link>
+            ) : (
+              t('branchPrinting.movedFromFeatures')
+            )}
+          </p>
           <ModelCard
             title={t('featuresSections.orders')}
             id="features-orders"
@@ -316,225 +314,6 @@ function BranchFeatures({
   )
 }
 
-type SalesKey = keyof SalesSettings
-const SalesDraft = createContext<{
-  draft: SalesSettings
-  base: SalesSettings
-  set: (patch: Partial<SalesSettings>) => void
-  save: () => void
-  reset: () => void
-  busy: boolean
-  canWrite: boolean
-  notice: { text: string; failed: boolean } | null
-} | null>(null)
-
-function useSalesDraft() {
-  const value = useContext(SalesDraft)
-  if (!value) throw new Error('sales draft is missing')
-  return value
-}
-
-function SalesDraftProvider({
-  branch,
-  storeId,
-  canWrite,
-  children,
-}: {
-  branch: PosBranch
-  storeId: string
-  canWrite: boolean
-  children: ReactNode
-}) {
-  const { t } = useTranslation()
-  const client = useQueryClient()
-  const saved = JSON.stringify(branch.sales_settings ?? {})
-  const base = normalizeSalesSettings(branch.sales_settings)
-  const [draft, setDraft] = useState(base)
-  const [busy, setBusy] = useState(false)
-  const [notice, setNotice] = useState<{ text: string; failed: boolean } | null>(null)
-  useEffect(() => {
-    setDraft(normalizeSalesSettings(JSON.parse(saved) as unknown))
-  }, [saved])
-  const dirty = JSON.stringify(draft) !== JSON.stringify(base)
-  useEffect(() => {
-    if (!dirty) return
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault()
-    }
-    window.addEventListener('beforeunload', warn)
-    return () => window.removeEventListener('beforeunload', warn)
-  }, [dirty])
-  async function save() {
-    if (!dirty || busy || !canWrite) return
-    setBusy(true)
-    setNotice(null)
-    try {
-      await posRequest('PUT', `/pos/branches/${branch.id}/sales_settings`, { body: draft })
-      await client.invalidateQueries({ queryKey: posKey(storeId, 'branches') })
-      await refreshBusinessModel(storeId)
-      setNotice({ text: t('saved'), failed: false })
-    } catch (error) {
-      setNotice({ text: describeFailure(error, t), failed: true })
-    } finally {
-      setBusy(false)
-    }
-  }
-  return (
-    <SalesDraft.Provider
-      value={{
-        draft,
-        base,
-        set: (patch) => setDraft((current) => ({ ...current, ...patch })),
-        save: () => void save(),
-        reset: () => setDraft(base),
-        busy,
-        canWrite,
-        notice,
-      }}
-    >
-      {children}
-    </SalesDraft.Provider>
-  )
-}
-
-function SalesFields({ keys }: { keys: SalesKey[] }) {
-  const { t } = useTranslation()
-  const { draft, set, canWrite, busy } = useSalesDraft()
-  const { modules } = useBranchScope()
-  const kitchenOff = modules != null && modules['fnb.kitchen'] !== true
-  return (
-    <div className="space-y-4">
-      {keys.map((key) => {
-        if (key === 'cart_order')
-          return (
-            <ModelSelect
-              key={key}
-              label={t('salesCartOrder')}
-              value={draft.cart_order}
-              disabled={!canWrite || busy}
-              options={[
-                { value: 'oldest_first', label: t('salesCartOldest') },
-                { value: 'newest_first', label: t('salesCartNewest') },
-              ]}
-              onChange={(value) =>
-                set({ cart_order: value === 'newest_first' ? 'newest_first' : 'oldest_first' })
-              }
-            />
-          )
-        if (key === 'payment_chime')
-          return (
-            <ModelSelect
-              key={key}
-              label={t('salesChime')}
-              value={draft.payment_chime}
-              disabled={!canWrite || busy}
-              options={[
-                { value: 'default', label: t('salesChimeDefault') },
-                { value: 'off', label: t('salesChimeOff') },
-              ]}
-              onChange={(value) => set({ payment_chime: value === 'off' ? 'off' : 'default' })}
-            />
-          )
-        const label = {
-          allow_oversell: 'salesAllowOversell',
-          warn_below_cost: 'salesWarnBelowCost',
-          show_stock: 'salesShowStock',
-          show_cost: 'salesShowCost',
-          order_note: 'salesOrderNote',
-          coupons: 'salesCoupons',
-          auto_print_receipt: 'salesAutoPrint',
-          inline_variants: 'salesInlineVariants',
-          scheduled_delivery: 'salesScheduledDelivery',
-          auto_print_prebill: 'salesAutoPrintPrebill',
-          print_void_tickets: 'salesPrintVoidTickets',
-        }[key]
-        const hint = {
-          allow_oversell: 'salesAllowOversellHint',
-          warn_below_cost: 'salesWarnBelowCostHint',
-          show_stock: 'salesShowStockHint',
-          show_cost: 'salesShowCostHint',
-          order_note: 'salesOrderNoteHint',
-          coupons: 'salesCouponsHint',
-          auto_print_receipt: 'salesAutoPrintHint',
-          inline_variants: 'salesInlineVariantsHint',
-          scheduled_delivery: 'salesScheduledDeliveryHint',
-          auto_print_prebill: 'salesAutoPrintPrebillHint',
-          print_void_tickets: 'salesPrintVoidTicketsHint',
-        }[key]
-        if (!label) return null
-        const needsKitchen = key === 'print_void_tickets' && kitchenOff
-        return (
-          <div key={key}>
-            <ToggleRow
-              checked={draft[key] === true}
-              disabled={!canWrite || busy || needsKitchen}
-              switchLabel={t(label)}
-              onChange={(value) => set({ [key]: value })}
-              label={t(label)}
-              description={hint ? t(hint) : undefined}
-              extra={
-                needsKitchen ? (
-                  <p role="note">{t('salesPrintVoidTicketsNeedsKitchen')}</p>
-                ) : key === 'allow_oversell' ? (
-                  <p role="note">{t('salesAllowOversellWarn')}</p>
-                ) : null
-              }
-            />
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function SalesSaveBar() {
-  const { t } = useTranslation()
-  const { draft, base, save, reset, busy, canWrite, notice } = useSalesDraft()
-  const dirty = JSON.stringify(draft) !== JSON.stringify(base)
-  if (!dirty && !notice) return null
-  return (
-    <div className="sticky bottom-0 flex flex-wrap items-center gap-2 rounded-md border bg-background p-3">
-      <ModelNotice notice={notice} />
-      {dirty && canWrite ? (
-        <>
-          <Button type="button" disabled={busy} onClick={save}>
-            {busy ? t('waiting') : t('salesSave')}
-          </Button>
-          <Button type="button" variant="outline" disabled={busy} onClick={reset}>
-            {t('salesDiscard')}
-          </Button>
-        </>
-      ) : null}
-    </div>
-  )
-}
-
-function KitchenTrigger() {
-  const { t } = useTranslation()
-  const { branch, access } = useBranchScope()
-  const settings = useKitchenSettings(branch.id)
-  const write = useKitchenWrite()
-  if (!settings.data) return null
-  return (
-    <ModelSelect
-      label={t('branchKitchen.trigger')}
-      value={settings.data.kitchen_send_trigger}
-      disabled={!access.write || write.isPending}
-      options={[
-        { value: 'on_complete', label: t('branchKitchen.trigger_on_complete') },
-        { value: 'manual', label: t('branchKitchen.trigger_manual') },
-      ]}
-      onChange={(value) =>
-        void write.mutateAsync({
-          method: 'PUT',
-          path: '/pos/kitchen_settings',
-          body: { branch_id: branch.id, kitchen_send_trigger: value },
-        })
-      }
-    />
-  )
-}
-
 function QrModeField() {
   const { t } = useTranslation()
   const { branch, modules, storeId } = useBranchScope()
@@ -563,30 +342,6 @@ function KioskKitchenField() {
       }
       label={t('kiosk.kitchenBeforePayment')}
       description={t('kiosk.kitchenBeforePaymentHint')}
-    />
-  )
-}
-
-function CupAutoPrint() {
-  const { t } = useTranslation()
-  const { branch, access } = useBranchScope()
-  const write = useKitchenWrite()
-  const [on, setOn] = useState(true)
-  return (
-    <ToggleRow
-      checked={on}
-      disabled={!access.write || write.isPending}
-      switchLabel={t('salesCupAutoPrint')}
-      onChange={(value) => {
-        setOn(value)
-        void write.mutateAsync({
-          method: 'PUT',
-          path: '/pos/cup_label_settings',
-          body: { branch_id: branch.id, auto_print: value },
-        })
-      }}
-      label={t('salesCupAutoPrint')}
-      description={t('salesCupAutoPrintHint')}
     />
   )
 }

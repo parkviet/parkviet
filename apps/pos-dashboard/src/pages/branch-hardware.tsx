@@ -18,6 +18,7 @@ const FIX_PATHS: Record<HardwareCheckKey, (branchId: string) => string> = {
   receipt_printer: (branchId) => `/branches/${branchId}/printing`,
   kitchen_printer: (branchId) => `/branches/${branchId}/printing`,
   cup_label_printer: (branchId) => `/branches/${branchId}/kitchen`,
+  ready_ticket_printer: (branchId) => `/branches/${branchId}/printing`,
   kitchen_stations: (branchId) => `/branches/${branchId}/kitchen`,
   print_station: () => '/devices',
   customer_display: () => '/devices',

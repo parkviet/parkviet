@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_17_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_18_113500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -2559,7 +2559,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_190000) do
     t.check_constraint "jsonb_typeof(weekend_days) = 'array'::text", name: "chk_pos_branches_weekend_days"
     t.check_constraint "kiosk_idle_seconds >= 15 AND kiosk_idle_seconds <= 600", name: "chk_pos_branches_kiosk_idle"
     t.check_constraint "kiosk_qr_timeout_seconds >= 60 AND kiosk_qr_timeout_seconds <= 900", name: "chk_pos_branches_kiosk_qr_timeout"
-    t.check_constraint "kitchen_send_trigger::text = ANY (ARRAY['on_complete'::character varying, 'manual'::character varying]::text[])", name: "chk_pos_branches_kitchen_send_trigger"
+    t.check_constraint "kitchen_send_trigger::text = ANY (ARRAY['on_complete'::character varying, 'on_save'::character varying, 'manual'::character varying]::text[])", name: "chk_pos_branches_kitchen_send_trigger"
     t.check_constraint "lot_selection::text = ANY (ARRAY['fefo'::character varying, 'cashier_pick'::character varying]::text[])", name: "chk_pos_branches_lot_selection"
     t.check_constraint "max_pause_minutes >= 1 AND max_pause_minutes <= 240", name: "chk_pos_branches_max_pause"
     t.check_constraint "profile_version >= 1", name: "chk_pos_branches_profile_version"
@@ -4021,7 +4021,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_190000) do
     t.index ["source_type", "source_id"], name: "idx_pos_print_jobs_source"
     t.index ["store_id", "idempotency_key"], name: "idx_pos_print_jobs_key", unique: true
     t.check_constraint "attempts >= 0", name: "chk_pos_print_jobs_attempts"
-    t.check_constraint "kind::text = ANY (ARRAY['receipt'::character varying, 'prebill'::character varying, 'kitchen_ticket'::character varying, 'void_ticket'::character varying, 'cup_label'::character varying, 'checklist'::character varying, 'table_qr'::character varying, 'test'::character varying]::text[])", name: "chk_pos_print_jobs_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['receipt'::character varying, 'prebill'::character varying, 'kitchen_ticket'::character varying, 'void_ticket'::character varying, 'ready_ticket'::character varying, 'cup_label'::character varying, 'checklist'::character varying, 'table_qr'::character varying, 'test'::character varying]::text[])", name: "chk_pos_print_jobs_kind"
     t.check_constraint "status::text = ANY (ARRAY['queued'::character varying, 'claimed'::character varying, 'printed'::character varying, 'failed'::character varying, 'canceled'::character varying]::text[])", name: "chk_pos_print_jobs_status"
   end
 

@@ -161,7 +161,12 @@ export function SetupPreviewStep({
           <p className="text-sm text-muted-foreground">
             {t('setup.previewKitchen', {
               trigger: t(
-                `setup.shopTrigger_${profile.branch_defaults.kitchen_send_trigger === 'manual' ? 'manual' : 'on_complete'}`,
+                `setup.shopTrigger_${
+                  profile.branch_defaults.kitchen_send_trigger === 'manual' ||
+                  profile.branch_defaults.kitchen_send_trigger === 'on_save'
+                    ? profile.branch_defaults.kitchen_send_trigger
+                    : 'on_complete'
+                }`,
               ),
               stations: profile.kitchen_stations
                 .map((kind) => t(`setup.shopStation_${kind}`))

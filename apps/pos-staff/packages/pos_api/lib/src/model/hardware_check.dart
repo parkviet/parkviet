@@ -19,7 +19,7 @@ abstract class HardwareCheck
     implements Built<HardwareCheck, HardwareCheckBuilder> {
   @BuiltValueField(wireName: r'key')
   HardwareCheckKeyEnum get key;
-  // enum keyEnum {  receipt_printer,  kitchen_printer,  cup_label_printer,  kitchen_stations,  print_station,  customer_display,  server,  einvoice,  };
+  // enum keyEnum {  receipt_printer,  kitchen_printer,  cup_label_printer,  ready_ticket_printer,  kitchen_stations,  print_station,  customer_display,  server,  einvoice,  };
 
   /// `not_needed` when the branch does not use it (module or feature off, no printer behind a print station, no e-invoices).
   @BuiltValueField(wireName: r'status')
@@ -139,6 +139,9 @@ class HardwareCheckKeyEnum extends EnumClass {
   @BuiltValueEnumConst(wireName: r'cup_label_printer')
   static const HardwareCheckKeyEnum cupLabelPrinter =
       _$hardwareCheckKeyEnum_cupLabelPrinter;
+  @BuiltValueEnumConst(wireName: r'ready_ticket_printer')
+  static const HardwareCheckKeyEnum readyTicketPrinter =
+      _$hardwareCheckKeyEnum_readyTicketPrinter;
   @BuiltValueEnumConst(wireName: r'kitchen_stations')
   static const HardwareCheckKeyEnum kitchenStations =
       _$hardwareCheckKeyEnum_kitchenStations;

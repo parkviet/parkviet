@@ -108,8 +108,12 @@ function TriggerCard({ settings, loading }: { settings?: KitchenSettings; loadin
             </p>
           )}
           <p className="text-sm">
-            <Link to={`/${storeId}/branches/${branch.id}/features` as string} className="underline">
-              {t('salesMoved')}
+            <Link
+              to={`/${storeId}/branches/${branch.id}/printing` as string}
+              hash="printing-auto"
+              className="underline"
+            >
+              {t('branchPrinting.movedFromFeatures')}
             </Link>
           </p>
         </>

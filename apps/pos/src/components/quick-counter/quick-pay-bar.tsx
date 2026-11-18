@@ -142,7 +142,7 @@ export function QuickPayBar({
     active.operational_status === 'editing' &&
     !paying;
   const branch = data?.branches.find((row) => row.id === active.branch_id);
-  const canSend = kitchenOn && branch?.kitchen_send_trigger !== 'on_complete';
+  const canSend = kitchenOn && branch?.kitchen_send_trigger === 'manual';
   const pending = canSend ? pendingKitchenUnits(active) : 0;
   const cashPayable = open && Boolean(cashMethod) && !unresolved && eaterDue > 0n && mealKnown;
   // A completed order cannot go to the kitchen any more: dishes still to

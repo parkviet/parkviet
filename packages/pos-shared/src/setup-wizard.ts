@@ -26,7 +26,7 @@ export const SUMMARY_STEP: SetupStep = 6;
 export const MAX_STATIONS = 4;
 export const STATION_NAME_MAX = 80;
 
-export type KitchenSendTrigger = 'on_complete' | 'manual';
+export type KitchenSendTrigger = 'on_complete' | 'on_save' | 'manual';
 export type ShopStationKind = 'prep' | 'bar';
 
 // The F&B "set up the shop" step: kitchen stations to create, the tax
@@ -84,7 +84,11 @@ export function shopDefaults(
     stations: kinds.map((kind) => ({ kind, name: stationName(kind) })),
     foodTax: pick(catalogue.menu_tax_defaults.food),
     alcoholTax: pick(catalogue.menu_tax_defaults.alcohol),
-    trigger: profile.branch_defaults.kitchen_send_trigger === 'manual' ? 'manual' : 'on_complete',
+    trigger:
+      profile.branch_defaults.kitchen_send_trigger === 'manual' ||
+      profile.branch_defaults.kitchen_send_trigger === 'on_save'
+        ? profile.branch_defaults.kitchen_send_trigger
+        : 'on_complete',
   };
 }
 
@@ -331,20 +335,44 @@ export function setupReducer(state: SetupState, action: SetupAction): SetupState
       const profile = action.profiles.find((item) => item.key === action.key);
       if (!isAvailable(profile) || state.profileKeys.includes(profile.key)) return state;
       if (!state.profileKey)
-        return { ...withProfile(state, profile.key, action.profiles), choice: profile.key, declined: false };
-      return { ...state, profileKeys: [...state.profileKeys, profile.key], choice: profile.key, shop: null };
+        return {
+          ...withProfile(state, profile.key, action.profiles),
+          choice: profile.key,
+          declined: false,
+        };
+      return {
+        ...state,
+        profileKeys: [...state.profileKeys, profile.key],
+        choice: profile.key,
+        shop: null,
+      };
     }
     case 'remove-profile': {
       const keys = state.profileKeys.filter((key) => key !== action.key);
       if (!keys.length)
-        return { ...state, profileKey: null, profileKeys: [], choice: null, shop: null, disabledModules: [] };
+        return {
+          ...state,
+          profileKey: null,
+          profileKeys: [],
+          choice: null,
+          shop: null,
+          disabledModules: [],
+        };
       if (keys[0] === state.profileKey) return { ...state, profileKeys: keys, shop: null };
-      return { ...withProfile(state, keys[0], action.profiles, keys), choice: keys[0], declined: false };
+      return {
+        ...withProfile(state, keys[0], action.profiles, keys),
+        choice: keys[0],
+        declined: false,
+      };
     }
     case 'make-primary': {
       if (!state.profileKeys.includes(action.key) || state.profileKey === action.key) return state;
       const keys = [action.key, ...state.profileKeys.filter((key) => key !== action.key)];
-      return { ...withProfile(state, action.key, action.profiles, keys), choice: action.key, declined: false };
+      return {
+        ...withProfile(state, action.key, action.profiles, keys),
+        choice: action.key,
+        declined: false,
+      };
     }
     case 'answer-interest': {
       const choice = state.choice;

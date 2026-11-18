@@ -14,6 +14,8 @@ const PrintJobKindEnum _$printJobKindEnum_kitchenTicket =
     const PrintJobKindEnum._('kitchenTicket');
 const PrintJobKindEnum _$printJobKindEnum_voidTicket =
     const PrintJobKindEnum._('voidTicket');
+const PrintJobKindEnum _$printJobKindEnum_readyTicket =
+    const PrintJobKindEnum._('readyTicket');
 const PrintJobKindEnum _$printJobKindEnum_cupLabel =
     const PrintJobKindEnum._('cupLabel');
 const PrintJobKindEnum _$printJobKindEnum_checklist =
@@ -33,6 +35,8 @@ PrintJobKindEnum _$printJobKindEnumValueOf(String name) {
       return _$printJobKindEnum_kitchenTicket;
     case 'voidTicket':
       return _$printJobKindEnum_voidTicket;
+    case 'readyTicket':
+      return _$printJobKindEnum_readyTicket;
     case 'cupLabel':
       return _$printJobKindEnum_cupLabel;
     case 'checklist':
@@ -52,6 +56,7 @@ final BuiltSet<PrintJobKindEnum> _$printJobKindEnumValues =
   _$printJobKindEnum_prebill,
   _$printJobKindEnum_kitchenTicket,
   _$printJobKindEnum_voidTicket,
+  _$printJobKindEnum_readyTicket,
   _$printJobKindEnum_cupLabel,
   _$printJobKindEnum_checklist,
   _$printJobKindEnum_tableQr,
@@ -107,6 +112,7 @@ class _$PrintJobKindEnumSerializer
     'prebill': 'prebill',
     'kitchenTicket': 'kitchen_ticket',
     'voidTicket': 'void_ticket',
+    'readyTicket': 'ready_ticket',
     'cupLabel': 'cup_label',
     'checklist': 'checklist',
     'tableQr': 'table_qr',
@@ -117,6 +123,7 @@ class _$PrintJobKindEnumSerializer
     'prebill': 'prebill',
     'kitchen_ticket': 'kitchenTicket',
     'void_ticket': 'voidTicket',
+    'ready_ticket': 'readyTicket',
     'cup_label': 'cupLabel',
     'checklist': 'checklist',
     'table_qr': 'tableQr',

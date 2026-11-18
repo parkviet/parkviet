@@ -179,8 +179,9 @@ RSpec.describe Spree::Pos::BusinessProfiles do
 
     it 'checks the kitchen send trigger default' do
       expect(errors_of('quan_an' => profile(branch_defaults: { 'kitchen_send_trigger' => 'manual' }))).to eq([])
+      expect(errors_of('quan_an' => profile(branch_defaults: { 'kitchen_send_trigger' => 'on_save' }))).to eq([])
       expect(errors_of('quan_an' => profile(branch_defaults: { 'kitchen_send_trigger' => 'later' }))).
-        to eq(['quan_an.branch_defaults.kitchen_send_trigger: "later" must be one of on_complete, manual.'])
+        to eq(['quan_an.branch_defaults.kitchen_send_trigger: "later" must be one of on_complete, on_save, manual.'])
     end
 
     it 'checks the proposed kitchen stations' do

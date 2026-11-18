@@ -45,6 +45,8 @@ module Spree
         checks = PRINTER_ROLES.map do |key, (role, module_key)|
           check(key, module_key && !modules[module_key] ? NOT_NEEDED : printer_status(printers, role))
         end
+        ready_needed = modules['fnb.kitchen'] && SalesSettings.for(branch)['auto_print_ready_ticket']
+        checks << check('ready_ticket_printer', ready_needed ? printer_status(printers, 'ready_ticket') : NOT_NEEDED)
         checks << check('kitchen_stations', !modules['fnb.kitchen'] ? NOT_NEEDED : stations_status(stations))
         checks << check('print_station', print_station_status(printers, devices))
         checks << check('customer_display', customer_display_status(displays))

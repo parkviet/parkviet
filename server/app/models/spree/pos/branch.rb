@@ -53,9 +53,9 @@ module Spree
       # Null inherits the store's cutoff. A stored time stays the branch's own.
       validates :business_day_cutoff, presence: true, allow_nil: true
       validates :staff_session_idle_minutes, numericality: { only_integer: true, in: 5..240 }
-      # When orders reach the kitchen: as the sale completes, or when the
-      # cashier sends them (Kitchen::Send).
-      validates :kitchen_send_trigger, inclusion: { in: %w[on_complete manual] }
+      # When orders reach the kitchen: as the sale completes, as an open order
+      # is saved, or when the cashier sends them (Kitchen::Send).
+      validates :kitchen_send_trigger, inclusion: { in: %w[on_complete on_save manual] }
       # Percent of the items after discounts; nil means no service charge.
       validates :service_charge_rate, numericality: { greater_than: 0, less_than_or_equal_to: 50 }, allow_nil: true
       # How long a table may stay seated before the floor flags it; nil turns it off.

@@ -36,12 +36,14 @@ module Spree
               versions = Template.current_versions(templates)
               data = templates.map { |template| template.to_pos(versions.fetch(template.id)) }
               # With `branch_id`, `branch_default` marks the template that
-              # branch prints each document type with.
+              # branch prints each document type with, and `branch_override`
+              # marks an explicit per-branch assignment.
               if params[:branch_id].present?
                 overrides = Template.branch_overrides(branch!(params[:branch_id]))
                 data.each_with_index do |entry, index|
                   template = templates[index]
                   chosen = overrides[template.document_type]
+                  entry[:branch_override] = chosen ? chosen.id == template.id : false
                   entry[:branch_default] = chosen ? chosen.id == template.id : template.is_default && template.status == 'active'
                 end
               end
@@ -72,9 +74,9 @@ module Spree
             def create
               return if channel_rejected?
 
-              document_type, config = creation_source
               paper = params.key?(:paper) ? paper!(params[:paper]) : Template::DEFAULT_PAPER
-              name = params.key?(:name) ? name!(params[:name]) : Template::DEFAULT_NAMES.fetch(document_type)
+              document_type, config = creation_source(paper)
+              name = params.key?(:name) ? name!(params[:name]) : Template.default_name(document_type, paper)
               template = Template.transaction do
                 Template.ensure_defaults!(current_store)
                 Template.lock_type!(current_store, document_type)
@@ -223,7 +225,7 @@ module Spree
                                                                                           details: { current_version: template.current_version })
             end
 
-            def creation_source
+            def creation_source(paper)
               if params[:from_default].present?
                 raise Invalid.at('/config', 'unexpected', 'Give from_default or config, not both.') if params.key?(:config)
 
@@ -232,7 +234,7 @@ module Spree
                   raise Invalid.at('/document_type', 'mismatch', 'document_type must match from_default.')
                 end
 
-                [type, Template.default_config(type)]
+                [type, Template.default_config(type, paper: paper)]
               else
                 type = document_type!(params[:document_type], '/document_type')
                 raise Invalid.at('/config', 'missing', 'Give from_default or config.') unless params.key?(:config)

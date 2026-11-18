@@ -46,7 +46,7 @@ abstract class PrintJob implements Built<PrintJob, PrintJobBuilder> {
 
   @BuiltValueField(wireName: r'kind')
   PrintJobKindEnum get kind;
-  // enum kindEnum {  receipt,  prebill,  kitchen_ticket,  void_ticket,  cup_label,  checklist,  table_qr,  test,  };
+  // enum kindEnum {  receipt,  prebill,  kitchen_ticket,  void_ticket,  ready_ticket,  cup_label,  checklist,  table_qr,  test,  };
 
   @BuiltValueField(wireName: r'status')
   PrintJobStatusEnum get status;
@@ -401,6 +401,8 @@ class PrintJobKindEnum extends EnumClass {
       _$printJobKindEnum_kitchenTicket;
   @BuiltValueEnumConst(wireName: r'void_ticket')
   static const PrintJobKindEnum voidTicket = _$printJobKindEnum_voidTicket;
+  @BuiltValueEnumConst(wireName: r'ready_ticket')
+  static const PrintJobKindEnum readyTicket = _$printJobKindEnum_readyTicket;
   @BuiltValueEnumConst(wireName: r'cup_label')
   static const PrintJobKindEnum cupLabel = _$printJobKindEnum_cupLabel;
   @BuiltValueEnumConst(wireName: r'checklist')

@@ -35,6 +35,7 @@ module Spree
                 label_barcode: label_barcode, modifiers: modifiers, note: note, attributes: { added_by: staff }
               )
               recalculate!(workspace)
+              Kitchen::Send.on_save(workspace: workspace, actor: staff, key: key)
               finish!(workspace, staff, 'workspace.item.add', result.audit)
             end
           rescue Conflict
@@ -48,6 +49,7 @@ module Spree
               sale_line = sale_line!(workspace, sale_line_id)
               Timed::Guard.not_timed!(sale_line, workspace)
               base_quantity = change_quantity!(workspace, sale_line, quantity, sale_quantity)
+              Kitchen::Send.on_save(workspace: workspace, actor: staff, key: key)
               finish!(workspace, staff, 'workspace.item.update', sale_line_id: sale_line.prefixed_id, quantity: base_quantity)
             end
           end

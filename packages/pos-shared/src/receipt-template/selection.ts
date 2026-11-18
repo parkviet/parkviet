@@ -1,4 +1,4 @@
-import { isPaperSize } from '../paper-size';
+import { isPaperSize, isRollPaper } from '../paper-size';
 import type { DocumentType, PaperSize } from './types';
 
 // Which template a print uses. A posted receipt reprints with the template,
@@ -17,6 +17,9 @@ export type ListedTemplate = {
   // Read with a branch: the template that branch prints the document type
   // with (its own choice, else the store default).
   branch_default?: boolean;
+  // Read with a branch: true only when the branch explicitly picked this
+  // template (as opposed to inheriting the store default).
+  branch_override?: boolean;
   current_version: number;
 };
 
@@ -35,6 +38,10 @@ export type PrintChoice = {
   // Unknown until loaded when the original's template is no longer listed.
   name: string | null;
   original: boolean;
+};
+
+export type PrintSelectionOptions = {
+  allowSheetReceipts?: boolean;
 };
 
 export const ORIGINAL_CHOICE = 'original';
@@ -58,18 +65,38 @@ export function originalLayout(
 
 // The original first (labelled as such), then every other active template
 // of the document type, default (the branch's, else the store's) first.
+// When `allowSheetReceipts` is false, sheet templates (A4/A5/A6) are hidden
+// from cashier selection unless an administrator set one as the branch's own
+// default (`branch_default` without merely inheriting a sheet store default
+// when roll templates exist, or `branch_default && !is_default`).
 export function printChoices(
   templates: readonly ListedTemplate[],
   documentType: DocumentType,
   original: PrintLayout | null = null,
+  options: PrintSelectionOptions = {},
 ): PrintChoice[] {
-  const listed = templates
+  const allowSheets = options.allowSheetReceipts !== false;
+  const active = templates
     .filter((template) => template.document_type === documentType && template.status === 'active')
     .sort((a, b) => defaultRank(b) - defaultRank(a));
+  // If the branch explicitly picked its own template (`branch_override: true`,
+  // or legacy `branch_default && !is_default`), honour the administrator's
+  // branch override even when sheets are off. When every active template of the
+  // document type is a sheet template, keep the top active template rather than
+  // returning an empty list.
+  const filtered = allowSheets
+    ? active
+    : active.filter((template) => {
+        const paper = paperOf(template.paper) ?? DEFAULT_PAPER;
+        if (isRollPaper(paper)) return true;
+        if (template.branch_override !== undefined) return template.branch_override;
+        return template.branch_default === true && !template.is_default;
+      });
+  const listed = filtered.length > 0 ? filtered : active.slice(0, 1);
   const source = originalLayout(original);
   const choices: PrintChoice[] = [];
   if (source) {
-    const known = listed.find((template) => template.id === source.templateId);
+    const known = active.find((template) => template.id === source.templateId);
     choices.push({
       key: ORIGINAL_CHOICE,
       templateId: source.templateId,
@@ -94,17 +121,24 @@ export function printChoices(
 }
 
 // The choice a print starts from: the original, else the remembered
-// template if it is still offered, else the branch's default, else the
-// store default, else the first.
+// template if it is still offered (and allowed), else the branch's default,
+// else the store default, else the first.
 export function initialChoice(
   choices: readonly PrintChoice[],
   templates: readonly ListedTemplate[],
   remembered: string | null = null,
+  options: PrintSelectionOptions = {},
 ): string | null {
   if (choices.length === 0) return null;
+  const allowSheets = options.allowSheetReceipts !== false;
   const original = choices.find((choice) => choice.original);
   if (original) return original.key;
-  if (remembered && choices.some((choice) => choice.key === remembered)) return remembered;
+  if (remembered) {
+    const rememberedChoice = choices.find((choice) => choice.key === remembered);
+    if (rememberedChoice && (allowSheets || isRollPaper(rememberedChoice.paper))) {
+      return remembered;
+    }
+  }
   const preferred = templates
     .filter(
       (template) =>

@@ -17,7 +17,7 @@ module Spree
         module_function
 
         # @return [Hash] 'workspace' and the 'sale_line_ids' this batch wrote or grew
-        def call(workspace:, staff:, key:, items:, append_batch_id: nil, device: nil, allow_hidden: false, allow_emenu: false)
+        def call(workspace:, staff:, key:, items:, append_batch_id: nil, device: nil, allow_hidden: false, allow_emenu: false, send_kitchen: true)
           batch = batch_id!(append_batch_id)
           rows = items!(items)
           payload = { 'command' => COMMAND, 'append_batch_id' => batch, 'items' => rows }
@@ -44,6 +44,7 @@ module Spree
                                              buffet_cover_line_id: cover&.id, **course })
             end
             ApplyDiscount.recalculate!(workspace)
+            Kitchen::Send.on_save(workspace: workspace, actor: staff, key: key, device: device) if send_kitchen
             workspace.update!(revision: workspace.revision + 1)
             sale_line_ids = results.map { |result| result.sale_line.prefixed_id }.uniq
             AuditEntry.record!(store: workspace.store, actor: staff, action: 'workspace.items.append', subject: workspace,

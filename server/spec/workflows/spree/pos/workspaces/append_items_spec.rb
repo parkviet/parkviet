@@ -139,4 +139,37 @@ RSpec.describe Spree::Pos::Workspaces::AppendItems do
       end.to raise_error(Spree::Pos::Conflict) { |error| expect(error.reason).to eq('line_sent') }
     end
   end
+
+  describe 'when kitchen_send_trigger is on_save' do
+    it 'sends unsent table items once per save, leaves held dishes unsent, and sends only what remains at completion' do
+      branch.update!(kitchen_send_trigger: 'on_complete')
+      append(waiter, [item(dish)])
+      expect(Spree::Pos::KitchenTicket.where(workspace_id: order.workspace.id)).to be_empty
+
+      branch.update!(kitchen_send_trigger: 'on_save')
+      key = SecureRandom.uuid
+      batch = SecureRandom.uuid
+      first = append(waiter, [item(drink, 2), item(dish, 1, course: 2, hold: true)], key: key, batch: batch)
+      expect(append(waiter, [item(drink, 2), item(dish, 1, course: 2, hold: true)], key: key, batch: batch)).to eq(first)
+
+      tickets = Spree::Pos::KitchenTicket.where(workspace_id: order.workspace.id).order(:sequence)
+      expect(tickets.size).to eq(1)
+      expect(tickets.sole.items.pluck(:name, :quantity)).to eq([['Phở bò', 1], ['Trà đá', 2]])
+
+      held_line = Spree::Pos::SaleLine.where(workspace_id: order.workspace.id, course_status: 'held').sole
+      expect(held_line.kitchen_sent_quantity).to eq(0)
+
+      Spree::Pos::Workspaces::EditUnsentLine.call(
+        workspace: order.workspace.reload, staff: waiter, key: SecureRandom.uuid,
+        sale_line_id: held_line.prefixed_id, row_version: held_line.row_version,
+        placement: { course: 2, hold: false }
+      )
+      expect(Spree::Pos::KitchenTicket.where(workspace_id: order.workspace.id).count).to eq(2)
+      expect(held_line.reload.kitchen_sent_quantity).to eq(1)
+
+      # Completion sends nothing extra when every dish was already sent on save.
+      expect(Spree::Pos::Kitchen::Send.on_complete(workspace: order.workspace.reload, actor: cashier)).to eq([])
+      expect(Spree::Pos::KitchenTicket.where(workspace_id: order.workspace.id).count).to eq(2)
+    end
+  end
 end

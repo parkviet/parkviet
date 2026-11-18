@@ -11,6 +11,7 @@ import type {
   PaperSize,
   TemplateConfig,
 } from '@parkviet/pos-shared/receipt-template/types';
+import { normalizeSalesSettings } from '@parkviet/pos-shared/sales-settings';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { usePosSelection } from '../components/pos-selection';
@@ -34,6 +35,7 @@ export type ReceiptTemplate = {
   is_default: boolean;
   // Read for a branch: the template that branch prints the document type with.
   branch_default?: boolean;
+  branch_override?: boolean;
   current_version: number;
   // The version `config` belongs to.
   version: number;
@@ -169,11 +171,18 @@ export type PrintTemplate = {
 // document type stands in.
 export function usePrintTemplate(
   documentType: DocumentType,
-  options: { original?: PrintLayout | null; remember?: boolean } = {},
+  options: { original?: PrintLayout | null; remember?: boolean; branchId?: string | null } = {},
 ): PrintTemplate {
   const { original = null, remember = false } = options;
-  const { selection } = usePosSelection();
-  const list = useReceiptTemplates(true, selection.branchId);
+  const { selection, context } = usePosSelection();
+  const branchId = options.branchId ?? selection.branchId;
+  const branchSettings =
+    branchId && branchId !== context.data?.selection.branch_id
+      ? context.data?.branches.find((row) => row.id === branchId)?.sales_settings
+      : (context.data?.sales_settings ??
+        context.data?.branches.find((row) => row.id === branchId)?.sales_settings);
+  const allowSheetReceipts = normalizeSalesSettings(branchSettings).allow_sheet_receipts;
+  const list = useReceiptTemplates(true, branchId);
   const [picked, setPicked] = useState<string | null>(null);
   const remembered = useMemo(
     () => (remember ? rememberedTemplate(documentType) : null),
@@ -181,13 +190,13 @@ export function usePrintTemplate(
   );
   const templates = list.data ?? [];
   const listed = useMemo(
-    () => printChoices(list.data ?? [], documentType, original),
-    [list.data, documentType, original],
+    () => printChoices(list.data ?? [], documentType, original, { allowSheetReceipts }),
+    [list.data, documentType, original, allowSheetReceipts],
   );
   const key =
     picked && listed.some((choice) => choice.key === picked)
       ? picked
-      : initialChoice(listed, templates, remembered);
+      : initialChoice(listed, templates, remembered, { allowSheetReceipts });
   const selected = listed.find((choice) => choice.key === key) ?? null;
   const version = useReceiptTemplateVersion(
     selected?.templateId ?? null,

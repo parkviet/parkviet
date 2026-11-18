@@ -25,7 +25,7 @@ abstract class PosKitchenSettingsUpdateRequest
 
   @BuiltValueField(wireName: r'kitchen_send_trigger')
   PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum? get kitchenSendTrigger;
-  // enum kitchenSendTriggerEnum {  on_complete,  manual,  };
+  // enum kitchenSendTriggerEnum {  on_complete,  on_save,  manual,  };
 
   @BuiltValueField(wireName: r'void_reasons')
   BuiltList<String>? get voidReasons;
@@ -164,6 +164,9 @@ class PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum extends EnumClass {
   static const PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum
       onComplete =
       _$posKitchenSettingsUpdateRequestKitchenSendTriggerEnum_onComplete;
+  @BuiltValueEnumConst(wireName: r'on_save')
+  static const PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum onSave =
+      _$posKitchenSettingsUpdateRequestKitchenSendTriggerEnum_onSave;
   @BuiltValueEnumConst(wireName: r'manual')
   static const PosKitchenSettingsUpdateRequestKitchenSendTriggerEnum manual =
       _$posKitchenSettingsUpdateRequestKitchenSendTriggerEnum_manual;

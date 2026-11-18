@@ -15,7 +15,7 @@ module Spree
       PAPERS = %w[58mm 80mm].freeze
       COMMAND_LANGUAGES = %w[escpos tspl].freeze
       STATUSES = %w[active disabled].freeze
-      ROLES = %w[receipt prebill kitchen_ticket void_ticket cup_label checklist table_qr].freeze
+      ROLES = %w[receipt prebill kitchen_ticket void_ticket ready_ticket cup_label checklist table_qr].freeze
       # Documents rendered as ESC/POS text; a label language cannot print them.
       ESCPOS_KINDS = %w[receipt prebill].freeze
       # Host or IPv4 with an optional port: no scheme, path or credentials.

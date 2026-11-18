@@ -76,7 +76,7 @@ test('old branch-setting URLs open the matching tab of the selected branch', asy
 test('a branch manager reaches only the branch-management tabs of their branch', async ({ page }) => {
   const state = await install(page, 'manager'); await page.goto('/store_1/features?branch=branch_main');
   await expect(page).toHaveURL(/\/store_1\/branches\/branch_main\/features/);
-  await expect(tabs(page)).toHaveText(['Tổng quan', 'Chức năng', 'Nền tảng giao hàng', 'Phần cứng']);
+  await expect(tabs(page)).toHaveText(['Tổng quan', 'Chức năng', 'In ấn', 'Nền tảng giao hàng', 'Phần cứng']);
   await expect(page.getByRole('button', { name: 'Sửa thông tin', exact: true })).toHaveCount(0);
   await expect(page.getByRole('group', { name: 'Mẫu tem cân' })).toHaveCount(0);
   await page.goto('/store_1/branches/branch_main/payments?branch=branch_main');
@@ -100,13 +100,18 @@ test('payments tab picks methods or returns to every active method', async ({ pa
 
 test('printing tab chooses a template per document or the store default', async ({ page }) => {
   const state = await install(page); await page.goto('/store_1/branches/branch_main/printing');
-  const sale = page.getByRole('combobox', { name: 'Phiếu bán hàng', exact: true });
-  await expect(sale).toContainText('Mặc định cửa hàng (Phiếu bán mặc định)');
+  const saleRow = page.locator('[data-function="sale"]');
+  await expect(saleRow).toContainText('Mặc định cửa hàng (Phiếu bán mặc định)');
+  await saleRow.getByRole('button', { name: 'Chọn mẫu', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  const sale = dialog.getByRole('combobox', { name: 'Phiếu bán hàng', exact: true });
   await sale.click(); await page.getByRole('option', { name: 'Bán hàng K58', exact: true }).click();
-  await page.getByRole('button', { name: 'Lưu', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
   await expect.poll(() => state.writes.at(-1)).toEqual({ method: 'PUT', path: '/pos/branches/branch_main/receipt_templates', body: { templates: { sale: 'postpl_k58' } } });
+  await expect(saleRow).toContainText('Bán hàng K58 (58mm)');
+  await saleRow.getByRole('button', { name: 'Chọn mẫu', exact: true }).click();
   await sale.click(); await page.getByRole('option', { name: 'Mặc định cửa hàng (Phiếu bán mặc định)', exact: true }).click();
-  await page.getByRole('button', { name: 'Lưu', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
   await expect.poll(() => state.writes.at(-1)).toEqual({ method: 'PUT', path: '/pos/branches/branch_main/receipt_templates', body: { templates: { sale: null } } });
 });
 
@@ -121,6 +126,6 @@ test('features tab assigns shared scale label formats while measured goods are o
 
 test('features tab hides label formats when measured goods are off', async ({ page }) => {
   await install(page, 'owner', { 'retail.measured': false }); await page.goto('/store_1/branches/branch_main/features');
-  await expect(page.getByRole('heading', { name: 'Chức năng chi nhánh', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Quy trình bán hàng', exact: true })).toBeVisible();
   await expect(page.getByRole('group', { name: 'Mẫu tem cân' })).toHaveCount(0);
 });

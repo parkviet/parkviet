@@ -29,6 +29,43 @@ module Spree
                               })
         end
 
+        def ready(workspace:, items:, ready_at:)
+          ticket = items.first.kitchen_ticket
+          header = ticket.header.to_h
+          PrintDocuments.wrap('ready_ticket', {
+                                'documentType' => nil, 'page' => PAGE, 'banners' => [],
+                                'header' => ready_head(workspace, items, header, ready_at) + items.flat_map { |item| item_blocks(item, void: false) },
+                                'meta' => meta(ticket, header), 'lines' => { 'layout' => 'stacked', 'items' => [] },
+                                'totals' => [], 'payments' => [], 'payQr' => nil, 'notes' => [], 'footer' => [], 'disclaimer' => nil
+                              })
+        end
+
+        def ready_head(workspace, items, header, ready_at)
+          stations = items.map { |item| item.kitchen_ticket.kitchen_station.name }.uniq.join(', ')
+          place = ready_place(workspace, header)
+          number = (header['order_number'] || workspace.order_number)&.then { |n| "Số #{n}" }
+          blocks = [{ 'kind' => 'title', 'title' => 'PHIẾU TRẢ MÓN', 'number' => (number || place).presence }]
+          call = [number, place].compact
+          blocks << text(call, size: 'l', bold: true, align: 'center') if call.any?
+          blocks << text([header['guest_name']], bold: true, align: 'center') if header['guest_name'] && place != header['guest_name']
+          time = PrintDocuments::Text.document_time(ready_at.iso8601, workspace.branch.timezone)
+          blocks << text(["#{SERVICE_MODES.fetch(workspace.service_mode, workspace.service_mode.upcase)} · #{time}"], bold: true, align: 'center')
+          blocks << text(["Trạm: #{stations}"], align: 'center') if stations.present?
+          blocks << { 'kind' => 'divider', 'style' => 'solid' }
+        end
+
+        def ready_place(workspace, header)
+          if workspace.resource
+            table = [workspace.resource.name, workspace.table_label.presence].compact.join(' ')
+            area = workspace.resource.area&.name.presence
+            [area, "Bàn #{table}"].compact.join(' · ')
+          elsif header['table'].present?
+            "Bàn #{header['table']}"
+          else
+            workspace.tab_name.presence || workspace.guest_name.presence
+          end
+        end
+
         def head(ticket, header)
           blocks = [{ 'kind' => 'title', 'title' => ticket.kitchen_station.name.upcase, 'number' => "Phiếu ##{ticket.sequence}" }]
           blocks << text(['HỦY MÓN'], size: 'l', bold: true, align: 'center', invert: true) if ticket.kind == 'void'
@@ -45,8 +82,7 @@ module Spree
           blocks << { 'kind' => 'divider', 'style' => 'solid' }
         end
 
-        def item_blocks(item)
-          void = item.kitchen_ticket.kind == 'void'
+        def item_blocks(item, void: item.kitchen_ticket.kind == 'void')
           blocks = [text(["#{void ? '-' : ''}#{quantity(item.quantity)} x #{item.name}"], size: 'l', bold: true)]
           options = Array(item.modifiers).map do |row|
             count = row['quantity'].to_i > 1 ? " x#{row['quantity']}" : ''

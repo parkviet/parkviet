@@ -70,3 +70,10 @@ test('older API without feature settings reports unsupported instead of exposing
   await expect(page.getByRole('region', { name: 'Quy tắc bán hàng' }).getByRole('alert')).toBeVisible();
   await expect(credit(page)).toHaveCount(0); expect(state.writes).toEqual([]);
 });
+
+test('features tab links printing switches to the Printing tab instead of repeating them', async ({ page }) => {
+  await install(page, 'owner');
+  await expect(page.getByRole('region', { name: 'Tự động in' })).toHaveCount(0);
+  const link = page.getByRole('link', { name: 'Cài đặt in đã chuyển sang tab In ấn' });
+  await expect(link).toHaveAttribute('href', /\/store_1\/branches\/br_1\/printing.*#printing-auto$/);
+});

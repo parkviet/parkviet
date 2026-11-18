@@ -25,12 +25,14 @@ describe('normalizeSalesSettings', () => {
     });
   });
 
-  it('reads the four switches and falls back when a value is not boolean', () => {
+  it('reads the switches and falls back when a value is not boolean', () => {
     expect(normalizeSalesSettings(undefined)).toMatchObject({
       inline_variants: false,
       scheduled_delivery: false,
       auto_print_prebill: false,
       print_void_tickets: true,
+      auto_print_ready_ticket: false,
+      allow_sheet_receipts: true,
     });
     expect(
       normalizeSalesSettings({
@@ -38,12 +40,22 @@ describe('normalizeSalesSettings', () => {
         scheduled_delivery: 'yes',
         auto_print_prebill: 1,
         print_void_tickets: false,
+        auto_print_ready_ticket: true,
+        allow_sheet_receipts: false,
       }),
     ).toMatchObject({
       inline_variants: true,
       scheduled_delivery: false,
       auto_print_prebill: false,
       print_void_tickets: false,
+      auto_print_ready_ticket: true,
+      allow_sheet_receipts: false,
+    });
+    expect(
+      normalizeSalesSettings({ auto_print_ready_ticket: 'yes', allow_sheet_receipts: 0 }),
+    ).toMatchObject({
+      auto_print_ready_ticket: false,
+      allow_sheet_receipts: true,
     });
   });
 });

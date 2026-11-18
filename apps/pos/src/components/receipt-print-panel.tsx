@@ -159,6 +159,7 @@ export function ReceiptPrintPanel({
   const template = usePrintTemplate(documentType, {
     original: receipt.original_print ?? null,
     remember: true,
+    branchId: receipt.branch_id,
   });
 
   const printRoute = usePrintRoute(receipt.branch_id, receipt.register_id ?? null, 'receipt');

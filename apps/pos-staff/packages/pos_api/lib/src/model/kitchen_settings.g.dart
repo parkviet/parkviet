@@ -10,6 +10,9 @@ const KitchenSettingsKitchenSendTriggerEnum
     _$kitchenSettingsKitchenSendTriggerEnum_onComplete =
     const KitchenSettingsKitchenSendTriggerEnum._('onComplete');
 const KitchenSettingsKitchenSendTriggerEnum
+    _$kitchenSettingsKitchenSendTriggerEnum_onSave =
+    const KitchenSettingsKitchenSendTriggerEnum._('onSave');
+const KitchenSettingsKitchenSendTriggerEnum
     _$kitchenSettingsKitchenSendTriggerEnum_manual =
     const KitchenSettingsKitchenSendTriggerEnum._('manual');
 
@@ -18,6 +21,8 @@ KitchenSettingsKitchenSendTriggerEnum
   switch (name) {
     case 'onComplete':
       return _$kitchenSettingsKitchenSendTriggerEnum_onComplete;
+    case 'onSave':
+      return _$kitchenSettingsKitchenSendTriggerEnum_onSave;
     case 'manual':
       return _$kitchenSettingsKitchenSendTriggerEnum_manual;
     default:
@@ -29,6 +34,7 @@ final BuiltSet<KitchenSettingsKitchenSendTriggerEnum>
     _$kitchenSettingsKitchenSendTriggerEnumValues = BuiltSet<
         KitchenSettingsKitchenSendTriggerEnum>(const <KitchenSettingsKitchenSendTriggerEnum>[
   _$kitchenSettingsKitchenSendTriggerEnum_onComplete,
+  _$kitchenSettingsKitchenSendTriggerEnum_onSave,
   _$kitchenSettingsKitchenSendTriggerEnum_manual,
 ]);
 
@@ -40,10 +46,12 @@ class _$KitchenSettingsKitchenSendTriggerEnumSerializer
     implements PrimitiveSerializer<KitchenSettingsKitchenSendTriggerEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
     'onComplete': 'on_complete',
+    'onSave': 'on_save',
     'manual': 'manual',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'on_complete': 'onComplete',
+    'on_save': 'onSave',
     'manual': 'manual',
   };
 

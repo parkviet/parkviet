@@ -34,6 +34,7 @@ module Spree
             # A canceled order frees its rooms: their clocks stop now.
             Timed::Stop.stop_all!(workspace, staff) if status == 'canceled'
             workspace.update!(operational_status: status, revision: workspace.revision + 1)
+            Kitchen::Send.on_save(workspace: workspace, actor: staff, key: key) if status == 'parked'
             AuditEntry.record!(store: workspace.store, actor: staff, action: "workspace.#{status}", subject: workspace)
             workspace.to_pos
           end

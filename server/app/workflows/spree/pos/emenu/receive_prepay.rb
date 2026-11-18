@@ -68,7 +68,7 @@ module Spree
               workspace: workspace, staff: staff, key: "#{key}:append",
               append_batch_id: guest_order.append_batch_id,
               items: kept.map { |row| GuestOrders::Accept.append_row(row) },
-              allow_hidden: emenu, allow_emenu: emenu
+              allow_hidden: emenu, allow_emenu: emenu, send_kitchen: false
             )
             workspace.reload
             BookTablePayment.write_in_transaction!(

@@ -114,4 +114,58 @@ describe('print choices', () => {
     // Read without a branch: the store default.
     expect(initialChoice(printChoices([k80, a4], 'sale'), [k80, a4])).toBe('postpl_a');
   });
+
+  it('hides sheet templates and ignores remembered sheets when allowSheetReceipts is false, except an explicit branch template or original', () => {
+    const a5 = template({ id: 'postpl_a5', name: 'Bán hàng A5', paper: 'a5' });
+    const k58 = template({ id: 'postpl_k58', name: 'Bán hàng K58', paper: '58mm' });
+    const storeK80 = { ...k80, branch_default: true };
+    const choices = printChoices([storeK80, k58, a4, a5], 'sale', null, {
+      allowSheetReceipts: false,
+    });
+    expect(choices.map((choice) => choice.key)).toEqual(['postpl_a', 'postpl_k58']);
+    // Remembered A4 is ignored; falls back to the branch/store roll default.
+    expect(
+      initialChoice(choices, [storeK80, k58, a4, a5], 'postpl_b', { allowSheetReceipts: false }),
+    ).toBe('postpl_a');
+
+    // Administrator explicitly assigned A4 to this branch (even when A4 is also store default).
+    const sameStoreAndBranchA4 = {
+      ...a4,
+      is_default: true,
+      branch_default: true,
+      branch_override: true,
+    };
+    const nonDefaultK80 = {
+      ...k80,
+      is_default: false,
+      branch_default: false,
+      branch_override: false,
+    };
+    const withBranchSheet = printChoices([nonDefaultK80, sameStoreAndBranchA4, a5], 'sale', null, {
+      allowSheetReceipts: false,
+    });
+    expect(withBranchSheet.map((choice) => choice.key)).toEqual(['postpl_b', 'postpl_a']);
+    expect(
+      initialChoice(withBranchSheet, [nonDefaultK80, sameStoreAndBranchA4, a5], 'postpl_b', {
+        allowSheetReceipts: false,
+      }),
+    ).toBe('postpl_b');
+
+    // When every active template is a sheet template, keep the top active template
+    // rather than returning an empty choice list.
+    const onlySheet = printChoices([a4, a5], 'sale', null, { allowSheetReceipts: false });
+    expect(onlySheet.map((choice) => choice.key)).toEqual(['postpl_b']);
+
+    // Reprinting an earlier A4 receipt keeps the original choice.
+    const reprint = printChoices(
+      [storeK80, a4],
+      'sale',
+      { template_id: 'postpl_b', template_version: 2, paper: 'a4' },
+      { allowSheetReceipts: false },
+    );
+    expect(reprint.map((choice) => choice.key)).toEqual([ORIGINAL_CHOICE, 'postpl_a']);
+    expect(initialChoice(reprint, [storeK80, a4], null, { allowSheetReceipts: false })).toBe(
+      ORIGINAL_CHOICE,
+    );
+  });
 });

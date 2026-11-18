@@ -56,9 +56,13 @@ export function TicketFooter({
   const shared = isTableOrder(active);
   const currency = active.totals?.currency ?? 'VND';
   const branch = data?.branches.find((row) => row.id === active.branch_id);
-  // A table order or a tab is always sent by hand; another order only when
-  // the branch does not send as the sale completes.
-  const canSend = kitchenOn && (shared || branch?.kitchen_send_trigger !== 'on_complete');
+  // A table order or a tab is always sent by hand; another order when the
+  // branch is `manual` or `on_save` (for held dishes and fired courses).
+  const canSend =
+    kitchenOn &&
+    (shared ||
+      branch?.kitchen_send_trigger === 'manual' ||
+      branch?.kitchen_send_trigger === 'on_save');
   // Anyone serving a table or a tab sends its additions; another order is
   // sent by the person holding it.
   const sendLocked = shared

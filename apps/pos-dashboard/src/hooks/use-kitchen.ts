@@ -5,7 +5,7 @@ import { posKey } from '../lib/query-keys'
 import { useSession } from './use-session'
 
 export type KitchenStationKind = 'prep' | 'bar' | 'expo'
-export type KitchenSendTrigger = 'on_complete' | 'manual'
+export type KitchenSendTrigger = 'on_complete' | 'on_save' | 'manual'
 
 export type KitchenStation = {
   id: string
@@ -58,28 +58,30 @@ export type CupLabelSettings = {
   size: CupLabelSize
   fields: CupLabelField[]
   pickup_minutes: number
+  auto_print: boolean
   module_enabled: boolean
   sizes: CupLabelSize[]
   available_fields: CupLabelField[]
 }
 
-function useBranchList<T>(resource: string, path: string, branchId: string) {
+function useBranchList<T>(resource: string, path: string, branchId: string, enabled = true) {
   const { storeId } = useSession()
   return useQuery({
     queryKey: posKey(storeId, 'kitchen', resource, branchId),
+    enabled: enabled && Boolean(branchId),
     queryFn: async () =>
       (await posRequest<{ data: T }>('GET', path, { params: { branch_id: branchId } })).data,
   })
 }
 
-export const useKitchenStations = (branchId: string) =>
-  useBranchList<KitchenStation[]>('stations', '/pos/kitchen_stations', branchId)
-export const useStationRoutes = (branchId: string) =>
-  useBranchList<StationRoute[]>('routes', '/pos/station_routes', branchId)
-export const useKitchenSettings = (branchId: string) =>
-  useBranchList<KitchenSettings>('settings', '/pos/kitchen_settings', branchId)
-export const useCupLabelSettings = (branchId: string) =>
-  useBranchList<CupLabelSettings>('cup-labels', '/pos/cup_label_settings', branchId)
+export const useKitchenStations = (branchId: string, enabled = true) =>
+  useBranchList<KitchenStation[]>('stations', '/pos/kitchen_stations', branchId, enabled)
+export const useStationRoutes = (branchId: string, enabled = true) =>
+  useBranchList<StationRoute[]>('routes', '/pos/station_routes', branchId, enabled)
+export const useKitchenSettings = (branchId: string, enabled = true) =>
+  useBranchList<KitchenSettings>('settings', '/pos/kitchen_settings', branchId, enabled)
+export const useCupLabelSettings = (branchId: string, enabled = true) =>
+  useBranchList<CupLabelSettings>('cup-labels', '/pos/cup_label_settings', branchId, enabled)
 
 // Every kitchen setup write is a command with its own idempotency key.
 export function useKitchenWrite() {

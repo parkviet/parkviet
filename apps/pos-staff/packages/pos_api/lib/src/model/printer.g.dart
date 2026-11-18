@@ -100,6 +100,8 @@ const PrinterRolesEnum _$printerRolesEnum_kitchenTicket =
     const PrinterRolesEnum._('kitchenTicket');
 const PrinterRolesEnum _$printerRolesEnum_voidTicket =
     const PrinterRolesEnum._('voidTicket');
+const PrinterRolesEnum _$printerRolesEnum_readyTicket =
+    const PrinterRolesEnum._('readyTicket');
 const PrinterRolesEnum _$printerRolesEnum_cupLabel =
     const PrinterRolesEnum._('cupLabel');
 const PrinterRolesEnum _$printerRolesEnum_checklist =
@@ -117,6 +119,8 @@ PrinterRolesEnum _$printerRolesEnumValueOf(String name) {
       return _$printerRolesEnum_kitchenTicket;
     case 'voidTicket':
       return _$printerRolesEnum_voidTicket;
+    case 'readyTicket':
+      return _$printerRolesEnum_readyTicket;
     case 'cupLabel':
       return _$printerRolesEnum_cupLabel;
     case 'checklist':
@@ -134,6 +138,7 @@ final BuiltSet<PrinterRolesEnum> _$printerRolesEnumValues =
   _$printerRolesEnum_prebill,
   _$printerRolesEnum_kitchenTicket,
   _$printerRolesEnum_voidTicket,
+  _$printerRolesEnum_readyTicket,
   _$printerRolesEnum_cupLabel,
   _$printerRolesEnum_checklist,
   _$printerRolesEnum_tableQr,
@@ -272,6 +277,7 @@ class _$PrinterRolesEnumSerializer
     'prebill': 'prebill',
     'kitchenTicket': 'kitchen_ticket',
     'voidTicket': 'void_ticket',
+    'readyTicket': 'ready_ticket',
     'cupLabel': 'cup_label',
     'checklist': 'checklist',
     'tableQr': 'table_qr',
@@ -281,6 +287,7 @@ class _$PrinterRolesEnumSerializer
     'prebill': 'prebill',
     'kitchen_ticket': 'kitchenTicket',
     'void_ticket': 'voidTicket',
+    'ready_ticket': 'readyTicket',
     'cup_label': 'cupLabel',
     'checklist': 'checklist',
     'table_qr': 'tableQr',

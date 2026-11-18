@@ -2241,7 +2241,7 @@ paths:
                   type: string
                 kitchen_send_trigger:
                   type: string
-                  enum: [on_complete, manual]
+                  enum: [on_complete, on_save, manual]
                 void_reasons:
                   type: array
                   maxItems: 20
@@ -6072,6 +6072,18 @@ components:
           description: >
             Queue a void ticket for the kitchen station printer. When false
             the void still shows on the kitchen screen and stays on the order.
+        auto_print_ready_ticket:
+          type: boolean
+          default: false
+          description: >
+            Queue a runner ready ticket when kitchen items move to `ready` on
+            a kitchen screen.
+        allow_sheet_receipts:
+          type: boolean
+          default: true
+          description: >
+            Offer sheet-paper templates (A4, A5, A6) in the counter print
+            dialog, printed through the browser print dialog.
     CatalogItem:
       type: object
       additionalProperties: true
@@ -7762,7 +7774,7 @@ components:
           type: array
           items:
             type: string
-            enum: [receipt, prebill, kitchen_ticket, void_ticket, cup_label, checklist, table_qr]
+            enum: [receipt, prebill, kitchen_ticket, void_ticket, ready_ticket, cup_label, checklist, table_qr]
         print_station_device_id:
           type: [string, 'null']
         register_id:
@@ -7788,7 +7800,7 @@ components:
           type: string
         kind:
           type: string
-          enum: [receipt, prebill, kitchen_ticket, void_ticket, cup_label, checklist, table_qr, test]
+          enum: [receipt, prebill, kitchen_ticket, void_ticket, ready_ticket, cup_label, checklist, table_qr, test]
         status:
           type: string
           enum: [queued, claimed, printed, failed, canceled]
@@ -7891,7 +7903,7 @@ components:
           const: 1
         kind:
           type: string
-          enum: [receipt, prebill, kitchen_ticket, void_ticket, cup_label, checklist, table_qr, test]
+          enum: [receipt, prebill, kitchen_ticket, void_ticket, ready_ticket, cup_label, checklist, table_qr, test]
         documentType:
           enum: [sale, prebill, payment_ticket, return, refund, shift_closure, null]
         page:
@@ -8273,10 +8285,11 @@ components:
           type: string
         kitchen_send_trigger:
           type: string
-          enum: [on_complete, manual]
+          enum: [on_complete, on_save, manual]
           description: >
-            `on_complete` sends what is left as the sale completes; `manual`
-            waits for "send to kitchen".
+            `on_complete` sends what is left as the sale completes; `on_save`
+            sends unsent items when an open order is saved; `manual` waits for
+            "send to kitchen".
         module_enabled:
           type: boolean
           description: Whether `fnb.kitchen` is on at the branch.
@@ -8343,7 +8356,7 @@ components:
       properties:
         key:
           type: string
-          enum: [receipt_printer, kitchen_printer, cup_label_printer, kitchen_stations, print_station, customer_display,
+          enum: [receipt_printer, kitchen_printer, cup_label_printer, ready_ticket_printer, kitchen_stations, print_station, customer_display,
                  server, einvoice]
         status:
           type: string

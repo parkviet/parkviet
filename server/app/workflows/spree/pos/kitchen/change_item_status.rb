@@ -33,7 +33,10 @@ module Spree
           changed = KitchenTicketItem.transaction do
             item.lock!
             apply!(item, action.to_s, move, actor, Workspace.database_now).tap do |moved|
-              PlatformOrders::MarkReady.after_kitchen(item.kitchen_ticket.workspace_id) if moved
+              if moved
+                PlatformOrders::MarkReady.after_kitchen(item.kitchen_ticket.workspace_id)
+                print_ready_after_commit([item], actor) if action.to_s == 'ready'
+              end
             end
           end
           publish(item.kitchen_ticket) if changed
@@ -45,11 +48,14 @@ module Spree
           changed = KitchenTicketItem.transaction do
             items = KitchenTicketItem.where(kitchen_ticket_id: ticket.id).order(:id).lock.to_a
             now = Workspace.database_now
-            moved = items.select { |item| KitchenTicketItem::OPEN.include?(item.status) }.each do |item|
-              apply!(item, 'ready', MOVES['ready'], actor, now)
-            end.any?
+            moved_items = items.select { |item| KitchenTicketItem::OPEN.include?(item.status) }
+            moved_items.each { |item| apply!(item, 'ready', MOVES['ready'], actor, now) }
+            moved = moved_items.any?
             # A delivery platform's order is ready for its driver.
-            PlatformOrders::MarkReady.after_kitchen(ticket.workspace_id) if moved
+            if moved
+              PlatformOrders::MarkReady.after_kitchen(ticket.workspace_id)
+              print_ready_after_commit(moved_items, actor)
+            end
             moved
           end
           publish(ticket) if changed
@@ -83,6 +89,7 @@ module Spree
             moved.each { |item| apply!(item, 'ready', MOVES['ready'], actor, now) }
             tickets = KitchenTicket.where(id: moved.map(&:kitchen_ticket_id).uniq).includes(:kitchen_station, :workspace, :branch, :items).to_a
             tickets.map(&:workspace_id).uniq.each { |workspace_id| PlatformOrders::MarkReady.after_kitchen(workspace_id) }
+            print_ready_after_commit(moved, actor) if moved.any?
             tickets
           end
           tickets.each { |ticket| publish(ticket) }
@@ -154,6 +161,54 @@ module Spree
           Realtime.publish(ticket.branch, 'kitchen_ticket.updated',
                            id: ticket.prefixed_id, refs: { workspace_id: ticket.workspace.prefixed_id,
                                                            kitchen_station_id: ticket.kitchen_station.prefixed_id })
+        end
+
+        def print_ready_after_commit(items, actor)
+          ids = items.map(&:id)
+          ActiveRecord.after_all_transactions_commit { print_ready!(ids, actor) }
+        end
+
+        def print_ready!(item_ids, actor)
+          loaded = KitchenTicketItem.where(id: item_ids, status: 'ready').
+                   includes(kitchen_ticket: [{ kitchen_station: { expo_station: { printer: :print_station_device } } },
+                                             :branch, :store, { workspace: { resource: :area } }]).
+                   order(:id).to_a
+          return if loaded.empty?
+
+          branch = loaded.first.kitchen_ticket.branch
+          return unless SalesSettings.for(branch)['auto_print_ready_ticket']
+
+          branch_printers = Printer.where(branch_id: branch.id, status: 'active').includes(:print_station_device).to_a
+          staff = actor.is_a?(Spree.admin_user_class) ? actor : nil
+          loaded.group_by { |item| [ready_printer_for(item.kitchen_ticket.kitchen_station, branch_printers), item.kitchen_ticket.workspace] }.
+            each do |(printer, workspace), group|
+              if printer.nil?
+                Rails.logger.info("[pos] ready ticket for workspace #{workspace.prefixed_id} not queued: no active ready_ticket printer")
+                next
+              end
+
+              ready_at = group.filter_map(&:ready_at).max || Workspace.database_now
+              stamp = group.map { |row| "#{row.id}@#{row.ready_at&.utc&.iso8601(6)}" }.join(',')
+              key = "ready_ticket:#{Digest::SHA256.hexdigest("#{printer.id}:#{stamp}")}"
+              PrintJobs::Enqueue.call(
+                store: workspace.store, printer: printer, kind: 'ready_ticket',
+                document: TicketDocument.ready(workspace: workspace, items: group, ready_at: ready_at),
+                key: key, actor: staff, source: group.first.kitchen_ticket
+              )
+            rescue StandardError => e
+              Rails.logger.error("[pos] ready ticket for workspace #{workspace.prefixed_id} not queued: #{e.class}: #{e.message}")
+            end
+        rescue StandardError => e
+          Rails.logger.error("[pos] ready tickets not queued: #{e.class}: #{e.message}")
+        end
+
+        def ready_printer_for(station, branch_printers)
+          expo = station.expo_station
+          expo_printer = expo&.active ? expo.printer : nil
+          return expo_printer if expo_printer&.station? && expo_printer.accepting_jobs? && expo_printer.prints?('ready_ticket')
+
+          branch_printers.select { |printer| printer.station? && printer.accepting_jobs? && printer.prints?('ready_ticket') }.
+            min_by { |printer| [printer.register_id.nil? ? 0 : 1, printer.id] }
         end
       end
     end

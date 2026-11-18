@@ -16,6 +16,8 @@ export const SALES_SETTING_KEYS = [
   'scheduled_delivery',
   'auto_print_prebill',
   'print_void_tickets',
+  'auto_print_ready_ticket',
+  'allow_sheet_receipts',
 ] as const;
 
 export type SalesSettingKey = (typeof SALES_SETTING_KEYS)[number];
@@ -36,6 +38,8 @@ export type SalesSettings = {
   scheduled_delivery: boolean;
   auto_print_prebill: boolean;
   print_void_tickets: boolean;
+  auto_print_ready_ticket: boolean;
+  allow_sheet_receipts: boolean;
 };
 
 export const SALES_SETTING_DEFAULTS: SalesSettings = {
@@ -52,6 +56,8 @@ export const SALES_SETTING_DEFAULTS: SalesSettings = {
   scheduled_delivery: false,
   auto_print_prebill: false,
   print_void_tickets: true,
+  auto_print_ready_ticket: false,
+  allow_sheet_receipts: true,
 };
 
 const CART_ORDERS: readonly CartOrder[] = ['newest_first', 'oldest_first'];
@@ -86,5 +92,13 @@ export function normalizeSalesSettings(value: unknown): SalesSettings {
     scheduled_delivery: flag(source.scheduled_delivery, SALES_SETTING_DEFAULTS.scheduled_delivery),
     auto_print_prebill: flag(source.auto_print_prebill, SALES_SETTING_DEFAULTS.auto_print_prebill),
     print_void_tickets: flag(source.print_void_tickets, SALES_SETTING_DEFAULTS.print_void_tickets),
+    auto_print_ready_ticket: flag(
+      source.auto_print_ready_ticket,
+      SALES_SETTING_DEFAULTS.auto_print_ready_ticket,
+    ),
+    allow_sheet_receipts: flag(
+      source.allow_sheet_receipts,
+      SALES_SETTING_DEFAULTS.allow_sheet_receipts,
+    ),
   };
 }

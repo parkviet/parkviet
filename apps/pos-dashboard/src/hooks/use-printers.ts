@@ -1,5 +1,5 @@
 import type { PrintJobDocument } from '@parkviet/pos-shared/receipt-template/types'
-import type { Printer, PrintJob } from '@parkviet/pos-shared/types/print-adapter'
+import type { Printer, PrinterRole, PrintJob } from '@parkviet/pos-shared/types/print-adapter'
 import { useResourceMutation } from '@spree/dashboard-core'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { posRequest } from '../lib/pos-request'
@@ -49,5 +49,26 @@ export function usePrinterWrite() {
     successMessage: false,
     errorMessage: false,
     onSuccess: () => client.invalidateQueries({ queryKey: posKey(storeId, 'printers') }),
+  })
+}
+
+export function usePrinterRoleBatchWrite() {
+  const client = useQueryClient()
+  const { storeId } = useSession()
+  return useResourceMutation({
+    mutationFn: async (updates: { printerId: string; roles: PrinterRole[] }[]) => {
+      try {
+        for (const item of updates) {
+          await posRequest<{ data: unknown }>('PATCH', `/pos/printers/${item.printerId}`, {
+            body: { roles: item.roles },
+            idempotencyKey: crypto.randomUUID(),
+          })
+        }
+      } finally {
+        void client.invalidateQueries({ queryKey: posKey(storeId, 'printers') })
+      }
+    },
+    successMessage: false,
+    errorMessage: false,
   })
 }

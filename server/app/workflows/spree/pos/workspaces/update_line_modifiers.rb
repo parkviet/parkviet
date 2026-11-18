@@ -41,6 +41,7 @@ module Spree
             result = merge_into_twin(workspace, sale_line, merge_key) ||
                      replace_options(sale_line, merge_key, line_price, pricing)
             items.send(:recalculate!, workspace)
+            Kitchen::Send.on_save(workspace: workspace, actor: staff, key: key)
             items.send(:finish!, workspace, staff, 'workspace.item.modifiers',
                        sale_line_id: result.prefixed_id, merged_from: result.id == sale_line.id ? nil : sale_line.prefixed_id,
                        before: before, after: SaleLineKinds::Menu.audit(pricing))

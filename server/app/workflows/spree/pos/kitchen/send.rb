@@ -11,16 +11,32 @@ module Spree
       # leave after commit, so neither can undo a sale.
       module Send
         MODULE = 'fnb.kitchen'
-        TRIGGERS = %w[on_complete manual].freeze
+        TRIGGERS = %w[on_complete on_save manual].freeze
 
         module_function
 
-        # From Workspaces::Complete: every paid order of an `on_complete`
-        # branch reaches the kitchen in the transaction that places it.
+        # From Workspaces::Complete: every paid order of an `on_complete` or
+        # `on_save` branch reaches the kitchen in the transaction that places it.
         def on_complete(workspace:, actor:)
-          return [] unless workspace.branch.kitchen_send_trigger == 'on_complete'
+          return [] unless %w[on_complete on_save].include?(workspace.branch.kitchen_send_trigger)
 
           call(workspace: workspace, actor: actor, send_key: "complete:#{workspace.prefixed_id}", buffet: false)
+        end
+
+        # From order-saving commands on open orders (tables, timed rooms, open
+        # tabs, parked drafts): sends unsent non-held menu lines once per save
+        # key. Quick counter sales stay unsent until parked or completed.
+        def on_save(workspace:, actor:, key:, device: nil)
+          return [] unless workspace.branch.kitchen_send_trigger == 'on_save'
+          return [] unless workspace.shared_service? || workspace.operational_status == 'parked'
+
+          raw = "save:#{key}"
+          send_key = raw.length > 200 ? "save:#{Digest::SHA256.hexdigest(key.to_s)}" : raw
+          call(workspace: workspace, actor: actor, send_key: send_key, device: device)
+        rescue Conflict => e
+          raise unless e.reason == BuffetRounds::REASON
+
+          []
         end
 
         # "Send to kitchen" while the order is still open. A table order is

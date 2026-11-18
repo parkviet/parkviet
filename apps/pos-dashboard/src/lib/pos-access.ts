@@ -210,7 +210,13 @@ export function visibleNav(page: PosPage, access: PosAccess) {
         canManageKitchen(access) ||
         canManageResources(access))
     )
-  if (page === 'branch-printing') return canAdminister(access) || canManagePrinters(access)
+  if (page === 'branch-printing')
+    return (
+      canAdminister(access) ||
+      canManagePrinters(access) ||
+      canManageBranch(access) ||
+      canManageKitchen(access)
+    )
   if (page === 'branch-kitchen') return canAdminister(access) || canManageKitchen(access)
   if (page === 'branch-floor-plan')
     return (
