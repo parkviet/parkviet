@@ -118,6 +118,7 @@ const groups: { key: string; labelKey: string; icon: NavEntry['icon']; children:
     icon: Settings2,
     children: [
       { key: 'store-info', labelKey: 'storeInfo.title', path: '/settings/store-info' },
+      { key: 'tax-info', labelKey: 'taxInfo.title', path: '/settings/tax-info' },
       { key: 'branches', labelKey: 'adminResource_branches', path: '/branches' },
       {
         key: 'branch',

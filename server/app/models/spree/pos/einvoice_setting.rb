@@ -14,7 +14,9 @@ module Spree
 
       STATUSES = %w[active disabled].freeze
       DEFAULT_CONSUMER_LABEL = 'Bán cho người tiêu dùng'
-      TAX_CODE = /\A\d{10}(-\d{3})?\z/
+      # 10 digits (13 with a dependent unit's -3 suffix), or the 12-digit
+      # personal identification number that serves as a person's tax code.
+      TAX_CODE = /\A(?:\d{10}(?:-\d{3})?|\d{12})\z/
       SYMBOL = /\A[CK]\d{2}[A-Z]{3}\z/
       TEMPLATE = /\A[1-9]\z/
 

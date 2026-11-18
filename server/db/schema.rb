@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_18_113500) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_18_150100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -2431,7 +2431,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_113500) do
     t.bigint "changed_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "tax_location_code", limit: 20
+    t.boolean "tax_head_office", default: false, null: false
     t.index ["branch_id"], name: "index_spree_pos_branch_infos_on_branch_id", unique: true
+    t.index ["store_id"], name: "idx_pos_branch_infos_one_head_office", unique: true, where: "tax_head_office"
     t.index ["store_id"], name: "index_spree_pos_branch_infos_on_store_id"
   end
 
@@ -4922,6 +4925,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_113500) do
     t.index ["token_digest"], name: "idx_pos_table_codes_token", unique: true
     t.check_constraint "(status::text = 'active'::text) = (revoked_at IS NULL)", name: "chk_pos_table_codes_revoked"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'revoked'::character varying]::text[])", name: "chk_pos_table_codes_status"
+  end
+
+  create_table "spree_pos_tax_profiles", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.string "store_code", limit: 32
+    t.string "legacy_tax_code", limit: 14
+    t.string "declaration_period", limit: 16
+    t.string "tax_authority_code", limit: 16
+    t.decimal "business_area_m2", precision: 10, scale: 2
+    t.string "industry_code", limit: 16
+    t.string "signer_name", limit: 120
+    t.string "preparer_name", limit: 120
+    t.string "storekeeper_name", limit: 120
+    t.string "cashier_name", limit: 120
+    t.bigint "changed_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["store_id"], name: "index_spree_pos_tax_profiles_on_store_id", unique: true
+    t.check_constraint "business_area_m2 IS NULL OR business_area_m2 >= 0::numeric", name: "chk_pos_tax_profiles_area"
+    t.check_constraint "declaration_period IS NULL OR (declaration_period::text = ANY (ARRAY['month'::character varying, 'quarter'::character varying]::text[]))", name: "chk_pos_tax_profiles_period"
   end
 
   create_table "spree_pos_tax_rate_schedules", force: :cascade do |t|
@@ -7471,6 +7494,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_113500) do
   add_foreign_key "spree_pos_table_codes", "spree_pos_branches", column: "branch_id"
   add_foreign_key "spree_pos_table_codes", "spree_pos_resources", column: "resource_id"
   add_foreign_key "spree_pos_table_codes", "spree_stores", column: "store_id"
+  add_foreign_key "spree_pos_tax_profiles", "spree_admin_users", column: "changed_by_id"
+  add_foreign_key "spree_pos_tax_profiles", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_tax_rate_schedules", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_tax_rate_schedules", "spree_tax_rates", column: "tax_rate_id"
   add_foreign_key "spree_pos_tender_attempts", "spree_admin_users", column: "actor_id"

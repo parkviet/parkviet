@@ -138,6 +138,8 @@ Rails.application.routes.draw do
               delete :logo, action: :destroy_logo
             end
             resource :store_profile, only: [:show, :update]
+            resource :tax_profile, only: [:show, :update]
+            get 'tax_catalog', to: 'tax_catalogs#show'
             post 'onboarding', to: 'onboarding#create'
             get 'operations/metrics', to: 'operational_metrics#show'
             get 'system_status', to: 'system_status#show'

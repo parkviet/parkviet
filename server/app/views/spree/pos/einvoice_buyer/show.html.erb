@@ -82,7 +82,7 @@
           </div>
           <button class="secondary" type="submit" name="lookup" value="1">Tra cứu</button>
         </div>
-        <% if @error == 'tax_code' %><p class="error">Mã số thuế gồm 10 chữ số, hoặc 10 chữ số kèm "-" và 3 chữ số.</p><% end %>
+        <% if @error == 'tax_code' %><p class="error">Mã số thuế gồm 10 chữ số (hoặc 10 chữ số kèm "-" và 3 chữ số), hoặc 12 chữ số của số định danh cá nhân.</p><% end %>
         <% %w[name address personal_id phone email buyer_note].each do |field| %>
           <label for="<%= field %>"><%= labels[field] %></label>
           <% if field == 'address' %>

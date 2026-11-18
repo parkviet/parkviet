@@ -112,6 +112,13 @@ there. A branch copies those values and overrides them on its Information tab
 (`components/branch-info-card.tsx`). New branches take the store's business types;
 the first selected type is the primary one.
 
+Tax declaration info lives at `/settings/tax-info` (`pages/tax-info.tsx`), directly
+under store information in the sidebar, behind the same access rule. It reads and
+writes `GET`/`PATCH /pos/tax_profile`: the taxpayer name, tax code, address and
+description are the store information's own fields (never copied), and branches
+appear as business locations (location code, one head office). Its pickers read
+`GET /pos/tax_catalog` (`server/config/pos/vn_tax_catalog.yml`).
+
 ## Goods ("Hàng hoá")
 
 The Goods group (`/goods/*`; `/products` stays the redirect to the branch

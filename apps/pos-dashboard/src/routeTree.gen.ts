@@ -74,6 +74,7 @@ import { Route as AuthenticatedStoreIdSettingsReceiptTemplatesRouteImport } from
 import { Route as AuthenticatedStoreIdSettingsSetupRouteImport } from './routes/_authenticated/$storeId/settings/setup'
 import { Route as AuthenticatedStoreIdSettingsStoreInfoRouteImport } from './routes/_authenticated/$storeId/settings/store-info'
 import { Route as AuthenticatedStoreIdSettingsSystemRouteImport } from './routes/_authenticated/$storeId/settings/system'
+import { Route as AuthenticatedStoreIdSettingsTaxInfoRouteImport } from './routes/_authenticated/$storeId/settings/tax-info'
 import { Route as AuthenticatedStoreIdShiftsIndexRouteImport } from './routes/_authenticated/$storeId/shifts/index'
 import { Route as AuthenticatedStoreIdShiftsClosuresRouteImport } from './routes/_authenticated/$storeId/shifts/closures'
 import { Route as AuthenticatedStoreIdShiftsLateCashRouteImport } from './routes/_authenticated/$storeId/shifts/late-cash'
@@ -479,6 +480,12 @@ const AuthenticatedStoreIdSettingsSystemRoute =
     path: '/system',
     getParentRoute: () => AuthenticatedStoreIdSettingsRoute,
   } as any)
+const AuthenticatedStoreIdSettingsTaxInfoRoute =
+  AuthenticatedStoreIdSettingsTaxInfoRouteImport.update({
+    id: '/tax-info',
+    path: '/tax-info',
+    getParentRoute: () => AuthenticatedStoreIdSettingsRoute,
+  } as any)
 const AuthenticatedStoreIdShiftsIndexRoute =
   AuthenticatedStoreIdShiftsIndexRouteImport.update({
     id: '/',
@@ -658,6 +665,7 @@ export interface FileRoutesByFullPath {
   '/$storeId/settings/setup': typeof AuthenticatedStoreIdSettingsSetupRoute
   '/$storeId/settings/store-info': typeof AuthenticatedStoreIdSettingsStoreInfoRoute
   '/$storeId/settings/system': typeof AuthenticatedStoreIdSettingsSystemRoute
+  '/$storeId/settings/tax-info': typeof AuthenticatedStoreIdSettingsTaxInfoRoute
   '/$storeId/shifts/closures': typeof AuthenticatedStoreIdShiftsClosuresRoute
   '/$storeId/shifts/late-cash': typeof AuthenticatedStoreIdShiftsLateCashRoute
   '/$storeId/branches/': typeof AuthenticatedStoreIdBranchesIndexRoute
@@ -733,6 +741,7 @@ export interface FileRoutesByTo {
   '/$storeId/settings/setup': typeof AuthenticatedStoreIdSettingsSetupRoute
   '/$storeId/settings/store-info': typeof AuthenticatedStoreIdSettingsStoreInfoRoute
   '/$storeId/settings/system': typeof AuthenticatedStoreIdSettingsSystemRoute
+  '/$storeId/settings/tax-info': typeof AuthenticatedStoreIdSettingsTaxInfoRoute
   '/$storeId/shifts/closures': typeof AuthenticatedStoreIdShiftsClosuresRoute
   '/$storeId/shifts/late-cash': typeof AuthenticatedStoreIdShiftsLateCashRoute
   '/$storeId/branches': typeof AuthenticatedStoreIdBranchesIndexRoute
@@ -821,6 +830,7 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/settings/setup': typeof AuthenticatedStoreIdSettingsSetupRoute
   '/_authenticated/$storeId/settings/store-info': typeof AuthenticatedStoreIdSettingsStoreInfoRoute
   '/_authenticated/$storeId/settings/system': typeof AuthenticatedStoreIdSettingsSystemRoute
+  '/_authenticated/$storeId/settings/tax-info': typeof AuthenticatedStoreIdSettingsTaxInfoRoute
   '/_authenticated/$storeId/shifts/closures': typeof AuthenticatedStoreIdShiftsClosuresRoute
   '/_authenticated/$storeId/shifts/late-cash': typeof AuthenticatedStoreIdShiftsLateCashRoute
   '/_authenticated/$storeId/branches/': typeof AuthenticatedStoreIdBranchesIndexRoute
@@ -909,6 +919,7 @@ export interface FileRouteTypes {
     | '/$storeId/settings/setup'
     | '/$storeId/settings/store-info'
     | '/$storeId/settings/system'
+    | '/$storeId/settings/tax-info'
     | '/$storeId/shifts/closures'
     | '/$storeId/shifts/late-cash'
     | '/$storeId/branches/'
@@ -984,6 +995,7 @@ export interface FileRouteTypes {
     | '/$storeId/settings/setup'
     | '/$storeId/settings/store-info'
     | '/$storeId/settings/system'
+    | '/$storeId/settings/tax-info'
     | '/$storeId/shifts/closures'
     | '/$storeId/shifts/late-cash'
     | '/$storeId/branches'
@@ -1071,6 +1083,7 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/settings/setup'
     | '/_authenticated/$storeId/settings/store-info'
     | '/_authenticated/$storeId/settings/system'
+    | '/_authenticated/$storeId/settings/tax-info'
     | '/_authenticated/$storeId/shifts/closures'
     | '/_authenticated/$storeId/shifts/late-cash'
     | '/_authenticated/$storeId/branches/'
@@ -1563,6 +1576,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoreIdSettingsSystemRouteImport
       parentRoute: typeof AuthenticatedStoreIdSettingsRoute
     }
+    '/_authenticated/$storeId/settings/tax-info': {
+      id: '/_authenticated/$storeId/settings/tax-info'
+      path: '/tax-info'
+      fullPath: '/$storeId/settings/tax-info'
+      preLoaderRoute: typeof AuthenticatedStoreIdSettingsTaxInfoRouteImport
+      parentRoute: typeof AuthenticatedStoreIdSettingsRoute
+    }
     '/_authenticated/$storeId/shifts/': {
       id: '/_authenticated/$storeId/shifts/'
       path: '/'
@@ -1924,6 +1944,7 @@ interface AuthenticatedStoreIdSettingsRouteChildren {
   AuthenticatedStoreIdSettingsSetupRoute: typeof AuthenticatedStoreIdSettingsSetupRoute
   AuthenticatedStoreIdSettingsStoreInfoRoute: typeof AuthenticatedStoreIdSettingsStoreInfoRoute
   AuthenticatedStoreIdSettingsSystemRoute: typeof AuthenticatedStoreIdSettingsSystemRoute
+  AuthenticatedStoreIdSettingsTaxInfoRoute: typeof AuthenticatedStoreIdSettingsTaxInfoRoute
   AuthenticatedStoreIdSettingsIndexRoute: typeof AuthenticatedStoreIdSettingsIndexRoute
 }
 
@@ -1941,6 +1962,8 @@ const AuthenticatedStoreIdSettingsRouteChildren: AuthenticatedStoreIdSettingsRou
       AuthenticatedStoreIdSettingsStoreInfoRoute,
     AuthenticatedStoreIdSettingsSystemRoute:
       AuthenticatedStoreIdSettingsSystemRoute,
+    AuthenticatedStoreIdSettingsTaxInfoRoute:
+      AuthenticatedStoreIdSettingsTaxInfoRoute,
     AuthenticatedStoreIdSettingsIndexRoute:
       AuthenticatedStoreIdSettingsIndexRoute,
   }

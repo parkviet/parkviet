@@ -1,0 +1,97 @@
+# Vietnam tax catalog for the POS, read by Spree::Pos::VnTaxCatalog and
+# checked at load: a block without items, a blank or repeated code, or a
+# missing name stops the loader and fails
+# spec/services/spree/pos/vn_tax_catalog_spec.rb.
+#
+# Each top-level key is one block. Every block records what it is based on
+# (`basis`), when it was last checked (`updated_on`) and whether it has been
+# compared with the official list (`verified`). A wrong entry is fixed here
+# and in the spec, never in code. Rate blocks will be added under their own
+# keys.
+
+# Tax offices a taxpayer files with. From 01/07/2025 the tax administration
+# is organized as one tax office per province or city (34, matching the
+# provinces in vn_admin_units.json). Codes here are the province codes of
+# that file, not the authority codes printed on declaration forms; compare
+# them with the tax administration's list of tax offices before a
+# declaration is generated from them.
+tax_authorities:
+  basis: >-
+    Tổ chức lại hệ thống cơ quan thuế theo 34 tỉnh, thành phố từ 01/07/2025
+    (Nghị quyết 202/2025/QH15 về sắp xếp đơn vị hành chính cấp tỉnh).
+  updated_on: '2026-11-18'
+  verified: false
+  items:
+    - { code: '01', name: 'Thuế thành phố Hà Nội' }
+    - { code: '04', name: 'Thuế tỉnh Cao Bằng' }
+    - { code: '08', name: 'Thuế tỉnh Tuyên Quang' }
+    - { code: '11', name: 'Thuế tỉnh Điện Biên' }
+    - { code: '12', name: 'Thuế tỉnh Lai Châu' }
+    - { code: '14', name: 'Thuế tỉnh Sơn La' }
+    - { code: '15', name: 'Thuế tỉnh Lào Cai' }
+    - { code: '19', name: 'Thuế tỉnh Thái Nguyên' }
+    - { code: '20', name: 'Thuế tỉnh Lạng Sơn' }
+    - { code: '22', name: 'Thuế tỉnh Quảng Ninh' }
+    - { code: '24', name: 'Thuế tỉnh Bắc Ninh' }
+    - { code: '25', name: 'Thuế tỉnh Phú Thọ' }
+    - { code: '31', name: 'Thuế thành phố Hải Phòng' }
+    - { code: '33', name: 'Thuế tỉnh Hưng Yên' }
+    - { code: '37', name: 'Thuế tỉnh Ninh Bình' }
+    - { code: '38', name: 'Thuế tỉnh Thanh Hóa' }
+    - { code: '40', name: 'Thuế tỉnh Nghệ An' }
+    - { code: '42', name: 'Thuế tỉnh Hà Tĩnh' }
+    - { code: '44', name: 'Thuế tỉnh Quảng Trị' }
+    - { code: '46', name: 'Thuế thành phố Huế' }
+    - { code: '48', name: 'Thuế thành phố Đà Nẵng' }
+    - { code: '51', name: 'Thuế tỉnh Quảng Ngãi' }
+    - { code: '52', name: 'Thuế tỉnh Gia Lai' }
+    - { code: '56', name: 'Thuế tỉnh Khánh Hòa' }
+    - { code: '66', name: 'Thuế tỉnh Đắk Lắk' }
+    - { code: '68', name: 'Thuế tỉnh Lâm Đồng' }
+    - { code: '75', name: 'Thuế tỉnh Đồng Nai' }
+    - { code: '79', name: 'Thuế thành phố Hồ Chí Minh' }
+    - { code: '80', name: 'Thuế tỉnh Tây Ninh' }
+    - { code: '82', name: 'Thuế tỉnh Đồng Tháp' }
+    - { code: '86', name: 'Thuế tỉnh Vĩnh Long' }
+    - { code: '91', name: 'Thuế tỉnh An Giang' }
+    - { code: '92', name: 'Thuế thành phố Cần Thơ' }
+    - { code: '96', name: 'Thuế tỉnh Cà Mau' }
+
+# Business lines a store declares, abbreviated from the Vietnam Standard
+# Industrial Classification (VSIC 2018) to what POS stores do: retail, food
+# and drink, entertainment and personal services. `group` only orders the
+# picker: retail | fnb | entertainment | services.
+industries:
+  basis: >-
+    Hệ thống ngành kinh tế Việt Nam (VSIC 2018), Quyết định 27/2018/QĐ-TTg; mã cấp 4,
+    rút gọn cho bán lẻ, ăn uống, vui chơi giải trí và dịch vụ.
+  updated_on: '2026-11-18'
+  verified: false
+  items:
+    - { code: '4711', group: retail, name: 'Bán lẻ lương thực, thực phẩm, đồ uống, thuốc lá chiếm tỷ trọng lớn trong cửa hàng kinh doanh tổng hợp' }
+    - { code: '4719', group: retail, name: 'Bán lẻ khác trong cửa hàng kinh doanh tổng hợp' }
+    - { code: '4722', group: retail, name: 'Bán lẻ thực phẩm trong cửa hàng chuyên doanh' }
+    - { code: '4723', group: retail, name: 'Bán lẻ đồ uống trong cửa hàng chuyên doanh' }
+    - { code: '4741', group: retail, name: 'Bán lẻ máy vi tính, thiết bị ngoại vi, phần mềm và thiết bị viễn thông trong cửa hàng chuyên doanh' }
+    - { code: '4752', group: retail, name: 'Bán lẻ đồ ngũ kim, sơn, kính và thiết bị lắp đặt khác trong xây dựng trong cửa hàng chuyên doanh' }
+    - { code: '4759', group: retail, name: 'Bán lẻ đồ điện gia dụng, đồ nội thất và đồ dùng gia đình khác trong cửa hàng chuyên doanh' }
+    - { code: '4761', group: retail, name: 'Bán lẻ sách, báo, tạp chí, văn phòng phẩm trong cửa hàng chuyên doanh' }
+    - { code: '4771', group: retail, name: 'Bán lẻ hàng may mặc, giày dép, hàng da và giả da trong cửa hàng chuyên doanh' }
+    - { code: '4772', group: retail, name: 'Bán lẻ thuốc, dụng cụ y tế, mỹ phẩm và vật phẩm vệ sinh trong cửa hàng chuyên doanh' }
+    - { code: '4773', group: retail, name: 'Bán lẻ hàng hóa khác mới trong cửa hàng chuyên doanh' }
+    - { code: '4781', group: retail, name: 'Bán lẻ lương thực, thực phẩm, đồ uống, thuốc lá lưu động hoặc tại chợ' }
+    - { code: '5610', group: fnb, name: 'Nhà hàng và các dịch vụ ăn uống phục vụ lưu động' }
+    - { code: '5621', group: fnb, name: 'Cung cấp dịch vụ ăn uống theo hợp đồng không thường xuyên (tiệc, hội họp, đám cưới)' }
+    - { code: '5629', group: fnb, name: 'Dịch vụ ăn uống khác' }
+    - { code: '5630', group: fnb, name: 'Dịch vụ phục vụ đồ uống' }
+    - { code: '1071', group: fnb, name: 'Sản xuất các loại bánh từ bột' }
+    - { code: '9311', group: entertainment, name: 'Hoạt động của các cơ sở thể thao' }
+    - { code: '9321', group: entertainment, name: 'Hoạt động của các công viên vui chơi và công viên theo chủ đề' }
+    - { code: '9329', group: entertainment, name: 'Hoạt động vui chơi giải trí khác (karaoke, bida, trò chơi)' }
+    - { code: '5510', group: services, name: 'Dịch vụ lưu trú ngắn ngày' }
+    - { code: '9610', group: services, name: 'Dịch vụ tắm hơi, massage và tăng cường sức khỏe tương tự (trừ thể thao)' }
+    - { code: '9620', group: services, name: 'Giặt là, làm sạch các sản phẩm dệt và lông thú' }
+    - { code: '9631', group: services, name: 'Cắt tóc, làm đầu, gội đầu' }
+    - { code: '9639', group: services, name: 'Hoạt động dịch vụ phục vụ cá nhân khác chưa được phân vào đâu' }
+    - { code: '4520', group: services, name: 'Bảo dưỡng, sửa chữa ô tô và xe có động cơ khác' }
+    - { code: '4542', group: services, name: 'Bảo dưỡng và sửa chữa mô tô, xe máy' }

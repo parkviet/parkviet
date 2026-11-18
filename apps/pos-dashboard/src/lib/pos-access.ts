@@ -44,6 +44,7 @@ export type PosPage =
   | 'setup'
   | 'store-model'
   | 'store-info'
+  | 'tax-info'
   | 'devices'
   | 'menu'
   | 'stock-alerts'
@@ -268,7 +269,9 @@ export const canCreatePosChannel = (access: PosAccess) => hasKey(access, 'write_
       canManageKitchen(access) ||
       canManageResources(access)
     )
-  if (page === 'store-info') return canAdminister(access)
+  // Tax declaration details are read by store readers and changed by writers,
+  // like the store information they share fields with.
+  if (page === 'store-info' || page === 'tax-info') return canAdminister(access)
   if (page === 'setup' || page === 'store-model') return canAdminister(access, true)
   if (page === 'devices')
     return (
