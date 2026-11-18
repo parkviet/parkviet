@@ -145,7 +145,14 @@ describe('ensureProductTypes', () => {
     expect(client.productTypes.create).toHaveBeenCalledWith({ name: 'Dịch vụ' })
     expect(client.productTypes.create).toHaveBeenCalledWith({ name: 'Nguyên liệu' })
   })
-  it('refuses before writing anything without the products write key', async () => {
+  it('refuses without reading when the role cannot read product types', async () => {
+    const client = fakeClient({ types: [[]] })
+    await expect(ensureProductTypes({ canRead: false, canCreate: true }, client)).rejects.toEqual(
+      new GoodsSetupError('product_types_unreadable'),
+    )
+    expect(client.productTypes.list).not.toHaveBeenCalled()
+  })
+  it('refuses before writing anything without the product types write key', async () => {
     const client = fakeClient({ types: [[{ id: 'pt_g', name: 'Hàng hoá' }]] })
     await expect(ensureProductTypes({ canCreate: false }, client)).rejects.toEqual(
       new GoodsSetupError('product_types_forbidden'),

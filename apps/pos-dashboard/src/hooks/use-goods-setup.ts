@@ -1,7 +1,7 @@
 import { adminClient, usePermissions } from '@spree/dashboard-core'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
-import { canCreatePosChannel, canWriteGoods } from '../lib/pos-access'
+import { canCreatePosChannel, canReadProductTypes, canWriteProductTypes } from '../lib/pos-access'
 import { useSession } from './use-session'
 
 // What goods screens need before they write: the store's `pos` sales channel
@@ -53,7 +53,12 @@ export type ProductTypeIds = Record<ProductKind, string>
 
 // Refusals the screens translate: `goods.setup.<reason>`.
 export class GoodsSetupError extends Error {
-  constructor(readonly reason: 'pos_channel_forbidden' | 'product_types_forbidden') {
+  constructor(
+    readonly reason:
+      | 'pos_channel_forbidden'
+      | 'product_types_forbidden'
+      | 'product_types_unreadable',
+  ) {
     super(reason)
     this.name = 'GoodsSetupError'
   }
@@ -105,9 +110,10 @@ const readProductTypes = (client: Client) =>
   listAll((page) => client.productTypes.list({ page, limit: 100 }))
 // Makes sure the three POS product types exist and returns their ids.
 export async function ensureProductTypes(
-  { canCreate }: { canCreate: boolean },
+  { canRead = true, canCreate }: { canRead?: boolean; canCreate: boolean },
   client: Client = adminClient,
 ): Promise<ProductTypeIds> {
+  if (!canRead) throw new GoodsSetupError('product_types_unreadable')
   const found = productTypesByKind(await readProductTypes(client))
   const missing = PRODUCT_KINDS.filter((kind) => !found[kind])
   if (missing.length > 0 && !canCreate) throw new GoodsSetupError('product_types_forbidden')
@@ -138,7 +144,8 @@ export function useGoodsSetup() {
   const { permissionKeys } = usePermissions()
   const access = { permissionKeys }
   const mayCreateChannel = canCreatePosChannel(access)
-  const mayCreateTypes = canWriteGoods(access)
+  const mayReadTypes = canReadProductTypes(access)
+  const mayCreateTypes = canWriteProductTypes(access)
   const ensure = useCallback(
     <T>(part: string, run: () => Promise<T>) =>
       client.fetchQuery({
@@ -154,8 +161,11 @@ export function useGoodsSetup() {
       [ensure, mayCreateChannel],
     ),
     ensureProductTypes: useCallback(
-      () => ensure('product-types', () => ensureProductTypes({ canCreate: mayCreateTypes })),
-      [ensure, mayCreateTypes],
+      () =>
+        ensure('product-types', () =>
+          ensureProductTypes({ canRead: mayReadTypes, canCreate: mayCreateTypes }),
+        ),
+      [ensure, mayReadTypes, mayCreateTypes],
     ),
   }
 }

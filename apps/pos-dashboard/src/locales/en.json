@@ -4043,7 +4043,8 @@
     },
     "setup": {
       "pos_channel_forbidden": "The store has no sales channel with code pos yet. Someone allowed to change Settings must create it before products are saved.",
-      "product_types_forbidden": "The store is missing the Goods, Service and Ingredient product types. Someone allowed to change Products must save first to create them.",
+      "product_types_forbidden": "The store is missing the Goods, Service and Ingredient product types. Someone allowed to change Product types must save first to create them.",
+      "product_types_unreadable": "Your role cannot read Product types (read_product_types), so goods cannot be saved yet. Ask an administrator to grant it.",
       "pos_channel_inactive": "The pos sales channel is switched off. Products are saved but cannot be sold at the counter until the channel is switched back on in the Spree Dashboard."
     }
   },

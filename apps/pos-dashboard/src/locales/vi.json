@@ -4015,7 +4015,8 @@
     },
     "setup": {
       "pos_channel_forbidden": "Cửa hàng chưa có kênh bán hàng mã pos. Cần người có quyền ghi Cài đặt tạo kênh này trước khi lưu sản phẩm.",
-      "product_types_forbidden": "Cửa hàng chưa đủ loại sản phẩm Hàng hoá, Dịch vụ, Nguyên liệu. Cần người có quyền ghi Sản phẩm lưu lần đầu để tạo chúng.",
+      "product_types_forbidden": "Cửa hàng chưa đủ loại sản phẩm Hàng hoá, Dịch vụ, Nguyên liệu. Cần người có quyền ghi Loại sản phẩm lưu lần đầu để tạo chúng.",
+      "product_types_unreadable": "Vai trò của bạn chưa có quyền xem Loại sản phẩm (read_product_types), nên chưa lưu được hàng hoá. Nhờ quản trị cấp thêm quyền này.",
       "pos_channel_inactive": "Kênh bán hàng pos đang tắt. Sản phẩm vẫn được lưu nhưng chưa bán được ở quầy cho đến khi bật lại kênh trong Spree Dashboard."
     }
   },

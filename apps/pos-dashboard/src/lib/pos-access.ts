@@ -189,6 +189,10 @@ export const canReadCategories = (access: PosAccess) =>
   hasKey(access, 'read_categories') || hasKey(access, 'write_categories')
 export const canWriteCategories = (access: PosAccess) => hasKey(access, 'write_categories')
 export const canCreatePosChannel = (access: PosAccess) => hasKey(access, 'write_settings')
+// Spree registers product types as their own catalog scope, apart from products.
+export const canReadProductTypes = (access: PosAccess) =>
+  hasKey(access, 'read_product_types') || hasKey(access, 'write_product_types')
+export const canWriteProductTypes = (access: PosAccess) => hasKey(access, 'write_product_types')
 export function visibleNav(page: PosPage, access: PosAccess) {
   if (
     page === 'goods-products' ||

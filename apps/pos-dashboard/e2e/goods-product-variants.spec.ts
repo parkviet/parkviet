@@ -69,7 +69,7 @@ async function install(page: Page) {
     return route.fulfill({ json: { data: [], meta: { page: 1, pages: 1, count: 0, next: null } } });
   });
   await installDashboardShell(page, { authenticated: true });
-  await page.route('**/api/v3/admin/me', (route) => route.fulfill({ json: { id: 'staff_admin', email: 'admin@example.test', full_name: 'Quản trị Hiền', selected_locale: 'vi', stores: [{ id: 'store_1', name: 'Cửa hàng Hiền', code: 'store_1', default_currency: 'VND' }], permissions: [], permission_keys: ['read_pos_topology', 'write_pos_topology', 'read_products', 'write_products', 'write_settings', 'read_categories', 'write_categories'] } }));
+  await page.route('**/api/v3/admin/me', (route) => route.fulfill({ json: { id: 'staff_admin', email: 'admin@example.test', full_name: 'Quản trị Hiền', selected_locale: 'vi', stores: [{ id: 'store_1', name: 'Cửa hàng Hiền', code: 'store_1', default_currency: 'VND' }], permissions: [], permission_keys: ['read_pos_topology', 'write_pos_topology', 'read_products', 'write_products', 'read_product_types', 'write_product_types', 'write_settings', 'read_categories', 'write_categories'] } }));
   return state;
 }
 

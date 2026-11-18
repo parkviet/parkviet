@@ -61,7 +61,7 @@ import {
   sellingVariants,
   variantsEditable,
 } from '../lib/goods-products'
-import { canAdminister, canWriteGoods, visibleNav } from '../lib/pos-access'
+import { canAdminister, canReadProductTypes, canWriteGoods, visibleNav } from '../lib/pos-access'
 import { goodsProductSchema } from '../schemas/goods-product'
 
 type Notice = { text: string; failed: boolean; lines?: string[] }
@@ -91,7 +91,9 @@ export function GoodsProductFormPage({ productId }: { productId?: string }) {
   const { context } = usePosSession()
   const editing = productId !== undefined
   const product = useGoodsProduct(productId ?? '', PRODUCT_FORM_EXPAND, editing)
-  const types = useGoodsProductTypes()
+  const types = useGoodsProductTypes(
+    canReadProductTypes({ permissionKeys: usePermissions().permissionKeys }),
+  )
   const branches = useMemo(
     () => (context.data?.branches ?? []).filter((branch) => branch.status === 'active'),
     [context.data],

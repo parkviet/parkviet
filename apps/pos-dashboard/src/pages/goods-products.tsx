@@ -65,7 +65,7 @@ import {
   productStock,
   toCsv,
 } from '../lib/goods-products'
-import { canWriteGoods } from '../lib/pos-access'
+import { canReadProductTypes, canWriteGoods } from '../lib/pos-access'
 import { goodsProductSearchSchema } from '../schemas/goods-product-search'
 
 const TABLE_KEY = 'pos-goods-products'
@@ -91,7 +91,7 @@ export function GoodsProductsPage() {
   const searchParams = goodsProductSearchSchema.parse(useSearch({ strict: false }))
   const view = searchParams.view ?? 'pos'
   const currency = context.data?.store.currency ?? 'VND'
-  const types = useGoodsProductTypes()
+  const types = useGoodsProductTypes(canReadProductTypes({ permissionKeys }))
   const categories = useGoodsCategories()
   const taxCategories = useGoodsTaxCategories()
   const taxRates = useGoodsTaxRates()

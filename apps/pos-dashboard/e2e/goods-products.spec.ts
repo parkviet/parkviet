@@ -70,7 +70,7 @@ async function install(page: Page, options: { posChannel?: boolean; write?: bool
   });
   await installDashboardShell(page, { authenticated: true });
   // The catalog keys this screen is gated on, beside the shell's topology keys.
-  await page.route('**/api/v3/admin/me', (route) => route.fulfill({ json: { id: 'staff_admin', email: 'admin@example.test', full_name: 'Quản trị Hiền', selected_locale: 'vi', stores: [{ id: 'store_1', name: 'Siêu thị Hiền', code: 'store_1', default_currency: 'VND' }], permissions: [], permission_keys: ['read_pos_topology', 'write_pos_topology', 'read_products', ...(write ? ['write_products', 'write_settings', 'write_categories', 'read_categories'] : [])] } }));
+  await page.route('**/api/v3/admin/me', (route) => route.fulfill({ json: { id: 'staff_admin', email: 'admin@example.test', full_name: 'Quản trị Hiền', selected_locale: 'vi', stores: [{ id: 'store_1', name: 'Siêu thị Hiền', code: 'store_1', default_currency: 'VND' }], permissions: [], permission_keys: ['read_pos_topology', 'write_pos_topology', 'read_products', 'read_product_types', ...(write ? ['write_products', 'write_product_types', 'write_settings', 'write_categories', 'read_categories'] : [])] } }));
   return state;
 }
 const MENU = /^(Open actions|Mở menu thao tác)$/;
