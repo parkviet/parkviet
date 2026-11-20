@@ -20,6 +20,17 @@ Có thể làm thủ công trong Spree Dashboard:
 
 Ứng dụng không tự xuất bản sản phẩm cũ hay toàn bộ danh mục và không thay đổi dữ liệu cũ; chỉ sản phẩm tạo từ màn Hàng hoá được xuất bản lên kênh `pos`. Một sản phẩm phải đồng thời đang được xuất bản trên kênh POS, còn được phép bán và được cấp cho chi nhánh mới bán được. Tồn kho vẫn lấy từ kho của chi nhánh.
 
+## Sản phẩm là trung tâm
+
+Mọi thứ POS bán là sản phẩm Spree, kể cả món F&B. Không có bảng "món thực đơn" hay "nhóm món" riêng.
+
+- **Danh mục ở quầy** là danh mục Spree gắn trực tiếp vào sản phẩm. Tab "Tất cả" luôn có; sản phẩm không thuộc danh mục nào chỉ hiện ở đó.
+- **Loại sản phẩm POS** theo loại sản phẩm Spree: Sản phẩm thường, Sản phẩm chế biến, Dịch vụ, Nguyên liệu. Ở chi nhánh bật thực đơn F&B, Sản phẩm chế biến bán theo kiểu món (giá theo lịch bán, bán kèm, combo, qua bếp và tem ly); các loại khác là dòng bán thường. Nguyên liệu không bán tại quầy.
+- **Cấu hình vận hành** (nhóm bếp, tem ly, hiện thành phần trên màn bếp, đặt QR, vé uống), nhóm bán kèm và combo chỉ gắn cho Sản phẩm chế biến, sửa trong form sản phẩm ở Hàng hoá. Chúng nằm trong các bảng phụ của POS gắn theo sản phẩm và bị xoá cùng sản phẩm. Nhân bản hay nhập CSV trong Spree không mang theo cấu hình này; dùng "Sao chép cấu hình vận hành từ sản phẩm khác" trong form.
+- **Màn Thực đơn** chỉ còn phần vận hành: combo, lịch bán, món yêu thích và hết món theo chi nhánh.
+- **Menu QR** của chi nhánh có danh mục và thứ tự riêng; chi nhánh chưa cấu hình menu QR thì dùng danh mục Spree như ở quầy.
+- Báo cáo doanh thu, giá vốn và nguyên liệu gom theo biến thể, nên món F&B và hàng thường nằm chung một báo cáo.
+
 ## Giá và khuyến mại
 
 Danh mục, tem cân và thêm hàng dùng bộ giải giá theo ngữ cảnh của Spree, bao gồm kênh POS, thay vì chỉ lấy giá cơ sở. Khi có đơn, ngữ cảnh giá lấy từ chính đơn đó. Các quy tắc khuyến mại theo kênh kiểm tra kênh trên đơn; không cần giả lập Store API bằng header `X-Spree-Channel`.

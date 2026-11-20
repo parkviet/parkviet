@@ -10,7 +10,7 @@ Chi nhánh bật **suất ăn và ví** hoặc **hoa hồng tài xế** cũng m�
 
 ## Bố cục
 
-Nhóm món ở bên trái, lưới món ở giữa, phiếu đơn ở bên phải. Không có bảng bàn và không có tab đơn: phiếu bên phải luôn là đơn của khách đang đứng ở quầy. Thu xong một đơn thì phiếu trống ngay cho khách sau.
+Danh mục ở bên trái, lưới sản phẩm ở giữa, phiếu đơn ở bên phải. Không có bảng bàn và không có tab đơn: phiếu bên phải luôn là đơn của khách đang đứng ở quầy. Thu xong một đơn thì phiếu trống ngay cho khách sau.
 
 - **Ảnh món:** ô món hiện ảnh của món. Nút **Ảnh món** cạnh nút đổi cỡ ô bật hoặc tắt ảnh. Mỗi máy nhớ lựa chọn của mình; ở quầy nhanh ảnh mặc định bật.
 - **Thêm món:** món không có tùy chọn thêm bằng một chạm. Món có tùy chọn (đường, đá, topping…) mở bảng tùy chọn tại chỗ. Món hết hàng ghi **Hết món** và không chạm được. Món đang theo giá khung giờ có nhãn giá giờ trên ô.
