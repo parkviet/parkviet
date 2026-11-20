@@ -58,7 +58,7 @@ async function install(page: Page, options: { posChannel?: boolean; write?: bool
     if (path === '/products/bulk_add_to_channels') return route.fulfill({ json: { product_count: 1, channel_count: 1 } });
     if (path === '/channels' && method === 'GET') return route.fulfill({ json: page_(channels) });
     if (path === '/channels') { const created = { id: 'ch_new', code: 'pos', name: 'Point of Sale', active: true }; channels.push(created); return route.fulfill({ status: 201, json: created }); }
-    if (path === '/product_types') return route.fulfill({ json: page_([{ id: 'pt_goods', name: 'Hàng hoá' }, { id: 'pt_service', name: 'Dịch vụ' }, { id: 'pt_ingredient', name: 'Nguyên liệu' }]) });
+    if (path === '/product_types') return route.fulfill({ json: page_([{ id: 'pt_goods', name: 'Sản phẩm thường' }, { id: 'pt_prepared', name: 'Sản phẩm chế biến' }, { id: 'pt_service', name: 'Dịch vụ' }, { id: 'pt_ingredient', name: 'Nguyên liệu' }]) });
     if (path === '/categories') return route.fulfill({ json: page_([{ id: 'ctg_drinks', name: 'Đồ uống', pretty_name: 'Đồ uống' }]) });
     if (path === '/tax_categories') return route.fulfill({ json: page_([{ id: 'taxcat_vat', name: 'VAT' }]) });
     if (path === '/tax_rates') return route.fulfill({ json: page_([{ id: 'tr_1', tax_category_id: 'taxcat_vat', rate_percent: '8' }]) });

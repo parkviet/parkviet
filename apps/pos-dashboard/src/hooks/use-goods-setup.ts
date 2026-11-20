@@ -13,14 +13,15 @@ import { useSession } from './use-session'
 export const POS_CHANNEL_CODE = 'pos'
 export const POS_CHANNEL_NAME = 'Point of Sale'
 
-export const PRODUCT_KINDS = ['goods', 'service', 'ingredient'] as const
+export const PRODUCT_KINDS = ['goods', 'prepared', 'service', 'ingredient'] as const
 export type ProductKind = (typeof PRODUCT_KINDS)[number]
 // Spree 6.0 product types carry no metadata, so a kind is recognized by the
 // fixed name it is created with. Names are compared without case, spacing or
 // Vietnamese marks, so "Hàng hóa" (either accent placement) or a type renamed
 // to "hang hoa" still count, while any other type is left alone.
 export const PRODUCT_TYPE_NAMES: Record<ProductKind, string> = {
-  goods: 'Hàng hoá',
+  goods: 'Sản phẩm thường',
+  prepared: 'Sản phẩm chế biến',
   service: 'Dịch vụ',
   ingredient: 'Nguyên liệu',
 }
@@ -33,7 +34,12 @@ const fold = (name: string) =>
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim()
-const KIND_BY_NAME = new Map(PRODUCT_KINDS.map((kind) => [fold(PRODUCT_TYPE_NAMES[kind]), kind]))
+// Names used before the kinds were renamed still count as plain products.
+const LEGACY_GOODS_NAMES = ['Hàng hoá', 'Sản phẩm']
+const KIND_BY_NAME = new Map<string, ProductKind>([
+  ...LEGACY_GOODS_NAMES.map((name) => [fold(name), 'goods'] as const),
+  ...PRODUCT_KINDS.map((kind) => [fold(PRODUCT_TYPE_NAMES[kind]), kind] as const),
+])
 export const productKindOf = (name: string): ProductKind | null =>
   KIND_BY_NAME.get(fold(name)) ?? null
 

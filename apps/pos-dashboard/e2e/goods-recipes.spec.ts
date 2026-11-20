@@ -57,7 +57,7 @@ async function install(page: Page, { modules = { 'fnb.recipes': true } as Json }
       if (row) row.cost_price = String(body?.cost_price);
       return route.fulfill({ json: row });
     }
-    if (path === '/product_types') return route.fulfill({ json: page_([{ id: 'pt_goods', name: 'Hàng hoá' }, { id: 'pt_service', name: 'Dịch vụ' }, { id: 'pt_ingredient', name: 'Nguyên liệu' }]) });
+    if (path === '/product_types') return route.fulfill({ json: page_([{ id: 'pt_goods', name: 'Sản phẩm thường' }, { id: 'pt_prepared', name: 'Sản phẩm chế biến' }, { id: 'pt_service', name: 'Dịch vụ' }, { id: 'pt_ingredient', name: 'Nguyên liệu' }]) });
     if (path === '/pos/units/variants') return route.fulfill({ json: { data: (url.searchParams.get('variant_ids') ?? '').split(',').filter((id) => units[id]).map((id) => ({ variant_id: id, sale_unit: units[id], sale_unit_name: units[id], base_unit: units[id], ratio_numerator: 1, ratio_denominator: 1 })) } });
     if (path === '/pos/units') return route.fulfill({ json: { data: [
       { id: 'u_ml', code: 'ml', name: 'Mililit', dimension: 'volume', base_code: 'ml', factor_to_base: 1, sale_precision: 0, version: 1, status: 'active' },

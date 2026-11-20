@@ -16,7 +16,12 @@ vi.mock('../lib/pos-request', () => ({ posRequest: request }))
 
 const { saveIngredient } = await import('./use-goods-ingredients')
 
-const types = { goods: 'pt_goods', service: 'pt_service', ingredient: 'pt_ingredient' }
+const types = {
+  goods: 'pt_goods',
+  prepared: 'pt_prepared',
+  service: 'pt_service',
+  ingredient: 'pt_ingredient',
+}
 const parsed = (values: Record<string, unknown> = {}) =>
   goodsIngredientSchema('VND').parse({ ...emptyIngredient('g'), name: 'Bột mì', ...values })
 const context = (overrides: Record<string, unknown> = {}) => ({

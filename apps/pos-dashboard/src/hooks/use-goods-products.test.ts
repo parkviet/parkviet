@@ -25,7 +25,12 @@ vi.mock('../lib/pos-request', () => ({ posRequest: request }))
 
 const { generateSku, saveGoodsProduct } = await import('./use-goods-products')
 
-const types = { goods: 'pt_goods', service: 'pt_service', ingredient: 'pt_ingredient' }
+const types = {
+  goods: 'pt_goods',
+  prepared: 'pt_prepared',
+  service: 'pt_service',
+  ingredient: 'pt_ingredient',
+}
 const parsed = (overrides: Record<string, unknown> = {}) =>
   goodsProductSchema('VND').parse({
     ...emptyGoodsProduct(['branch_a', 'branch_b']),

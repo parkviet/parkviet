@@ -47,6 +47,11 @@ export const useGoodsTaxCategories = (enabled = true) =>
   useGoodsQuery(['tax-categories'], enabled, () =>
     listAll((page) => adminClient.taxCategories.list({ ...ALL, page })),
   )
+// Every sales channel of the store (reading needs `read_settings`), for filters.
+export const useGoodsChannels = (enabled = true) =>
+  useGoodsQuery(['channels'], enabled, () =>
+    listAll((page) => adminClient.channels.list({ ...ALL, page })),
+  )
 // The `pos` channel as it stands, without creating it (reading needs `read_settings`).
 export const usePosChannel = (enabled = true) =>
   useGoodsQuery(['pos-channel'], enabled, async () => {

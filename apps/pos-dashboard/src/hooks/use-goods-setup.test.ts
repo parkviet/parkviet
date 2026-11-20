@@ -44,6 +44,8 @@ describe('product kinds', () => {
     expect(productKindOf('Hàng hoá')).toBe('goods')
     expect(productKindOf('Hàng hóa')).toBe('goods')
     expect(productKindOf('  hang   HOA ')).toBe('goods')
+    expect(productKindOf('Sản phẩm thường')).toBe('goods')
+    expect(productKindOf('Sản phẩm chế biến')).toBe('prepared')
     expect(productKindOf('Dịch vụ')).toBe('service')
     expect(productKindOf('Nguyên liệu')).toBe('ingredient')
     expect(productKindOf('Apparel')).toBeNull()
@@ -119,6 +121,7 @@ describe('ensureProductTypes', () => {
       .mockResolvedValueOnce(page([{ id: 'pt_g', name: 'Hàng hoá' }], 2))
       .mockResolvedValueOnce(
         page([
+          { id: 'pt_p', name: 'Sản phẩm chế biến' },
           { id: 'pt_s', name: 'Dịch vụ' },
           { id: 'pt_i', name: 'Nguyên liệu' },
         ]),
@@ -127,6 +130,7 @@ describe('ensureProductTypes', () => {
     const client = { channels: {}, productTypes: { list, create } } as never
     await expect(ensureProductTypes({ canCreate: false }, client)).resolves.toEqual({
       goods: 'pt_g',
+      prepared: 'pt_p',
       service: 'pt_s',
       ingredient: 'pt_i',
     })
@@ -138,10 +142,12 @@ describe('ensureProductTypes', () => {
     const client = fakeClient({ types: [[{ id: 'pt_g', name: 'Hang hoa' }]] })
     await expect(ensureProductTypes({ canCreate: true }, client)).resolves.toEqual({
       goods: 'pt_g',
+      prepared: 'pt_Sản phẩm chế biến',
       service: 'pt_Dịch vụ',
       ingredient: 'pt_Nguyên liệu',
     })
-    expect(client.productTypes.create).toHaveBeenCalledTimes(2)
+    expect(client.productTypes.create).toHaveBeenCalledTimes(3)
+    expect(client.productTypes.create).toHaveBeenCalledWith({ name: 'Sản phẩm chế biến' })
     expect(client.productTypes.create).toHaveBeenCalledWith({ name: 'Dịch vụ' })
     expect(client.productTypes.create).toHaveBeenCalledWith({ name: 'Nguyên liệu' })
   })
@@ -167,10 +173,12 @@ describe('ensureProductTypes', () => {
       types: [
         [
           { id: 'pt_g', name: 'Hàng hoá' },
+          { id: 'pt_p', name: 'Sản phẩm chế biến' },
           { id: 'pt_i', name: 'Nguyên liệu' },
         ],
         [
           { id: 'pt_g', name: 'Hàng hoá' },
+          { id: 'pt_p', name: 'Sản phẩm chế biến' },
           { id: 'pt_s2', name: 'Dịch vụ' },
           { id: 'pt_i', name: 'Nguyên liệu' },
         ],
@@ -179,6 +187,7 @@ describe('ensureProductTypes', () => {
     })
     await expect(ensureProductTypes({ canCreate: true }, client)).resolves.toEqual({
       goods: 'pt_g',
+      prepared: 'pt_p',
       service: 'pt_s2',
       ingredient: 'pt_i',
     })

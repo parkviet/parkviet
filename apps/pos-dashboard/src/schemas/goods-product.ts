@@ -49,7 +49,7 @@ export function goodsProductSchema(currency: string) {
   return z
     .object({
       name: z.string().trim().min(1, `${ERR}.name`).max(255, `${ERR}.name`),
-      kind: z.enum(['goods', 'service']),
+      kind: z.enum(['goods', 'prepared', 'service']),
       unitCode: z.string().trim().min(1, `${ERR}.unit`),
       sku: code(`${ERR}.sku`),
       barcode: code(`${ERR}.barcode`),

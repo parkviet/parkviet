@@ -47,7 +47,7 @@ async function install(page: Page) {
     if (path === '/option_types' && method === 'GET') return route.fulfill({ json: page_([{ id: 'ot_size', name: 'size', label: 'Size', option_values: [{ id: 'ov_size_S', name: 's', label: 'S', position: 1 }, { id: 'ov_size_M', name: 'm', label: 'M', position: 2 }] }]) });
     if (path.startsWith('/option_types')) return route.fulfill({ status: method === 'POST' ? 201 : 200, json: { id: 'ot_new', ...body } });
     if (path === '/channels') return route.fulfill({ json: page_([{ id: 'ch_pos', code: 'pos', name: 'POS', active: true }]) });
-    if (path === '/product_types') return route.fulfill({ json: page_([{ id: 'pt_goods', name: 'Hàng hoá' }, { id: 'pt_service', name: 'Dịch vụ' }, { id: 'pt_ingredient', name: 'Nguyên liệu' }]) });
+    if (path === '/product_types') return route.fulfill({ json: page_([{ id: 'pt_goods', name: 'Sản phẩm thường' }, { id: 'pt_prepared', name: 'Sản phẩm chế biến' }, { id: 'pt_service', name: 'Dịch vụ' }, { id: 'pt_ingredient', name: 'Nguyên liệu' }]) });
     if (path === '/categories' || path === '/tax_categories' || path === '/tax_rates') return route.fulfill({ json: page_([]) });
     if (path === '/variants') return route.fulfill({ json: page_(url.searchParams.get('q[sku_eq]') ? [] : [{ sku: 'SP000007' }]) });
     if (path === '/price_lists') return route.fulfill({ json: page_([{ id: 'pl_wholesale', name: 'Giá sỉ', status: 'active', starts_at: '2026-11-01T00:00:00Z', ends_at: null, price_rules: [{ type: 'volume_rule', preferences: { min_quantity: 1, max_quantity: null } }] }]) });

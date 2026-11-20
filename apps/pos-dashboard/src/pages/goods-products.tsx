@@ -9,7 +9,6 @@ import {
   ImportButton,
   ImportWizardDialog,
   PageHeader,
-  type ResourceActionsContext,
   ResourceTable,
   Subject,
   usePermissions,
@@ -42,6 +41,7 @@ import {
   goodsKey,
   type ProductListParams,
   useGoodsCategories,
+  useGoodsChannels,
   useGoodsProductTypes,
   useGoodsTaxCategories,
   useGoodsWrite,
@@ -53,7 +53,7 @@ import {
   readGoodsProducts,
   useGoodsTaxRates,
 } from '../hooks/use-goods-products'
-import { POS_CHANNEL_CODE, useGoodsSetup } from '../hooks/use-goods-setup'
+import { POS_CHANNEL_CODE, PRODUCT_KINDS, useGoodsSetup } from '../hooks/use-goods-setup'
 import { usePosSession } from '../hooks/use-pos-session'
 import { useSession } from '../hooks/use-session'
 import {
@@ -67,7 +67,7 @@ import {
   productStock,
   toCsv,
 } from '../lib/goods-products'
-import { canReadProductTypes, canWriteGoods } from '../lib/pos-access'
+import { canReadChannels, canReadProductTypes, canWriteGoods } from '../lib/pos-access'
 import { goodsProductSearchSchema } from '../schemas/goods-product-search'
 
 const TABLE_KEY = 'pos-goods-products'
@@ -108,6 +108,7 @@ export function GoodsProductsPage() {
   const types = useGoodsProductTypes(canReadProductTypes({ permissionKeys }))
   const viewQuery = viewParams(types.data?.byKind.ingredient?.id ?? null)
   const categories = useGoodsCategories()
+  const channels = useGoodsChannels(canReadChannels({ permissionKeys }))
   const taxCategories = useGoodsTaxCategories()
   const taxRates = useGoodsTaxRates()
   const [notice, setNotice] = useState<{ text: string; failed: boolean } | null>(null)
@@ -207,6 +208,11 @@ export function GoodsProductsPage() {
     value: type.id,
     label: type.name,
   }))
+  // The POS kinds (regular, prepared, service, ingredient) among the store's types.
+  const kindOptions = PRODUCT_KINDS.flatMap((kind) => {
+    const type = types.data?.byKind[kind]
+    return type ? [{ value: type.id, label: t(`goods.kind.${kind}`) }] : []
+  })
   const categoryOptions = (categories.data ?? []).map((category) => ({
     value: category.id,
     label: category.pretty_name || category.name,
@@ -262,6 +268,8 @@ export function GoodsProductsPage() {
         key: 'price',
         label: t('goods.products.columns.price'),
         sortable: true,
+        filterable: true,
+        filterType: 'number',
         default: true,
         className: 'text-right tabular-nums whitespace-nowrap',
         render: (product) => cells(product).price,
@@ -316,6 +324,16 @@ export function GoodsProductsPage() {
         render: (product) => cells(product).product_type,
       },
       {
+        key: 'product_kind',
+        label: t('goods.products.columns.product_kind'),
+        filterable: true,
+        displayable: false,
+        filterType: 'enum',
+        quickFilter: true,
+        filterOptions: kindOptions,
+        ransackAttribute: 'product_type_id',
+      },
+      {
         key: 'categories',
         label: t('goods.products.columns.categories'),
         filterable: true,
@@ -323,6 +341,26 @@ export function GoodsProductsPage() {
         filterType: 'enum',
         filterOptions: categoryOptions,
         ransackAttribute: 'categories_id',
+      },
+      {
+        key: 'tags',
+        label: t('goods.products.columns.tags'),
+        filterable: true,
+        displayable: false,
+        filterType: 'tags',
+        taggableType: 'product',
+      },
+      {
+        key: 'channels',
+        label: t('goods.products.columns.channels'),
+        filterable: true,
+        displayable: false,
+        filterType: 'enum',
+        filterOptions: (channels.data ?? []).map((channel) => ({
+          value: channel.id,
+          label: channel.name,
+        })),
+        ransackAttribute: 'channels_id',
       },
       {
         key: 'track_inventory',
@@ -410,7 +448,7 @@ export function GoodsProductsPage() {
   }, [canWrite, t, view, storeId, setup])
 
   // The rows the table shows now, every page of them, with the columns on.
-  async function exportCsv(ctx: ResourceActionsContext) {
+  async function exportCsv() {
     setNotice(null)
     setExporting(true)
     try {
@@ -420,8 +458,8 @@ export function GoodsProductsPage() {
         sort: searchParams.sort
           ? `${searchParams.dir === 'desc' ? '-' : ''}${searchParams.sort}`
           : 'name',
-        ...(ctx.search ? { [ctx.searchParam]: ctx.search } : {}),
-        ...filtersToRansack(ctx.filters, ctx.columns),
+        ...(searchParams.search ? { search_with_barcode: searchParams.search } : {}),
+        ...filtersToRansack(searchParams.filters, getTable(TABLE_KEY).columns),
       }
       const rows = await readAllGoodsProducts(params as ProductListParams)
       const shown = searchParams.columns ?? defaultColumns()
@@ -445,21 +483,34 @@ export function GoodsProductsPage() {
       <PageHeader
         title={t('goods.products.title')}
         actions={
-          canWrite ? (
-            <Button
-              onClick={() => navigate({ to: '/$storeId/goods/products/new', params: { storeId } })}
-            >
-              <PlusIcon className="size-4" />
-              {t('goods.products.create')}
+          <>
+            {canWrite && (
+              <ImportButton
+                type="products"
+                subject={Subject.Product}
+                label={t('goods.products.import')}
+                onCreated={(created) => setImportId(created.id)}
+              />
+            )}
+            <Button variant="outline" disabled={exporting} onClick={() => void exportCsv()}>
+              <DownloadIcon className="size-4" />
+              {t(exporting ? 'waiting' : 'goods.products.export')}
             </Button>
-          ) : (
-            <Badge variant="outline">{t('adminReadAccess')}</Badge>
-          )
+            {canWrite ? (
+              <Button
+                onClick={() =>
+                  navigate({ to: '/$storeId/goods/products/new', params: { storeId } })
+                }
+              >
+                <PlusIcon className="size-4" />
+                {t('goods.products.create')}
+              </Button>
+            ) : (
+              <Badge variant="outline">{t('adminReadAccess')}</Badge>
+            )}
+          </>
         }
       />
-      <p className="text-base text-muted-foreground">
-        {t(view === 'pos' ? 'goods.products.hintPos' : 'goods.products.hintUnpublished')}
-      </p>
       {notice && (
         <p
           role={notice.failed ? 'alert' : 'status'}
@@ -484,28 +535,6 @@ export function GoodsProductsPage() {
         ]}
         searchParams={searchParams}
         bulkActions={bulkActions}
-        actions={(ctx) => (
-          <>
-            {canWrite && (
-              <ImportButton
-                type="products"
-                subject={Subject.Product}
-                label={t('goods.products.import')}
-                onCreated={(created) => setImportId(created.id)}
-              />
-            )}
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-[2.125rem]"
-              disabled={exporting}
-              onClick={() => void exportCsv(ctx)}
-            >
-              <DownloadIcon className="size-4" />
-              {t(exporting ? 'waiting' : 'goods.products.export')}
-            </Button>
-          </>
-        )}
         rowActions={(product) => (
           <RowActions
             actions={[

@@ -3848,8 +3848,6 @@
     "products": {
       "title": "Products",
       "create": "Create product",
-      "hintPos": "Items sold at the counter (the pos channel). Search by name, SKU or barcode; select a name to edit it.",
-      "hintUnpublished": "Store products not on the pos channel, so the counter cannot sell them yet. Select them, then Publish to POS.",
       "viewPos": "Sold at the counter",
       "viewUnpublished": "Not on POS yet",
       "searchPlaceholder": "Name, SKU or barcode…",
@@ -3892,7 +3890,10 @@
         "stock": "Stock",
         "product_type": "Type",
         "categories": "Categories",
-        "track_inventory": "Stock tracking"
+        "track_inventory": "Stock tracking",
+        "tags": "Tags",
+        "product_kind": "POS product kind",
+        "channels": "Sales channel"
       },
       "bulk": {
         "status": "Change status",
@@ -4512,13 +4513,14 @@
       }
     },
     "kind": {
-      "goods": "Goods",
+      "goods": "Regular product",
+      "prepared": "Prepared product",
       "service": "Service",
       "ingredient": "Ingredient"
     },
     "setup": {
       "pos_channel_forbidden": "The store has no sales channel with code pos yet. Someone allowed to change Settings must create it before products are saved.",
-      "product_types_forbidden": "The store is missing the Goods, Service and Ingredient product types. Someone allowed to change Product types must save first to create them.",
+      "product_types_forbidden": "The store is missing the Regular product, Prepared product, Service and Ingredient product types. Someone allowed to change Product types must save first to create them.",
       "product_types_unreadable": "Your role cannot read Product types (read_product_types), so goods cannot be saved yet. Ask an administrator to grant it.",
       "pos_channel_inactive": "The pos sales channel is switched off. Products are saved but cannot be sold at the counter until the channel is switched back on in the Spree Dashboard."
     }

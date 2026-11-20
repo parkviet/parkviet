@@ -3826,8 +3826,6 @@
     "products": {
       "title": "Sản phẩm",
       "create": "Tạo sản phẩm",
-      "hintPos": "Hàng đang bán tại quầy (kênh pos). Tìm theo tên, SKU hoặc mã vạch; bấm tên để sửa.",
-      "hintUnpublished": "Sản phẩm của cửa hàng chưa lên kênh pos nên chưa bán được ở quầy. Chọn rồi bấm Đưa lên kênh POS.",
       "viewPos": "Đang bán tại quầy",
       "viewUnpublished": "Chưa lên kênh POS",
       "searchPlaceholder": "Tên, SKU hoặc mã vạch…",
@@ -3868,7 +3866,10 @@
         "stock": "Tồn kho",
         "product_type": "Loại",
         "categories": "Danh mục",
-        "track_inventory": "Theo dõi tồn"
+        "track_inventory": "Theo dõi tồn",
+        "tags": "Thẻ",
+        "product_kind": "Loại sản phẩm POS",
+        "channels": "Kênh bán"
       },
       "bulk": {
         "status": "Đổi trạng thái",
@@ -4470,13 +4471,14 @@
       }
     },
     "kind": {
-      "goods": "Hàng hoá",
+      "goods": "Sản phẩm thường",
+      "prepared": "Sản phẩm chế biến",
       "service": "Dịch vụ",
       "ingredient": "Nguyên liệu"
     },
     "setup": {
       "pos_channel_forbidden": "Cửa hàng chưa có kênh bán hàng mã pos. Cần người có quyền ghi Cài đặt tạo kênh này trước khi lưu sản phẩm.",
-      "product_types_forbidden": "Cửa hàng chưa đủ loại sản phẩm Hàng hoá, Dịch vụ, Nguyên liệu. Cần người có quyền ghi Loại sản phẩm lưu lần đầu để tạo chúng.",
+      "product_types_forbidden": "Cửa hàng chưa đủ loại sản phẩm Sản phẩm thường, Sản phẩm chế biến, Dịch vụ, Nguyên liệu. Cần người có quyền ghi Loại sản phẩm lưu lần đầu để tạo chúng.",
       "product_types_unreadable": "Vai trò của bạn chưa có quyền xem Loại sản phẩm (read_product_types), nên chưa lưu được hàng hoá. Nhờ quản trị cấp thêm quyền này.",
       "pos_channel_inactive": "Kênh bán hàng pos đang tắt. Sản phẩm vẫn được lưu nhưng chưa bán được ở quầy cho đến khi bật lại kênh trong Spree Dashboard."
     }

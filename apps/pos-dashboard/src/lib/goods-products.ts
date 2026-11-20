@@ -203,7 +203,7 @@ export const PREP_PRESETS = [3, 5, 10, 15, 20, 30] as const
 // ---------------------------------------------------------------------------
 // Form
 
-export type GoodsKind = 'goods' | 'service'
+export type GoodsKind = 'goods' | 'prepared' | 'service'
 export type GoodsProductFormValues = {
   name: string
   kind: GoodsKind

@@ -145,7 +145,9 @@ export function GoodsProductFormPage({ productId }: { productId?: string }) {
     )
   const existing = editing ? product.data : undefined
   const kind: GoodsKind =
-    existing && existing.product_type_id === types.data?.byKind.service?.id ? 'service' : 'goods'
+    (['service', 'prepared'] as const).find(
+      (value) => existing && existing.product_type_id === types.data?.byKind[value]?.id,
+    ) ?? 'goods'
   const initial = existing
     ? formFromProduct(existing, {
         kind,
@@ -236,6 +238,9 @@ function ProductForm({
       saveGoodsProduct(value, saving),
   )
   const busy = form.formState.isSubmitting
+  // A product made before the POS kinds has no type; the form shows it as a
+  // regular product, and saving is what gives it that type.
+  const untypedProduct = Boolean(existing && !existing.product.product_type_id)
   const storedOptions = existing ? optionVariants(existing.product) : []
   // Stored variants the matrix cannot represent keep their own values.
   const lockedVariants = Boolean(existing && !variantsEditable(existing.product))
@@ -395,7 +400,7 @@ function ProductForm({
                 <TopologySelect
                   id={id}
                   value={draft.kind}
-                  options={(['goods', 'service'] as const).map((value) => ({
+                  options={(['goods', 'prepared', 'service'] as const).map((value) => ({
                     value,
                     label: t(`goods.kind.${value}`),
                   }))}
@@ -732,7 +737,9 @@ function ProductForm({
         {!readOnly && (
           <Button
             type="submit"
-            disabled={busy || (Boolean(existing) && !form.formState.isDirty && !image)}
+            disabled={
+              busy || (Boolean(existing) && !form.formState.isDirty && !image && !untypedProduct)
+            }
           >
             {t(busy ? 'waiting' : 'save')}
           </Button>

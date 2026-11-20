@@ -48,7 +48,7 @@ async function install(page: Page) {
       else if (method === 'PATCH') Object.assign(row ?? {}, { name: body?.name });
       return route.fulfill({ json: row });
     }
-    if (path === '/product_types') return route.fulfill({ json: page_([{ id: 'pt_goods', name: 'Hàng hoá' }, { id: 'pt_service', name: 'Dịch vụ' }, { id: 'pt_ingredient', name: 'Nguyên liệu' }]) });
+    if (path === '/product_types') return route.fulfill({ json: page_([{ id: 'pt_goods', name: 'Sản phẩm thường' }, { id: 'pt_prepared', name: 'Sản phẩm chế biến' }, { id: 'pt_service', name: 'Dịch vụ' }, { id: 'pt_ingredient', name: 'Nguyên liệu' }]) });
     if (path === '/variants') return route.fulfill({ json: page_(url.searchParams.get('q[sku_eq]') ? [] : [{ sku: 'NL000003' }]) });
     if (path === '/pos/units/variants') return route.fulfill({ json: { data: (url.searchParams.get('variant_ids') ?? '').split(',').filter((id) => units[id]).map((id) => ({ variant_id: id, sale_unit: units[id].code, sale_unit_name: units[id].name })) } });
     if (path === '/pos/units/variant') { units[String(body?.variant_id)] = { code: String(body?.sale_unit), name: String(body?.sale_unit) }; return route.fulfill({ json: { data: {} } }); }
