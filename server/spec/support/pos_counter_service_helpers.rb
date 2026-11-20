@@ -28,7 +28,7 @@ module PosCounterServiceHelpers
   end
 
   def cup_item!(store, branch, **)
-    menu_item!(store, branch, **).tap { |item| item.update!(cup_label: true) }
+    prepared_product!(store, branch, **, settings: { cup_label: true })
   end
 
   def cup_jobs(sale)

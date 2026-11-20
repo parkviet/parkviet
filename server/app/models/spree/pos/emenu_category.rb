@@ -3,7 +3,7 @@
 module Spree
   module Pos
     # One category of a branch's electronic menu. Items inside it are the
-    # store's menu items, in this category's own order.
+    # store's products, in this category's own order.
     class EmenuCategory < Record
       self.table_name = 'spree_pos_emenu_categories'
       has_prefix_id :posemenucat

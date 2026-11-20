@@ -13,7 +13,7 @@ module Spree
       belongs_to :kitchen_station, class_name: 'Spree::Pos::KitchenStation'
       belongs_to :product, class_name: 'Spree::Product', optional: true
 
-      validates :kitchen_category, format: { with: MenuItem::KITCHEN_CATEGORY }, allow_nil: true
+      validates :kitchen_category, format: { with: ProductSetting::KITCHEN_CATEGORY }, allow_nil: true
       validates :service_mode, inclusion: { in: Workspace::SERVICE_MODES }, allow_nil: true
       validate :one_target
       validate :same_branch

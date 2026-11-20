@@ -40,7 +40,7 @@ module PosTableHelpers
   end
 
   def menu_product!(store, branch, name: "Món #{SecureRandom.hex(2)}", price: 50_000)
-    size(menu_item!(store, branch, name: name, price: price))
+    size(prepared_product!(store, branch, name: name, price: price))
   end
 
   def add_dish(order, variant, quantity: 1)

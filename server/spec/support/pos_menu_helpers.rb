@@ -3,7 +3,8 @@
 require_relative 'pos_credit_helpers'
 
 # Menu fixtures built on the real models, and a draft at a branch running
-# `fnb.menu`, for workflow and request specs of the menu.
+# `fnb.menu`, for workflow and request specs of the menu. What the menu sells
+# is Spree products; their POS data hangs off the product.
 module PosMenuHelpers
   include PosCreditHelpers
 
@@ -17,11 +18,26 @@ module PosMenuHelpers
     branch
   end
 
-  # A product on the menu. `sizes` ({ 'M' => 30_000, 'L' => 35_000 }) gives
-  # one variant per size, labelled by an option value, the product's default
-  # variant being the first; without sizes the default variant sells at `price`.
-  def menu_item!(store, branch, name:, price:, sizes: {}, kind: 'single', category: nil)
-    product = create(:product, store: store, status: 'active', name: name)
+  # The store's "Sản phẩm chế biến" product type, created once.
+  def prepared_type!(store)
+    Spree::ProductType.where(store_id: store.id).to_a.find { |type| Spree::Pos::ProductKinds.kind_of(type.name) == 'prepared' } ||
+      Spree::ProductType.create!(store: store, name: Spree::Pos::ProductKinds::NAMES['prepared'])
+  end
+
+  # A top-level Spree category of the store: the menu tab a product shows in.
+  def menu_category!(store, name)
+    Spree::Category.create!(store: store, name: name)
+  end
+
+  # A prepared product the branch sells at the till. `sizes`
+  # ({ 'M' => 30_000, 'L' => 35_000 }) gives one variant per size, labelled by
+  # an option value, the product's default variant being the first; without
+  # sizes the default variant sells at `price`. `category` is a Spree
+  # category; `settings` ({ kitchen_category:, cup_label:, drink_credit:, ... })
+  # writes the product's POS operating settings; `type` replaces the prepared
+  # product type (nil for none).
+  def prepared_product!(store, branch, name:, price:, sizes: {}, category: nil, settings: nil, type: prepared_type!(store))
+    product = create(:product, store: store, status: 'active', name: name, product_type: type)
     product.default_variant.set_price(store.default_currency, price)
     if sizes.any?
       size_type = create(:option_type, name: "size-#{SecureRandom.hex(4)}", presentation: 'Size')
@@ -39,21 +55,30 @@ module PosMenuHelpers
     product.reload
     product.variants.each { |variant| branch.stock_location.restock(variant, 100) }
     Spree::Pos::BranchProduct.find_or_create_by!(branch: branch, product: product)
-    Spree::Pos::MenuItem.create!(store: store, product: product, kind: kind, menu_category: category)
+    product.product_categories.create!(category: category) if category
+    Spree::Pos::ProductSetting.create!(store: store, product: product, **settings) if settings
+    product.reload
   end
 
-  def size(item, index = 0)
-    item.reload.sizes[index]
+  # Makes `combo` a combo of `variants` ({ variant => quantity }).
+  def combo_of!(combo, variants)
+    variants.each { |variant, quantity| combo.pos_combo_components.create!(variant: variant, quantity: quantity) }
+    combo.reload
   end
 
-  # A group of `options` ({ 'Trân châu' => 5_000 }) offered on `item`.
-  def modifier_group!(store, item, name:, options:, min: 0, max: 1, allow_quantity: false, defaults: [])
+  def size(product, index = 0)
+    product.reload.pos_sizes[index]
+  end
+
+  # A group of `options` ({ 'Trân châu' => 5_000 }) offered on `product`.
+  def modifier_group!(store, product, name:, options:, min: 0, max: 1, allow_quantity: false, defaults: [])
     group = Spree::Pos::ModifierGroup.create!(store: store, name: name, min_select: min, max_select: max, allow_quantity: allow_quantity)
     options.each_with_index do |(label, delta), index|
       group.modifier_options.create!(name: label, price_delta: delta, position: index, default_selected: defaults.include?(label))
     end
-    Spree::Pos::MenuItemModifierGroup.create!(menu_item: item, modifier_group: group, position: item.menu_item_modifier_groups.count)
-    item.reload
+    Spree::Pos::ProductModifierGroup.create!(product: product, modifier_group: group,
+                                             position: product.pos_product_modifier_groups.count)
+    product.reload
     group.reload
   end
 

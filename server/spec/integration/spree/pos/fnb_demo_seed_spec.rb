@@ -21,7 +21,7 @@ RSpec.describe 'POS F&B demo seed', pos_modules: :default do
     ENV['POS_FNB_DEMO'] = previous
   end
 
-  it 'creates a restaurant with tables, a menu with options, two stations and a fake LAN printer, once' do
+  it 'creates a restaurant with tables, a menu of prepared products with options, two stations and a fake LAN printer, once' do
     run
     branch = Spree::Pos::Branch.find_by!(store: store, code: 'demo-nha-hang')
     expect(branch).to have_attributes(profile_key: 'nha_hang', service_charge_rate: 5)
@@ -29,16 +29,34 @@ RSpec.describe 'POS F&B demo seed', pos_modules: :default do
     expect(Spree::Pos::ModulePolicy.for_branch(branch)).to include('fnb.tables' => true, 'fnb.kitchen' => true, 'fnb.postpay' => true)
     expect(Spree::Pos::Area.where(branch: branch).count).to eq(2)
     expect(Spree::Pos::Resource.where(branch: branch).count).to eq(12)
-    items = Spree::Pos::MenuItem.where(store: store)
-    expect(items.count).to eq(30)
-    expect(items.joins(:menu_item_modifier_groups).distinct.count).to be >= 20
+    sellable = Spree::Pos::Menu::Sellable.products(branch)
+    expect(sellable.count).to eq(32)
+    expect(Spree::Pos::Menu::Sellable.prepared(branch).count).to eq(32)
+    expect(sellable.joins(:pos_product_modifier_groups).distinct.count).to be >= 20
+    names = Spree::Category.where(store_id: store.id, parent_id: nil).map(&:name)
+    expect(names).to include('Khai vị', 'Món chính', 'Lẩu', 'Đồ uống')
+    drinks = Spree::Category.where(store_id: store.id).to_a.find { |category| category.name == 'Đồ uống' }
+    expect(drinks.products.count).to eq(10)
+    bar = Spree::Pos::Kitchen::Defaults::BAR_CATEGORY
+    expect(Spree::Pos::ProductSetting.where(store: store, kitchen_category: bar).count).to eq(10)
+    expect(Spree::Pos::ProductSetting.where(store: store, cup_label: true).count).to eq(4)
+    combo = sellable.to_a.find(&:combo?)
+    expect(combo.pos_combo_components.count).to eq(2)
+    ticket = sellable.to_a.find(&:door_ticket?)
+    expect(ticket.pos_setting).to have_attributes(drink_credit: 100_000, drink_credit_categories: [bar], qr_orderable: false)
+    expect(ticket.categories).to be_empty
+    happy_hour = Spree::Pos::MenuSchedule.find_by!(store: store, branch: branch)
+    expect(happy_hour.menu_schedule_items.map(&:price)).to contain_exactly(20_000, 25_000)
     expect(Spree::Pos::KitchenStation.where(branch: branch).pluck(:name)).to contain_exactly('Bếp', 'Bar')
     expect(Spree::Pos::StationRoute.find_by!(branch: branch).kitchen_category).to eq('do_uong')
     expect(Spree::Pos::Printer.find_by!(branch: branch)).to have_attributes(connection: 'escpos_lan', address: '127.0.0.1:9100')
 
     run
     expect(Spree::Pos::Branch.for_store(store).where(code: 'demo-nha-hang').count).to eq(1)
-    expect(Spree::Pos::MenuItem.where(store: store).count).to eq(30)
+    expect(Spree::Product.where(store: store).count).to eq(32)
+    expect(Spree::Category.where(store_id: store.id, parent_id: nil).count).to eq(4)
+    expect(Spree::ProductType.where(store_id: store.id).count).to eq(1)
+    expect(store.channels.where(code: Spree::Pos::SalesChannel::CODE).count).to eq(1)
   end
 
   it 'does nothing unless asked for, and never outside development' do

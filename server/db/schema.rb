@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_18_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_20_104600) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -2723,12 +2723,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_190000) do
   end
 
   create_table "spree_pos_combo_components", force: :cascade do |t|
-    t.bigint "menu_item_id", null: false
     t.bigint "variant_id", null: false
     t.integer "quantity", default: 1, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["menu_item_id", "variant_id"], name: "idx_pos_combo_components_pair", unique: true
+    t.bigint "product_id", null: false
+    t.index ["product_id", "variant_id"], name: "idx_pos_combo_components_pair", unique: true
     t.index ["variant_id"], name: "index_spree_pos_combo_components_on_variant_id"
     t.check_constraint "quantity > 0", name: "chk_pos_combo_components_quantity"
   end
@@ -3142,13 +3142,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_190000) do
 
   create_table "spree_pos_emenu_items", force: :cascade do |t|
     t.bigint "emenu_category_id", null: false
-    t.bigint "menu_item_id", null: false
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["emenu_category_id", "menu_item_id"], name: "idx_pos_emenu_items_unique", unique: true
+    t.bigint "product_id", null: false
     t.index ["emenu_category_id", "position"], name: "idx_pos_emenu_items_position"
-    t.index ["menu_item_id"], name: "index_spree_pos_emenu_items_on_menu_item_id"
+    t.index ["emenu_category_id", "product_id"], name: "idx_pos_emenu_items_unique", unique: true
+    t.index ["product_id"], name: "index_spree_pos_emenu_items_on_product_id"
   end
 
   create_table "spree_pos_exchange_operations", force: :cascade do |t|
@@ -3652,82 +3652,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_190000) do
 
   create_table "spree_pos_menu_availabilities", force: :cascade do |t|
     t.bigint "branch_id", null: false
-    t.bigint "menu_item_id", null: false
     t.date "sold_out_on"
     t.string "updated_by_type"
     t.bigint "updated_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["branch_id", "menu_item_id"], name: "idx_pos_menu_availabilities_pair", unique: true
-    t.index ["menu_item_id"], name: "index_spree_pos_menu_availabilities_on_menu_item_id"
-  end
-
-  create_table "spree_pos_menu_categories", force: :cascade do |t|
-    t.bigint "store_id", null: false
-    t.string "name", limit: 80, null: false
-    t.integer "position", default: 0, null: false
-    t.string "color", limit: 16
-    t.boolean "active", default: true, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["store_id", "name"], name: "idx_pos_menu_categories_name", unique: true
-    t.index ["store_id"], name: "index_spree_pos_menu_categories_on_store_id"
+    t.bigint "product_id", null: false
+    t.index ["branch_id", "product_id"], name: "idx_pos_menu_availabilities_pair", unique: true
+    t.index ["product_id"], name: "index_spree_pos_menu_availabilities_on_product_id"
   end
 
   create_table "spree_pos_menu_favorites", force: :cascade do |t|
     t.bigint "branch_id", null: false
-    t.bigint "menu_item_id", null: false
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["branch_id", "menu_item_id"], name: "idx_pos_menu_favorites_pair", unique: true
-    t.index ["menu_item_id"], name: "index_spree_pos_menu_favorites_on_menu_item_id"
-  end
-
-  create_table "spree_pos_menu_item_modifier_groups", force: :cascade do |t|
-    t.bigint "menu_item_id", null: false
-    t.bigint "modifier_group_id", null: false
-    t.integer "position", default: 0, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["menu_item_id", "modifier_group_id"], name: "idx_pos_menu_item_modifier_groups_pair", unique: true
-    t.index ["modifier_group_id"], name: "index_spree_pos_menu_item_modifier_groups_on_modifier_group_id"
-  end
-
-  create_table "spree_pos_menu_items", force: :cascade do |t|
-    t.bigint "store_id", null: false
     t.bigint "product_id", null: false
-    t.bigint "menu_category_id"
-    t.string "kind", default: "single", null: false
-    t.string "kitchen_category", limit: 40
-    t.boolean "cup_label", default: false, null: false
-    t.boolean "show_components_on_kds", default: true, null: false
-    t.integer "position", default: 0, null: false
-    t.boolean "active", default: true, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.decimal "drink_credit", precision: 19, scale: 4
-    t.jsonb "drink_credit_categories", default: [], null: false
-    t.boolean "qr_orderable", default: true, null: false
-    t.index ["menu_category_id"], name: "index_spree_pos_menu_items_on_menu_category_id"
-    t.index ["product_id"], name: "index_spree_pos_menu_items_on_product_id"
-    t.index ["store_id", "product_id"], name: "idx_pos_menu_items_product", unique: true
-    t.index ["store_id"], name: "index_spree_pos_menu_items_on_store_id"
-    t.check_constraint "drink_credit IS NULL OR drink_credit > 0::numeric", name: "chk_pos_menu_items_drink_credit"
-    t.check_constraint "kind::text = ANY (ARRAY['single'::character varying, 'combo'::character varying]::text[])", name: "chk_pos_menu_items_kind"
-    t.check_constraint "kitchen_category IS NULL OR kitchen_category::text ~ '^[a-z_]{2,40}$'::text", name: "chk_pos_menu_items_kitchen_category"
+    t.index ["branch_id", "product_id"], name: "idx_pos_menu_favorites_pair", unique: true
+    t.index ["product_id"], name: "index_spree_pos_menu_favorites_on_product_id"
   end
 
   create_table "spree_pos_menu_schedule_items", force: :cascade do |t|
     t.bigint "menu_schedule_id", null: false
-    t.bigint "menu_item_id", null: false
     t.bigint "variant_id"
     t.decimal "price", precision: 19, scale: 4
     t.boolean "hidden", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index "menu_schedule_id, menu_item_id, COALESCE(variant_id, (0)::bigint)", name: "idx_pos_menu_schedule_items_target", unique: true
-    t.index ["menu_item_id"], name: "index_spree_pos_menu_schedule_items_on_menu_item_id"
+    t.bigint "product_id", null: false
+    t.index "menu_schedule_id, product_id, COALESCE(variant_id, (0)::bigint)", name: "idx_pos_menu_schedule_items_target", unique: true
+    t.index ["product_id"], name: "index_spree_pos_menu_schedule_items_on_product_id"
     t.index ["variant_id"], name: "index_spree_pos_menu_schedule_items_on_variant_id"
     t.check_constraint "price IS NULL OR price >= 0::numeric", name: "chk_pos_menu_schedule_items_price"
   end
@@ -4081,6 +4035,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_190000) do
     t.check_constraint "connection::text = ANY (ARRAY['escpos_lan'::character varying, 'escpos_bluetooth'::character varying, 'sunmi_builtin'::character varying, 'epson_epos'::character varying, 'star_webprnt'::character varying, 'browser'::character varying]::text[])", name: "chk_pos_printers_connection"
     t.check_constraint "paper::text = ANY (ARRAY['58mm'::character varying, '80mm'::character varying]::text[])", name: "chk_pos_printers_paper"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'disabled'::character varying]::text[])", name: "chk_pos_printers_status"
+  end
+
+  create_table "spree_pos_product_modifier_groups", force: :cascade do |t|
+    t.bigint "modifier_group_id", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "product_id", null: false
+    t.index ["modifier_group_id"], name: "index_spree_pos_product_modifier_groups_on_modifier_group_id"
+    t.index ["product_id", "modifier_group_id"], name: "idx_pos_product_modifier_groups_pair", unique: true
+  end
+
+  create_table "spree_pos_product_settings", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.bigint "product_id", null: false
+    t.string "kitchen_category", limit: 40
+    t.boolean "cup_label", default: false, null: false
+    t.boolean "show_components_on_kds", default: true, null: false
+    t.boolean "qr_orderable", default: true, null: false
+    t.decimal "drink_credit", precision: 19, scale: 4
+    t.jsonb "drink_credit_categories", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id"], name: "index_spree_pos_product_settings_on_product_id"
+    t.index ["store_id", "product_id"], name: "idx_pos_product_settings_product", unique: true
+    t.index ["store_id"], name: "index_spree_pos_product_settings_on_store_id"
+    t.check_constraint "drink_credit IS NULL OR drink_credit > 0::numeric", name: "chk_pos_product_settings_drink_credit"
+    t.check_constraint "kitchen_category IS NULL OR kitchen_category::text ~ '^[a-z_]{2,40}$'::text", name: "chk_pos_product_settings_kitchen_category"
   end
 
   create_table "spree_pos_push_registrations", force: :cascade do |t|
@@ -7182,7 +7164,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_190000) do
   add_foreign_key "spree_pos_collections", "spree_pos_credit_accounts", column: "credit_account_id"
   add_foreign_key "spree_pos_collections", "spree_pos_received_funds", column: "received_funds_id"
   add_foreign_key "spree_pos_collections", "spree_stores", column: "store_id"
-  add_foreign_key "spree_pos_combo_components", "spree_pos_menu_items", column: "menu_item_id", on_delete: :cascade
+  add_foreign_key "spree_pos_combo_components", "spree_products", column: "product_id", on_delete: :cascade
   add_foreign_key "spree_pos_combo_components", "spree_variants", column: "variant_id"
   add_foreign_key "spree_pos_command_receipts", "spree_admin_users", column: "actor_id"
   add_foreign_key "spree_pos_command_receipts", "spree_pos_workspaces", column: "workspace_id"
@@ -7253,7 +7235,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_190000) do
   add_foreign_key "spree_pos_einvoices", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_emenu_categories", "spree_pos_branches", column: "branch_id"
   add_foreign_key "spree_pos_emenu_items", "spree_pos_emenu_categories", column: "emenu_category_id"
-  add_foreign_key "spree_pos_emenu_items", "spree_pos_menu_items", column: "menu_item_id"
+  add_foreign_key "spree_pos_emenu_items", "spree_products", column: "product_id", on_delete: :cascade
   add_foreign_key "spree_pos_exchange_operations", "spree_admin_users", column: "actor_id"
   add_foreign_key "spree_pos_exchange_operations", "spree_pos_branches", column: "branch_id"
   add_foreign_key "spree_pos_exchange_operations", "spree_pos_return_operations", column: "return_operation_id"
@@ -7348,17 +7330,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_190000) do
   add_foreign_key "spree_pos_meal_swipes", "spree_pos_workspaces", column: "workspace_id"
   add_foreign_key "spree_pos_meal_swipes", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_menu_availabilities", "spree_pos_branches", column: "branch_id", on_delete: :cascade
-  add_foreign_key "spree_pos_menu_availabilities", "spree_pos_menu_items", column: "menu_item_id", on_delete: :cascade
-  add_foreign_key "spree_pos_menu_categories", "spree_stores", column: "store_id"
+  add_foreign_key "spree_pos_menu_availabilities", "spree_products", column: "product_id", on_delete: :cascade
   add_foreign_key "spree_pos_menu_favorites", "spree_pos_branches", column: "branch_id", on_delete: :cascade
-  add_foreign_key "spree_pos_menu_favorites", "spree_pos_menu_items", column: "menu_item_id", on_delete: :cascade
-  add_foreign_key "spree_pos_menu_item_modifier_groups", "spree_pos_menu_items", column: "menu_item_id", on_delete: :cascade
-  add_foreign_key "spree_pos_menu_item_modifier_groups", "spree_pos_modifier_groups", column: "modifier_group_id", on_delete: :cascade
-  add_foreign_key "spree_pos_menu_items", "spree_pos_menu_categories", column: "menu_category_id", on_delete: :nullify
-  add_foreign_key "spree_pos_menu_items", "spree_products", column: "product_id"
-  add_foreign_key "spree_pos_menu_items", "spree_stores", column: "store_id"
-  add_foreign_key "spree_pos_menu_schedule_items", "spree_pos_menu_items", column: "menu_item_id", on_delete: :cascade
+  add_foreign_key "spree_pos_menu_favorites", "spree_products", column: "product_id", on_delete: :cascade
   add_foreign_key "spree_pos_menu_schedule_items", "spree_pos_menu_schedules", column: "menu_schedule_id", on_delete: :cascade
+  add_foreign_key "spree_pos_menu_schedule_items", "spree_products", column: "product_id", on_delete: :cascade
   add_foreign_key "spree_pos_menu_schedule_items", "spree_variants", column: "variant_id"
   add_foreign_key "spree_pos_menu_schedules", "spree_pos_branches", column: "branch_id", on_delete: :cascade
   add_foreign_key "spree_pos_menu_schedules", "spree_stores", column: "store_id"
@@ -7415,6 +7391,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_190000) do
   add_foreign_key "spree_pos_printers", "spree_pos_devices", column: "print_station_device_id"
   add_foreign_key "spree_pos_printers", "spree_pos_registers", column: "register_id"
   add_foreign_key "spree_pos_printers", "spree_stores", column: "store_id"
+  add_foreign_key "spree_pos_product_modifier_groups", "spree_pos_modifier_groups", column: "modifier_group_id", on_delete: :cascade
+  add_foreign_key "spree_pos_product_modifier_groups", "spree_products", column: "product_id", on_delete: :cascade
+  add_foreign_key "spree_pos_product_settings", "spree_products", column: "product_id", on_delete: :cascade
+  add_foreign_key "spree_pos_product_settings", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_push_registrations", "spree_admin_users", column: "staff_id"
   add_foreign_key "spree_pos_push_registrations", "spree_pos_devices", column: "device_id"
   add_foreign_key "spree_pos_push_registrations", "spree_stores", column: "store_id"

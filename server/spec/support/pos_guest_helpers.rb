@@ -38,8 +38,8 @@ module PosGuestHelpers
     Spree::Pos::GuestOrders::Submit.call(session: session, key: key, items: items)
   end
 
-  def sold_out!(item, branch: self.branch)
-    Spree::Pos::MenuAvailability.create!(branch: branch, menu_item: item,
+  def sold_out!(product, branch: self.branch)
+    Spree::Pos::MenuAvailability.create!(branch: branch, product: product,
                                          sold_out_on: Spree::Pos::BusinessDay.for(branch, Spree::Pos::Workspace.business_now))
   end
 

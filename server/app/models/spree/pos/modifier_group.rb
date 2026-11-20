@@ -2,7 +2,7 @@
 
 module Spree
   module Pos
-    # A set of options picked together on a menu item ("Đường", "Đá",
+    # A set of options picked together on a product ("Đường", "Đá",
     # "Topping"). At least `min_select` and at most `max_select` picks; with
     # `allow_quantity` one option may be picked several times and each counts.
     class ModifierGroup < Record
@@ -14,7 +14,7 @@ module Spree
       belongs_to :store, class_name: 'Spree::Store'
       has_many :modifier_options, -> { order(:position, :id) }, class_name: 'Spree::Pos::ModifierOption',
                                                                 dependent: :destroy, inverse_of: :modifier_group
-      has_many :menu_item_modifier_groups, class_name: 'Spree::Pos::MenuItemModifierGroup', dependent: :delete_all
+      has_many :product_modifier_groups, class_name: 'Spree::Pos::ProductModifierGroup', dependent: :delete_all
 
       validates :name, presence: true, length: { maximum: 80 }
       validates :min_select, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
