@@ -98,7 +98,7 @@ test('creates a prepared product with two attributes and an add-on group, then p
   await expect(page.getByRole('checkbox', { name: 'Topping' })).toHaveCount(0);
   await page.getByLabel('Loại', { exact: true }).click();
   await page.getByRole('option', { name: 'Sản phẩm chế biến', exact: true }).click();
-  await expect(page.getByLabel('Nhóm bếp')).toBeVisible();
+  await expect(page.getByLabel('Nhóm bếp', { exact: true })).toBeVisible();
   await page.getByLabel('Giá bán', { exact: true }).fill('150.000');
   await addAttribute(page, 'Màu sắc', 'Đỏ, Xanh');
   await addAttribute(page, 'Size', 'M');
