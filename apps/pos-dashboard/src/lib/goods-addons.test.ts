@@ -185,17 +185,17 @@ describe('options', () => {
 
 describe('membershipWrites', () => {
   const items = [
-    { id: 'i1', product_id: 'p1', name: 'Trà', kind: 'single', modifier_group_ids: ['g0', 'g1'] },
-    { id: 'i2', product_id: 'p2', name: 'Cà phê', kind: 'single', modifier_group_ids: ['g0'] },
-    { id: 'i3', product_id: 'p3', name: 'Combo', kind: 'combo', modifier_group_ids: [] },
-    { id: 'i4', product_id: 'p4', name: 'Bánh', kind: 'single', modifier_group_ids: [] },
+    { product_id: 'p1', name: 'Trà', kind: 'single', modifier_group_ids: ['g0', 'g1'] },
+    { product_id: 'p2', name: 'Cà phê', kind: 'single', modifier_group_ids: ['g0'] },
+    { product_id: 'p3', name: 'Combo', kind: 'combo', modifier_group_ids: [] },
+    { product_id: 'p4', name: 'Bánh', kind: 'single', modifier_group_ids: [] },
   ]
 
-  it('adds and removes the group, keeping the other groups in order', () => {
-    expect(membershipWrites(items, 'g1', new Set(['i2', 'i3']))).toEqual([
-      { id: 'i1', modifier_group_ids: ['g0'] },
-      { id: 'i2', modifier_group_ids: ['g0', 'g1'] },
+  it('adds and removes the group by product, keeping the other groups in order', () => {
+    expect(membershipWrites(items, 'g1', new Set(['p2', 'p3']))).toEqual([
+      { product_id: 'p1', modifier_group_ids: ['g0'] },
+      { product_id: 'p2', modifier_group_ids: ['g0', 'g1'] },
     ])
-    expect(membershipWrites(items, 'g1', new Set(['i1']))).toEqual([])
+    expect(membershipWrites(items, 'g1', new Set(['p1']))).toEqual([])
   })
 })

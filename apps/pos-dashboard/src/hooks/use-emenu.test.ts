@@ -10,7 +10,7 @@ describe('e-Menu helpers', () => {
         name: ' Đồ uống ',
         color: '#0b6e4f',
         image_url: '/rails/active_storage/blobs/cat.png',
-        items: [{ menu_item_id: 'menuitem_tea' }, 'menuitem_coffee'],
+        items: [{ id: 'posemenuitem_1', product_id: 'prod_tea', position: 0 }, 'prod_coffee'],
       },
       { name: '   ', items: [] },
     ])
@@ -20,7 +20,7 @@ describe('e-Menu helpers', () => {
         name: 'Đồ uống',
         color: '#0b6e4f',
         image_url: '/rails/active_storage/blobs/cat.png',
-        items: ['menuitem_tea', 'menuitem_coffee'],
+        items: ['prod_tea', 'prod_coffee'],
       },
     ])
   })

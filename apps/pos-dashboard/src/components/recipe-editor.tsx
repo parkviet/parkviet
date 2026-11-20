@@ -6,7 +6,6 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { readUnits } from '../hooks/use-master-data'
-import type { MenuItemConfig } from '../hooks/use-menu-admin'
 import {
   type RecipeOwner,
   type RecipeOwnerRef,
@@ -66,8 +65,15 @@ export function useConfirmedRecipeSave() {
 type Owner = { key: string; label: string; ref: RecipeOwnerRef }
 type Row = { variantId: string; name: string; quantity: string; unitCode: string }
 
-// The recipes of one menu item: one ingredient table for each size, and one
-// for each option the item offers. Quantities are entered in any unit that
+// What the editor reads of a product: its sizes and its add-on groups.
+export type RecipeProduct = {
+  name: string
+  variants: { id: string; name: string | null }[]
+  modifier_group_ids: string[]
+}
+
+// The recipes of one product: one ingredient table for each size, and one
+// for each option it offers. Quantities are entered in any unit that
 // measures what the ingredient is stocked in; the server converts them.
 export function RecipeEditor({
   item,
@@ -76,7 +82,7 @@ export function RecipeEditor({
   canEdit,
   onClose,
 }: {
-  item: MenuItemConfig
+  item: RecipeProduct
   groups: PosMenuModifierGroup[]
   branchId: string | null
   canEdit: boolean

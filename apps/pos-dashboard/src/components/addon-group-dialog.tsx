@@ -4,7 +4,7 @@ import { Badge, Button, DialogBody, DialogFooter, SearchInput, Switch } from '@s
 import { GripVerticalIcon, MoveDownIcon, MoveUpIcon, Trash2Icon } from '@spree/dashboard-ui/icons'
 import { type PointerEvent, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMenuItems, useMenuWrite } from '../hooks/use-menu-admin'
+import { useMenuWrite, useProductSettings } from '../hooks/use-menu-admin'
 import {
   type AddonGroup,
   type AddonRuleForm,
@@ -22,29 +22,25 @@ import {
   ruleForm,
   ruleLimits,
 } from '../lib/goods-addons'
-import { type ProductHit, ProductSearch } from './product-search'
 import { ModelCheck } from './setup/model-ui'
 import { TopologyDialog } from './topology-dialog'
 import { Input, TopologyField } from './topology-fields'
 
 // Creates or edits one add-on group: its options in order (price, own cost,
 // in stock), the three switches that set how the counter lets it be picked,
-// and the menu items that offer it. The menu screen and the goods add-on
-// screen open this same dialog.
+// and the prepared products that offer it. Only a prepared product ("Sản
+// phẩm chế biến") takes add-on groups, so every one of them is listed.
 export function AddonGroupDialog({
   group,
-  branchId,
   onSaved,
   onClose,
 }: {
   group?: AddonGroup
-  // The branch whose catalogue the product search reads.
-  branchId: string | null
   onSaved: (name: string) => void
   onClose: () => void
 }) {
   const { t } = useTranslation()
-  const items = useMenuItems(true)
+  const items = useProductSettings(true)
   const write = useMenuWrite()
   const [name, setName] = useState(group?.name ?? '')
   const [rule, setRule] = useState<AddonRuleForm>(() => ruleForm(group))
@@ -52,18 +48,20 @@ export function AddonGroupDialog({
     group ? optionDrafts(group) : [blankOption('new-0')],
   )
   const nextKey = useRef(0)
+  // Product ids chosen in this dialog; null until the first change.
   const [chosen, setChosen] = useState<Set<string> | null>(null)
-  const [pending, setPending] = useState<ProductHit[]>([])
   // Set once the group exists, so a retry after a failed later step updates it.
   const [savedId, setSavedId] = useState(group?.id ?? null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [checked, setChecked] = useState(false)
 
-  const menuItems = items.data ?? []
-  const offered = menuItems.filter((item) => item.kind !== 'combo')
+  const products = items.data ?? []
+  const offered = products
+    .filter((item) => item.kind !== 'combo')
+    .map((item) => ({ id: item.product_id, name: item.name }))
   const applied =
-    chosen ?? new Set(savedId ? appliedItems(menuItems, savedId).map((item) => item.id) : [])
+    chosen ?? new Set(savedId ? appliedItems(products, savedId).map((item) => item.product_id) : [])
   const limits = ruleLimits(rule)
   const problems = options.map(optionProblem)
   const valid =
@@ -83,16 +81,6 @@ export function AddonGroupDialog({
     else next.delete(id)
     setChosen(next)
   }
-  const pick = (hit: ProductHit) => {
-    const item = menuItems.find((row) => row.product_id === hit.productId)
-    if (item) {
-      if (item.kind !== 'combo') toggle(item.id, true)
-      return
-    }
-    setPending((current) =>
-      current.some((row) => row.productId === hit.productId) ? current : [...current, hit],
-    )
-  }
 
   async function save() {
     setChecked(true)
@@ -110,22 +98,12 @@ export function AddonGroupDialog({
       if (!id) throw new Error('missing group id')
       setSavedId(id)
       setChosen(applied)
-      for (const change of membershipWrites(menuItems, id, applied))
+      for (const change of membershipWrites(products, id, applied))
         await write.mutateAsync({
-          method: 'PATCH',
-          path: `/pos/menu_items/${change.id}`,
+          method: 'PUT',
+          path: `/pos/products/${change.product_id}/modifier_groups`,
           body: { modifier_group_ids: change.modifier_group_ids },
         })
-      for (const hit of pending) {
-        const created = (await write.mutateAsync({
-          method: 'POST',
-          path: '/pos/menu_items',
-          body: { product_id: hit.productId, kind: 'single', modifier_group_ids: [id] },
-        })) as { data?: { id?: string } }
-        const itemId = created.data?.id
-        setPending((current) => current.filter((row) => row.productId !== hit.productId))
-        if (itemId) setChosen((current) => new Set([...(current ?? applied), itemId]))
-      }
       onSaved(body.name)
       onClose()
     } catch (failure) {
@@ -208,36 +186,6 @@ export function AddonGroupDialog({
                   applied={applied}
                   onToggle={toggle}
                 />
-                <ProductSearch
-                  branchId={branchId}
-                  label={t('goods.addons.addProduct')}
-                  onPick={pick}
-                />
-                {pending.length > 0 && (
-                  <ul
-                    className="flex flex-wrap gap-2"
-                    aria-label={t('goods.addons.pendingProducts')}
-                  >
-                    {pending.map((hit) => (
-                      <li key={hit.productId}>
-                        <Badge variant="outline" className="gap-1">
-                          {hit.name}
-                          <button
-                            type="button"
-                            aria-label={t('goods.addons.removeProduct', { name: hit.name })}
-                            onClick={() =>
-                              setPending((current) =>
-                                current.filter((row) => row.productId !== hit.productId),
-                              )
-                            }
-                          >
-                            ×
-                          </button>
-                        </Badge>
-                      </li>
-                    ))}
-                  </ul>
-                )}
               </fieldset>
               {error && (
                 <p role="alert" className="text-sm text-destructive">

@@ -19,6 +19,9 @@ async function install(page: Page) {
     product('prod_tee', 'Áo polo', [variant('v_s', 'POLO-S', [size('S', 1)], '200000'), variant('v_m', 'POLO-M', [size('M', 2)], '210000')]),
   ];
   const prices: Json[] = [];
+  // POS operating data of the store's prepared products, keyed by product.
+  const settings: Json[] = [];
+  const config = (id: string, name: string) => ({ product_id: id, name, product_kind: 'prepared', kind: 'single', kitchen_category: null, cup_label: false, show_components_on_kds: true, qr_orderable: true, drink_credit: null, drink_credit_categories: [], tax_category_id: 'tax_food', modifier_group_ids: [] as string[], components: [], variants: [] });
   const state = { writes: [] as { method: string; path: string; body: unknown }[], refuseDelete: false };
   const page_ = (data: unknown[]) => ({ data, meta: { page: 1, limit: 100, count: data.length, pages: 1, from: data.length ? 1 : 0, to: data.length, previous: null, next: null } });
   await page.route('**/api/v3/admin/**', async (route) => {
@@ -29,7 +32,9 @@ async function install(page: Page) {
     if (path === '/products' && method === 'POST') {
       const rows = (body?.variants as { sku: string; options: { value: string }[]; prices: { amount: string }[] }[]) ?? [];
       const created = product('prod_new', String(body?.name), rows.map((row, index) => variant(`v_new_${index}`, row.sku, [color(row.options[0].value === 'do' ? 'Đỏ' : 'Xanh', row.options[0].value === 'do' ? 1 : 2), size(row.options[1].value.toUpperCase(), row.options[1].value === 'm' ? 1 : 2)], row.prices[0].amount)));
+      Object.assign(created, { product_type_id: body?.product_type_id, tax_category_id: body?.tax_category_id ?? null });
       products.push(created);
+      if (body?.product_type_id === 'pt_prepared') settings.push(config('prod_new', String(body?.name)));
       return route.fulfill({ status: 201, json: created });
     }
     const one = /^\/products\/([^/]+)$/.exec(path);
@@ -58,8 +63,13 @@ async function install(page: Page) {
       return route.fulfill({ json: { price_count: prices.length } });
     }
     if (path === '/pos/modifier_groups') return route.fulfill({ json: { data: [{ id: 'grp_topping', name: 'Topping', min_select: 0, max_select: 2, allow_quantity: false, required: false, position: 0, options: [{ id: 'opt_1', name: 'Trân châu', price_delta: '5000' }] }] } });
-    if (path === '/pos/menu_items' && method === 'GET') return route.fulfill({ json: { data: [], meta: { tax_defaults: { food: null, alcohol: null } } } });
-    if (path === '/pos/menu_items') return route.fulfill({ status: 201, json: { data: { id: 'mi_new' } } });
+    if (path === '/pos/products/settings') return route.fulfill({ json: { data: settings, meta: { tax_defaults: { food: 'tax_food', alcohol: null } } } });
+    const groups = /^\/pos\/products\/([^/]+)\/modifier_groups$/.exec(path);
+    if (groups) {
+      const row = settings.find((item) => item.product_id === groups[1]);
+      if (row) row.modifier_group_ids = body?.modifier_group_ids;
+      return route.fulfill({ json: { data: row } });
+    }
     if (path === '/pos/units/variants') return route.fulfill({ json: { data: [] } });
     if (path === '/pos/units/variant') return route.fulfill({ json: { data: { variant_id: url.searchParams.get('variant_id'), sale_unit: 'item', base_unit: 'item', price_unit: 'item', ratio_numerator: 1, ratio_denominator: 1, tracked_mode: 'none', version: 1, status: 'default' } } });
     if (path === '/pos/units') return route.fulfill({ json: { data: [{ id: 'u1', code: 'item', name: 'Cái', dimension: 'count', base_code: 'item', status: 'active' }] } });
@@ -81,9 +91,14 @@ async function addAttribute(page: Page, name: string, values: string) {
   await input.press('Enter');
 }
 
-test('creates a product with two attributes and an add-on group, then prices it in a volume price list', async ({ page }) => {
+test('creates a prepared product with two attributes and an add-on group, then prices it in a volume price list', async ({ page }) => {
   const state = await install(page); await page.goto('/store_1/goods/products/new');
   await page.getByLabel('Tên sản phẩm').fill('Áo thun');
+  // Add-on groups, combo and kitchen settings are offered on a prepared product only.
+  await expect(page.getByRole('checkbox', { name: 'Topping' })).toHaveCount(0);
+  await page.getByLabel('Loại', { exact: true }).click();
+  await page.getByRole('option', { name: 'Sản phẩm chế biến', exact: true }).click();
+  await expect(page.getByLabel('Nhóm bếp')).toBeVisible();
   await page.getByLabel('Giá bán', { exact: true }).fill('150.000');
   await addAttribute(page, 'Màu sắc', 'Đỏ, Xanh');
   await addAttribute(page, 'Size', 'M');
@@ -111,17 +126,21 @@ test('creates a product with two attributes and an add-on group, then prices it 
   });
   const created = state.writes.find((write) => write.path === '/products' && write.method === 'POST')?.body as Json;
   expect(created).not.toHaveProperty('prices');
+  // A new prepared product without a tax category takes the store's food default.
+  expect(created).toMatchObject({ product_type_id: 'pt_prepared', tax_category_id: 'tax_food' });
   expect(created.variants).toEqual([
     { options: [{ name: 'mau-sac', value: 'do' }, { name: 'size', value: 'm' }], sku: 'AT-DO-M', barcode: '', cost_price: null, track_inventory: true, prices: [{ currency: 'VND', amount: '150000' }], stock_levels: [{ stock_location_id: 'sloc_a', count_on_hand: 5 }] },
     { options: [{ name: 'mau-sac', value: 'do' }, { name: 'size', value: 'l' }], sku: 'SP000008', barcode: '', cost_price: null, track_inventory: true, prices: [{ currency: 'VND', amount: '150000' }], stock_levels: [{ stock_location_id: 'sloc_a', count_on_hand: 0 }] },
     { options: [{ name: 'mau-sac', value: 'xanh' }, { name: 'size', value: 'm' }], sku: 'SP000009', barcode: '', cost_price: null, track_inventory: true, prices: [{ currency: 'VND', amount: '160000' }], stock_levels: [{ stock_location_id: 'sloc_a', count_on_hand: 0 }] },
   ]);
-  const menu = state.writes.find((write) => write.path === '/pos/menu_items');
-  expect(menu).toMatchObject({ method: 'POST', body: { product_id: 'prod_new', kind: 'single', modifier_group_ids: ['grp_topping'] } });
+  // Unchanged kitchen settings and an empty combo are not written; the groups are.
+  expect(state.writes.filter((write) => write.path.startsWith('/pos/products/'))).toEqual([
+    { method: 'PUT', path: '/pos/products/prod_new/modifier_groups', body: { modifier_group_ids: ['grp_topping'] } },
+  ]);
 
   // The edit page reads the matrix back and offers the price lists.
   await expect(page.getByRole('table').getByRole('rowheader')).toHaveText(['Đỏ / M', 'Đỏ / L', 'Xanh / M', 'Xanh / LKhông bán']);
-  await expect(page.getByRole('checkbox', { name: 'Topping' })).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: 'Topping' })).toBeChecked();
   await page.getByLabel('Thêm vào bảng giá', { exact: true }).click();
   await page.getByRole('option', { name: 'Giá sỉ', exact: true }).click();
   await page.getByRole('button', { name: 'Đặt giá', exact: true }).click();

@@ -14,6 +14,17 @@ import {
   type ParsedVariantRow,
   type VariantRowValues,
 } from './goods-variants'
+import {
+  type ComboComponent,
+  type ComboRow,
+  comboRows,
+  DEFAULT_OPERATIONS,
+  type OperationsFormValues,
+  operationsForm,
+  operationsOf,
+  type ProductOperations,
+  type ProductPosConfig,
+} from './product-operations'
 
 // Pure mapping between Spree products and what the goods screens show and
 // send. Inputs are structural slices of the Admin API records, so tests and
@@ -223,14 +234,26 @@ export type GoodsProductFormValues = {
   // Attributes and the variant matrix; no attribute is a simple product.
   attributes: AttributeValues[]
   variants: VariantRowValues[]
-  // Add-on groups offered with the product (its menu item's groups).
+  // A prepared product's POS operating data: add-on groups offered with
+  // it, its kitchen settings ("Vận hành") and its combo contents (none: a
+  // single product).
   modifierGroupIds: string[]
+  operations: OperationsFormValues
+  comboComponents: ComboRow[]
 }
 // Already validated and canonical (see `schemas/goods-product.ts`).
 export type ParsedGoodsProduct = Omit<
   GoodsProductFormValues,
-  'prepMinutes' | 'price' | 'costPrice' | 'openingStock' | 'variants'
+  | 'prepMinutes'
+  | 'price'
+  | 'costPrice'
+  | 'openingStock'
+  | 'variants'
+  | 'operations'
+  | 'comboComponents'
 > & {
+  operations: ProductOperations
+  comboComponents: ComboComponent[]
   prepMinutes: number | null
   price: string
   costPrice: string | null
@@ -257,6 +280,8 @@ export const emptyGoodsProduct = (branchIds: string[]): GoodsProductFormValues =
   attributes: [],
   variants: [],
   modifierGroupIds: [],
+  operations: operationsForm(DEFAULT_OPERATIONS),
+  comboComponents: [],
 })
 
 type EditableProduct = ProductSlice & {
@@ -272,7 +297,13 @@ export function prepMinutesOf(metadata: Record<string, unknown> | null | undefin
 }
 export function formFromProduct(
   product: EditableProduct,
-  context: { kind: GoodsKind; unitCode: string; branchIds: string[]; modifierGroupIds?: string[] },
+  context: {
+    kind: GoodsKind
+    unitCode: string
+    branchIds: string[]
+    // The product's stored POS operating data, when it has any.
+    pos?: ProductPosConfig | null
+  },
 ): GoodsProductFormValues {
   const variant = sellingVariants(product)[0]
   const prep = prepMinutesOf(product.metadata)
@@ -295,9 +326,21 @@ export function formFromProduct(
     branchIds: context.branchIds,
     attributes: matrix.attributes,
     variants: matrix.rows,
-    modifierGroupIds: context.modifierGroupIds ?? [],
+    modifierGroupIds: [...(context.pos?.modifier_group_ids ?? [])],
+    operations: operationsForm(operationsOf(context.pos)),
+    comboComponents: comboRows(context.pos?.components ?? []),
   }
 }
+// A new prepared product left without a tax category takes the store's food
+// default from the F&B setup (null: the store chose none).
+export const withDefaultTax = <T extends Pick<ParsedGoodsProduct, 'kind' | 'taxCategoryId'>>(
+  value: T,
+  foodTaxCategoryId: string | null | undefined,
+): T =>
+  value.kind === 'prepared' && !value.taxCategoryId && foodTaxCategoryId
+    ? { ...value, taxCategoryId: foodTaxCategoryId }
+    : value
+
 // Whether the form can edit a product's variants: a product whose stored
 // variants do not each name one value of every attribute cannot.
 export const variantsEditable = (product: Pick<ProductSlice, 'variants'>) =>

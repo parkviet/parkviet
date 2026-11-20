@@ -9,6 +9,12 @@ import {
   optionSlug,
   sameText,
 } from '../lib/goods-variants'
+import {
+  comboQuantityValid,
+  operationsProblems,
+  parseCombo,
+  parseOperations,
+} from '../lib/product-operations'
 
 const ERR = 'goods.products.form.errors'
 const QUANTITY = /^\d{1,7}$/
@@ -68,10 +74,30 @@ export function goodsProductSchema(currency: string) {
       attributes: z.array(z.object({ name: z.string(), values: z.array(z.string()) })),
       variants: z.array(row),
       modifierGroupIds: z.array(z.string()),
+      operations: z.object({
+        kitchenCategory: z.string(),
+        cupLabel: z.boolean(),
+        showComponentsOnKds: z.boolean(),
+        qrOrderable: z.boolean(),
+        drinkCredit: z.string(),
+        drinkCreditCategories: z.string(),
+      }),
+      comboComponents: z.array(
+        z.object({ variantId: z.string(), name: z.string(), quantity: z.string() }),
+      ),
     })
     .superRefine((value, context) => {
       const issue = (path: (string | number)[], message: string) =>
         context.addIssue({ code: 'custom', path, message: `${ERR}.${message}` })
+      // The operating data is saved only for a prepared product.
+      if (value.kind === 'prepared') {
+        for (const field of operationsProblems(value.operations))
+          issue(['operations', field], field)
+        value.comboComponents.forEach((row, index) => {
+          if (!comboQuantityValid(row.quantity))
+            issue(['comboComponents', index, 'quantity'], 'comboQuantity')
+        })
+      }
       if (value.attributes.length === 0) {
         if (money(value.price) === null) issue(['price'], 'price')
         return
@@ -120,6 +146,8 @@ export function goodsProductSchema(currency: string) {
         price: money(value.price) ?? '0',
         costPrice: value.costPrice.trim() === '' ? null : money(value.costPrice),
         openingStock: counts(value.openingStock),
+        operations: parseOperations(value.operations),
+        comboComponents: parseCombo(value.comboComponents),
         attributes: value.attributes.map((attribute) => ({
           name: attribute.name.trim(),
           values: attribute.values.map((label) => label.trim()),

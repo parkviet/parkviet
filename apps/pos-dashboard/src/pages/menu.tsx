@@ -1,9 +1,6 @@
-import { formatMoney } from '@parkviet/pos-shared/money'
 import { conflictReason, describeFailure } from '@parkviet/pos-shared/request-failure'
-import type { PosMenuCategory, PosMenuModifierGroup } from '@parkviet/pos-shared/types/pos-context'
 import { PageHeader, usePermissions } from '@spree/dashboard-core'
 import {
-  ActiveBadge,
   Badge,
   Button,
   Checkbox,
@@ -14,30 +11,26 @@ import {
   useConfirm,
 } from '@spree/dashboard-ui'
 import { BookOpenIcon } from '@spree/dashboard-ui/icons'
+import { Link } from '@tanstack/react-router'
 import { type ReactNode, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AddonGroupDialog } from '../components/addon-group-dialog'
 import { BranchPicker } from '../components/branch-picker'
+import { GoodsComboEditor } from '../components/goods-combo-editor'
 import { PageSkeleton } from '../components/page-skeleton'
-import { type ProductHit, ProductSearch } from '../components/product-search'
 import { RecipeEditor } from '../components/recipe-editor'
 import { ModelCard } from '../components/setup/model-ui'
 import { TopologyDialog } from '../components/topology-dialog'
 import { Input, TopologyField, TopologySelect } from '../components/topology-fields'
 import {
-  type MenuItemConfig,
   type MenuSchedule,
-  type MenuTaxDefaults,
   useBranchMenu,
-  useMenuCategories,
-  useMenuItems,
   useMenuSchedules,
-  useMenuTaxDefaults,
   useMenuWrite,
   useModifierGroups,
+  useProductSettings,
 } from '../hooks/use-menu-admin'
 import { usePosSession } from '../hooks/use-pos-session'
-import type { AddonGroup } from '../lib/goods-addons'
+import { useSession } from '../hooks/use-session'
 import {
   canManageMenu,
   canManageRecipes,
@@ -45,12 +38,22 @@ import {
   type PosAccess,
   runsRecipes,
 } from '../lib/pos-access'
+import {
+  type ComboRow,
+  comboQuantityValid,
+  comboRows,
+  operationsOf,
+  operationWrites,
+  type ProductPosSettings,
+  parseCombo,
+} from '../lib/product-operations'
 
 type Notice = { text: string; failed: boolean } | null
 type Save = (method: string, path: string, body?: unknown) => Promise<void>
 
 const MENU_REFUSALS = [
-  'combo_empty',
+  'product_not_prepared',
+  'module_disabled',
   'menu_schedule_days_invalid',
   'menu_favorites_limit',
   'menu_favorites_duplicate',
@@ -63,12 +66,14 @@ function menuFailure(error: unknown, t: (key: string) => string) {
     : describeFailure(error, t)
 }
 
-// The store's menu: categories, items (an existing product each), option
-// groups, combos and time-of-day menus; and for the selected branch its
-// favourites row and today's sold-out marks.
+// The day-to-day operation of the menu: the store's combos and time-of-day
+// menus, and for the selected branch its favourites row, today's sold-out
+// marks and the recipes of what it sells. Products, categories, add-on
+// groups and kitchen settings are managed in Goods ("Hàng hoá").
 export function MenuPage() {
   const { t } = useTranslation()
   const confirm = useConfirm()
+  const { storeId } = useSession()
   const { context, selection } = usePosSession()
   const { permissionKeys } = usePermissions()
   const access: PosAccess = { permissionKeys, context: context.data }
@@ -77,9 +82,8 @@ export function MenuPage() {
   const editRecipes = canManageRecipes(access)
   // Menu managers read the recipes; inventory managers change them.
   const recipes = runsRecipes(access) && (manage || editRecipes)
-  const categories = useMenuCategories(true)
-  const items = useMenuItems(true)
-  const groups = useModifierGroups(true)
+  const products = useProductSettings(true)
+  const groups = useModifierGroups(recipes)
   const schedules = useMenuSchedules(true)
   const branchMenu = useBranchMenu(selection.branchId)
   const write = useMenuWrite()
@@ -98,32 +102,42 @@ export function MenuPage() {
       setNotice({ text: menuFailure(failure, t), failed: true })
     }
   }
+  async function confirmed(message: string, label: string) {
+    return confirm({
+      message,
+      variant: 'destructive',
+      confirmLabel: label,
+      cancelLabel: t('adminCancel'),
+    })
+  }
   async function remove(path: string, name: string) {
-    if (
-      !(await confirm({
-        message: t('menuAdmin.confirmDelete', { name }),
-        variant: 'destructive',
-        confirmLabel: t('menuAdmin.delete'),
-        cancelLabel: t('adminCancel'),
-      }))
-    )
-      return
+    if (!(await confirmed(t('menuAdmin.confirmDelete', { name }), t('menuAdmin.delete')))) return
     await run(() => save('DELETE', path))
   }
+  async function removeCombo(product: ProductPosSettings) {
+    if (
+      !(await confirmed(
+        t('menuAdmin.confirmUncombo', { name: product.name }),
+        t('menuAdmin.uncombo'),
+      ))
+    )
+      return
+    await run(() => save('PUT', `/pos/products/${product.product_id}/combo`, { components: [] }))
+  }
   const close = () => setDialog(null)
-  // The same dialog as the goods add-on screen.
-  const groupDialog = (group?: AddonGroup) => (
-    <AddonGroupDialog
-      group={group}
+  const productRows = products.data ?? []
+  const combos = productRows.filter((product) => product.kind === 'combo')
+  const groupRows = groups.data ?? []
+  const loading = [products, schedules].find((query) => query.isError)
+  const comboDialog = (product?: ProductPosSettings) => (
+    <ComboDialog
+      product={product}
+      candidates={productRows.filter((row) => row.kind !== 'combo')}
       branchId={selection.branchId}
-      onSaved={() => setNotice({ text: t('saved'), failed: false })}
+      save={save}
       onClose={close}
     />
   )
-  const categoryRows = categories.data ?? []
-  const itemRows = items.data ?? []
-  const groupRows = groups.data ?? []
-  const loading = [categories, items, groups, schedules].find((query) => query.isError)
 
   return (
     <div className="space-y-6">
@@ -136,6 +150,12 @@ export function MenuPage() {
           </div>
         }
       />
+      <p className="text-base text-muted-foreground">
+        {t('menuAdmin.intro')}{' '}
+        <Link to="/$storeId/goods/products" params={{ storeId }} className="underline">
+          {t('menuAdmin.openGoods')}
+        </Link>
+      </p>
       {notice && (
         <p
           role={notice.failed ? 'alert' : 'status'}
@@ -154,220 +174,42 @@ export function MenuPage() {
       )}
 
       <Section
-        title={t('menuAdmin.categories')}
+        title={t('menuAdmin.combos')}
         action={
           manage && (
             <Button
-              disabled={write.isPending}
-              onClick={() => setDialog(<CategoryDialog save={save} onClose={close} />)}
+              disabled={write.isPending || !products.isSuccess}
+              onClick={() => setDialog(comboDialog())}
             >
-              {t('menuAdmin.addCategory')}
+              {t('menuAdmin.addCombo')}
             </Button>
           )
         }
       >
         <Rows
-          empty={t('menuAdmin.none')}
-          rows={categoryRows.map((category) => ({
-            id: category.id,
+          empty={t(products.isPending ? 'waiting' : 'menuAdmin.noCombos')}
+          rows={combos.map((product) => ({
+            id: product.product_id,
             cells: [
-              <span key="name" className="font-medium">
-                {category.color && (
-                  <span
-                    aria-hidden="true"
-                    className="mr-2 inline-block size-3 rounded-full align-middle"
-                    style={{ background: category.color }}
-                  />
-                )}
-                {category.name}
-              </span>,
-              <ActiveBadge
-                key="active"
-                active={category.active}
-                activeLabel={t('statusActive')}
-                inactiveLabel={t('statusDisabled')}
-              />,
-            ],
-            actions: manage && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setDialog(<CategoryDialog category={category} save={save} onClose={close} />)
-                  }
-                >
-                  {t('adminEdit')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void remove(`/pos/menu_categories/${category.id}`, category.name)}
-                >
-                  {t('menuAdmin.delete')}
-                </Button>
-              </>
-            ),
-          }))}
-        />
-      </Section>
-
-      <Section
-        title={t('menuAdmin.items')}
-        action={
-          manage && (
-            <Button
-              disabled={write.isPending || !selection.branchId}
-              onClick={() =>
-                setDialog(
-                  <ItemDialog
-                    branchId={selection.branchId}
-                    categories={categoryRows}
-                    groups={groupRows}
-                    save={save}
-                    onClose={close}
-                  />,
-                )
-              }
-            >
-              {t('menuAdmin.addItem')}
-            </Button>
-          )
-        }
-      >
-        <Rows
-          empty={t('menuAdmin.none')}
-          rows={itemRows.map((item) => ({
-            id: item.id,
-            cells: [
-              <span key="name" className="font-medium">
-                {item.name}
-                {item.kind === 'combo' && (
-                  <Badge variant="outline" className="ml-2">
-                    {t('menuAdmin.combo')}
-                  </Badge>
-                )}
-              </span>,
-              <span key="category" className="text-muted-foreground">
-                {categoryRows.find((row) => row.id === item.menu_category_id)?.name ?? '—'}
-              </span>,
-              <span key="groups" className="text-muted-foreground">
-                {item.kind === 'combo'
-                  ? item.components.map((row) => `${row.name} ×${row.quantity}`).join(', ')
-                  : item.modifier_group_ids
-                      .map((id) => groupRows.find((row) => row.id === id)?.name)
-                      .filter(Boolean)
-                      .join(', ') || '—'}
-              </span>,
-              <span key="kitchen" className="text-muted-foreground">
-                {item.kitchen_category ?? '—'}
-              </span>,
-              <ActiveBadge
-                key="active"
-                active={item.active}
-                activeLabel={t('statusActive')}
-                inactiveLabel={t('statusDisabled')}
-              />,
-            ],
-            actions: (manage || recipes) && (
-              <>
-                {recipes && item.kind !== 'combo' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setDialog(
-                        <RecipeEditor
-                          item={item}
-                          groups={groupRows}
-                          branchId={selection.branchId}
-                          canEdit={editRecipes}
-                          onClose={close}
-                        />,
-                      )
-                    }
-                  >
-                    {t('recipes.open')}
-                  </Button>
-                )}
-                {manage && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setDialog(
-                          <ItemDialog
-                            item={item}
-                            branchId={selection.branchId}
-                            categories={categoryRows}
-                            groups={groupRows}
-                            save={save}
-                            onClose={close}
-                          />,
-                        )
-                      }
-                    >
-                      {t('adminEdit')}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void remove(`/pos/menu_items/${item.id}`, item.name)}
-                    >
-                      {t('menuAdmin.delete')}
-                    </Button>
-                  </>
-                )}
-              </>
-            ),
-          }))}
-        />
-      </Section>
-
-      <Section
-        title={t('menuAdmin.groups')}
-        action={
-          manage && (
-            <Button disabled={write.isPending} onClick={() => setDialog(groupDialog())}>
-              {t('menuAdmin.addGroup')}
-            </Button>
-          )
-        }
-      >
-        <Rows
-          empty={t('menuAdmin.none')}
-          rows={groupRows.map((group) => ({
-            id: group.id,
-            cells: [
-              <span key="name" className="font-medium">
-                {group.name}
-              </span>,
-              <span key="range" className="text-muted-foreground">
-                {t('menuAdmin.range', { min: group.min_select, max: group.max_select })}
-              </span>,
-              <span key="options" className="text-muted-foreground">
-                {group.options
-                  .filter((option) => option.active)
-                  .map((option) =>
-                    Number(option.price_delta) === 0
-                      ? option.name
-                      : `${option.name} (+${formatMoney(option.price_delta)})`,
-                  )
-                  .join(', ')}
+              <Link
+                key="name"
+                to="/$storeId/goods/products/$productId"
+                params={{ storeId, productId: product.product_id }}
+                className="font-medium hover:underline"
+              >
+                {product.name}
+              </Link>,
+              <span key="components" className="text-muted-foreground">
+                {product.components.map((row) => `${row.name} ×${row.quantity}`).join(', ')}
               </span>,
             ],
             actions: manage && (
               <>
-                <Button variant="outline" size="sm" onClick={() => setDialog(groupDialog(group))}>
+                <Button variant="outline" size="sm" onClick={() => setDialog(comboDialog(product))}>
                   {t('adminEdit')}
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void remove(`/pos/modifier_groups/${group.id}`, group.name)}
-                >
-                  {t('menuAdmin.delete')}
+                <Button variant="outline" size="sm" onClick={() => void removeCombo(product)}>
+                  {t('menuAdmin.uncombo')}
                 </Button>
               </>
             ),
@@ -382,7 +224,7 @@ export function MenuPage() {
             <Button
               disabled={write.isPending}
               onClick={() =>
-                setDialog(<ScheduleDialog items={itemRows} save={save} onClose={close} />)
+                setDialog(<ScheduleDialog products={productRows} save={save} onClose={close} />)
               }
             >
               {t('menuAdmin.addSchedule')}
@@ -417,7 +259,7 @@ export function MenuPage() {
                     setDialog(
                       <ScheduleDialog
                         schedule={schedule}
-                        items={itemRows}
+                        products={productRows}
                         save={save}
                         onClose={close}
                       />,
@@ -449,9 +291,22 @@ export function MenuPage() {
         {branchMenu.data && (
           <BranchMenu
             menu={branchMenu.data.items.map((item) => ({
-              id: item.id,
+              id: item.product_id,
               name: item.name,
               soldOut: item.sold_out,
+              recipe:
+                recipes && item.kind !== 'combo'
+                  ? () =>
+                      setDialog(
+                        <RecipeEditor
+                          item={item}
+                          groups={groupRows}
+                          branchId={selection.branchId}
+                          canEdit={editRecipes}
+                          onClose={close}
+                        />,
+                      )
+                  : null,
             }))}
             favorites={branchMenu.data.favorites}
             canFavorite={manage}
@@ -461,7 +316,7 @@ export function MenuPage() {
               run(() =>
                 save('PUT', '/pos/menu_favorites', {
                   branch_id: selection.branchId,
-                  menu_item_ids: ids,
+                  product_ids: ids,
                 }),
               )
             }
@@ -469,7 +324,7 @@ export function MenuPage() {
               run(() =>
                 save('PUT', '/pos/menu_availabilities', {
                   branch_id: selection.branchId,
-                  menu_item_id: id,
+                  product_id: id,
                   sold_out: value,
                 }),
               )
@@ -621,303 +476,87 @@ function CheckField({
   )
 }
 
-function CategoryDialog({
-  category,
-  save,
-  onClose,
-}: {
-  category?: PosMenuCategory
-  save: Save
-  onClose: () => void
-}) {
-  const { t } = useTranslation()
-  const [name, setName] = useState(category?.name ?? '')
-  const [position, setPosition] = useState(String(category?.position ?? 0))
-  const [color, setColor] = useState(category?.color ?? '')
-  const [active, setActive] = useState(category?.active ?? true)
-  const { busy, error, submit } = useDialogSubmit(onClose)
-  return (
-    <TopologyDialog
-      title={t(category ? 'menuAdmin.editCategory' : 'menuAdmin.addCategory')}
-      subtitle={category?.name}
-      dirty
-      busy={busy}
-      onClose={onClose}
-    >
-      {(close) => (
-        <form
-          className="flex min-h-0 flex-col"
-          onSubmit={(event) => {
-            event.preventDefault()
-            void submit(() =>
-              save(
-                category ? 'PATCH' : 'POST',
-                `/pos/menu_categories${category ? `/${category.id}` : ''}`,
-                {
-                  name: name.trim(),
-                  position: Number(position) || 0,
-                  color: color.trim() || null,
-                  active,
-                },
-              ),
-            )
-          }}
-        >
-          <DialogBody className="space-y-4">
-            <TextField label={t('adminName')} value={name} onChange={setName} maxLength={80} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <TextField
-                label={t('menuAdmin.position')}
-                value={position}
-                onChange={setPosition}
-                inputMode="numeric"
-              />
-              <TextField
-                label={t('menuAdmin.color')}
-                value={color}
-                onChange={setColor}
-                hint="#7b4a2e"
-                maxLength={7}
-              />
-            </div>
-            <CheckField label={t('statusActive')} checked={active} onChange={setActive} />
-            <DialogError error={error} />
-          </DialogBody>
-          <DialogActions busy={busy} close={close} disabled={!name.trim()} />
-        </form>
-      )}
-    </TopologyDialog>
-  )
-}
-
-function ItemDialog({
-  item,
+// The contents of one prepared product's combo. A new combo picks a single
+// prepared product first; its add-on groups are cleared, since a combo lists
+// its contents instead.
+function ComboDialog({
+  product,
+  candidates,
   branchId,
-  categories,
-  groups,
   save,
   onClose,
 }: {
-  item?: MenuItemConfig
+  product?: ProductPosSettings
+  candidates: ProductPosSettings[]
   branchId: string | null
-  categories: PosMenuCategory[]
-  groups: PosMenuModifierGroup[]
   save: Save
   onClose: () => void
 }) {
   const { t } = useTranslation()
-  const [product, setProduct] = useState<ProductHit | null>(null)
-  const [kind, setKind] = useState<'single' | 'combo'>(item?.kind ?? 'single')
-  const [categoryId, setCategoryId] = useState(item?.menu_category_id ?? '')
-  const [kitchen, setKitchen] = useState(item?.kitchen_category ?? '')
-  const [cupLabel, setCupLabel] = useState(item?.cup_label === true)
-  const [qrOrderable, setQrOrderable] = useState(item?.qr_orderable !== false)
-  const [drinkCredit, setDrinkCredit] = useState(item?.drink_credit?.replace(/\.0+$/, '') ?? '')
-  const [creditCategories, setCreditCategories] = useState(
-    (item?.drink_credit_categories ?? []).join(', '),
-  )
-  const creditValid = drinkCredit.trim() === '' || /^[1-9]\d*$/.test(drinkCredit.trim())
-  const taxDefaults = useMenuTaxDefaults(true).data
-  const initialTax = item?.tax_category_id ?? ''
-  const [tax, setTax] = useState(initialTax)
-  const taxOptions = taxChoices(t, taxDefaults, initialTax)
-  const [active, setActive] = useState(item?.active ?? true)
-  const [groupIds, setGroupIds] = useState<string[]>(item?.modifier_group_ids ?? [])
-  const [components, setComponents] = useState(
-    (item?.components ?? []).map((row) => ({
-      variantId: row.variant_id,
-      name: row.name,
-      quantity: String(row.quantity),
-    })),
-  )
+  const [productId, setProductId] = useState(product?.product_id ?? '')
+  const [rows, setRows] = useState<ComboRow[]>(comboRows(product?.components ?? []))
+  const [checked, setChecked] = useState(false)
   const { busy, error, submit } = useDialogSubmit(onClose)
-  const ready = (item || product) && (kind === 'single' || components.length > 0) && creditValid
+  const target = product ?? candidates.find((row) => row.product_id === productId)
+  const valid =
+    Boolean(target) && rows.length > 0 && rows.every((row) => comboQuantityValid(row.quantity))
   return (
     <TopologyDialog
-      title={t(item ? 'menuAdmin.editItem' : 'menuAdmin.addItem')}
-      subtitle={item?.name ?? product?.name}
+      title={t(product ? 'menuAdmin.editCombo' : 'menuAdmin.addCombo')}
+      subtitle={product?.name}
       dirty
       busy={busy}
+      wide
       onClose={onClose}
     >
       {(close) => (
         <form
           className="flex min-h-0 flex-col"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault()
-            void submit(() =>
-              save(item ? 'PATCH' : 'POST', `/pos/menu_items${item ? `/${item.id}` : ''}`, {
-                ...(item ? {} : { product_id: product?.productId }),
-                kind,
-                menu_category_id: categoryId || null,
-                kitchen_category: kitchen.trim() || null,
-                cup_label: cupLabel,
-                qr_orderable: qrOrderable,
-                drink_credit: drinkCredit.trim() || null,
-                drink_credit_categories: creditCategories
-                  .split(',')
-                  .map((value) => value.trim())
-                  .filter(Boolean),
-                ...(tax !== initialTax ? { tax_category_id: tax || null } : {}),
-                active,
-                modifier_group_ids: kind === 'single' ? groupIds : [],
-                ...(kind === 'combo'
-                  ? {
-                      components: components.map((row) => ({
-                        variant_id: row.variantId,
-                        quantity: Number(row.quantity) || 1,
-                      })),
-                    }
-                  : item?.kind === 'combo'
-                    ? { components: [] }
-                    : {}),
-              }),
-            )
+            setChecked(true)
+            if (!target || !valid) return
+            void submit(async () => {
+              const writes = operationWrites(target.product_id, target, {
+                operations: operationsOf(target),
+                comboComponents: parseCombo(rows),
+                modifierGroupIds: target.modifier_group_ids,
+              })
+              for (const write of writes) await save('PUT', write.path, write.body)
+            })
           }}
         >
           <DialogBody className="space-y-4">
-            {!item && (
-              <>
-                <ProductSearch
-                  branchId={branchId}
-                  label={t('menuAdmin.product')}
-                  onPick={setProduct}
-                />
-                {product && (
-                  <p className="text-sm">{t('menuAdmin.productPicked', { name: product.name })}</p>
+            {!product && (
+              <TopologyField
+                label={t('menuAdmin.comboProduct')}
+                hint={t('menuAdmin.comboProductHint')}
+              >
+                {(id, describedBy) => (
+                  <TopologySelect
+                    id={id}
+                    describedBy={describedBy}
+                    value={productId}
+                    options={[
+                      { value: '', label: '—' },
+                      ...candidates.map((row) => ({ value: row.product_id, label: row.name })),
+                    ]}
+                    onChange={setProductId}
+                  />
                 )}
-                <p className="text-sm text-muted-foreground">{t('menuAdmin.productHint')}</p>
-              </>
+              </TopologyField>
             )}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <TopologyField label={t('menuAdmin.kind')}>
-                {(id) => (
-                  <TopologySelect
-                    id={id}
-                    value={kind}
-                    options={[
-                      { value: 'single', label: t('menuAdmin.single') },
-                      { value: 'combo', label: t('menuAdmin.combo') },
-                    ]}
-                    onChange={(value) => setKind(value === 'combo' ? 'combo' : 'single')}
-                  />
-                )}
-              </TopologyField>
-              <TopologyField label={t('menuAdmin.category')}>
-                {(id) => (
-                  <TopologySelect
-                    id={id}
-                    value={categoryId}
-                    options={[
-                      { value: '', label: t('menuAdmin.noCategory') },
-                      ...categories.map((row) => ({ value: row.id, label: row.name })),
-                    ]}
-                    onChange={setCategoryId}
-                  />
-                )}
-              </TopologyField>
-              <TextField
-                label={t('menuAdmin.kitchen')}
-                hint={t('menuAdmin.kitchenHint')}
-                value={kitchen}
-                onChange={setKitchen}
-                maxLength={40}
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <TextField
-                label={t('menuAdmin.drinkCredit')}
-                hint={t(creditValid ? 'menuAdmin.drinkCreditHint' : 'menuAdmin.drinkCreditInvalid')}
-                value={drinkCredit}
-                onChange={setDrinkCredit}
-                maxLength={12}
-              />
-              <TextField
-                label={t('menuAdmin.drinkCreditCategories')}
-                hint={t('menuAdmin.drinkCreditCategoriesHint')}
-                value={creditCategories}
-                onChange={setCreditCategories}
-                maxLength={200}
-              />
-            </div>
-            {taxOptions.length > 1 ? (
-              <TopologyField label={t('menuAdmin.tax')}>
-                {(id) => (
-                  <TopologySelect id={id} value={tax} options={taxOptions} onChange={setTax} />
-                )}
-              </TopologyField>
-            ) : null}
-            <CheckField label={t('menuAdmin.cupLabel')} checked={cupLabel} onChange={setCupLabel} />
-            <CheckField
-              label={t('menuAdmin.qrOrderable')}
-              checked={qrOrderable}
-              onChange={setQrOrderable}
+            <GoodsComboEditor
+              rows={rows}
+              onChange={setRows}
+              branchId={branchId}
+              checked={checked}
+              disabled={busy}
             />
-            {kind === 'single' ? (
-              <fieldset className="space-y-2">
-                <legend className="text-sm font-medium">{t('menuAdmin.groups')}</legend>
-                {groups.length === 0 && (
-                  <p className="text-sm text-muted-foreground">{t('menuAdmin.none')}</p>
-                )}
-                {groups.map((group) => (
-                  <CheckField
-                    key={group.id}
-                    label={group.name}
-                    checked={groupIds.includes(group.id)}
-                    onChange={(checked) =>
-                      setGroupIds((current) =>
-                        checked ? [...current, group.id] : current.filter((id) => id !== group.id),
-                      )
-                    }
-                  />
-                ))}
-              </fieldset>
-            ) : (
-              <fieldset className="space-y-2">
-                <legend className="text-sm font-medium">{t('menuAdmin.components')}</legend>
-                {components.map((row, index) => (
-                  <div key={row.variantId} className="flex items-end gap-2">
-                    <span className="flex-1 pb-2">{row.name}</span>
-                    <TextField
-                      label={t('menuAdmin.quantity')}
-                      value={row.quantity}
-                      inputMode="numeric"
-                      onChange={(value) =>
-                        setComponents((current) =>
-                          current.map((entry, at) =>
-                            at === index ? { ...entry, quantity: value } : entry,
-                          ),
-                        )
-                      }
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() =>
-                        setComponents((current) => current.filter((_, at) => at !== index))
-                      }
-                    >
-                      {t('menuAdmin.delete')}
-                    </Button>
-                  </div>
-                ))}
-                <ProductSearch
-                  branchId={branchId}
-                  label={t('menuAdmin.addComponent')}
-                  onPick={(hit) =>
-                    setComponents((current) =>
-                      current.some((row) => row.variantId === hit.variantId)
-                        ? current
-                        : [...current, { variantId: hit.variantId, name: hit.name, quantity: '1' }],
-                    )
-                  }
-                />
-              </fieldset>
-            )}
-            <CheckField label={t('statusActive')} checked={active} onChange={setActive} />
             <DialogError error={error} />
           </DialogBody>
-          <DialogActions busy={busy} close={close} disabled={!ready} />
+          <DialogActions busy={busy} close={close} disabled={!valid} />
         </form>
       )}
     </TopologyDialog>
@@ -928,12 +567,12 @@ const DAYS = [1, 2, 3, 4, 5, 6, 0] as const
 
 function ScheduleDialog({
   schedule,
-  items,
+  products,
   save,
   onClose,
 }: {
   schedule?: MenuSchedule
-  items: MenuItemConfig[]
+  products: ProductPosSettings[]
   save: Save
   onClose: () => void
 }) {
@@ -946,7 +585,7 @@ function ScheduleDialog({
   const [active, setActive] = useState(schedule?.active ?? true)
   const [rows, setRows] = useState(
     (schedule?.items ?? []).map((row) => ({
-      menuItemId: row.menu_item_id,
+      productId: row.product_id,
       price: row.price?.replace(/\.0+$/, '') ?? '',
       hidden: row.hidden,
     })),
@@ -958,7 +597,9 @@ function ScheduleDialog({
     /^\d{2}:\d{2}$/.test(endsAt) &&
     startsAt !== endsAt &&
     rows.every((row) => row.hidden || /^\d+$/.test(row.price))
-  const unused = items.filter((item) => !rows.some((row) => row.menuItemId === item.id))
+  const unused = products.filter(
+    (product) => !rows.some((row) => row.productId === product.product_id),
+  )
   return (
     <TopologyDialog
       title={t(schedule ? 'menuAdmin.editSchedule' : 'menuAdmin.addSchedule')}
@@ -984,7 +625,7 @@ function ScheduleDialog({
                   days_of_week: days,
                   active,
                   items: rows.map((row) => ({
-                    menu_item_id: row.menuItemId,
+                    product_id: row.productId,
                     hidden: row.hidden,
                     price: row.hidden ? null : row.price,
                   })),
@@ -1036,9 +677,10 @@ function ScheduleDialog({
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">{t('menuAdmin.scheduleItemsTitle')}</legend>
               {rows.map((row, index) => (
-                <div key={row.menuItemId} className="flex flex-wrap items-end gap-2">
+                <div key={row.productId} className="flex flex-wrap items-end gap-2">
                   <span className="flex-1 pb-2">
-                    {items.find((item) => item.id === row.menuItemId)?.name ?? row.menuItemId}
+                    {products.find((product) => product.product_id === row.productId)?.name ??
+                      row.productId}
                   </span>
                   {!row.hidden && (
                     <TextField
@@ -1082,13 +724,16 @@ function ScheduleDialog({
                       value=""
                       options={[
                         { value: '', label: '—' },
-                        ...unused.map((item) => ({ value: item.id, label: item.name })),
+                        ...unused.map((product) => ({
+                          value: product.product_id,
+                          label: product.name,
+                        })),
                       ]}
                       onChange={(value) => {
                         if (value)
                           setRows((current) => [
                             ...current,
-                            { menuItemId: value, price: '', hidden: false },
+                            { productId: value, price: '', hidden: false },
                           ])
                       }}
                     />
@@ -1106,7 +751,8 @@ function ScheduleDialog({
   )
 }
 
-// The selected branch: its favourites row (in order) and today's sold-out marks.
+// The selected branch: its favourites row (in order), today's sold-out marks
+// and the recipes of what it sells, keyed by product.
 function BranchMenu({
   menu,
   favorites,
@@ -1116,7 +762,7 @@ function BranchMenu({
   onFavorites,
   onSoldOut,
 }: {
-  menu: { id: string; name: string; soldOut: boolean }[]
+  menu: { id: string; name: string; soldOut: boolean; recipe: (() => void) | null }[]
   favorites: string[]
   canFavorite: boolean
   canSoldOut: boolean
@@ -1139,6 +785,11 @@ function BranchMenu({
               </Badge>
             )}
             {item.soldOut && <Badge variant="destructive">{t('menuAdmin.soldOut')}</Badge>}
+            {item.recipe && (
+              <Button variant="outline" size="sm" onClick={item.recipe}>
+                {t('recipes.open')}
+              </Button>
+            )}
             {canFavorite && (
               <Button
                 variant="outline"
@@ -1168,21 +819,4 @@ function BranchMenu({
       })}
     </ul>
   )
-}
-
-// The tax choices of an item: the store's food and alcohol defaults from the
-// F&B setup, the item's own category when it is neither, and "not set" (a new
-// item then takes the food default).
-function taxChoices(
-  t: (key: string) => string,
-  defaults: MenuTaxDefaults | undefined,
-  current: string,
-) {
-  const options = [{ value: '', label: t('menuAdmin.taxUnset') }]
-  if (defaults?.food) options.push({ value: defaults.food, label: t('menuAdmin.taxFood') })
-  if (defaults?.alcohol && defaults.alcohol !== defaults.food)
-    options.push({ value: defaults.alcohol, label: t('menuAdmin.taxAlcohol') })
-  if (current && !options.some((row) => row.value === current))
-    options.push({ value: current, label: t('menuAdmin.taxOther') })
-  return options
 }

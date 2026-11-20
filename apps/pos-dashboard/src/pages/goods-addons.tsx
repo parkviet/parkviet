@@ -16,21 +16,19 @@ import { useTranslation } from 'react-i18next'
 import { AddonGroupDialog } from '../components/addon-group-dialog'
 import { BranchPicker } from '../components/branch-picker'
 import { MasterNotice } from '../components/master-page'
-import { useMenuItems, useMenuWrite, useModifierGroups } from '../hooks/use-menu-admin'
-import { usePosSession } from '../hooks/use-pos-session'
+import { useMenuWrite, useModifierGroups, useProductSettings } from '../hooks/use-menu-admin'
 import { type AddonGroup, appliedItems, describeSelection } from '../lib/goods-addons'
 
 type Notice = { text: string; failed: boolean } | null
 
 // The store's add-on groups ("Topping", "Đường", "Size bánh"): how each is
-// picked at the counter, its options, and how many products offer it. The
-// route lets only menu managers in; they also edit the menu screen's groups.
+// picked at the counter, its options, and how many prepared products offer
+// it. The route lets only menu managers in.
 export function GoodsAddonsPage() {
   const { t } = useTranslation()
   const confirm = useConfirm()
-  const { selection } = usePosSession()
   const groups = useModifierGroups(true)
-  const items = useMenuItems(true)
+  const items = useProductSettings(true)
   const write = useMenuWrite()
   const [notice, setNotice] = useState<Notice>(null)
   const [editor, setEditor] = useState<{ group?: AddonGroup } | null>(null)
@@ -179,7 +177,6 @@ export function GoodsAddonsPage() {
       {editor && (
         <AddonGroupDialog
           group={editor.group}
-          branchId={selection.branchId}
           onSaved={(name) => setNotice({ text: t('goods.addons.saved', { name }), failed: false })}
           onClose={() => setEditor(null)}
         />

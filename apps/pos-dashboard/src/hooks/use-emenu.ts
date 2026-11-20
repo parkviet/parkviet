@@ -43,6 +43,7 @@ export type EmenuCategoryDraft = {
   name: string
   color: string
   image_url: string | null
+  // Product ids, in the order guests see them.
   items: string[]
 }
 
@@ -105,7 +106,7 @@ export function readEmenuCategory(entry: unknown): EmenuCategoryDraft | null {
     ? row.items.flatMap((item) => {
         if (typeof item === 'string') return [item]
         const placed = (typeof item === 'object' && item ? item : {}) as Record<string, unknown>
-        return typeof placed.menu_item_id === 'string' ? [placed.menu_item_id] : []
+        return typeof placed.product_id === 'string' ? [placed.product_id] : []
       })
     : []
   return {

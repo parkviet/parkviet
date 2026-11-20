@@ -9,6 +9,8 @@ import {
   FolderTreeIcon,
   LayersIcon,
   PackageIcon,
+  ShapesIcon,
+  SlidersHorizontalIcon,
   StoreIcon,
   TagsIcon,
   TicketPercentIcon,
@@ -19,6 +21,7 @@ import { get, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { GoodsAddonGroups } from '../components/goods-addon-groups'
 import { CategoryChecklist } from '../components/goods-category-checklist'
+import { GoodsComboEditor } from '../components/goods-combo-editor'
 import { GoodsProductPriceLists } from '../components/goods-product-price-lists'
 import { GoodsUnitConversions } from '../components/goods-unit-conversions'
 import { GoodsVariantEditor } from '../components/goods-variant-editor'
@@ -36,7 +39,6 @@ import {
   createUnit,
   type FollowUpFailure,
   PRODUCT_FORM_EXPAND,
-  type ProductMenuItem,
   type SaveContext,
   saveGoodsProduct,
   useGoodsOptionTypes,
@@ -46,7 +48,7 @@ import {
   useProductUnit,
 } from '../hooks/use-goods-products'
 import { GoodsSetupError, useGoodsSetup } from '../hooks/use-goods-setup'
-import { useMenuItems, useModifierGroups } from '../hooks/use-menu-admin'
+import { useMenuTaxDefaults, useModifierGroups, useProductSettings } from '../hooks/use-menu-admin'
 import { usePosSession } from '../hooks/use-pos-session'
 import { useSession } from '../hooks/use-session'
 import {
@@ -62,6 +64,12 @@ import {
   variantsEditable,
 } from '../lib/goods-products'
 import { canAdminister, canReadProductTypes, canWriteGoods, visibleNav } from '../lib/pos-access'
+import {
+  copiedOperations,
+  type OperationsField,
+  type OperationsFormValues,
+  type ProductPosSettings,
+} from '../lib/product-operations'
 import { goodsProductSchema } from '../schemas/goods-product'
 
 type Notice = { text: string; failed: boolean; lines?: string[] }
@@ -103,14 +111,17 @@ export function GoodsProductFormPage({ productId }: { productId?: string }) {
   const branchIds = useMemo(() => branches.map((branch) => branch.id), [branches])
   const assigned = useProductBranches(productId ?? '', branchIds, editing && branchIds.length > 0)
   const unit = useProductUnit(editing ? (product.data?.default_variant_id ?? null) : null)
-  // Add-on groups are offered where the add-on groups page is: the selected
-  // branch runs the menu and the staff may change it.
-  const addonsOn = visibleNav('goods-addons', access)
-  const menuItems = useMenuItems(addonsOn)
-  const menuItem = useMemo((): ProductMenuItem | null => {
-    const item = productId ? menuItems.data?.find((row) => row.product_id === productId) : undefined
-    return item ? { id: item.id, kind: item.kind, modifierGroupIds: item.modifier_group_ids } : null
-  }, [menuItems.data, productId])
+  // A prepared product's operating data (kitchen settings, add-on groups,
+  // combo) is offered where the add-on groups page is: the selected branch
+  // runs the menu and the staff may change it.
+  const operationsOn = visibleNav('goods-addons', access)
+  const settings = useProductSettings(operationsOn)
+  const current = useMemo(
+    () => (productId ? (settings.data?.find((row) => row.product_id === productId) ?? null) : null),
+    [settings.data, productId],
+  )
+  // A new prepared product left without a tax category takes the food default.
+  const taxDefaults = useMenuTaxDefaults(!editing)
   const [notice, setNotice] = useState<Notice | null>(() =>
     productId ? (afterCreate.get(productId) ?? null) : null,
   )
@@ -125,7 +136,7 @@ export function GoodsProductFormPage({ productId }: { productId?: string }) {
       (product.isPending ||
         unit.isPending ||
         (branchIds.length > 0 && assigned.isPending) ||
-        (addonsOn && menuItems.isPending)))
+        (operationsOn && settings.isPending)))
   if (loading) return <PageSkeleton variant="page" />
   const failed = editing && (product.isError || assigned.isError)
   if (failed || types.isError)
@@ -153,13 +164,14 @@ export function GoodsProductFormPage({ productId }: { productId?: string }) {
         kind,
         unitCode: unit.data?.sale_unit ?? 'item',
         branchIds: assigned.data ?? [],
-        modifierGroupIds: menuItem?.modifierGroupIds ?? [],
+        pos: current,
       })
     : emptyGoodsProduct(manageBranches ? branchIds : [])
   return (
     <ProductForm
-      // A saved edit reloads the product; the form starts again from it.
-      key={existing?.updated_at ?? 'new'}
+      // A saved edit reloads the product and its operating data; the form
+      // starts again from them. A refetch with the same data keeps the edits.
+      key={`${existing?.updated_at ?? 'new'}|${current ? JSON.stringify(current) : ''}`}
       initial={initial}
       existing={
         existing
@@ -172,25 +184,30 @@ export function GoodsProductFormPage({ productId }: { productId?: string }) {
       }
       branches={branches}
       manageBranches={manageBranches}
-      addons={
-        addonsOn
+      operations={
+        operationsOn
           ? {
-              // Saved only once the product's menu item is known.
-              ready: menuItems.isSuccess,
-              menuItem,
-              error: menuItems.error,
-              retry: () => void menuItems.refetch(),
+              // Saved only once what is stored for the product is known.
+              ready: settings.isSuccess,
+              current,
+              others: (settings.data ?? []).filter((row) => row.product_id !== productId),
+              error: settings.error,
+              retry: () => void settings.refetch(),
             }
           : null
       }
+      foodTaxCategoryId={taxDefaults.data?.food ?? null}
       notice={notice}
       setNotice={setNotice}
     />
   )
 }
-type AddonsState = {
+type OperationsState = {
   ready: boolean
-  menuItem: ProductMenuItem | null
+  // What is stored for this product; null when nothing is yet.
+  current: ProductPosSettings | null
+  // The store's other prepared products, to copy operating data from.
+  others: ProductPosSettings[]
   error: unknown
   retry: () => void
 }
@@ -202,7 +219,8 @@ function ProductForm({
   existing,
   branches,
   manageBranches,
-  addons,
+  operations,
+  foodTaxCategoryId,
   notice,
   setNotice,
 }: {
@@ -210,14 +228,15 @@ function ProductForm({
   existing?: { product: Product; branchIds: string[]; unitCode: string }
   branches: Branch[]
   manageBranches: boolean
-  addons: AddonsState | null
+  operations: OperationsState | null
+  foodTaxCategoryId: string | null
   notice: Notice | null
   setNotice: (notice: Notice | null) => void
 }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { storeId } = useSession()
-  const { context } = usePosSession()
+  const { context, selection } = usePosSession()
   const { permissionKeys } = usePermissions()
   const canWrite = canWriteGoods({ permissionKeys })
   const currency = context.data?.store.currency ?? 'VND'
@@ -246,7 +265,9 @@ function ProductForm({
   const lockedVariants = Boolean(existing && !variantsEditable(existing.product))
   const withOptions = lockedVariants || draft.attributes.length > 0
   const optionTypes = useGoodsOptionTypes(canWrite)
-  const modifierGroups = useModifierGroups(addons !== null)
+  const modifierGroups = useModifierGroups(operations !== null)
+  const prepared = operations !== null && draft.kind === 'prepared'
+  const [triedSave, setTriedSave] = useState(false)
   const readOnly = !canWrite
   const set = <K extends keyof GoodsProductFormValues>(key: K, value: GoodsProductFormValues[K]) =>
     form.setValue(key, value as never, { shouldDirty: true })
@@ -257,6 +278,7 @@ function ProductForm({
   async function submit(values: GoodsProductFormValues) {
     form.clearErrors()
     setNotice(null)
+    setTriedSave(true)
     const parsed = goodsProductSchema(currency).safeParse(values)
     if (!parsed.success) {
       for (const issue of parsed.error.issues)
@@ -276,7 +298,8 @@ function ProductForm({
           manageBranches,
           image,
           existing,
-          addons: addons?.ready ? { menuItem: addons.menuItem } : undefined,
+          operations: operations?.ready ? { current: operations.current } : undefined,
+          foodTaxCategoryId,
         },
       })
       const next = followUpNotice(outcome.failures, t, !existing)
@@ -395,7 +418,10 @@ function ProductForm({
         >
           <div className="grid gap-4 sm:grid-cols-2">
             {text('name')}
-            <TopologyField label={t('goods.products.form.kind')}>
+            <TopologyField
+              label={t('goods.products.form.kind')}
+              hint={operations ? t('goods.products.form.operations.preparedOnly') : undefined}
+            >
               {(id) => (
                 <TopologySelect
                   id={id}
@@ -628,7 +654,31 @@ function ProductForm({
           )}
         </ModelCard>
 
-        {addons && (
+        {prepared && operations && (
+          <ModelCard
+            title={t('goods.products.form.operations.title')}
+            id="goods-operations"
+            icon={<SlidersHorizontalIcon />}
+          >
+            <OperationsFields
+              value={draft.operations}
+              onChange={(next) => set('operations', next)}
+              errorOf={(field) => errorAt(`operations.${field}`)}
+              others={operations.others}
+              onCopy={(source) => {
+                const copied = copiedOperations(source)
+                set('operations', copied.operations)
+                set('modifierGroupIds', copied.modifierGroupIds)
+                set('comboComponents', copied.comboComponents)
+              }}
+              error={operations.error}
+              retry={operations.retry}
+              disabled={busy || readOnly || !operations.ready}
+            />
+          </ModelCard>
+        )}
+
+        {prepared && operations && (
           <ModelCard
             title={t('goods.products.form.addons.title')}
             id="goods-addons"
@@ -638,14 +688,30 @@ function ProductForm({
               groups={modifierGroups.data}
               value={draft.modifierGroupIds}
               onChange={(ids) => set('modifierGroupIds', ids)}
-              combo={addons.menuItem?.kind === 'combo'}
-              error={addons.error ?? modifierGroups.error}
+              combo={draft.comboComponents.length > 0}
+              error={operations.error ?? modifierGroups.error}
               retry={() => {
-                addons.retry()
+                operations.retry()
                 void modifierGroups.refetch()
               }}
               storeId={storeId}
-              disabled={busy || readOnly || !addons.ready}
+              disabled={busy || readOnly || !operations.ready}
+            />
+          </ModelCard>
+        )}
+
+        {prepared && operations && (
+          <ModelCard
+            title={t('goods.products.form.combo.title')}
+            id="goods-combo"
+            icon={<ShapesIcon />}
+          >
+            <GoodsComboEditor
+              rows={draft.comboComponents}
+              onChange={(rows) => set('comboComponents', rows)}
+              branchId={selection.branchId}
+              checked={triedSave}
+              disabled={busy || readOnly || !operations.ready}
             />
           </ModelCard>
         )}
@@ -746,6 +812,148 @@ function ProductForm({
         )}
       </div>
     </form>
+  )
+}
+
+// The kitchen settings of a prepared product, and copying them (with its
+// add-on groups and combo contents) from another prepared product, since
+// Spree's duplicate and CSV import carry no POS data.
+function OperationsFields({
+  value,
+  onChange,
+  errorOf,
+  others,
+  onCopy,
+  error,
+  retry,
+  disabled,
+}: {
+  value: OperationsFormValues
+  onChange: (value: OperationsFormValues) => void
+  errorOf: (field: OperationsField) => string | undefined
+  others: ProductPosSettings[]
+  onCopy: (source: ProductPosSettings) => void
+  error: unknown
+  retry: () => void
+  disabled: boolean
+}) {
+  const { t } = useTranslation()
+  const [sourceId, setSourceId] = useState('')
+  const [copied, setCopied] = useState('')
+  const change = (next: Partial<OperationsFormValues>) => onChange({ ...value, ...next })
+  if (error)
+    return (
+      <div role="alert" className="space-y-2 text-sm">
+        <p>{describeFailure(error, t)}</p>
+        <Button type="button" size="sm" variant="outline" onClick={retry}>
+          {t('retry')}
+        </Button>
+      </div>
+    )
+  const field = (key: OperationsField, options: { maxLength: number; numeric?: boolean }) => {
+    const message = errorOf(key)
+    return (
+      <TopologyField
+        label={t(`goods.products.form.operations.${key}`)}
+        hint={t(`goods.products.form.operations.${key}Hint`)}
+        error={message}
+      >
+        {(id, describedBy) => (
+          <Input
+            id={id}
+            aria-describedby={describedBy}
+            aria-invalid={Boolean(message)}
+            inputMode={options.numeric ? 'numeric' : 'text'}
+            maxLength={options.maxLength}
+            disabled={disabled}
+            value={value[key]}
+            onChange={(event) => change({ [key]: event.target.value })}
+          />
+        )}
+      </TopologyField>
+    )
+  }
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">{t('goods.products.form.operations.hint')}</p>
+      <div className="grid gap-4 sm:grid-cols-2">{field('kitchenCategory', { maxLength: 40 })}</div>
+      <SwitchRow
+        label={t('goods.products.form.operations.cupLabel')}
+        hint={t('goods.products.form.operations.cupLabelHint')}
+        checked={value.cupLabel}
+        disabled={disabled}
+        onChange={(checked) => change({ cupLabel: checked })}
+      />
+      <SwitchRow
+        label={t('goods.products.form.operations.showComponentsOnKds')}
+        hint={t('goods.products.form.operations.showComponentsOnKdsHint')}
+        checked={value.showComponentsOnKds}
+        disabled={disabled}
+        onChange={(checked) => change({ showComponentsOnKds: checked })}
+      />
+      <SwitchRow
+        label={t('goods.products.form.operations.qrOrderable')}
+        hint={t('goods.products.form.operations.qrOrderableHint')}
+        checked={value.qrOrderable}
+        disabled={disabled}
+        onChange={(checked) => change({ qrOrderable: checked })}
+      />
+      <div className="grid gap-4 sm:grid-cols-2">
+        {field('drinkCredit', { maxLength: 12, numeric: true })}
+        {field('drinkCreditCategories', { maxLength: 200 })}
+      </div>
+      <div className="space-y-2 rounded-md border p-3">
+        <p className="text-sm font-medium">{t('goods.products.form.operations.copyTitle')}</p>
+        <p className="text-sm text-muted-foreground">
+          {t('goods.products.form.operations.copyHint')}
+        </p>
+        {others.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {t('goods.products.form.operations.copyNone')}
+          </p>
+        ) : (
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-56 flex-1">
+              <TopologyField label={t('goods.products.form.operations.copySource')}>
+                {(id) => (
+                  <TopologySelect
+                    id={id}
+                    value={sourceId}
+                    disabled={disabled}
+                    options={[
+                      { value: '', label: '—' },
+                      ...others.map((row) => ({ value: row.product_id, label: row.name })),
+                    ]}
+                    onChange={(next) => {
+                      setSourceId(next)
+                      setCopied('')
+                    }}
+                  />
+                )}
+              </TopologyField>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={disabled || !sourceId}
+              onClick={() => {
+                const source = others.find((row) => row.product_id === sourceId)
+                if (!source) return
+                onCopy(source)
+                setCopied(source.name)
+              }}
+            >
+              {t('goods.products.form.operations.copy')}
+            </Button>
+          </div>
+        )}
+        {copied && (
+          <p role="status" className="text-sm text-success">
+            {t('goods.products.form.operations.copied', { name: copied })}
+          </p>
+        )}
+      </div>
+    </div>
   )
 }
 

@@ -10,6 +10,7 @@ import {
   productCreateBody,
   productUpdateBody,
   SKU_PREFIX,
+  withDefaultTax,
 } from '../lib/goods-products'
 import {
   type OptionNames,
@@ -19,6 +20,7 @@ import {
   variantChanges,
 } from '../lib/goods-variants'
 import { posRequest } from '../lib/pos-request'
+import { operationWrites, type ProductPosConfig } from '../lib/product-operations'
 import { goodsKey, type ProductListParams } from './use-goods'
 import type { ProductTypeIds } from './use-goods-setup'
 import { listAll, POS_CHANNEL_CODE } from './use-goods-setup'
@@ -26,8 +28,9 @@ import { useSession } from './use-session'
 
 // Reads and the save sequence of the goods product screens. Products stay
 // Spree records; the POS tables touched beside them are the branch
-// assortment (`branch_products`) and the store-wide selling unit
-// (`variant_units`), both through their existing POS endpoints.
+// assortment (`branch_products`), the store-wide selling unit
+// (`variant_units`) and a prepared product's operating data (settings,
+// add-on groups, combo under `/pos/products/:id`), all through POS endpoints.
 
 // Everything a list row or the form reads of a product.
 export const PRODUCT_EXPAND = ['variants', 'variants.stock_levels', 'default_variant']
@@ -227,27 +230,6 @@ async function namedRows(rows: ParsedVariantRow[]) {
   return rows.map((row) => (row.sku ? row : { ...row, sku: generated.shift() ?? '' }))
 }
 
-// The add-on groups of a product live on its menu item: one is created for
-// the product the first time groups are chosen, then its groups are replaced.
-export type ProductMenuItem = { id: string; kind: string; modifierGroupIds: string[] }
-export async function saveProductAddons(
-  productId: string,
-  menuItem: ProductMenuItem | null,
-  groupIds: readonly string[],
-) {
-  const body = { modifier_group_ids: groupIds }
-  const idempotencyKey = crypto.randomUUID()
-  if (menuItem)
-    return posRequest('PATCH', `/pos/menu_items/${menuItem.id}`, { body, idempotencyKey })
-  if (groupIds.length === 0) return null
-  return posRequest('POST', '/pos/menu_items', {
-    body: { product_id: productId, kind: 'single', ...body },
-    idempotencyKey,
-  })
-}
-export const sameIds = (a: readonly string[], b: readonly string[]) =>
-  a.length === b.length && a.every((id, index) => id === b[index])
-
 const assign = (branchId: string, productId: string) =>
   posRequest('POST', `/pos/branches/${branchId}/products`, { body: { product_id: productId } })
 const unassign = (branchId: string, productId: string) =>
@@ -269,7 +251,16 @@ const setUnit = (branchId: string, variantId: string, unit: string) =>
 // A step after the product itself was saved that did not go through. The
 // product is kept; saving again repeats only what is still missing.
 export type FollowUpFailure = {
-  step: 'branches' | 'unit' | 'image' | 'channel' | 'addons' | 'variantCreate' | 'variantDelete'
+  step:
+    | 'branches'
+    | 'unit'
+    | 'image'
+    | 'channel'
+    | 'operations'
+    | 'addons'
+    | 'combo'
+    | 'variantCreate'
+    | 'variantDelete'
   error: unknown
   // The variant a variant step was about.
   label?: string
@@ -290,9 +281,12 @@ export type SaveContext = {
     branchIds: string[]
     unitCode: string
   }
-  // The product's menu item when add-on groups are managed here (null: none
-  // yet); absent when the signed-in staff cannot change the menu.
-  addons?: { menuItem: ProductMenuItem | null }
+  // The product's stored operating data when it is managed here (null:
+  // none yet); absent when the signed-in staff cannot change the menu.
+  operations?: { current: ProductPosConfig | null }
+  // The store's food tax category, given to a new prepared product left
+  // without one.
+  foodTaxCategoryId?: string | null
 }
 
 async function attempt(
@@ -321,10 +315,14 @@ export async function saveGoodsProduct(
   const productTypeId = types[value.kind]
   const withOptions = value.attributes.length > 0
   const sku = withOptions ? value.sku : value.sku || (await generateSku())
-  const parsed = { ...value, sku, variants: await namedRows(value.variants) }
+  const existing = context.existing
+  const parsed = {
+    ...(existing ? value : withDefaultTax(value, context.foodTaxCategoryId)),
+    sku,
+    variants: await namedRows(value.variants),
+  }
   const optionNames = await ensureOptionTypes(parsed.attributes)
   const failures: FollowUpFailure[] = []
-  const existing = context.existing
   let product: Product
   if (existing) {
     const changes = withOptions
@@ -417,13 +415,14 @@ export async function saveGoodsProduct(
         setUnit(through, product.default_variant_id, parsed.unitCode),
       )
   }
-  // After the branches: a new menu item also joins the assortment of every
-  // branch running the menu.
-  const addons = context.addons
-  if (addons && !sameIds(addons.menuItem?.modifierGroupIds ?? [], parsed.modifierGroupIds))
-    await attempt(failures, 'addons', () =>
-      saveProductAddons(product.id, addons.menuItem, parsed.modifierGroupIds),
-    )
+  // Only a prepared product takes operating data; the product was saved
+  // with that type above.
+  const operations = context.operations
+  if (operations && parsed.kind === 'prepared')
+    for (const write of operationWrites(product.id, operations.current, parsed))
+      await attempt(failures, write.step, () =>
+        posRequest('PUT', write.path, { body: write.body, idempotencyKey: crypto.randomUUID() }),
+      )
   return { productId: product.id, failures }
 }
 

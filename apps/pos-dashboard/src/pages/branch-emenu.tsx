@@ -34,7 +34,7 @@ import {
   useTableCodes,
   useTableSettings,
 } from '../hooks/use-floor-plan'
-import { useBranchMenu, useMenuItems } from '../hooks/use-menu-admin'
+import { useBranchMenu, useProductSettings } from '../hooks/use-menu-admin'
 import { usePosSession } from '../hooks/use-pos-session'
 import { useTimedPromotions } from '../hooks/use-rate-plans'
 import { clearBranchLogo, uploadBranchLogo, useBranchInfo } from '../hooks/use-store-info'
@@ -259,7 +259,8 @@ function Loaded({
   const { t } = useTranslation()
   const [menuDraft, setMenuDraft] = useState<EmenuCategoryDraft[] | null>(null)
   const [previewTab, setPreviewTab] = useState<EmenuPreviewMode>('phone')
-  const catalog = useMenuItems(true)
+  // Guests order prepared products only.
+  const catalog = useProductSettings(true)
   const counter = useBranchMenu(branchId)
   const promotions = useTimedPromotions(branchId)
   const areas = useAreas(branchId)
@@ -292,20 +293,20 @@ function Loaded({
   const dishes = useMemo(() => {
     const counterItems = counter.data?.items
     const hasCounterList = Array.isArray(counterItems)
-    const pictures = new Map((counterItems ?? []).map((item) => [item.id, item]))
+    const pictures = new Map((counterItems ?? []).map((item) => [item.product_id, item]))
     const out = new Map<string, EmenuDish>()
     for (const item of catalog.data ?? []) {
-      const shown = pictures.get(item.id)
+      const shown = pictures.get(item.product_id)
       const prices = (shown?.variants ?? item.variants)
         .map((variant) => variant.price)
         .filter((price): price is string => price !== null)
         .sort((a, b) => Number(a) - Number(b))
-      out.set(item.id, {
-        id: item.id,
+      out.set(item.product_id, {
+        id: item.product_id,
         name: item.name,
         price: prices[0] ?? null,
         image_url: shown?.image_url ?? null,
-        atCounter: hasCounterList ? pictures.has(item.id) : true,
+        atCounter: hasCounterList ? pictures.has(item.product_id) : true,
       })
     }
     return out

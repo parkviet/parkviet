@@ -283,7 +283,42 @@ describe('payloads', () => {
       unitCode: 'ly',
       categoryIds: ['ctg_drinks'],
       branchIds: ['branch_a'],
+      modifierGroupIds: [],
+      comboComponents: [],
     })
+  })
+
+  it('reads the stored operating data of a prepared product into the form', () => {
+    const values = formFromProduct(
+      { ...product(), description: null, metadata: {} },
+      {
+        kind: 'prepared',
+        unitCode: 'ly',
+        branchIds: [],
+        pos: {
+          product_id: 'prod_1',
+          name: 'Combo',
+          product_kind: 'prepared',
+          kind: 'combo',
+          kitchen_category: 'do_uong',
+          cup_label: true,
+          show_components_on_kds: false,
+          qr_orderable: false,
+          drink_credit: null,
+          drink_credit_categories: [],
+          tax_category_id: null,
+          modifier_group_ids: [],
+          components: [{ id: 'c1', variant_id: 'v_cake', name: 'Bánh', quantity: 2 }],
+        },
+      },
+    )
+    expect(values.operations).toMatchObject({
+      kitchenCategory: 'do_uong',
+      cupLabel: true,
+      showComponentsOnKds: false,
+      qrOrderable: false,
+    })
+    expect(values.comboComponents).toEqual([{ variantId: 'v_cake', name: 'Bánh', quantity: '2' }])
   })
 })
 

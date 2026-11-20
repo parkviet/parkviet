@@ -1,20 +1,16 @@
-import type { PosMenu, PosMenuCategory, PosMenuItem } from '@parkviet/pos-shared/types/pos-context'
+import type { PosMenu } from '@parkviet/pos-shared/types/pos-context'
 import { useResourceMutation } from '@spree/dashboard-core'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { AddonGroup } from '../lib/goods-addons'
 import { posRequest } from '../lib/pos-request'
+import type { OperationWrite, ProductPosSettings } from '../lib/product-operations'
 import { posKey } from '../lib/query-keys'
 import { useSession } from './use-session'
 
-// The store's menu (categories, items, option groups, time-of-day menus)
-// and a branch's favourites and sold-out marks. The menu belongs to the
-// store; favourites and sold out belong to one branch.
-
-export type MenuItemConfig = Omit<PosMenuItem, 'image_url' | 'sold_out' | 'variants'> & {
-  variants: { id: string; name: string | null; sku: string | null; price: string | null }[]
-  // Guests may order the item from the table's QR code (default on).
-  qr_orderable?: boolean
-}
+// The store's POS operating data (add-on groups, time-of-day menus, each
+// prepared product's kitchen settings, add-ons and combo) and a branch's
+// favourites and sold-out marks. Products and categories are Spree records;
+// favourites and sold out belong to one branch.
 
 export type MenuSchedule = {
   id: string
@@ -28,14 +24,14 @@ export type MenuSchedule = {
   active: boolean
   items: {
     id: string
-    menu_item_id: string
+    product_id: string
     variant_id: string | null
     price: string | null
     hidden: boolean
   }[]
 }
 
-export type MenuResource = 'menu_categories' | 'menu_items' | 'modifier_groups' | 'menu_schedules'
+export type MenuResource = 'modifier_groups' | 'menu_schedules'
 
 function useMenuQuery<T>(resource: MenuResource, enabled: boolean) {
   const { storeId } = useSession()
@@ -46,28 +42,31 @@ function useMenuQuery<T>(resource: MenuResource, enabled: boolean) {
   })
 }
 
-export const useMenuCategories = (enabled: boolean) =>
-  useMenuQuery<PosMenuCategory>('menu_categories', enabled)
-// Tax categories new items start with (chosen in the F&B setup step): ids, or
-// null when the store never chose one.
+// Tax categories new prepared products start with (chosen in the F&B setup
+// step): ids, or null when the store never chose one.
 export type MenuTaxDefaults = { food: string | null; alcohol: string | null }
 
-type MenuItemsBody = { data: MenuItemConfig[]; meta?: { tax_defaults?: MenuTaxDefaults } }
+type ProductSettingsBody = {
+  data: ProductPosSettings[]
+  meta?: { tax_defaults?: MenuTaxDefaults }
+}
 
-// Items and the tax defaults come in one answer; both hooks share it.
-function useMenuItemsBody<T>(enabled: boolean, select: (body: MenuItemsBody) => T) {
+// Every prepared product of the store and the tax defaults come in one
+// answer; both hooks share it.
+function useProductSettingsBody<T>(enabled: boolean, select: (body: ProductSettingsBody) => T) {
   const { storeId } = useSession()
   return useQuery({
-    queryKey: posKey(storeId, 'menu-admin', 'menu_items'),
+    queryKey: posKey(storeId, 'menu-admin', 'product-settings'),
     enabled,
-    queryFn: () => posRequest<MenuItemsBody>('GET', '/pos/menu_items'),
+    queryFn: () => posRequest<ProductSettingsBody>('GET', '/pos/products/settings'),
     select,
   })
 }
 
-export const useMenuItems = (enabled: boolean) => useMenuItemsBody(enabled, (body) => body.data)
+export const useProductSettings = (enabled: boolean) =>
+  useProductSettingsBody(enabled, (body) => body.data)
 export const useMenuTaxDefaults = (enabled: boolean) =>
-  useMenuItemsBody(
+  useProductSettingsBody(
     enabled,
     (body): MenuTaxDefaults => body.meta?.tax_defaults ?? { food: null, alcohol: null },
   )
@@ -91,6 +90,13 @@ export function useBranchMenu(branchId: string | null) {
       ).data,
   })
 }
+
+// One write of a product's operating data (settings, combo or add-on groups).
+export const putOperation = (write: Pick<OperationWrite, 'path' | 'body'>) =>
+  posRequest<{ data: unknown }>('PUT', write.path, {
+    body: write.body,
+    idempotencyKey: crypto.randomUUID(),
+  })
 
 // One menu command. Every write is audited under its own idempotency key;
 // refusals reach the caller untouched so 409 reasons and 422 fields stay readable.

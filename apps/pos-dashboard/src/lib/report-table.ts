@@ -96,13 +96,13 @@ export const REPORT_COLUMNS: Record<PosReportType, string[]> = {
   ingredient_usage: [
     'business_date',
     'ingredient',
-    'menu_item',
+    'product',
     'quantity',
     'unit',
     'cost',
     'cost_missing',
   ],
-  menu_margin: ['menu_item', 'quantity', 'revenue', 'cost', 'margin', 'margin_rate', 'costed'],
+  menu_margin: ['product', 'quantity', 'revenue', 'cost', 'margin', 'margin_rate', 'costed'],
   platforms: [
     'business_date',
     'platform',

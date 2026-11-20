@@ -5,9 +5,10 @@ import { installDashboardShell } from './support/dashboard';
 type Json = Record<string, unknown>;
 type Option = { id: string; name: string; price_delta: string; cost_price: string | null; variant_id: null; default_selected: boolean; position: number; active: boolean };
 type Group = { id: string; name: string; min_select: number; max_select: number; allow_quantity: boolean; required: boolean; position: number; options: Option[] };
-type Item = { id: string; product_id: string; name: string; kind: string; modifier_group_ids: string[] };
+type Item = { product_id: string; name: string; kind: string; modifier_group_ids: string[] };
 const branches = [{ id: 'branch_a', name: 'Chi nhánh Quận 1', code: 'q1', status: 'active', timezone: 'Asia/Ho_Chi_Minh', stock_location_id: 'sloc_a', receiving_stock_location_id: null }];
-const item = (id: string, name: string, groups: string[] = [], kind = 'single'): Item => ({ id, product_id: `prod_${id}`, name, kind, modifier_group_ids: groups, menu_category_id: null, kitchen_category: null, cup_label: null, show_components_on_kds: false, position: 0, active: true, qr_orderable: true, tax_category_id: null, components: [], drink_credit: null, drink_credit_categories: [], variants: [{ id: `v_${id}`, name: null, sku: null, price: '30000.0' }] } as Item);
+// A row of GET /pos/products/settings: a prepared product's operating data.
+const item = (id: string, name: string, groups: string[] = [], kind = 'single'): Item => ({ product_id: id, name, product_kind: 'prepared', kind, modifier_group_ids: groups, kitchen_category: null, cup_label: false, show_components_on_kds: true, qr_orderable: true, tax_category_id: null, components: [], drink_credit: null, drink_credit_categories: [], variants: [{ id: `v_${id}`, name: null, sku: null, price: '30000.0' }] } as Item);
 const sugar: Group = { id: 'grp_sugar', name: 'Mức đường', min_select: 1, max_select: 1, allow_quantity: false, required: true, position: 0, options: [
   { id: 'opt_half', name: '50%', price_delta: '0.0', cost_price: null, variant_id: null, default_selected: false, position: 0, active: true },
   { id: 'opt_full', name: '100%', price_delta: '0.0', cost_price: null, variant_id: null, default_selected: true, position: 1, active: true },
@@ -15,7 +16,7 @@ const sugar: Group = { id: 'grp_sugar', name: 'Mức đường', min_select: 1, 
 
 async function install(page: Page) {
   const groups: Group[] = [structuredClone(sugar)];
-  const items: Item[] = [item('mi_tea', 'Trà sữa', ['grp_sugar']), item('mi_coffee', 'Cà phê sữa'), item('mi_combo', 'Combo sáng', [], 'combo')];
+  const items: Item[] = [item('prod_tea', 'Trà sữa', ['grp_sugar']), item('prod_coffee', 'Cà phê sữa'), item('prod_combo', 'Combo sáng', [], 'combo')];
   const state = { writes: [] as { method: string; path: string; body: Json | null }[] };
   const saveGroup = (id: string, body: Json): Group => {
     const options = (body.options as Json[]).map((row, position) => ({ id: String(row.id ?? `opt_${id}_${position}`), name: String(row.name), price_delta: String(row.price_delta), cost_price: (row.cost_price as string | null) ?? null, variant_id: null, default_selected: Boolean(row.default_selected), position, active: Boolean(row.active) }));
@@ -35,12 +36,9 @@ async function install(page: Page) {
       groups[index] = saveGroup(group[1], { ...groups[index], ...body });
       return route.fulfill({ json: { data: groups[index] } });
     }
-    if (path === '/pos/menu_items' && method === 'GET') return route.fulfill({ json: { data: items, meta: { tax_defaults: { food: null, alcohol: null } } } });
-    if (path === '/pos/menu_items' && method === 'POST') { const created = item('mi_cake', 'Bánh flan', body?.modifier_group_ids as string[]); created.product_id = String(body?.product_id); items.push(created); return route.fulfill({ status: 201, json: { data: created } }); }
-    const menuItem = /^\/pos\/menu_items\/([^/]+)$/.exec(path);
-    if (menuItem) { const row = items.find((entry) => entry.id === menuItem[1]); if (row) row.modifier_group_ids = body?.modifier_group_ids as string[]; return route.fulfill({ json: { data: row } }); }
-    if (path === '/pos/catalog') return route.fulfill({ json: { data: [{ id: 'v_cake', product_id: 'prod_cake', name: 'Bánh flan' }], meta: { page: 1, pages: 1, count: 1, ambiguous: false } } });
-    if (path === '/pos/menu') return route.fulfill({ json: { data: { module_enabled: true, categories: [], items: [], modifier_groups: groups, schedules: [], favorites: [], etag: 'e1' } } });
+    if (path === '/pos/products/settings') return route.fulfill({ json: { data: items, meta: { tax_defaults: { food: null, alcohol: null } } } });
+    const product = /^\/pos\/products\/([^/]+)\/modifier_groups$/.exec(path);
+    if (product && method === 'PUT') { const row = items.find((entry) => entry.product_id === product[1]); if (row) row.modifier_group_ids = body?.modifier_group_ids as string[]; return route.fulfill({ json: { data: row } }); }
     return route.fulfill({ json: { data: [], meta: { page: 1, pages: 1, count: 0, next: null } } });
   });
   await installDashboardShell(page, { authenticated: true });
@@ -48,7 +46,7 @@ async function install(page: Page) {
   return state;
 }
 
-test('an add-on group with three options is created and offered on two products', async ({ page }) => {
+test('an add-on group with three options is created and offered on a prepared product', async ({ page }) => {
   const state = await install(page);
   await page.goto('/store_1/goods/addons');
   if (test.info().project.name !== 'mobile') await expect(page.locator('[data-sidebar="sidebar"]').first().getByRole('link', { name: 'Nhóm bán kèm', exact: true })).toHaveAttribute('href', '/store_1/goods/addons');
@@ -90,9 +88,6 @@ test('an add-on group with three options is created and offered on two products'
   // A combo lists its contents, so it is not offered.
   await expect(dialog.getByRole('checkbox', { name: 'Combo sáng' })).toHaveCount(0);
   await dialog.getByRole('checkbox', { name: 'Cà phê sữa' }).check();
-  await dialog.getByLabel('Thêm sản phẩm chưa có trên thực đơn').fill('flan');
-  await dialog.getByRole('button', { name: 'Tìm' }).click();
-  await dialog.getByRole('button', { name: 'Bánh flan' }).click();
   await expect(dialog.getByText('Áp dụng cho 1 sản phẩm')).toBeVisible();
   await dialog.getByRole('button', { name: 'Lưu', exact: true }).click();
   await expect(dialog).toBeHidden();
@@ -107,19 +102,17 @@ test('an add-on group with three options is created and offered on two products'
     ],
   } });
   expect(state.writes.slice(1)).toEqual([
-    { method: 'PATCH', path: '/pos/menu_items/mi_coffee', body: { modifier_group_ids: ['grp_new'] } },
-    { method: 'POST', path: '/pos/menu_items', body: { product_id: 'prod_cake', kind: 'single', modifier_group_ids: ['grp_new'] } },
+    { method: 'PUT', path: '/pos/products/prod_coffee/modifier_groups', body: { modifier_group_ids: ['grp_new'] } },
   ]);
   const card = page.locator('[data-addon-group="grp_new"]');
-  await expect(card).toContainText('Áp dụng cho 2 sản phẩm');
+  await expect(card).toContainText('Áp dụng cho 1 sản phẩm');
   await expect(card.getByRole('list', { name: 'Tuỳ chọn của Topping' })).toContainText('Kem cheese');
 });
 
-test('a group is edited from the menu screen and deleted after confirming', async ({ page }) => {
+test('a group is edited and deleted after confirming', async ({ page }) => {
   const state = await install(page);
-  await page.goto('/store_1/menu');
-  // The menu screen opens the same dialog.
-  await page.getByRole('listitem').filter({ hasText: 'Mức đường' }).getByRole('button', { name: 'Chỉnh sửa' }).last().click();
+  await page.goto('/store_1/goods/addons');
+  await page.locator('[data-addon-group="grp_sugar"]').getByRole('button', { name: 'Mức đường', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('switch', { name: 'Bắt buộc chọn' })).toBeChecked();
   await dialog.getByRole('checkbox', { name: 'Trà sữa' }).uncheck();
@@ -129,11 +122,10 @@ test('a group is edited from the menu screen and deleted after confirming', asyn
   await expect(dialog).toBeHidden();
   expect(state.writes.map((write) => [write.method, write.path])).toEqual([
     ['PATCH', '/pos/modifier_groups/grp_sugar'],
-    ['PATCH', '/pos/menu_items/mi_tea'],
+    ['PUT', '/pos/products/prod_tea/modifier_groups'],
   ]);
   expect((state.writes[0].body?.options as Json[])[0]).toMatchObject({ id: 'opt_half', active: false, cost_price: null });
 
-  await page.goto('/store_1/goods/addons');
   const card = page.locator('[data-addon-group="grp_sugar"]');
   await expect(card).toContainText('Áp dụng cho 0 sản phẩm');
   await card.getByRole('button', { name: /^(Open actions|Mở menu thao tác)$/ }).click();

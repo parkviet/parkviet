@@ -162,10 +162,22 @@ in `options`. A new product is priced per variant, never with product-level
 variant set), then deletes and creates variants through `/products/:id/variants`; a
 refused delete (variant on orders, or an ingredient of an active recipe) is a
 reported follow-up step, and a variant already gone counts as deleted. A simple product
-given attributes turns its single variant into the first combination. Add-on
-groups are the product's `menu_items.modifier_group_ids` (an item is created the
-first time groups are chosen, which also adds it to every branch running the
-menu), shown only where the add-on groups page is. Unit conversion opens the
+given attributes turns its single variant into the first combination. A
+prepared product ("Sản phẩm chế biến") also carries POS operating data keyed by
+its id, read from `GET /pos/products/settings` (every prepared product of the
+store, with `meta.tax_defaults`) and shown only where the add-on groups page is
+and only while the form's kind is prepared: the "Vận hành" block (kitchen
+category, cup label, contents on the kitchen screen, QR ordering, drink credit)
+saved with `PUT /pos/products/:id/settings`, add-on groups with
+`PUT .../modifier_groups` and combo contents with `PUT .../combo` (pure rules
+and the write plan in `lib/product-operations.ts`). Only changed parts are
+written, after the product and its branches; a combo takes no add-on groups, so
+the clearing write goes first. "Copy from another product" fills the block,
+groups and combo from another prepared product (Spree's duplicate and CSV import
+carry no POS data). A new prepared product left without a tax category takes
+`tax_defaults.food`. The server never adds a product to a branch: the branch
+checklist (all active branches by default, for topology writers) is what makes a
+new product sell at the till. Unit conversion opens the
 branch `VariantUnitEditor` through a branch selling the product. The price-list
 card writes Spree prices (`/prices/bulk_upsert`, `bulk_destroy`, `min_quantity`
 breaks on lists with a volume rule) on its own and refreshes only price reads.
@@ -225,14 +237,14 @@ reports how many products it refused.
 
 Add-on groups (`pages/goods-addons.tsx`, pure rules in `lib/goods-addons.ts`) are
 the store's `modifier_groups`. `components/addon-group-dialog.tsx` is the one
-group dialog, also opened by the menu screen: three switches map to the stored
+group dialog: three switches map to the stored
 limits (required is `min_select` ≥ 1, several options is `max_select` ≥ 2, more
 than one of an option is `allow_quantity`, only with several options), each
 option has a price, its own cost and in stock (`active`; the counter leaves an
-option out of stock out), and the products are menu items whose
-`modifier_group_ids` are patched, or created as single items for a product not on
-the menu yet. Option costs come only to menu or stock managers; a row read
-without `cost_price` never sends one, so the stored cost stays. The server copies
+option out of stock out), and the products are the store's prepared products
+(combos excluded), whose groups are replaced with
+`PUT /pos/products/:id/modifier_groups`. Option costs come only to menu or stock
+managers; a row read without `cost_price` never sends one, so the stored cost stays. The server copies
 an option's cost onto a sold line only when no active recipe or stocked variant
 counts what it uses; the copy feeds the menu margin report and the below-cost
 warning.
@@ -241,7 +253,7 @@ Recipes (`pages/goods-recipes.tsx`, drawer in `components/goods-recipe-sheet.tsx
 pure rules in `lib/goods-recipes.ts`) list `GET /pos/recipes/list` (the store's
 active recipes of variants and add-on options, `q`, `owner_type`, `variant_ids`,
 paged, with each one's estimated cost) and read and write one recipe with the
-existing `GET`/`PUT /pos/recipes`, the same calls as the menu's
+existing `GET`/`PUT /pos/recipes`, the same calls as the menu screen's
 `RecipeEditor`; both save through `useConfirmedRecipeSave` (a size with stock
 asks before it is written off) and deleting saves an empty list. The drawer picks
 a selling variant of any non-ingredient product and adds ingredients from the
@@ -251,6 +263,20 @@ ingredient products. "Cost from ingredients" then sets the variant's
 route needs `canManageRecipes`; the nav item also needs the selected branch to
 run `fnb.recipes`. A recipe saves while any active branch runs the module, and
 ingredients are taken from stock only at branches that run it.
+
+## Menu ("Thực đơn")
+
+The menu screen (`pages/menu.tsx`, reads and writes in `hooks/use-menu-admin.ts`)
+operates what the store already sells; it manages no products, categories or
+add-on groups and links to Goods for them. The till's tabs are the products'
+Spree categories. It holds the store's combos (prepared products with contents,
+edited with `components/goods-combo-editor.tsx` like the product form; making a
+combo clears the product's add-on groups, "Bỏ combo" sends no contents) and
+time-of-day menus (`/pos/menu_schedules`, rows by `product_id`), and for the
+selected branch, from `GET /pos/menu`, the favourites row
+(`PUT /pos/menu_favorites` with `product_ids`), today's sold-out marks
+(`PUT /pos/menu_availabilities` with `product_id`) and each product's recipes.
+The e-menu tab of a branch places prepared products by `product_id`.
 
 Do not edit `apps/dashboard`. POS administration lives only here: do not add
 settings or setup screens back to `apps/pos`.

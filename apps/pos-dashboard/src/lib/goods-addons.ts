@@ -141,33 +141,33 @@ export function moveRow<T>(rows: readonly T[], from: number, to: number): T[] | 
   return next
 }
 
-// Menu items a group is offered on. A combo lists its contents instead.
-export type AddonMenuItem = {
-  id: string
+// Prepared products a group is offered on, keyed by product. A combo lists
+// its contents instead.
+export type AddonProduct = {
   product_id: string
   name: string
   kind: string
   modifier_group_ids: string[]
 }
 
-export const appliedItems = (items: readonly AddonMenuItem[], groupId: string) =>
+export const appliedItems = (items: readonly AddonProduct[], groupId: string) =>
   items.filter((item) => item.modifier_group_ids.includes(groupId))
 
-// The menu items whose group list changes so that exactly `chosen` offer
-// the group; each keeps its other groups in their order.
+// The products whose group list changes so that exactly `chosen` (product
+// ids) offer the group; each keeps its other groups in their order.
 export function membershipWrites(
-  items: readonly AddonMenuItem[],
+  items: readonly AddonProduct[],
   groupId: string,
   chosen: ReadonlySet<string>,
-): { id: string; modifier_group_ids: string[] }[] {
+): { product_id: string; modifier_group_ids: string[] }[] {
   return items.flatMap((item) => {
     if (item.kind === 'combo') return []
     const has = item.modifier_group_ids.includes(groupId)
-    const wants = chosen.has(item.id)
+    const wants = chosen.has(item.product_id)
     if (has === wants) return []
     return [
       {
-        id: item.id,
+        product_id: item.product_id,
         modifier_group_ids: wants
           ? [...item.modifier_group_ids, groupId]
           : item.modifier_group_ids.filter((id) => id !== groupId),

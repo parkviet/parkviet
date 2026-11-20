@@ -83,7 +83,7 @@ test('Thực đơn: import counter menu, non-counter dish badge, home sections, 
     .toEqual(['/pos/emenu_menu', '/pos/emenu_settings'])
   expect(writes.find((w) => w.path === '/pos/emenu_settings')?.body).toMatchObject({
     best_sellers_enabled: true,
-    best_seller_item_ids: ['menuitem_cake'],
+    best_seller_item_ids: ['prod_cake'],
   })
 })
 
@@ -192,22 +192,23 @@ test('Bổ sung: paused preview hides menu, and direct_to_kitchen saves limits v
 
 type WriteCall = { path: string; method: string; body: Record<string, unknown> | null }
 
-function dish(id: string, name: string, price: string) {
+// A prepared product's operating data, keyed by product id.
+function dish(productId: string, name: string, price: string) {
   return {
-    id,
-    product_id: `prod_${id}`,
+    product_id: productId,
     name,
+    product_kind: 'prepared',
     kind: 'single',
-    menu_category_id: 'menucat_1',
     kitchen_category: null,
     cup_label: false,
-    show_components_on_kds: false,
-    position: 0,
-    active: true,
+    show_components_on_kds: true,
+    qr_orderable: true,
+    drink_credit: null,
+    drink_credit_categories: [],
     tax_category_id: null,
     modifier_group_ids: [],
     components: [],
-    variants: [{ id: `variant_${id}`, name, sku: null, price }],
+    variants: [{ id: `variant_${productId}`, name, sku: null, price }],
   }
 }
 
@@ -231,7 +232,7 @@ async function install(page: Page, writes: WriteCall[]) {
       name: 'Trà sữa',
       color: null as string | null,
       image_url: null as string | null,
-      items: [{ menu_item_id: 'menuitem_tea' }],
+      items: [{ id: 'posemenuitem_1', product_id: 'prod_tea', position: 0 }],
     },
   ]
   let storedTableSettings: Record<string, unknown> = {
@@ -301,7 +302,7 @@ async function install(page: Page, writes: WriteCall[]) {
           name: 'Trà sữa',
           color: '#0b6e4f',
           image_url: null,
-          items: [{ menu_item_id: 'menuitem_tea' }],
+          items: [{ id: 'posemenuitem_1', product_id: 'prod_tea', position: 0 }],
         },
       ]
       return route.fulfill({ json: { data: storedMenu } })
@@ -314,7 +315,11 @@ async function install(page: Page, writes: WriteCall[]) {
           color: (cat.color as string | null) ?? null,
           image_url: null,
           items: Array.isArray(cat.items)
-            ? (cat.items as string[]).map((id) => ({ menu_item_id: id }))
+            ? (cat.items as string[]).map((id, position) => ({
+                id: `posemenuitem_${idx}_${position}`,
+                product_id: id,
+                position,
+              }))
             : [],
         }))
       }
@@ -365,15 +370,17 @@ async function install(page: Page, writes: WriteCall[]) {
       return route.fulfill({
         json: {
           data: {
-            categories: [{ id: 'menucat_1', name: 'Trà sữa', color: '#0b6e4f', position: 0 }],
+            categories: [{ id: 'ctg_tea', name: 'Trà sữa', position: 0, parent_id: null }],
             items: [
               {
-                ...dish('menuitem_tea', 'Trà sữa trân châu', '35000.0'),
+                ...dish('prod_tea', 'Trà sữa trân châu', '35000.0'),
+                category_ids: ['ctg_tea'],
                 image_url: null,
                 sold_out: false,
               },
               {
-                ...dish('menuitem_coffee', 'Cà phê sữa', '29000.0'),
+                ...dish('prod_coffee', 'Cà phê sữa', '29000.0'),
+                category_ids: ['ctg_tea'],
                 image_url: null,
                 sold_out: false,
               },
@@ -382,13 +389,13 @@ async function install(page: Page, writes: WriteCall[]) {
         },
       })
     }
-    if (path === '/pos/menu_items') {
+    if (path === '/pos/products/settings') {
       const items = [
-        dish('menuitem_tea', 'Trà sữa trân châu', '35000.0'),
-        dish('menuitem_coffee', 'Cà phê sữa', '29000.0'),
-        dish('menuitem_cake', 'Bánh flan', '25000.0'),
+        dish('prod_tea', 'Trà sữa trân châu', '35000.0'),
+        dish('prod_coffee', 'Cà phê sữa', '29000.0'),
+        dish('prod_cake', 'Bánh flan', '25000.0'),
       ]
-      return route.fulfill({ json: { data: items } })
+      return route.fulfill({ json: { data: items, meta: { tax_defaults: { food: null, alcohol: null } } } })
     }
     return route.fulfill({
       json: { data: [], meta: { page: 1, pages: 1, count: 0, next: null } },
