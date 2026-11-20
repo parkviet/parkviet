@@ -18,6 +18,8 @@ module Spree
                 end
         branches = policy.visible_branches.order(:name, :id).limit(100).to_a
         branches << branch if branch && branches.none? { |item| item.id == branch.id }
+        store_info = StoreInfo.for_store(store)
+        branches.each { |item| item.inherit_store_info(store_info) }
         registers = registers_for(branch).to_a
         registers << register if register && registers.none? { |item| item.id == register.id }
         {

@@ -83,7 +83,15 @@ module Spree
       def effective_business_day_cutoff
         return business_day_cutoff if business_day_cutoff.present?
 
-        StoreInfo.for_store(store)&.business_day_cutoff || Time.zone.parse('2000-01-01 04:00:00')
+        info = defined?(@inherited_store_info) ? @inherited_store_info : StoreInfo.find_by(store_id: store_id)
+        info&.business_day_cutoff || Time.zone.parse('2000-01-01 04:00:00')
+      end
+
+      # A caller listing many branches of one store reads its StoreInfo once
+      # and hands it to each branch, so `to_pos` stays one query per list.
+      def inherit_store_info(info)
+        @inherited_store_info = info
+        self
       end
 
       def cutoff_clock
