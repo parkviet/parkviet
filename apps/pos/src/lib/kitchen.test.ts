@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { kitchenSent, kitchenStates, sentUnits, unsentKitchenQuantity } from './kitchen';
+import {
+  kitchenSent,
+  kitchenStates,
+  priorityMarkable,
+  sentUnits,
+  unsentKitchenQuantity,
+} from './kitchen';
 import type { PosLineItem, PosWorkspace } from './pos-context';
 
 const line = (overrides: Partial<PosLineItem>): PosLineItem =>
@@ -32,6 +38,26 @@ describe('kitchen quantities', () => {
       { state: 'served', count: 1 },
     ]);
     expect(kitchenStates(line({}))).toEqual([]);
+  });
+});
+
+describe('priorityMarkable', () => {
+  const open = { operational_status: 'editing' } as PosWorkspace;
+  const markable = line({ sale_line_id: 'posline_1', row_version: 2 });
+
+  it('allows a menu line with a version on an open order, paid or not', () => {
+    expect(priorityMarkable(open, markable)).toBe(true);
+    expect(priorityMarkable({ ...open, payments: true } as PosWorkspace, markable)).toBe(true);
+    expect(priorityMarkable({ operational_status: 'parked' } as PosWorkspace, markable)).toBe(true);
+  });
+
+  it('refuses a closed order and a line that cannot take the mark', () => {
+    expect(priorityMarkable({ operational_status: 'completed' } as PosWorkspace, markable)).toBe(
+      false,
+    );
+    expect(priorityMarkable(open, { ...markable, kind: 'ordinary' })).toBe(false);
+    expect(priorityMarkable(open, { ...markable, sale_line_id: null })).toBe(false);
+    expect(priorityMarkable(open, { ...markable, row_version: undefined })).toBe(false);
   });
 });
 

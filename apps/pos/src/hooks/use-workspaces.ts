@@ -449,6 +449,19 @@ export function useWorkspaces(
         )
       ).workspace;
     },
+    // Marks a menu line urgent or takes the mark off, by the line's own
+    // version and without the lease: it moves no money and tells the kitchen
+    // nothing new, and works on any open order.
+    async setLinePriority(workspace: PosWorkspace, saleLineId: string, priority: boolean) {
+      const line = findLine(workspace, saleLineId);
+      return (
+        await sendIntent(
+          workspace.id,
+          { row_version: line?.row_version, priority },
+          `/pos/workspaces/${workspace.id}/sale_lines/${line?.sale_line_id ?? saleLineId}/priority`,
+        )
+      ).workspace;
+    },
     // Replaces the options and note of a menu line. The server prices the
     // line again on its base price and may merge it into a twin line.
     async updateModifiers(

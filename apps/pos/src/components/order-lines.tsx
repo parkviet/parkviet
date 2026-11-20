@@ -9,7 +9,7 @@ import {
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCupLabelReprint } from '../hooks/use-kitchen';
-import { kitchenSent, kitchenStates } from '../lib/kitchen';
+import { kitchenSent, kitchenStates, priorityMarkable } from '../lib/kitchen';
 import { linePicks, toSelections } from '../lib/menu-selection';
 import type {
   PosLineItem,
@@ -43,6 +43,7 @@ export function OrderLines({
   menu = null,
   onUpdateModifiers,
   onAddSame,
+  onPriority,
   cupLabels = false,
   appendOnly = false,
   onVoid,
@@ -83,6 +84,8 @@ export function OrderLines({
     variantId: string,
     input: { modifiers: PosModifierSelection[]; note?: string },
   ) => Promise<PosWorkspace>;
+  // Marks a menu line urgent for the kitchen, or takes the mark off.
+  onPriority?: (saleLineId: string, priority: boolean) => Promise<PosWorkspace>;
   // The branch prints cup labels: a line already sent or sold can print its
   // labels again.
   cupLabels?: boolean;
@@ -111,8 +114,9 @@ export function OrderLines({
   // Changing counts and taking lines off, which a table order allows without the lease.
   const countDisabled = disabled && !appendOnly;
 
-  async function run(lineId: string, action: () => Promise<PosWorkspace>) {
-    if (countDisabled) return;
+  // `leaseFree` is for a change that needs neither the lease nor an unlocked basket.
+  async function run(lineId: string, action: () => Promise<PosWorkspace>, leaseFree = false) {
+    if (countDisabled && !leaseFree) return;
     setError('');
     try {
       await action();
@@ -215,6 +219,11 @@ export function OrderLines({
                     <div className="basket-line-name">
                       <strong>{line.name}</strong>
                       {line.below_cost ? <span className="stock-low">{t('belowCost')}</span> : null}
+                      {line.priority ? (
+                        <span className="basket-line-priority" data-testid="line-priority-badge">
+                          {t('linePriorityBadge')}
+                        </span>
+                      ) : null}
                       {line.price_label ? (
                         <span className="basket-line-price-label">{line.price_label}</span>
                       ) : null}
@@ -288,6 +297,23 @@ export function OrderLines({
                                     }
                                   >
                                     {t('menuAddSame')}
+                                  </button>
+                                ) : null}
+                                {onPriority && priorityMarkable(workspace, line) ? (
+                                  <button
+                                    type="button"
+                                    aria-pressed={line.priority === true}
+                                    data-testid="line-priority-toggle"
+                                    onClick={() =>
+                                      void run(
+                                        line.id,
+                                        () =>
+                                          onPriority(line.sale_line_id as string, !line.priority),
+                                        true,
+                                      )
+                                    }
+                                  >
+                                    {t('linePriority')}
                                   </button>
                                 ) : null}
                                 {printsLabels ? (

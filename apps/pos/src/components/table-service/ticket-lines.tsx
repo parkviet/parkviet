@@ -11,7 +11,7 @@ import { describeTraceFailure } from '@parkviet/pos-shared/traceability';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCupLabelReprint } from '../../hooks/use-kitchen';
-import { kitchenSent } from '../../lib/kitchen';
+import { kitchenSent, priorityMarkable } from '../../lib/kitchen';
 import { linePicks } from '../../lib/menu-selection';
 import type { PosLineItem, PosMenuProduct, PosWorkspace } from '../../lib/pos-context';
 import { MAX_COUNT_QUANTITY } from '../../lib/quantity';
@@ -355,6 +355,11 @@ function TicketLine({
           <span className="ticket-line-name">
             {line.name}
             {tagText ? <span className={`ticket-tag ${TAG_CLASS[tag]}`}>{tagText}</span> : null}
+            {line.priority ? (
+              <span className="ticket-tag ticket-tag-priority" data-testid="line-priority-badge">
+                {t('linePriorityBadge')}
+              </span>
+            ) : null}
           </span>
           {details.length > 0 ? (
             <span className="ticket-line-detail">{details.join(' · ')}</span>
@@ -476,6 +481,19 @@ function LineActions({
           onClick={() => onEditNote(item)}
         >
           {t('ticketLineNote')}
+        </button>
+      ) : null}
+      {kitchenOn && priorityMarkable(active, line) ? (
+        <button
+          type="button"
+          aria-pressed={line.priority === true}
+          data-testid="line-priority-toggle"
+          disabled={busy}
+          onClick={() =>
+            onChange((current) => workspaces.setLinePriority(current, lineId, !line.priority))
+          }
+        >
+          {t('linePriority')}
         </button>
       ) : null}
       {cupTools ? (

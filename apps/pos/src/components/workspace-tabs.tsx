@@ -663,6 +663,14 @@ export function WorkspaceTabsView({ selling }: { selling: SellingWorkspace }) {
                         workspaces.addItem(current, variantId, 1, { ...input, merge: true }),
                       )
                     }
+                    onPriority={
+                      kitchenOn
+                        ? (saleLineId, priority) =>
+                            command(active, (current) =>
+                              workspaces.setLinePriority(current, saleLineId, priority),
+                            )
+                        : undefined
+                    }
                     cupLabels={cupLabels}
                   />
                   {voiding?.sale_line_id ? (

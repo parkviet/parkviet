@@ -1749,6 +1749,8 @@
   "kitchenVoidEntry": "Hủy món",
   "kitchenEntryWasted": "đã làm, ghi hao hụt",
   "kitchenEntryApprovedBy": "duyệt: {{name}}",
+  "linePriority": "Ưu tiên",
+  "linePriorityBadge": "Ưu tiên",
   "lineChangedByOther": "Dòng này vừa được người khác sửa. Đã tải lại; hãy thử lại.",
   "tableSnapshotLocked": "Đơn đã có thanh toán nên không sửa được. Khách gọi thêm thì mở đơn bổ sung cho bàn này.",
   "callNumber": "Số gọi {{number}}",

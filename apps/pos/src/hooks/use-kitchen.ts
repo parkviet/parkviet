@@ -12,6 +12,8 @@ export type PosKitchenTicketItem = {
   note: string | null;
   quantity: string;
   status: 'new' | 'preparing' | 'ready' | 'served' | 'voided';
+  priority?: boolean;
+  priority_at?: string | null;
 };
 
 // What one send told one station; written once, only item statuses move.
@@ -24,6 +26,8 @@ export type PosKitchenTicket = {
   service_mode: string;
   sent_at: string;
   done: boolean;
+  // An item still to make is marked urgent.
+  priority?: boolean;
   items: PosKitchenTicketItem[];
 };
 

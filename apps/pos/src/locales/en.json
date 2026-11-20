@@ -1749,6 +1749,8 @@
   "kitchenVoidEntry": "Void",
   "kitchenEntryWasted": "already made, recorded as waste",
   "kitchenEntryApprovedBy": "approved by {{name}}",
+  "linePriority": "Priority",
+  "linePriorityBadge": "Priority",
   "lineChangedByOther": "Someone else just changed this line. It has been reloaded; try again.",
   "tableSnapshotLocked": "The order has a payment and cannot change. For more items, open another order at this table.",
   "callNumber": "Call number {{number}}",

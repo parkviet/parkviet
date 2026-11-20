@@ -109,6 +109,14 @@ export function KitchenHistory({ workspace, manual, disabled, disabledReason, on
                         ? ` (${item.modifiers.map((row) => row.name).join(', ')})`
                         : ''}{' '}
                       — {t(`kitchenStatus_${item.status}`)}
+                      {item.priority && item.status !== 'served' && item.status !== 'voided' ? (
+                        <>
+                          {' '}
+                          <span className="kitchen-priority" data-testid="kitchen-item-priority">
+                            {t('linePriorityBadge')}
+                          </span>
+                        </>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

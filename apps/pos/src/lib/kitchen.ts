@@ -5,6 +5,17 @@ export function kitchenSent(line: PosLineItem): number {
   return Number.isFinite(sent) ? sent : 0;
 }
 
+// A menu line takes the urgent mark on any open order: it needs no lease and
+// no tender state, only the line's own version.
+export function priorityMarkable(workspace: PosWorkspace, line: PosLineItem): boolean {
+  return (
+    line.kind === 'menu' &&
+    Boolean(line.sale_line_id) &&
+    typeof line.row_version === 'number' &&
+    (workspace.operational_status === 'editing' || workspace.operational_status === 'parked')
+  );
+}
+
 // Menu units the kitchen has not been told about yet.
 export function unsentKitchenQuantity(workspace: PosWorkspace): number {
   return (workspace.line_items ?? [])

@@ -1259,6 +1259,9 @@ kbd { padding: var(--pos-s1); border: 1px solid var(--pos-border); border-radius
 .ticket-tag-cooking { background: #fff1e0; color: #a35800; }
 .ticket-tag-done { background: #e2f4ea; color: var(--pos-success); }
 .ticket-tag-held, .ticket-tag-sent { background: var(--pos-bg); color: var(--pos-muted); }
+.ticket-tag-priority, .basket-line-priority, .kitchen-priority { background: var(--pos-danger); color: var(--pos-surface); }
+.basket-line-priority, .kitchen-priority { padding: 1px 6px; border-radius: 4px; font-size: .6875rem; font-weight: 700; white-space: nowrap; }
+.pos-layout button[aria-pressed='true'][data-testid='line-priority-toggle'] { border-color: var(--pos-danger); color: var(--pos-danger); font-weight: 700; }
 .pos-layout .ticket-line-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; padding: 0 var(--pos-s3) var(--pos-s2) 54px; border: 0; }
 .pos-layout .ticket-line-actions button { min-height: 36px; padding: 0 var(--pos-s3); }
 .ticket-stepper { display: inline-flex; align-items: center; border: 1px solid var(--pos-border); border-radius: 8px; background: var(--pos-surface); overflow: hidden; }
