@@ -261,7 +261,6 @@ export function GoodsCategoriesPage() {
           )
         }
       />
-      <p className="text-base text-muted-foreground">{t('goods.categories.hint')}</p>
       <Tabs value={layout} onValueChange={(value) => setLayout(String(value))}>
         <TabsList aria-label={t('goods.categories.layout')}>
           <TabsTrigger value="list">

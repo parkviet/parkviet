@@ -5,7 +5,6 @@ import {
   Button,
   ResourceNameCell,
   RowActions,
-  SectionTitle,
   Tabs,
   TabsList,
   TabsTrigger,
@@ -265,7 +264,6 @@ export function GoodsPriceListsPage() {
   return (
     <div className="space-y-6">
       {header}
-      <p className="text-base text-muted-foreground">{t('goods.priceLists.hint')}</p>
       <div className="w-full min-w-0 overflow-x-auto">
         <Tabs value={tab} onValueChange={(value) => setTab(String(value))}>
           <TabsList aria-label={t('goods.priceLists.tabs')}>
@@ -278,10 +276,6 @@ export function GoodsPriceListsPage() {
           </TabsList>
         </Tabs>
       </div>
-      <SectionTitle>
-        <TagsIcon />
-        {t('goods.priceLists.title')}
-      </SectionTitle>
       <MasterNotice notice={notice} />
       <ResourceTable<PriceListRow>
         tableKey={TABLE_KEY}

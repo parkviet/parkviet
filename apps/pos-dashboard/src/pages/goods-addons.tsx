@@ -82,7 +82,6 @@ export function GoodsAddonsPage() {
           </div>
         }
       />
-      <p className="text-base text-muted-foreground">{t('goods.addons.hint')}</p>
       <MasterNotice notice={notice} />
       <SearchInput
         value={term}

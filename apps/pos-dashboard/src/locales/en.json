@@ -4072,8 +4072,6 @@
     },
     "barcodeLabels": {
       "title": "Barcode labels",
-      "sectionAt": "Goods to label · {{branch}}",
-      "hint": "Search by name, SKU or barcode, or scan a code into the search box. Prices, promotional prices and stock are the selected branch’s; labels print the till price. The label template, stock and printer are chosen when printing.",
       "templates": "Product label templates",
       "scaleLabels": "Scale labels",
       "noBranch": "Choose an active branch to print labels.",
@@ -4116,8 +4114,6 @@
     "ingredients": {
       "title": "Ingredients",
       "create": "Add ingredient",
-      "hint": "Ingredients are used in preparation, are not sold at the counter and are never published on the POS channel. Stock, stock value and thresholds are for the selected branch.",
-      "sectionAt": "Ingredients at {{branch}}",
       "searchPlaceholder": "Ingredient code or name…",
       "empty": "No ingredients yet.",
       "export": "Export CSV",
@@ -4190,7 +4186,6 @@
     },
     "priceLists": {
       "title": "Price lists",
-      "hint": "Price lists change selling prices by channel, customer group, dates or quantity. A list on the POS channel changes the price at the till; wholesale prices apply by each line's quantity.",
       "create": "New price list",
       "searchPlaceholder": "Search by code or name",
       "empty": "No price lists yet.",
@@ -4310,7 +4305,6 @@
     },
     "categories": {
       "title": "Categories",
-      "hint": "Categories help filter and find goods. A product can belong to several categories; deleting a category keeps its products.",
       "create": "New category",
       "createTitle": "New category",
       "editTitle": "Edit category",
@@ -4354,7 +4348,6 @@
     },
     "addons": {
       "title": "Add-on groups",
-      "hint": "Option groups guests add when ordering, such as toppings, sugar level or cake size. Pick rules and options out of stock take effect at the counter right away.",
       "create": "Create add-on group",
       "createTitle": "Create add-on group",
       "editTitle": "Edit add-on group",
@@ -4431,7 +4424,6 @@
     },
     "recipes": {
       "title": "Recipes",
-      "hint": "A recipe says which ingredients one product uses and how much of each. Costs use each ingredient's current cost price.",
       "create": "Create recipe",
       "searchPlaceholder": "Search by product name or SKU",
       "clearSearch": "Clear search",

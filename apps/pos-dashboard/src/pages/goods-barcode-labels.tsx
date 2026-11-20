@@ -9,12 +9,10 @@ import {
   Input,
   Label,
   SearchInput,
-  SectionTitle,
   useConfirm,
 } from '@spree/dashboard-ui'
 import { MinusIcon, PlusIcon, PrinterIcon, TagIcon, Trash2Icon } from '@spree/dashboard-ui/icons'
 import { Link } from '@tanstack/react-router'
-import { ScanBarcode } from 'lucide-react'
 import { type KeyboardEvent, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BranchPicker } from '../components/branch-picker'
@@ -195,11 +193,6 @@ function LabelPicker({ branch, currency }: { branch: PosBranch; currency: string
 
   return (
     <>
-      <SectionTitle>
-        <ScanBarcode />
-        {t('goods.barcodeLabels.sectionAt', { branch: branch.name })}
-      </SectionTitle>
-      <p className="text-base text-muted-foreground">{t('goods.barcodeLabels.hint')}</p>
       <Card>
         <CardContent className="grid gap-4">
           <div className="grid gap-1.5">

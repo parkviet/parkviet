@@ -5,7 +5,6 @@ import {
   filtersToRansack,
   getTable,
   PageHeader,
-  type ResourceActionsContext,
   ResourceTable,
   resourceSearchSchema,
   usePermissions,
@@ -15,7 +14,6 @@ import {
   Button,
   ResourceNameCell,
   RowActions,
-  SectionTitle,
   StatusBadge,
   useConfirm,
   useRowClickBridge,
@@ -364,14 +362,14 @@ export function GoodsIngredientsPage() {
   })
 
   // The rows the table shows now, every page of them, with the columns on.
-  async function exportCsv(ctx: ResourceActionsContext) {
+  async function exportCsv() {
     setNotice(null)
     setExporting(true)
     try {
       const all = await readRows()
       const shown = listed(all, {
-        ...(ctx.search ? { [ctx.searchParam]: ctx.search } : {}),
-        ...filtersToRansack(ctx.filters, ctx.columns),
+        ...(searchParams.search ? { search: searchParams.search } : {}),
+        ...filtersToRansack(searchParams.filters, getTable(TABLE_KEY).columns),
         sort: searchParams.sort
           ? `${searchParams.dir === 'desc' ? '-' : ''}${searchParams.sort}`
           : 'name',
@@ -404,6 +402,10 @@ export function GoodsIngredientsPage() {
       actions={
         <div className="flex items-center gap-2">
           <BranchPicker />
+          <Button variant="outline" disabled={exporting} onClick={() => void exportCsv()}>
+            <DownloadIcon className="size-4" />
+            {t(exporting ? 'waiting' : 'goods.ingredients.export')}
+          </Button>
           {canWrite ? (
             <Button disabled={!typesReadable || units.isPending} onClick={() => edit()}>
               <PlusIcon className="size-4" />
@@ -439,13 +441,6 @@ export function GoodsIngredientsPage() {
   return (
     <div className="space-y-6">
       {header}
-      <SectionTitle>
-        <BoxesIcon />
-        {branch
-          ? t('goods.ingredients.sectionAt', { branch: branch.name })
-          : t('goods.ingredients.title')}
-      </SectionTitle>
-      <p className="text-base text-muted-foreground">{t('goods.ingredients.hint')}</p>
       {notice && (
         <p
           role={notice.failed ? 'alert' : 'status'}
@@ -460,18 +455,6 @@ export function GoodsIngredientsPage() {
         queryKey={['pos', storeId, 'goods', 'ingredients-table', typeId, branchId, alertsReadable]}
         queryFn={async (params: Record<string, unknown>) => listed(await readRows(), params)}
         searchParams={searchParams}
-        actions={(ctx) => (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-[2.125rem]"
-            disabled={exporting}
-            onClick={() => void exportCsv(ctx)}
-          >
-            <DownloadIcon className="size-4" />
-            {t(exporting ? 'waiting' : 'goods.ingredients.export')}
-          </Button>
-        )}
         rowActions={(row) => (
           <RowActions
             actions={[

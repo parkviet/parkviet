@@ -110,7 +110,6 @@ export function GoodsRecipesPage() {
           </div>
         }
       />
-      <p className="text-base text-muted-foreground">{t('goods.recipes.hint')}</p>
       {branch && context.data && !runsRecipes(access) && (
         <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
           {t('goods.recipes.moduleNote', { branch: branch.name })}

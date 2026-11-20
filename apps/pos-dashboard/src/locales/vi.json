@@ -4044,8 +4044,6 @@
     },
     "barcodeLabels": {
       "title": "In tem mã vạch",
-      "sectionAt": "Chọn hàng in tem · {{branch}}",
-      "hint": "Tìm theo tên, SKU, mã vạch hoặc quét mã vào ô tìm kiếm. Giá, giá khuyến mại và tồn kho là của chi nhánh đang chọn; tem in giá bán tại quầy. Mẫu tem, khổ giấy và máy in chọn ở bước in.",
       "templates": "Mẫu tem sản phẩm",
       "scaleLabels": "Tem cân",
       "noBranch": "Chọn một chi nhánh đang hoạt động để in tem.",
@@ -4085,8 +4083,6 @@
     "ingredients": {
       "title": "Nguyên liệu",
       "create": "Thêm nguyên liệu",
-      "hint": "Nguyên liệu là hàng dùng để chế biến, không bán ở quầy và không lên kênh POS. Tồn kho, giá trị kho và mức cảnh báo tính theo chi nhánh đang chọn.",
-      "sectionAt": "Nguyên liệu tại {{branch}}",
       "searchPlaceholder": "Mã hoặc tên nguyên liệu…",
       "empty": "Chưa có nguyên liệu nào.",
       "export": "Xuất CSV",
@@ -4158,7 +4154,6 @@
     },
     "priceLists": {
       "title": "Bảng giá",
-      "hint": "Bảng giá đổi giá bán theo kênh, nhóm khách, thời gian hoặc số lượng. Bảng giá gắn kênh POS đổi giá ở quầy; giá sỉ áp dụng theo số lượng của từng dòng hàng.",
       "create": "Tạo bảng giá",
       "searchPlaceholder": "Tìm theo mã hoặc tên bảng giá",
       "empty": "Chưa có bảng giá nào.",
@@ -4278,7 +4273,6 @@
     },
     "categories": {
       "title": "Danh mục",
-      "hint": "Danh mục giúp lọc và tìm hàng hoá. Một sản phẩm có thể thuộc nhiều danh mục; xoá danh mục không xoá sản phẩm.",
       "create": "Tạo danh mục",
       "createTitle": "Tạo danh mục",
       "editTitle": "Sửa danh mục",
@@ -4320,7 +4314,6 @@
     },
     "addons": {
       "title": "Nhóm bán kèm",
-      "hint": "Các nhóm tuỳ chọn khách chọn thêm khi gọi món, như topping, mức đường hay size bánh. Quy tắc chọn và tuỳ chọn hết hàng có tác dụng ngay ở quầy.",
       "create": "Tạo nhóm bán kèm",
       "createTitle": "Tạo nhóm bán kèm",
       "editTitle": "Sửa nhóm bán kèm",
@@ -4390,7 +4383,6 @@
     },
     "recipes": {
       "title": "Công thức chế biến",
-      "hint": "Công thức cho biết một sản phẩm dùng những nguyên liệu nào, mỗi thứ bao nhiêu. Giá vốn tính theo giá vốn hiện tại của nguyên liệu.",
       "create": "Tạo công thức",
       "searchPlaceholder": "Tìm theo tên sản phẩm, SKU",
       "clearSearch": "Xoá tìm kiếm",
