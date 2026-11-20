@@ -146,11 +146,13 @@ paths:
     post:
       operationId: posWorkspaceAddItem
       description: >
-        Adds a line. A menu item at a branch running `fnb.menu` is priced by
-        the server from its options: send `modifiers` ([ModifierSelection],
-        omitted for the item's default options) and `note`, never a price.
-        Two lines merge (`merge: true`) only with the same options and note.
-        Refused with 409 `menu_item_sold_out`, `menu_item_hidden`,
+        Adds a line. A prepared product ("Sản phẩm chế biến") at a branch
+        running `fnb.menu` is a menu line, priced by the server from its
+        options: send `modifiers` ([ModifierSelection], omitted for the
+        product's default options) and `note`, never a price. Any other
+        product is an ordinary line. Two lines merge (`merge: true`) only with
+        the same options and note. Refused with 409 `product_sold_out`
+        (`details.product_id`), `product_hidden`,
         `modifier_min`, `modifier_max`, `modifier_unknown`, or
         `module_disabled` when options are sent where the menu is off.
       parameters:
@@ -224,8 +226,11 @@ paths:
     get:
       operationId: posMenu
       description: >
-        The menu a branch sells from now: a running time-of-day menu applied,
-        hidden items left out, today's sold-out items marked. Send the last
+        The menu a branch sells from now: every product the branch sells at
+        the till, a running time-of-day menu applied, hidden products left
+        out, today's sold-out products marked. Categories are the store's
+        Spree categories with a listed product attached directly, in tree
+        order; a product without one shows only under "All". Send the last
         `etag` as `If-None-Match` to get 304 when nothing changed. Read again
         on `menu.sold_out`.
       parameters:
@@ -259,7 +264,7 @@ paths:
     put:
       operationId: posMenuSoldOut
       description: >
-        Marks a menu item sold out at a branch for the current business day,
+        Marks a product sold out at a branch for the current business day,
         or back on sale. Needs `pos.menu.sold_out`, `pos.menu.manage`, or a
         kitchen screen (device mode `kds`) of the branch.
       requestBody:
@@ -268,11 +273,11 @@ paths:
           application/json:
             schema:
               type: object
-              required: [branch_id, menu_item_id, sold_out]
+              required: [branch_id, product_id, sold_out]
               properties:
                 branch_id:
                   type: string
-                menu_item_id:
+                product_id:
                   type: string
                 sold_out:
                   type: boolean
@@ -302,11 +307,11 @@ paths:
           application/json:
             schema:
               type: object
-              required: [branch_id, menu_item_ids]
+              required: [branch_id, product_ids]
               properties:
                 branch_id:
                   type: string
-                menu_item_ids:
+                product_ids:
                   type: array
                   maxItems: 20
                   items:
@@ -322,36 +327,24 @@ paths:
                 properties:
                   data:
                     type: object
-                    required: [branch_id, menu_item_ids]
+                    required: [branch_id, product_ids]
                     properties:
                       branch_id:
                         type: string
-                      menu_item_ids:
+                      product_ids:
                         type: array
                         items:
                           type: string
-  /api/v3/admin/pos/menu_categories:
+  /api/v3/admin/pos/products/settings:
     get:
-      operationId: posMenuCategories
+      operationId: posProductSettings
+      description: >
+        The POS operating data of every prepared product ("Sản phẩm chế biến")
+        of the store, inactive ones included, each with its sizes at list
+        price. Product data itself is read and written through the Admin API.
       responses:
         '200':
-          description: Categories of the store's menu
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data]
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/MenuCategory'
-  /api/v3/admin/pos/menu_items:
-    get:
-      operationId: posMenuItems
-      responses:
-        '200':
-          description: Items of the store's menu, inactive ones included
+          description: Prepared products by name
           content:
             application/json:
               schema:
@@ -361,9 +354,192 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/MenuItemConfig'
+                      $ref: '#/components/schemas/ProductPosSettings'
                   meta:
-                    $ref: '#/components/schemas/MenuItemsMeta'
+                    $ref: '#/components/schemas/ProductPosSettingsMeta'
+  /api/v3/admin/pos/products/{product_id}/settings:
+    put:
+      operationId: posProductSettingsUpdate
+      description: >
+        Sets a prepared product's operating settings; fields left out keep
+        their value, a product without settings starts from the defaults.
+        Needs `pos.menu.manage` at a branch of the store, or store
+        administration.
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                kitchen_category:
+                  type: [string, 'null']
+                  pattern: '^[a-z_]{2,40}$'
+                cup_label:
+                  type: boolean
+                show_components_on_kds:
+                  type: boolean
+                qr_orderable:
+                  type: boolean
+                drink_credit:
+                  type: [string, 'null']
+                  description: A door ticket's drink credit; null for none.
+                drink_credit_categories:
+                  type: array
+                  maxItems: 20
+                  items:
+                    type: string
+                    pattern: '^[a-z_]{2,40}$'
+      responses:
+        '200':
+          description: The product's POS operating data after the change
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ProductPosConfig'
+        '404':
+          description: No such product in the store, or an unknown add-on group or variant
+        '409':
+          description: >
+            Refused; `error.details.reason` says why: `product_not_prepared` (only
+            a "Sản phẩm chế biến" product takes add-ons, a combo or kitchen
+            settings), `module_disabled` while no branch runs `fnb.menu`,
+            `menu_rows_limit`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v3/admin/pos/products/{product_id}/combo:
+    put:
+      operationId: posProductComboUpdate
+      description: >
+        Replaces a prepared product's combo contents. A product with contents
+        is a combo; an empty list makes it a single product again.
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [components]
+              properties:
+                components:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [variant_id]
+                    properties:
+                      variant_id:
+                        type: string
+                      quantity:
+                        type: integer
+                        minimum: 1
+                        maximum: 100
+      responses:
+        '200':
+          description: The product's POS operating data after the change
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ProductPosConfig'
+        '404':
+          description: No such product in the store, or an unknown add-on group or variant
+        '409':
+          description: >
+            Refused; `error.details.reason` says why: `product_not_prepared` (only
+            a "Sản phẩm chế biến" product takes add-ons, a combo or kitchen
+            settings), `module_disabled` while no branch runs `fnb.menu`,
+            `menu_rows_limit`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v3/admin/pos/products/{product_id}/modifier_groups:
+    put:
+      operationId: posProductModifierGroupsUpdate
+      description: Replaces the add-on groups offered on a prepared product, in order.
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [modifier_group_ids]
+              properties:
+                modifier_group_ids:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: The product's POS operating data after the change
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ProductPosConfig'
+        '404':
+          description: No such product in the store, or an unknown add-on group or variant
+        '409':
+          description: >
+            Refused; `error.details.reason` says why: `product_not_prepared` (only
+            a "Sản phẩm chế biến" product takes add-ons, a combo or kitchen
+            settings), `module_disabled` while no branch runs `fnb.menu`,
+            `menu_rows_limit`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v3/admin/pos/modifier_groups:
     get:
       operationId: posModifierGroups
@@ -585,7 +761,7 @@ paths:
       operationId: posReportIngredientUsage
       description: >
         Ingredients completed sales used, by business date, ingredient and
-        menu item, in stock units, at the cost copied at completion.
+        product, in stock units, at the cost copied at completion.
       parameters:
         - $ref: '#/components/parameters/ReportBranch'
         - $ref: '#/components/parameters/ReportFrom'
@@ -2173,7 +2349,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/KitchenIdempotencyKey'
       description: >
-        Sends a product, or every menu item of a kitchen category, to a station,
+        Sends a product, or every prepared product of a kitchen category, to a station,
         for one service mode or (without one) every mode. One of `product_id` and
         `kitchen_category`. A second route for the same target and mode answers
         `station_route_taken`.
@@ -3529,11 +3705,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/KitchenBoardResult'
-  /api/v3/pos_device/kitchen/menu_items:
+  /api/v3/pos_device/kitchen/products:
     get:
-      operationId: posDeviceKitchenMenuItems
+      operationId: posDeviceKitchenProducts
       description: >
-        Menu items the station makes and whether each is sold out today. Marking
+        Prepared products the branch sells that the station makes, by name,
+        and whether each is sold out today. Marking
         one sold out names a person: PUT /admin/pos/menu_availabilities with a
         staff session on the device.
       parameters:
@@ -3544,7 +3721,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Items
+          description: Products
           content:
             application/json:
               schema:
@@ -3554,7 +3731,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/KitchenMenuItem'
+                      $ref: '#/components/schemas/KitchenProduct'
   /api/v3/pos_device/kitchen/items/{id}/start:
     post:
       operationId: posDeviceKitchenItemStart
@@ -6642,11 +6819,11 @@ components:
         categories:
           type: array
           items:
-            $ref: '#/components/schemas/MenuCategory'
+            $ref: '#/components/schemas/TillCategory'
         items:
           type: array
           items:
-            $ref: '#/components/schemas/MenuItem'
+            $ref: '#/components/schemas/MenuProduct'
         modifier_groups:
           type: array
           items:
@@ -6668,15 +6845,16 @@ components:
                 description: Shown on its prices, e.g. "Happy hour".
         favorites:
           type: array
-          description: Menu item ids of the favourites row, in order.
+          description: Product ids of the favourites row, in order.
           items:
             type: string
         etag:
           type: string
-    MenuCategory:
+    TillCategory:
       type: object
       additionalProperties: false
-      required: [id, name, position, color, active]
+      description: A Spree category of the store, as a tab of the till.
+      required: [id, name, position, parent_id]
       properties:
         id:
           type: string
@@ -6684,27 +6862,30 @@ components:
           type: string
         position:
           type: integer
-        color:
+          description: Position among its siblings; the list is already in tree order.
+        parent_id:
           type: [string, 'null']
-        active:
-          type: boolean
-    MenuItemConfig:
+    ProductPosConfig:
       type: object
       additionalProperties: true
-      required: [id, product_id, name, kind, menu_category_id, kitchen_category, cup_label, show_components_on_kds, position, active,
-                 tax_category_id, modifier_group_ids, components]
+      description: >
+        A product's POS operating data. Only a prepared product ("Sản phẩm chế
+        biến") is a menu line; any other kind reads with the defaults, no
+        add-ons and no contents.
+      required: [product_id, name, product_kind, kind, kitchen_category, cup_label, show_components_on_kds, qr_orderable,
+                 drink_credit, drink_credit_categories, tax_category_id, modifier_group_ids, components]
       properties:
-        id:
-          type: string
         product_id:
           type: string
         name:
           type: string
+        product_kind:
+          type: [string, 'null']
+          enum: [goods, prepared, service, ingredient, null]
+          description: The POS kind of the product's Spree product type.
         kind:
           type: string
           enum: [single, combo]
-        menu_category_id:
-          type: [string, 'null']
         kitchen_category:
           type: [string, 'null']
           pattern: '^[a-z_]{2,40}$'
@@ -6712,13 +6893,16 @@ components:
           type: boolean
         show_components_on_kds:
           type: boolean
-        position:
-          type: integer
-        active:
-          type: boolean
         qr_orderable:
           type: boolean
           description: Guests may order it from the table QR.
+        drink_credit:
+          type: [string, 'null']
+          description: A door ticket's drink credit per ticket.
+        drink_credit_categories:
+          type: array
+          items:
+            type: string
         tax_category_id:
           type: [string, 'null']
         modifier_group_ids:
@@ -6740,12 +6924,39 @@ components:
                 type: string
               quantity:
                 type: integer
-    MenuItem:
+    ProductPosSettings:
       allOf:
-        - $ref: '#/components/schemas/MenuItemConfig'
+        - $ref: '#/components/schemas/ProductPosConfig'
         - type: object
-          required: [image_url, sold_out, variants]
+          required: [variants]
           properties:
+            variants:
+              type: array
+              description: Sizes at list price.
+              items:
+                type: object
+                additionalProperties: false
+                required: [id, name, sku, price]
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: [string, 'null']
+                  sku:
+                    type: [string, 'null']
+                  price:
+                    type: [string, 'null']
+    MenuProduct:
+      allOf:
+        - $ref: '#/components/schemas/ProductPosConfig'
+        - type: object
+          required: [category_ids, image_url, sold_out, variants]
+          properties:
+            category_ids:
+              type: array
+              description: The Spree categories it is attached to directly, in tree order.
+              items:
+                type: string
             image_url:
               type: [string, 'null']
             sold_out:
@@ -6828,9 +7039,9 @@ components:
     MenuAvailability:
       type: object
       additionalProperties: false
-      required: [menu_item_id, branch_id, sold_out, business_date]
+      required: [product_id, branch_id, sold_out, business_date]
       properties:
-        menu_item_id:
+        product_id:
           type: string
         branch_id:
           type: string
@@ -7144,7 +7355,7 @@ components:
     IngredientUsageRow:
       type: object
       additionalProperties: false
-      required: [business_date, ingredient, ingredient_sku, menu_item, quantity, unit, cost, cost_missing]
+      required: [business_date, ingredient, ingredient_sku, product, quantity, unit, cost, cost_missing]
       properties:
         business_date:
           type: string
@@ -7153,7 +7364,7 @@ components:
           type: string
         ingredient_sku:
           type: [string, 'null']
-        menu_item:
+        product:
           type: string
         quantity:
           type: integer
@@ -7167,9 +7378,9 @@ components:
     MenuMarginRow:
       type: object
       additionalProperties: false
-      required: [menu_item, sku, quantity, revenue, cost, margin, margin_rate, costed]
+      required: [product, sku, quantity, revenue, cost, margin, margin_rate, costed]
       properties:
-        menu_item:
+        product:
           type: string
         sku:
           type: [string, 'null']
@@ -7608,18 +7819,19 @@ components:
         categories:
           type: array
           items:
-            $ref: '#/components/schemas/KioskMenuCategory'
+            $ref: '#/components/schemas/KioskCategory'
         items:
           type: array
           items:
-            $ref: '#/components/schemas/KioskMenuItem'
+            $ref: '#/components/schemas/KioskItem'
         modifier_groups:
           type: array
           items:
             $ref: '#/components/schemas/KioskModifierGroup'
-    KioskMenuCategory:
+    KioskCategory:
       type: object
       additionalProperties: false
+      description: A Spree category of the store with a product the kiosk sells, in tree order.
       required: [id, name, position, color]
       properties:
         id:
@@ -7630,20 +7842,26 @@ components:
           type: integer
         color:
           type: [string, 'null']
-    KioskMenuItem:
+          description: Always null; Spree categories carry no colour.
+        image_url:
+          type: [string, 'null']
+    KioskItem:
       type: object
       additionalProperties: false
-      required: [id, name, kind, menu_category_id, position, image_url, sold_out, modifier_group_ids, components, variants]
+      required: [id, name, kind, category_ids, position, image_url, sold_out, modifier_group_ids, components, variants]
       properties:
         id:
           type: string
+          description: The product id.
         name:
           type: string
         kind:
           type: string
           enum: [single, combo]
-        menu_category_id:
-          type: [string, 'null']
+        category_ids:
+          type: array
+          items:
+            type: string
         position:
           type: integer
         image_url:
@@ -8621,7 +8839,7 @@ components:
           type: boolean
         is_default:
           type: boolean
-          description: Where a menu item goes when no route names it.
+          description: Where a prepared product goes when no route names it.
         warn_after_minutes:
           type: integer
         late_after_minutes:
@@ -8728,7 +8946,7 @@ components:
           description: Reasons a sent item may be voided for, in order; `khac` with a note is always offered.
           items:
             type: string
-    MenuItemsMeta:
+    ProductPosSettingsMeta:
       type: object
       additionalProperties: false
       required: [tax_defaults]
@@ -8739,7 +8957,7 @@ components:
       type: object
       additionalProperties: false
       required: [food, alcohol]
-      description: Tax categories new menu items start with, chosen in the F&B setup step.
+      description: Tax categories new prepared products start with, chosen in the F&B setup step.
       properties:
         food:
           type: string
@@ -9460,12 +9678,12 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/KitchenBoard'
-    KitchenMenuItem:
+    KitchenProduct:
       type: object
       additionalProperties: false
-      required: [id, name, kitchen_category, sold_out]
+      required: [product_id, name, kitchen_category, sold_out]
       properties:
-        id:
+        product_id:
           type: string
         name:
           type: string
@@ -12309,11 +12527,11 @@ components:
     GuestOrderItem:
       type: object
       additionalProperties: false
-      required: [variant_id, menu_item_id, name, size, quantity, unit_price, amount, note, modifiers]
+      required: [variant_id, product_id, name, size, quantity, unit_price, amount, note, modifiers]
       properties:
         variant_id:
           type: string
-        menu_item_id:
+        product_id:
           type: string
         name:
           type: string
@@ -13133,11 +13351,11 @@ components:
     EmenuItem:
       type: object
       additionalProperties: false
-      required: [id, menu_item_id, position]
+      required: [id, product_id, position]
       properties:
         id:
           type: string
-        menu_item_id:
+        product_id:
           type: string
         position:
           type: integer
@@ -13174,7 +13392,7 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/EmenuCategory'
-    EmenuMenuCategoryInput:
+    EmenuCategoryInput:
       type: object
       required: [name, items]
       properties:
@@ -13197,7 +13415,7 @@ components:
         categories:
           type: array
           items:
-            $ref: '#/components/schemas/EmenuMenuCategoryInput'
+            $ref: '#/components/schemas/EmenuCategoryInput'
     EmenuMenuImportInput:
       type: object
       required: [branch_id]

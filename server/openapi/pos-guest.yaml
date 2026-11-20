@@ -320,11 +320,11 @@ components:
         categories:
           type: array
           items:
-            $ref: '#/components/schemas/GuestMenuCategory'
+            $ref: '#/components/schemas/GuestCategory'
         items:
           type: array
           items:
-            $ref: '#/components/schemas/GuestMenuItem'
+            $ref: '#/components/schemas/GuestItem'
         modifier_groups:
           type: array
           items:
@@ -335,9 +335,12 @@ components:
           $ref: '#/components/schemas/GuestSections'
         payment:
           $ref: '#/components/schemas/GuestPayment'
-    GuestMenuCategory:
+    GuestCategory:
       type: object
       additionalProperties: false
+      description: >
+        An electronic-menu category when the branch has an electronic menu,
+        else a Spree category of the counter (no colour, no image), in order.
       required: [id, name, position, color, image_url]
       properties:
         id:
@@ -350,22 +353,27 @@ components:
           type: [string, 'null']
         image_url:
           type: [string, 'null']
-    GuestMenuItem:
+    GuestItem:
       type: object
       additionalProperties: false
-      required: [id, name, kind, menu_category_id, position, image_url, sold_out, modifier_group_ids, components, variants]
+      required: [id, name, kind, category_ids, position, image_url, sold_out, modifier_group_ids, components, variants]
       properties:
         id:
           type: string
+          description: The product id. On an electronic menu a product placed in two categories is two items.
         name:
           type: string
         kind:
           type: string
           enum: [single, combo]
-        menu_category_id:
-          type: [string, 'null']
+        category_ids:
+          type: array
+          description: The categories it shows in; one on an electronic menu.
+          items:
+            type: string
         position:
           type: integer
+          description: Its place in its category on an electronic menu, else in the counter's order.
         image_url:
           type: [string, 'null']
         sold_out:
