@@ -11,7 +11,7 @@ import {
 } from './cart';
 
 const tea = (overrides: Partial<Omit<CartLine, 'key'>> = {}): Omit<CartLine, 'key'> => ({
-  itemId: 'mi_tea',
+  itemId: 'prod_tea',
   variantId: 'v_tea_l',
   name: 'Trà đào',
   size: 'L',

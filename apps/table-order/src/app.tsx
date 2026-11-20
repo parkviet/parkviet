@@ -7,11 +7,11 @@ import { applyTheme, isOrderQrActive, isValidPrepayMethod, remainingSeconds } fr
 import { errorKey, keepsKey } from './lib/errors';
 import { forgetCode, readCode, readToken, saveToken, takeCodeFromAddress } from './lib/session';
 import type {
+  GuestItem,
   GuestMenu,
   GuestRequest,
   GuestSession,
   GuestTable,
-  MenuItem,
   PaymentQr,
 } from './lib/types';
 import { CartScreen } from './screens/cart-screen';
@@ -49,7 +49,7 @@ export function App() {
   const [menu, setMenu] = useState<GuestMenu | null>(null);
   const [table, setTable] = useState<GuestTable | null>(null);
   const [tab, setTab] = useState<Tab>('menu');
-  const [item, setItem] = useState<MenuItem | null>(null);
+  const [item, setItem] = useState<GuestItem | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [savedPrepay, setSavedPrepay] = useState<{ orderId: string; lines: CartLine[] } | null>(
     null,

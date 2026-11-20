@@ -45,10 +45,10 @@ const menu = {
   ],
   items: [
     {
-      id: 'mi_tea',
+      id: 'prod_tea',
       name: 'Trà đào',
       kind: 'single',
-      menu_category_id: 'cat_tea',
+      category_ids: ['cat_tea'],
       position: 1,
       image_url: null,
       sold_out: false,
@@ -60,10 +60,10 @@ const menu = {
       ],
     },
     {
-      id: 'mi_flan',
+      id: 'prod_flan',
       name: 'Bánh flan',
       kind: 'single',
-      menu_category_id: 'cat_cake',
+      category_ids: ['cat_cake'],
       position: 2,
       image_url: null,
       sold_out: true,
@@ -287,10 +287,10 @@ test('orders a dish with options, waits for staff, then sees it sent to the kitc
   await expect(page.getByRole('heading', { name: 'Bàn 4 · Quận 1' })).toBeVisible();
   // The code leaves the address once exchanged.
   await expect(page).toHaveURL(/\/table\/$/);
-  await expect(page.getByTestId('menu-item-mi_flan')).toBeDisabled();
-  await expect(page.getByTestId('menu-item-mi_flan')).toContainText('Hết món');
+  await expect(page.getByTestId('menu-item-prod_flan')).toBeDisabled();
+  await expect(page.getByTestId('menu-item-prod_flan')).toContainText('Hết món');
 
-  await page.getByTestId('menu-item-mi_tea').click();
+  await page.getByTestId('menu-item-prod_tea').click();
   await page.getByRole('radio', { name: /^L / }).check();
   // Sugar is required: nothing can be added until it is chosen.
   await expect(page.getByTestId('add-to-cart')).toBeDisabled();
@@ -364,7 +364,7 @@ test('reads the menu only at a closed table and orders once staff open it', asyn
   await page.goto(`/table/t/${CODE}`);
 
   await expect(page.getByTestId('table-closed')).toContainText('Bàn chưa mở');
-  await page.getByTestId('menu-item-mi_tea').click();
+  await page.getByTestId('menu-item-prod_tea').click();
   await page.getByLabel('100%').check();
   await page.getByTestId('add-to-cart').click();
   await page.getByTestId('tab-cart').click();
@@ -409,7 +409,7 @@ test('blocks menu viewing while paused, loads theme and menu when unpaused, and 
     },
     sections: {
       banner: [{ id: 'prm_1', name: 'Mua 2 tặng 1 khung giờ vàng' }],
-      best_sellers: ['mi_tea'],
+      best_sellers: ['prod_tea'],
       new_items: [],
     },
   };
@@ -417,7 +417,7 @@ test('blocks menu viewing while paused, loads theme and menu when unpaused, and 
   await page.goto(`/table/t/${CODE}`);
 
   await expect(page.getByTestId('paused')).toHaveText('Quán đang tạm dừng nhận đơn.');
-  await expect(page.getByTestId('menu-item-mi_tea')).toHaveCount(0);
+  await expect(page.getByTestId('menu-item-prod_tea')).toHaveCount(0);
   await page.getByTestId('tab-cart').click();
   await expect(page.getByTestId('paused')).toBeVisible();
   await expect(page.getByTestId('send-order')).toHaveCount(0);
@@ -436,7 +436,7 @@ test('blocks menu viewing while paused, loads theme and menu when unpaused, and 
   );
 
   // Staff pause right before guest submits: 409 emenu_paused switches back to paused screen.
-  await page.getByTestId('menu-item-mi_tea').click();
+  await page.getByTestId('menu-item-prod_tea').click();
   await page.getByLabel('100%').check();
   await page.getByTestId('add-to-cart').click();
   await page.getByTestId('tab-cart').click();
@@ -460,7 +460,7 @@ test('prepay VietQR shows QR and transfer details, cancels back to cart, and pol
   await install(page, api);
   await page.goto(`/table/t/${CODE}`);
 
-  await page.getByTestId('menu-item-mi_tea').click();
+  await page.getByTestId('menu-item-prod_tea').click();
   await page.getByRole('radio', { name: /^L / }).check();
   await page.getByLabel('50%').check();
   await page.getByLabel('Trân châu').check();
@@ -519,7 +519,7 @@ test('counts down order_too_soon on Send button and pays the open bill via VietQ
   await install(page, api);
   await page.goto(`/table/t/${CODE}`);
 
-  await page.getByTestId('menu-item-mi_tea').click();
+  await page.getByTestId('menu-item-prod_tea').click();
   await page.getByRole('radio', { name: /^L / }).check();
   await page.getByLabel('50%').check();
   await page.getByLabel('Trân châu').check();
@@ -573,4 +573,46 @@ test('counts down order_too_soon on Send button and pays the open bill via VietQ
   await expect(page.getByTestId('amount-due')).toHaveCount(0);
   await expect(page.getByTestId('amount-paid')).toContainText('80.000');
   await expect(page.getByText('Đã thanh toán', { exact: true })).toBeVisible();
+});
+
+test('shows the counter menu by Spree category: a product in two categories under both, one without a category under All only', async ({
+  page,
+}) => {
+  const api = newApi();
+  const row = (id: string, name: string, categoryIds: string[], position: number) => ({
+    id,
+    name,
+    kind: 'single',
+    category_ids: categoryIds,
+    position,
+    image_url: null,
+    sold_out: false,
+    modifier_group_ids: [],
+    components: [],
+    variants: [{ id: `v_${id}`, name: null, price: '20000.0', price_label: null }],
+  });
+  api.menuOverride = {
+    categories: [
+      { id: 'ctg_tea', name: 'Trà', position: 0, color: null, image_url: null },
+      { id: 'ctg_cake', name: 'Bánh', position: 1, color: null, image_url: null },
+    ],
+    items: [
+      row('prod_peach', 'Trà đào', ['ctg_tea'], 0),
+      row('prod_combo', 'Trà và bánh', ['ctg_tea', 'ctg_cake'], 1),
+      row('prod_flan', 'Bánh flan', ['ctg_cake'], 2),
+      row('prod_soda', 'Soda', [], 3),
+    ],
+  };
+  await install(page, api);
+  await page.goto(`/table/t/${CODE}`);
+
+  const shown = page.getByTestId(/^menu-item-/);
+  await expect(page.getByRole('button', { name: 'Tất cả' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(shown).toHaveCount(4);
+  await page.getByRole('button', { name: 'Trà', exact: true }).click();
+  await expect(shown).toHaveText([/Trà đào/, /Trà và bánh/]);
+  await page.getByRole('button', { name: 'Bánh', exact: true }).click();
+  await expect(shown).toHaveText([/Trà và bánh/, /Bánh flan/]);
+  await page.getByRole('button', { name: 'Tất cả' }).click();
+  await expect(page.getByTestId('menu-item-prod_soda')).toBeVisible();
 });

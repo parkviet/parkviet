@@ -5,10 +5,10 @@ import {
   lowestVariantPrice,
   RAIL_PREVIEW_LIMIT,
   resolveSectionItems,
-  sortMenuItems,
+  sortItems,
 } from '../lib/emenu';
 import { formatMoney } from '../lib/money';
-import type { GuestMenu, MenuItem } from '../lib/types';
+import type { GuestItem, GuestMenu } from '../lib/types';
 
 // The menu by category; a sold-out dish stays listed but cannot be opened.
 export function MenuScreen({
@@ -16,7 +16,7 @@ export function MenuScreen({
   onPick,
 }: {
   menu: GuestMenu;
-  onPick: (item: MenuItem) => void;
+  onPick: (item: GuestItem) => void;
 }) {
   const { t, i18n } = useTranslation();
   const [categoryId, setCategoryId] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export function MenuScreen({
   const banners = menu.sections?.banner ?? [];
   const bestSellers = resolveSectionItems(menu.items, menu.sections?.best_sellers);
   const newItems = resolveSectionItems(menu.items, menu.sections?.new_items);
-  const items = sortMenuItems(menu.items, categories, categoryId).filter(
+  const items = sortItems(menu.items, categories, categoryId).filter(
     (item) => !needle || item.name.toLocaleLowerCase(i18n.language).includes(needle),
   );
   const showExploreHeading =
@@ -114,7 +114,7 @@ export function MenuScreen({
       ) : null}
       <ul className="menu-items">
         {items.map((item) => (
-          <li key={`${item.menu_category_id ?? 'none'}-${item.id}`}>
+          <li key={`${item.category_ids[0] ?? 'none'}-${item.id}`}>
             <button
               type="button"
               className="menu-item"
@@ -160,10 +160,10 @@ function ItemRail({
 }: {
   title: string;
   testId: string;
-  items: MenuItem[];
+  items: GuestItem[];
   currency: string;
   language: string;
-  onPick: (item: MenuItem) => void;
+  onPick: (item: GuestItem) => void;
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);

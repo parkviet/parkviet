@@ -1,4 +1,4 @@
-import type { GuestMenu, GuestTheme, MenuCategory, MenuItem } from './types';
+import type { GuestCategory, GuestItem, GuestMenu, GuestTheme } from './types';
 
 export const DEFAULT_THEME = {
   brand_color: '#0b6e4f',
@@ -52,14 +52,16 @@ export function applyTheme(root: StyleRoot, theme?: Partial<GuestTheme> | null):
   root.style.setProperty('--accent-ink', contrastInk(accent));
 }
 
-export function resolveSectionItems(items: MenuItem[], ids: string[] | undefined): MenuItem[] {
+// The products of a home section (best sellers, new items) by product id, in
+// the configured order, each once.
+export function resolveSectionItems(items: GuestItem[], ids: string[] | undefined): GuestItem[] {
   if (!ids || ids.length === 0) return [];
-  const byId = new Map<string, MenuItem>();
+  const byId = new Map<string, GuestItem>();
   for (const item of items) {
     if (!byId.has(item.id)) byId.set(item.id, item);
   }
   const seen = new Set<string>();
-  const resolved: MenuItem[] = [];
+  const resolved: GuestItem[] = [];
   for (const id of ids) {
     if (seen.has(id)) continue;
     seen.add(id);
@@ -69,28 +71,32 @@ export function resolveSectionItems(items: MenuItem[], ids: string[] | undefined
   return resolved;
 }
 
-export function sortMenuItems(
-  items: MenuItem[],
-  categories: MenuCategory[],
+// The rows of one tab: a category, or every row ("All", null) ordered by its
+// first category then its position; rows without a category come last.
+export function sortItems(
+  items: GuestItem[],
+  categories: GuestCategory[],
   categoryId: string | null,
-): MenuItem[] {
+): GuestItem[] {
   const categoryRank = new Map(categories.map((category) => [category.id, category.position]));
-  const rank = (id: string | null) =>
-    id !== null && categoryRank.has(id)
-      ? (categoryRank.get(id) ?? Number.MAX_SAFE_INTEGER)
+  const rank = (item: GuestItem) => {
+    const first = item.category_ids[0];
+    return first !== undefined && categoryRank.has(first)
+      ? (categoryRank.get(first) ?? Number.MAX_SAFE_INTEGER)
       : Number.MAX_SAFE_INTEGER;
+  };
   return [...items]
-    .filter((item) => !categoryId || item.menu_category_id === categoryId)
+    .filter((item) => !categoryId || item.category_ids.includes(categoryId))
     .sort((a, b) => {
       if (categoryId === null) {
-        const diff = rank(a.menu_category_id) - rank(b.menu_category_id);
+        const diff = rank(a) - rank(b);
         if (diff !== 0) return diff;
       }
       return a.position - b.position;
     });
 }
 
-export function lowestVariantPrice(item: MenuItem): string | undefined {
+export function lowestVariantPrice(item: GuestItem): string | undefined {
   let best: { price: string; numeric: number } | null = null;
   for (const variant of item.variants) {
     const numeric = Number(variant.price);

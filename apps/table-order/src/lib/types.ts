@@ -13,7 +13,10 @@ export type GuestSession = {
   paused: boolean;
 };
 
-export type MenuCategory = {
+// A tab of the guest menu: a Spree category of the counter's menu, or an
+// electronic-menu category when the branch has one (only those carry a
+// colour and a picture).
+export type GuestCategory = {
   id: string;
   name: string;
   position: number;
@@ -28,11 +31,16 @@ export type MenuVariant = {
   price_label: string | null;
 };
 
-export type MenuItem = {
+// One product a guest may order; `id` is the product's id. On the counter's
+// menu `category_ids` are its Spree categories (none shows it under "All"
+// only) and `position` its place on the counter; on an electronic menu a
+// product placed in two categories is two rows, each with its one category
+// and its place in it.
+export type GuestItem = {
   id: string;
   name: string;
   kind: 'single' | 'combo';
-  menu_category_id: string | null;
+  category_ids: string[];
   position: number;
   image_url: string | null;
   sold_out: boolean;
@@ -69,8 +77,8 @@ export type GuestTheme = {
 export type GuestMenu = {
   currency: string;
   etag: string;
-  categories: MenuCategory[];
-  items: MenuItem[];
+  categories: GuestCategory[];
+  items: GuestItem[];
   modifier_groups: ModifierGroup[];
   theme?: GuestTheme;
   sections?: {

@@ -16,7 +16,7 @@ import {
   unitPrice,
 } from '../lib/modifiers';
 import { formatMoney } from '../lib/money';
-import type { GuestMenu, MenuItem, ModifierGroup } from '../lib/types';
+import type { GuestItem, GuestMenu, ModifierGroup } from '../lib/types';
 
 export type PickedItem = {
   itemId: string;
@@ -45,7 +45,7 @@ export function ItemScreen({
   onBack,
 }: {
   menu: GuestMenu;
-  item: MenuItem;
+  item: GuestItem;
   onAdd: (picked: PickedItem) => void;
   onBack: () => void;
 }) {

@@ -11,13 +11,13 @@ import {
   lowestVariantPrice,
   remainingSeconds,
   resolveSectionItems,
-  sortMenuItems,
+  sortItems,
 } from './emenu';
-import type { MenuCategory, MenuItem } from './types';
+import type { GuestCategory, GuestItem } from './types';
 
-const makeItem = (overrides: Partial<MenuItem> & { id: string; name: string }): MenuItem => ({
+const makeItem = (overrides: Partial<GuestItem> & { id: string; name: string }): GuestItem => ({
   kind: 'single',
-  menu_category_id: null,
+  category_ids: [],
   position: 0,
   image_url: null,
   sold_out: false,
@@ -80,43 +80,73 @@ describe('e-menu theme helpers', () => {
 });
 
 describe('e-menu home sections and category ordering', () => {
-  const categories: MenuCategory[] = [
+  const categories: GuestCategory[] = [
     { id: 'cat_tea', name: 'Trà', position: 2, color: '#0b6e4f' },
     { id: 'cat_coffee', name: 'Cà phê', position: 1, color: '#7c2d12' },
   ];
 
-  const items: MenuItem[] = [
-    makeItem({ id: 'mi_tea_1', name: 'Trà đào', menu_category_id: 'cat_tea', position: 0 }),
-    makeItem({ id: 'mi_cf_1', name: 'Bạc xỉu', menu_category_id: 'cat_coffee', position: 0 }),
-    makeItem({ id: 'mi_tea_2', name: 'Trà vải', menu_category_id: 'cat_tea', position: 1 }),
-    makeItem({ id: 'mi_cf_2', name: 'Cà phê sữa', menu_category_id: 'cat_coffee', position: 1 }),
+  const items: GuestItem[] = [
+    makeItem({ id: 'prod_tea_1', name: 'Trà đào', category_ids: ['cat_tea'], position: 0 }),
+    makeItem({ id: 'prod_cf_1', name: 'Bạc xỉu', category_ids: ['cat_coffee'], position: 0 }),
+    makeItem({ id: 'prod_tea_2', name: 'Trà vải', category_ids: ['cat_tea'], position: 1 }),
+    makeItem({ id: 'prod_cf_2', name: 'Cà phê sữa', category_ids: ['cat_coffee'], position: 1 }),
     // Same dish placed in a second e-Menu category
-    makeItem({ id: 'mi_cf_1', name: 'Bạc xỉu', menu_category_id: 'cat_tea', position: 2 }),
+    makeItem({ id: 'prod_cf_1', name: 'Bạc xỉu', category_ids: ['cat_tea'], position: 2 }),
   ];
 
   it('resolves best_sellers and new_items in configured order without duplicates', () => {
-    const resolved = resolveSectionItems(items, ['mi_tea_2', 'missing', 'mi_cf_1', 'mi_tea_2']);
-    expect(resolved.map((row) => row.id)).toEqual(['mi_tea_2', 'mi_cf_1']);
+    const resolved = resolveSectionItems(items, [
+      'prod_tea_2',
+      'missing',
+      'prod_cf_1',
+      'prod_tea_2',
+    ]);
+    expect(resolved.map((row) => row.id)).toEqual(['prod_tea_2', 'prod_cf_1']);
     expect(resolveSectionItems(items, undefined)).toEqual([]);
   });
 
   it('groups items by category position then item position when viewing all categories', () => {
-    const all = sortMenuItems(items, categories, null);
-    expect(all.map((row) => `${row.menu_category_id}:${row.id}`)).toEqual([
-      'cat_coffee:mi_cf_1',
-      'cat_coffee:mi_cf_2',
-      'cat_tea:mi_tea_1',
-      'cat_tea:mi_tea_2',
-      'cat_tea:mi_cf_1',
+    const all = sortItems(items, categories, null);
+    expect(all.map((row) => `${row.category_ids[0]}:${row.id}`)).toEqual([
+      'cat_coffee:prod_cf_1',
+      'cat_coffee:prod_cf_2',
+      'cat_tea:prod_tea_1',
+      'cat_tea:prod_tea_2',
+      'cat_tea:prod_cf_1',
     ]);
 
-    const teaOnly = sortMenuItems(items, categories, 'cat_tea');
-    expect(teaOnly.map((row) => row.id)).toEqual(['mi_tea_1', 'mi_tea_2', 'mi_cf_1']);
+    const teaOnly = sortItems(items, categories, 'cat_tea');
+    expect(teaOnly.map((row) => row.id)).toEqual(['prod_tea_1', 'prod_tea_2', 'prod_cf_1']);
+  });
+
+  it('lists a counter product under each of its categories once, one without a category under All only', () => {
+    const counter: GuestItem[] = [
+      makeItem({ id: 'prod_soda', name: 'Soda', category_ids: [], position: 0 }),
+      makeItem({
+        id: 'prod_latte',
+        name: 'Latte',
+        category_ids: ['cat_coffee', 'cat_tea'],
+        position: 1,
+      }),
+      makeItem({ id: 'prod_peach', name: 'Trà đào', category_ids: ['cat_tea'], position: 2 }),
+    ];
+    expect(sortItems(counter, categories, null).map((row) => row.id)).toEqual([
+      'prod_latte',
+      'prod_peach',
+      'prod_soda',
+    ]);
+    expect(sortItems(counter, categories, 'cat_tea').map((row) => row.id)).toEqual([
+      'prod_latte',
+      'prod_peach',
+    ]);
+    expect(sortItems(counter, categories, 'cat_coffee').map((row) => row.id)).toEqual([
+      'prod_latte',
+    ]);
   });
 
   it('picks the lowest variant price', () => {
     const item = makeItem({
-      id: 'mi_multi',
+      id: 'prod_multi',
       name: 'Trà sữa',
       variants: [
         { id: 'v_l', name: 'L', price: '45000.0', price_label: null },

@@ -1,4 +1,4 @@
-import type { GuestMenu, MenuItem, ModifierGroup } from './types';
+import type { GuestItem, GuestMenu, ModifierGroup } from './types';
 
 // The guest's picks in one item sheet: option id -> quantity. The same rules
 // as the counter's menu (min / max per group, summed quantities where a group
@@ -10,7 +10,7 @@ export const MAX_OPTION_QUANTITY = 10;
 
 export type GroupProblem = 'min' | 'max' | null;
 
-export function itemGroups(menu: GuestMenu, item: MenuItem): ModifierGroup[] {
+export function itemGroups(menu: GuestMenu, item: GuestItem): ModifierGroup[] {
   const byId = new Map(menu.modifier_groups.map((group) => [group.id, group]));
   return item.modifier_group_ids.flatMap((id) => {
     const group = byId.get(id);
