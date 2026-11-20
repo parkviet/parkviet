@@ -3,7 +3,8 @@
 require 'spree/api/testing_support/v3/base'
 
 # First-run setup: one idempotent command creates the store profile, the
-# first branch with its profile's modules, defaults and sample units, a
+# `pos` sales channel, the first branch with its profile's modules, defaults
+# and sample units, a
 # register, a full membership for the person setting up and only the risky
 # features they ticked. Branch rows here come from the workflow alone, and
 # features start at the product default (off).
@@ -180,6 +181,56 @@ RSpec.describe 'POS onboarding', type: :request, pos_modules: :default, pos_feat
     create(:pos_branch, store: store)
     expect(reason_of(setup!(owner, body))).to eq('already_onboarded')
     expect(Spree::Pos::StoreProfile.where(store: store)).to be_empty
+  end
+
+  describe 'the pos sales channel', pos_channel: :manual do
+    it 'creates the channel for the store being set up, once, and leaves other stores alone' do
+      other = create(:store)
+      owner = staff_with(%w[write_pos_topology])
+      key = SecureRandom.uuid
+      expect(store.channels.where(code: Spree::Pos::SalesChannel::CODE)).to be_empty
+
+      setup!(owner, body, key: key)
+      expect(response).to have_http_status(:created)
+
+      channel = store.channels.find_by!(code: Spree::Pos::SalesChannel::CODE)
+      expect(channel).to have_attributes(name: Spree::Pos::SalesChannel::NAME, active: true, default: false)
+      audit = Spree::Pos::AuditEntry.find_by!(store: store, action: 'sales_channel.create')
+      expect(audit).to have_attributes(subject_type: channel.class.name, subject_id: channel.id, actor_id: owner.id)
+      expect(other.channels.where(code: Spree::Pos::SalesChannel::CODE)).to be_empty
+
+      first_body = response.parsed_body
+      setup!(owner, body, key: key)
+      expect(response.parsed_body).to eq(first_body)
+      expect(store.channels.where(code: Spree::Pos::SalesChannel::CODE).count).to eq(1)
+      expect(Spree::Pos::AuditEntry.where(store: store, action: 'sales_channel.create').count).to eq(1)
+
+      get '/api/v3/admin/pos/context', headers: { 'Authorization' => "Bearer #{token_for(owner)}" }
+      expect(response.parsed_body['sales_channel']).to include('id' => channel.prefixed_id, 'code' => 'pos', 'status' => 'active')
+    end
+
+    it 'keeps an existing channel, active or switched off, exactly as it is' do
+      existing = create(:channel, store: store, code: 'pos', name: 'Tại quầy', active: false)
+      setup!(staff_with(%w[write_pos_topology]), body)
+      expect(response).to have_http_status(:created)
+
+      expect(store.channels.where(code: Spree::Pos::SalesChannel::CODE).pluck(:id)).to eq([existing.id])
+      expect(existing.reload).to have_attributes(name: 'Tại quầy', active: false)
+      expect(Spree::Pos::AuditEntry.where(store: store, action: 'sales_channel.create')).to be_empty
+    end
+
+    it 'rolls the channel back when a later setup step fails' do
+      owner = staff_with(%w[write_pos_topology])
+      # Same rollback trigger as above: the register code is already taken.
+      Spree::Pos::Register.create!(store: store, branch: create(:pos_branch, store: store, status: 'disabled'), name: 'X', code: 'taken',
+                                   status: 'active')
+      expect(store.channels.where(code: Spree::Pos::SalesChannel::CODE)).to be_empty
+
+      setup!(owner, body(register: { name: 'Quầy 1', code: 'taken' }))
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(store.channels.where(code: Spree::Pos::SalesChannel::CODE)).to be_empty
+      expect(Spree::Pos::AuditEntry.where(store: store, action: 'sales_channel.create')).to be_empty
+    end
   end
 
   describe 'the F&B shop setup step' do

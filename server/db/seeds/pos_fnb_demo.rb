@@ -68,10 +68,7 @@ else
 
     # The selling surface and product type the dashboard would set up on the
     # first save of a product, found by the same rules when they exist.
-    channel = store.channels.find_or_create_by!(code: Spree::Pos::SalesChannel::CODE) do |row|
-      row.name = 'Point of Sale'
-      row.active = true
-    end
+    channel = Spree::Pos::SalesChannel.ensure!(store)
     puts 'POS F&B demo: the pos sales channel is switched off; switch it on to sell the menu.' unless channel.active?
     prepared_name = Spree::Pos::ProductKinds::NAMES['prepared']
     prepared = Spree::ProductType.where(store_id: store.id).to_a.find { |type| Spree::Pos::ProductKinds.kind_of(type.name) == 'prepared' } ||

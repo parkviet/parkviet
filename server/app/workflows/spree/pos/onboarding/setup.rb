@@ -4,7 +4,8 @@ module Spree
   module Pos
     module Onboarding
       # First-run POS setup of a store, in one idempotent command: the store
-      # profile, the first branch (Branches::Create, so
+      # profile, the `pos` sales channel the counter sells on (created only
+      # when the store has none yet), the first branch (Branches::Create, so
       # the profile's modules, defaults and sample units), optionally a register and a
       # membership with every capability for the person setting up, and the
       # risky features they ticked themselves (D6: a profile never turns one
@@ -57,6 +58,7 @@ module Spree
             tables = modules.include?(BusinessProfiles::TABLES_MODULE)
             raise Conflict.new('Table orders need a register to be booked on.', reason: REGISTER_MISSING) if tables && register_params.nil?
 
+            ensure_sales_channel!(store, actor)
             store_profile = StoreProfile.create!(store: store, profile_key: chosen.first, profile_keys: chosen,
                                                  profile_version: BusinessProfiles.version,
                                                  interests: interests!(payload['interests']),
@@ -228,6 +230,15 @@ module Spree
                                reason: 'interest_invalid', details: { profile: key })
           end
           keys
+        end
+
+        # The channel the counter sells on (SalesChannel). One that is already
+        # there, switched off included, is the store's own and stays as it is.
+        def self.ensure_sales_channel!(store, actor)
+          return if store.channels.exists?(code: SalesChannel::CODE)
+
+          channel = SalesChannel.ensure!(store)
+          AuditEntry.record!(store: store, actor: actor, action: 'sales_channel.create', subject: channel)
         end
 
         # The same record and audit as POST /registers.
