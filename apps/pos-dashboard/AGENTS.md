@@ -263,6 +263,33 @@ route needs `canManageRecipes`; the nav item also needs the selected branch to
 run `fnb.recipes`. A recipe saves while any active branch runs the module, and
 ingredients are taken from stock only at branches that run it.
 
+## Kitchen ("Bếp", `/kitchen`)
+
+`pages/kitchen-board.tsx` (parts in `components/kitchen/`, pure rules in
+`lib/kitchen-board.ts`, reads and writes in `hooks/use-kitchen-board.ts` and
+`hooks/use-kitchen-void-requests.ts`) works the kitchen of the selected branch
+from the browser. It sits beside the groups in the sidebar, shown while the
+branch runs `fnb.kitchen` and the reader may operate it: administrators,
+`pos.kitchen.operate` or `pos.kitchen.manage`. The route guard checks the right
+only, so a branch without the module opens a note explaining how to enable it.
+
+- The board reads `GET /pos/kitchen/board?branch_id&station_ids&priority` and
+  is read again every 5 seconds (no Action Cable here). Dish commands are
+  `POST /pos/kitchen/items/:id/{start,ready,serve,recall,priority}`, plus
+  `tickets/:id/{bump,priority}` and `all_day/bump`; every outcome, a refused
+  409 included, reads the board again. Columns, urgent-first order, search and
+  lateness are pure functions in `lib/kitchen-board.ts`.
+- Station, "Ưu tiên", search, the voided switch, the view and the tab live in
+  the address (`schemas/kitchen-search.ts`); `branch` and `register` belong to
+  the branch picker. Without `?branch=` the picker falls back to the branch
+  flagged `is_default`.
+- The Yêu cầu huỷ tab lists `GET /pos/approval_requests` filtered by
+  `action[]=kitchen.void_sent` and decides with `POST .../grant|decline`.
+- Stations, routing, thresholds and void reasons are not set here: the
+  "Cài đặt bếp" button opens the branch's Kitchen tab. Priority is set by staff
+  only; the counter flags dishes and a recalled dish turns urgent by itself.
+- `e2e/kitchen.spec.ts` covers all of it with route mocks.
+
 ## Menu ("Thực đơn")
 
 The menu screen (`pages/menu.tsx`, reads and writes in `hooks/use-menu-admin.ts`)
