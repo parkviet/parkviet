@@ -61,6 +61,7 @@ type TopologyRow = TopologyDraft & {
   id: string
   status: string
   branch_id?: string
+  is_default?: boolean
   staff_id?: string
   staff?: { id: string; email: string; full_name: string | null }
   custom_capabilities?: string[]
@@ -308,7 +309,12 @@ export function TopologyPage({
             label: t('adminName'),
             sortable: true,
             default: true,
-            render: (row) => nameCell(row, row.name ?? '', row.code),
+            render: (row) =>
+              nameCell(
+                row,
+                row.name ?? '',
+                [row.code, row.is_default ? t('branchDefault') : null].filter(Boolean).join(' · '),
+              ),
           },
           {
             key: 'stock_location_id',

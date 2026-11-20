@@ -25,6 +25,7 @@ import { Route as AuthenticatedStoreIdEinvoicesRouteImport } from './routes/_aut
 import { Route as AuthenticatedStoreIdFeaturesRouteImport } from './routes/_authenticated/$storeId/features'
 import { Route as AuthenticatedStoreIdFundsRouteImport } from './routes/_authenticated/$storeId/funds'
 import { Route as AuthenticatedStoreIdInventoryRouteImport } from './routes/_authenticated/$storeId/inventory'
+import { Route as AuthenticatedStoreIdKitchenRouteImport } from './routes/_authenticated/$storeId/kitchen'
 import { Route as AuthenticatedStoreIdLabelFormatsRouteImport } from './routes/_authenticated/$storeId/label-formats'
 import { Route as AuthenticatedStoreIdMealAccountsRouteImport } from './routes/_authenticated/$storeId/meal-accounts'
 import { Route as AuthenticatedStoreIdMealSponsorsRouteImport } from './routes/_authenticated/$storeId/meal-sponsors'
@@ -196,6 +197,12 @@ const AuthenticatedStoreIdInventoryRoute =
   AuthenticatedStoreIdInventoryRouteImport.update({
     id: '/inventory',
     path: '/inventory',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdKitchenRoute =
+  AuthenticatedStoreIdKitchenRouteImport.update({
+    id: '/kitchen',
+    path: '/kitchen',
     getParentRoute: () => AuthenticatedStoreIdRoute,
   } as any)
 const AuthenticatedStoreIdLabelFormatsRoute =
@@ -706,6 +713,7 @@ export interface FileRoutesByFullPath {
   '/$storeId/features': typeof AuthenticatedStoreIdFeaturesRoute
   '/$storeId/funds': typeof AuthenticatedStoreIdFundsRouteWithChildren
   '/$storeId/inventory': typeof AuthenticatedStoreIdInventoryRouteWithChildren
+  '/$storeId/kitchen': typeof AuthenticatedStoreIdKitchenRoute
   '/$storeId/label-formats': typeof AuthenticatedStoreIdLabelFormatsRoute
   '/$storeId/meal-accounts': typeof AuthenticatedStoreIdMealAccountsRoute
   '/$storeId/meal-sponsors': typeof AuthenticatedStoreIdMealSponsorsRoute
@@ -801,6 +809,7 @@ export interface FileRoutesByTo {
   '/$storeId/devices': typeof AuthenticatedStoreIdDevicesRoute
   '/$storeId/einvoices': typeof AuthenticatedStoreIdEinvoicesRoute
   '/$storeId/features': typeof AuthenticatedStoreIdFeaturesRoute
+  '/$storeId/kitchen': typeof AuthenticatedStoreIdKitchenRoute
   '/$storeId/label-formats': typeof AuthenticatedStoreIdLabelFormatsRoute
   '/$storeId/meal-accounts': typeof AuthenticatedStoreIdMealAccountsRoute
   '/$storeId/meal-sponsors': typeof AuthenticatedStoreIdMealSponsorsRoute
@@ -895,6 +904,7 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/features': typeof AuthenticatedStoreIdFeaturesRoute
   '/_authenticated/$storeId/funds': typeof AuthenticatedStoreIdFundsRouteWithChildren
   '/_authenticated/$storeId/inventory': typeof AuthenticatedStoreIdInventoryRouteWithChildren
+  '/_authenticated/$storeId/kitchen': typeof AuthenticatedStoreIdKitchenRoute
   '/_authenticated/$storeId/label-formats': typeof AuthenticatedStoreIdLabelFormatsRoute
   '/_authenticated/$storeId/meal-accounts': typeof AuthenticatedStoreIdMealAccountsRoute
   '/_authenticated/$storeId/meal-sponsors': typeof AuthenticatedStoreIdMealSponsorsRoute
@@ -996,6 +1006,7 @@ export interface FileRouteTypes {
     | '/$storeId/features'
     | '/$storeId/funds'
     | '/$storeId/inventory'
+    | '/$storeId/kitchen'
     | '/$storeId/label-formats'
     | '/$storeId/meal-accounts'
     | '/$storeId/meal-sponsors'
@@ -1091,6 +1102,7 @@ export interface FileRouteTypes {
     | '/$storeId/devices'
     | '/$storeId/einvoices'
     | '/$storeId/features'
+    | '/$storeId/kitchen'
     | '/$storeId/label-formats'
     | '/$storeId/meal-accounts'
     | '/$storeId/meal-sponsors'
@@ -1184,6 +1196,7 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/features'
     | '/_authenticated/$storeId/funds'
     | '/_authenticated/$storeId/inventory'
+    | '/_authenticated/$storeId/kitchen'
     | '/_authenticated/$storeId/label-formats'
     | '/_authenticated/$storeId/meal-accounts'
     | '/_authenticated/$storeId/meal-sponsors'
@@ -1387,6 +1400,13 @@ declare module '@tanstack/react-router' {
       path: '/inventory'
       fullPath: '/$storeId/inventory'
       preLoaderRoute: typeof AuthenticatedStoreIdInventoryRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/kitchen': {
+      id: '/_authenticated/$storeId/kitchen'
+      path: '/kitchen'
+      fullPath: '/$storeId/kitchen'
+      preLoaderRoute: typeof AuthenticatedStoreIdKitchenRouteImport
       parentRoute: typeof AuthenticatedStoreIdRoute
     }
     '/_authenticated/$storeId/label-formats': {
@@ -2246,6 +2266,7 @@ interface AuthenticatedStoreIdRouteChildren {
   AuthenticatedStoreIdFeaturesRoute: typeof AuthenticatedStoreIdFeaturesRoute
   AuthenticatedStoreIdFundsRoute: typeof AuthenticatedStoreIdFundsRouteWithChildren
   AuthenticatedStoreIdInventoryRoute: typeof AuthenticatedStoreIdInventoryRouteWithChildren
+  AuthenticatedStoreIdKitchenRoute: typeof AuthenticatedStoreIdKitchenRoute
   AuthenticatedStoreIdLabelFormatsRoute: typeof AuthenticatedStoreIdLabelFormatsRoute
   AuthenticatedStoreIdMealAccountsRoute: typeof AuthenticatedStoreIdMealAccountsRoute
   AuthenticatedStoreIdMealSponsorsRoute: typeof AuthenticatedStoreIdMealSponsorsRoute
@@ -2296,6 +2317,7 @@ const AuthenticatedStoreIdRouteChildren: AuthenticatedStoreIdRouteChildren = {
   AuthenticatedStoreIdFundsRoute: AuthenticatedStoreIdFundsRouteWithChildren,
   AuthenticatedStoreIdInventoryRoute:
     AuthenticatedStoreIdInventoryRouteWithChildren,
+  AuthenticatedStoreIdKitchenRoute: AuthenticatedStoreIdKitchenRoute,
   AuthenticatedStoreIdLabelFormatsRoute: AuthenticatedStoreIdLabelFormatsRoute,
   AuthenticatedStoreIdMealAccountsRoute: AuthenticatedStoreIdMealAccountsRoute,
   AuthenticatedStoreIdMealSponsorsRoute: AuthenticatedStoreIdMealSponsorsRoute,

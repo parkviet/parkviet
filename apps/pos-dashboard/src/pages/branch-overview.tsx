@@ -1,9 +1,12 @@
-import { InfoIcon } from '@spree/dashboard-ui/icons'
-import type { ReactNode } from 'react'
+import { describeFailure } from '@parkviet/pos-shared/request-failure'
+import { Badge, Button } from '@spree/dashboard-ui'
+import { InfoIcon, StarIcon } from '@spree/dashboard-ui/icons'
+import { type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useBranchScope } from '../components/branch-detail'
 import { BranchInfoCard } from '../components/branch-info-card'
-import { ModelCard } from '../components/setup/model-ui'
+import { ModelCard, ModelNotice } from '../components/setup/model-ui'
+import { useStoreWrite } from '../hooks/use-master-data'
 import { usePosSession } from '../hooks/use-pos-session'
 import { useLocationOptions } from '../hooks/use-topology'
 import { BranchBusinessModel } from './business-model'
@@ -16,6 +19,23 @@ export function BranchOverviewTab() {
   const locations = useLocationOptions(access.read)
   const location = (id: string | null | undefined) =>
     id ? (locations.data?.data.find((row) => row.id === id)?.name ?? '—') : null
+  const write = useStoreWrite()
+  const [notice, setNotice] = useState<{ text: string; failed: boolean } | null>(null)
+  const disabled = branch.status !== 'active'
+  async function makeDefault() {
+    if (write.isPending) return
+    setNotice(null)
+    try {
+      await write.mutateAsync({
+        method: 'PATCH',
+        path: `/pos/branches/${branch.id}`,
+        body: { is_default: true },
+      })
+      setNotice({ text: t('branchDefaultSet', { name: branch.name }), failed: false })
+    } catch (failure) {
+      setNotice({ text: describeFailure(failure, t), failed: true })
+    }
+  }
   const rows: [string, ReactNode][] = [
     ['code', branch.code],
     ['timezone', branch.timezone],
@@ -46,6 +66,31 @@ export function BranchOverviewTab() {
             </div>
           ))}
         </dl>
+      </ModelCard>
+      <ModelCard title={t('branchDefaultTitle')} id="branch-default" icon={<StarIcon />}>
+        <p className="text-sm text-muted-foreground">{t('branchDefaultHint')}</p>
+        <ModelNotice notice={notice} />
+        {branch.is_default ? (
+          <Badge variant="success" className="w-fit">
+            {t('branchIsDefault')}
+          </Badge>
+        ) : (
+          access.write && (
+            <div className="space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={disabled || write.isPending}
+                onClick={() => void makeDefault()}
+              >
+                {t('branchSetDefault')}
+              </Button>
+              {disabled && (
+                <p className="text-sm text-muted-foreground">{t('branchDefaultDisabled')}</p>
+              )}
+            </div>
+          )
+        )}
       </ModelCard>
       <BranchBusinessModel
         key={branch.id}

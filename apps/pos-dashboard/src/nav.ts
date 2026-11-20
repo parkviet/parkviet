@@ -3,6 +3,7 @@ import {
   Boxes,
   Bus,
   ChartColumn,
+  ChefHat,
   HandCoins,
   IdCard,
   LayoutDashboard,
@@ -170,7 +171,7 @@ const settings = [
   { key: 'system', labelKey: 'systemStatus.title', path: '/system', icon: Server },
 ] satisfies { key: PosPage; labelKey: string; path: string; icon: typeof Settings }[]
 settingsNav.addGroup({ key: 'pos', labelKey: 'posDashboard.title' })
-const keys = ['home', ...groups.map((group) => group.key), 'pos-settings']
+const keys = ['home', 'kitchen', ...groups.map((group) => group.key), 'pos-settings']
 
 // 6.0.3 nav predicates receive CanCan permissions, not permissionKeys or POS
 // context, and children have no `if` at all. Re-register from a per-render
@@ -189,6 +190,15 @@ export function PosNavigation() {
       icon: LayoutDashboard,
       position: 100,
     })
+    // The kitchen screen is one page, so it sits beside the groups, after Sales.
+    if (visibleNav('kitchen', access))
+      nav.add({
+        key: 'kitchen',
+        labelKey: 'kitchenBoard.nav',
+        path: '/kitchen',
+        icon: ChefHat,
+        position: 250,
+      })
     groups.forEach((group, index) => {
       const children = group.children
         .filter((child) => visibleNav(child.key, access))

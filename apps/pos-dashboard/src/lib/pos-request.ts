@@ -6,7 +6,8 @@ import { adminClient } from '@spree/dashboard-core'
 // Reuse its JWT refresh/401 handler, store header, structured SpreeError and retry policy.
 export type PosRequestOptions = {
   body?: unknown
-  params?: Record<string, string | undefined>
+  // A list value is sent once per item (`status[]=a&status[]=b` for the key `status[]`).
+  params?: Record<string, string | string[] | undefined>
   idempotencyKey?: string
   headers?: Record<string, string>
 }

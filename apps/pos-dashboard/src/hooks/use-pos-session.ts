@@ -26,7 +26,7 @@ export function useCreatePosSession() {
   const listing = usePosContext(NO_SELECTION, { enabled: fallback })
   const source = fallback ? listing : guess
   const branches = source.data?.branches
-  const { selection, setSelection } = useBranchSelection(branches, hintBranch)
+  const { selection, setSelection } = useBranchSelection(branches)
   const scoped = usePosContext(selection, { enabled: branches !== undefined })
   const context = branches === undefined ? source : scoped
   const loadedBranch = scoped.data?.selection.branch_id

@@ -10,6 +10,7 @@ import {
   canManageMenu,
   canManageRatePlans,
   canManageResources,
+  canOperateKitchen,
   canReadCategories,
   canReadGoods,
   canSendReminders,
@@ -411,6 +412,30 @@ describe('POS permission gates', () => {
     expect(visibleNav('branch-emenu', staff(['pos.shift.open'], true))).toBe(false)
     expect(routeAllowed('branch-emenu', staff(['pos.shift.open'], true))).toBe(false)
     expect(tabs(staff(['pos.shift.open'], true))).not.toContain('emenu')
+  })
+})
+
+describe('kitchen screen gates', () => {
+  const staff = (capabilities: string[], kitchen: boolean, permissionKeys: string[] = []) => ({
+    permissionKeys,
+    context: {
+      selection: { branch_id: 'b', register_id: null },
+      capabilities,
+      modules: { 'fnb.kitchen': kitchen },
+    } as unknown as PosContext,
+  })
+  it('opens for every kitchen operator and manager, and for store writers', () => {
+    expect(canOperateKitchen(staff(['pos.kitchen.operate'], true))).toBe(true)
+    expect(canOperateKitchen(staff(['pos.kitchen.manage'], true))).toBe(true)
+    expect(canOperateKitchen(staff([], true, ['write_pos_topology']))).toBe(true)
+    expect(canOperateKitchen(staff([], true, ['read_pos_topology']))).toBe(false)
+    expect(canOperateKitchen(staff(['pos.shift.open'], true))).toBe(false)
+  })
+  it('hides the entry while the branch runs no kitchen, but keeps the URL for operators', () => {
+    expect(visibleNav('kitchen', staff(['pos.kitchen.operate'], true))).toBe(true)
+    expect(visibleNav('kitchen', staff(['pos.kitchen.operate'], false))).toBe(false)
+    expect(routeAllowed('kitchen', staff(['pos.kitchen.operate'], false))).toBe(true)
+    expect(routeAllowed('kitchen', staff(['pos.shift.open'], true))).toBe(false)
   })
 })
 

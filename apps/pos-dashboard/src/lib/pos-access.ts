@@ -9,6 +9,7 @@ import type { PosContext } from '@parkviet/pos-shared/types/pos-context'
 
 export type PosAccess = { permissionKeys: readonly string[]; context?: PosContext }
 export type PosPage =
+  | 'kitchen'
   | 'orders'
   | 'deliveries'
   | 'funds'
@@ -91,6 +92,13 @@ export const canManagePrinters = (access: PosAccess) => hasCapability(access, 'p
 // A branch's kitchen setup: stations, routes and the send trigger.
 export const canManageKitchen = (access: PosAccess) =>
   canAdminister(access, true) || hasCapability(access, 'pos.kitchen.manage')
+// Working the kitchen screen: everyone who may run the kitchen at the selected
+// branch, whatever their role (the API checks the same rights).
+export const canOperateKitchen = (access: PosAccess) =>
+  canAdminister(access, true) ||
+  hasCapability(access, 'pos.kitchen.operate') ||
+  hasCapability(access, 'pos.kitchen.manage')
+export const runsKitchen = (access: PosAccess) => access.context?.modules?.['fnb.kitchen'] === true
 // A branch's floor plan: its areas and tables. Offered while the branch runs
 // `resources`; its table settings belong to the branch's managers.
 export const canManageResources = (access: PosAccess) =>
@@ -213,6 +221,7 @@ export function visibleNav(page: PosPage, access: PosAccess) {
   // the selected branch runs those modules.
   if (page === 'goods-addons') return runsMenu(access) && canManageMenu(access)
   if (page === 'goods-recipes') return runsRecipes(access) && canManageRecipes(access)
+  if (page === 'kitchen') return runsKitchen(access) && canOperateKitchen(access)
   if (page === 'vehicle-commission')
     return runsVehicleCommission(access) && canManageVehicleCommission(access)
   if (page === 'meal-accounts' || page === 'meal-sponsors')
@@ -310,6 +319,8 @@ export function routeAllowed(page: PosPage, access: PosAccess) {
   if (page === 'inventory') return canOpenStock(access)
   // Store administrators prepare the menu before a branch turns it on.
   if (page === 'menu') return canSetSoldOut(access)
+  // The page explains how to turn the kitchen on while the branch runs none.
+  if (page === 'kitchen') return canOperateKitchen(access)
   // Store administrators prepare add-ons and recipes before a branch runs them.
   if (page === 'goods-addons') return canManageMenu(access)
   if (page === 'goods-recipes') return canManageRecipes(access)

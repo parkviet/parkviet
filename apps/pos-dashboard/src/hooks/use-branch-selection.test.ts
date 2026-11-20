@@ -17,9 +17,13 @@ describe('URL branch selection', () => {
     })
     expect(resolveBranchSelection({}, [])).toEqual({ branchId: null, registerId: null })
   })
-  it('falls back to the last used branch before the first one', () => {
-    expect(resolveBranchSelection({}, branches, 'b')).toEqual({ branchId: 'b', registerId: null })
-    expect(resolveBranchSelection({ branch: 'a' }, branches, 'b').branchId).toBe('a')
-    expect(resolveBranchSelection({}, branches, 'gone').branchId).toBe('a')
+  it('falls back to the default branch before the first one', () => {
+    const withDefault = [{ id: 'a' }, { id: 'b', is_default: true }] as PosBranch[]
+    expect(resolveBranchSelection({}, withDefault)).toEqual({ branchId: 'b', registerId: null })
+    expect(resolveBranchSelection({ branch: 'a' }, withDefault).branchId).toBe('a')
+    expect(resolveBranchSelection({ branch: 'gone' }, withDefault).branchId).toBe('b')
+  })
+  it('takes the first visible branch when the default is not visible', () => {
+    expect(resolveBranchSelection({}, branches).branchId).toBe('a')
   })
 })

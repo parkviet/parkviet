@@ -37,6 +37,8 @@ export type PosBranch = {
   stock_location_id: string;
   receiving_stock_location_id: string | null;
   receiving_note: string | null;
+  // The branch a page opens when the URL names none; one per store.
+  is_default?: boolean;
   return_window_days?: number | null;
   // How lot-tracked lines pick their lot; FEFO unless the cashier may choose.
   lot_selection?: LotSelection;
