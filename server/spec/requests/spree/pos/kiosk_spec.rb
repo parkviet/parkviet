@@ -18,8 +18,8 @@ RSpec.describe 'POS kiosk API', type: :request do
   let!(:paired) { pair_kiosk!(register, manager) }
   let(:device) { paired.first }
   let(:token) { paired.last }
-  let(:item) { menu_item!(store, branch, name: 'Cà phê sữa', price: 30_000) }
-  let(:variant) { item.product.default_variant }
+  let(:item) { prepared_product!(store, branch, name: 'Cà phê sữa', price: 30_000) }
+  let(:variant) { item.default_variant }
 
   before do
     allow(Spree::Store).to receive(:default).and_return(store)

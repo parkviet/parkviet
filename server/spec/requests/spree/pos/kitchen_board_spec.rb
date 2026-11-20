@@ -16,7 +16,7 @@ RSpec.describe 'POS kitchen board API', type: :request do
   let(:cashier) { credit_staff(store, branch, PosCreditHelpers::CASHIER) }
   let(:area) { area!(branch) }
   let(:soup) { menu_product!(store, branch, name: 'Phở bò', price: 50_000) }
-  let(:tea) { menu_item!(store, branch, name: 'Trà đá', price: 5_000) }
+  let(:tea) { prepared_product!(store, branch, name: 'Trà đá', price: 5_000) }
   let!(:pass) { kitchen_station!(branch, name: 'Ra món', kind: 'expo', position: 2) }
   let!(:kitchen) { kitchen_station!(branch, name: 'Bếp', default: true) }
   let!(:bar) { kitchen_station!(branch, name: 'Bar', kind: 'bar', position: 1) }
@@ -27,7 +27,7 @@ RSpec.describe 'POS kitchen board API', type: :request do
   before do
     allow(Spree::Store).to receive(:default).and_return(store)
     table_register!(branch, cashier)
-    station_route!(bar, product: tea.product)
+    station_route!(bar, product: tea)
     kitchen.update!(expo_station: pass)
   end
 

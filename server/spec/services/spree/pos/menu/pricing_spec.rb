@@ -11,7 +11,7 @@ RSpec.describe Spree::Pos::Menu::Pricing do
   let(:store) { menu_store }
   let(:branch) { menu_branch(store) }
   let(:zone) { ActiveSupport::TimeZone['Asia/Ho_Chi_Minh'] }
-  let(:item) { menu_item!(store, branch, name: 'Trà sữa', price: 30_000, sizes: { 'M' => 30_000, 'L' => 38_000 }) }
+  let(:item) { prepared_product!(store, branch, name: 'Trà sữa', price: 30_000, sizes: { 'M' => 30_000, 'L' => 38_000 }) }
   let!(:sugar) { modifier_group!(store, item, name: 'Đường', options: { '50%' => 0, '100%' => 0 }, min: 1, max: 1, defaults: ['100%']) }
   let!(:topping) do
     modifier_group!(store, item, name: 'Topping', options: { 'Trân châu' => 5_000, 'Thạch' => 4_000 }, max: 3, allow_quantity: true)
@@ -46,8 +46,21 @@ RSpec.describe Spree::Pos::Menu::Pricing do
     expect_conflict('modifier_max') { resolve(picks([option(sugar, '50%')], [option(topping, 'Thạch'), 0])) }
   end
 
+  it 'prices only prepared products of the store, and lists a combo with its contents' do
+    plain = prepared_product!(store, branch, name: 'Nước suối', price: 10_000, type: nil)
+    expect(described_class.menu_product(store, size(item))).to eq(item)
+    expect(described_class.menu_product(store, size(plain))).to be_nil
+    expect(described_class.menu_product(menu_store, size(item))).to be_nil
+    expect_conflict('modifier_unknown') { resolve(nil, variant: size(plain)) }
+
+    expect(resolve(nil).components).to eq([])
+    combo_of!(item, size(plain) => 2)
+    expect(resolve(nil).components.map { |row| [row.variant, row.quantity] }).to eq([[size(plain), 2]])
+    expect(resolve(nil).product).to eq(item)
+  end
+
   it 'refuses an option of another item or an inactive one' do
-    other = menu_item!(store, branch, name: 'Cà phê', price: 20_000)
+    other = prepared_product!(store, branch, name: 'Cà phê', price: 20_000)
     foreign = modifier_group!(store, other, name: 'Đá', options: { 'Ít đá' => 0 })
     expect_conflict('modifier_unknown') { resolve(picks([option(sugar, '50%')], [option(foreign, 'Ít đá')])) }
     option(topping, 'Thạch').update!(active: false)
@@ -69,7 +82,7 @@ RSpec.describe Spree::Pos::Menu::Pricing do
   describe 'time-of-day menus' do
     def schedule!(starts_at, ends_at, days: [], **item_attributes)
       schedule = Spree::Pos::MenuSchedule.create!(store: store, name: 'Giờ vàng', starts_at: starts_at, ends_at: ends_at, days_of_week: days)
-      schedule.menu_schedule_items.create!(menu_item: item, **item_attributes)
+      schedule.menu_schedule_items.create!(product: item, **item_attributes)
       schedule
     end
 
@@ -94,7 +107,7 @@ RSpec.describe Spree::Pos::Menu::Pricing do
 
     it 'refuses an item hidden while a window runs' do
       schedule!('06:00', '10:00', hidden: true)
-      expect_conflict('menu_item_hidden') { resolve(picks([option(sugar, '50%')]), now: zone.local(2026, 11, 11, 9, 0)) }
+      expect_conflict('product_hidden') { resolve(picks([option(sugar, '50%')]), now: zone.local(2026, 11, 11, 9, 0)) }
       expect(resolve(picks([option(sugar, '50%')]), now: zone.local(2026, 11, 11, 10, 0)).base_price).to eq(38_000)
     end
 

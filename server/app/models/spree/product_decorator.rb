@@ -33,6 +33,12 @@ module Spree
       def ransackable_scopes_skip_sanitize_args
         super | ProductDecorator::POS_SCOPES.map(&:to_sym)
       end
+
+      # The prefixed id of a product from its key, without loading it (the
+      # same encoding as Spree::Pos::Record.prefixed_for).
+      def pos_prefixed_for(id)
+        id && "#{_prefix_id_prefix}_#{Spree::PrefixedId::SQIDS.encode([id])}"
+      end
     end
 
     def self.prepended(base)

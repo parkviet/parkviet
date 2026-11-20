@@ -238,18 +238,12 @@ RSpec.describe 'POS onboarding', type: :request, pos_modules: :default, pos_feat
       expect(Spree::Pos::StoreProfile.find_by!(store: store).food_tax_category_id).to be_nil
     end
 
-    it 'gives new menu items the food tax default' do
+    it 'offers the food tax default to the product form' do
       owner = staff_with(%w[write_pos_topology write_pos_orders])
       setup!(owner, cafe)
-      # The product factory picks a category of its own; a new product
-      # starts on the store default.
-      product = create(:product, store: store, tax_category: Spree::TaxCategory.default(store))
-      post '/api/v3/admin/pos/menu_items', headers: { 'Authorization' => "Bearer #{token_for(owner)}", 'Idempotency-Key' => SecureRandom.uuid },
-                                           params: { product_id: product.prefixed_id, kind: 'single' }, as: :json
-      expect(response).to have_http_status(:created)
       food = Spree::Pos::StoreProfile.find_by!(store: store).food_tax_category
-      expect(product.reload.tax_category).to eq(food)
-      get '/api/v3/admin/pos/menu_items', headers: { 'Authorization' => "Bearer #{token_for(owner)}" }
+      get '/api/v3/admin/pos/products/settings', headers: { 'Authorization' => "Bearer #{token_for(owner)}" }
+      expect(response).to have_http_status(:ok), response.body
       expect(response.parsed_body.dig('meta', 'tax_defaults', 'food')).to eq(food.prefixed_id)
     end
 

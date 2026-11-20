@@ -22,13 +22,22 @@ module Spree
           end
         end
 
-        Result = Data.define(:menu_item, :base_price, :schedule, :options, :unit_price, :modifier_signature, :note, :components)
+        Result = Data.define(:product, :base_price, :schedule, :options, :unit_price, :modifier_signature, :note, :components)
 
         module_function
 
-        def resolve(branch:, variant:, selections:, now:, currency:, order: nil, note: nil, menu_item: nil, base_price: nil,
+        # The product a variant of the store sells as on the menu, or nil:
+        # only "Sản phẩm chế biến" products are menu products.
+        def menu_product(store, variant)
+          product = variant&.product
+          return if product.nil? || product.store_id != store.id
+
+          product if product.pos_prepared?
+        end
+
+        def resolve(branch:, variant:, selections:, now:, currency:, order: nil, note: nil, product: nil, base_price: nil,
                     allow_hidden: false)
-          item = menu_item || MenuItem.for_variant(branch.store, variant)
+          item = product || menu_product(branch.store, variant)
           raise Conflict.new('This item is not on the menu.', reason: 'modifier_unknown') if item.nil?
 
           schedule = nil
@@ -39,9 +48,9 @@ module Spree
           options = picked_options(item, selections)
           clean_note = normalize_note(note)
           unit_price = base_price + options.sum(BigDecimal('0'), &:amount)
-          Result.new(menu_item: item, base_price: base_price, schedule: schedule, options: options, unit_price: unit_price,
+          Result.new(product: item, base_price: base_price, schedule: schedule, options: options, unit_price: unit_price,
                      modifier_signature: signature(options, clean_note), note: clean_note,
-                     components: item.combo? ? item.combo_components.includes(variant: :product).to_a : [])
+                     components: item.pos_combo_components.includes(variant: :product).to_a)
         end
 
         # The schedules running at a branch now. Shared with the menu read.
@@ -51,20 +60,20 @@ module Spree
           end
         end
 
-        # [price or nil, schedule] for the item's size from the running
+        # [price or nil, schedule] for the product's size from the running
         # schedules: a row for the size beats a row for every size. Raises
-        # when a running schedule hides the item.
+        # when a running schedule hides the product.
         def scheduled_price(branch, item, variant, now, schedules: nil, allow_hidden: false)
           rows = (schedules || running_schedules(branch, now)).flat_map do |schedule|
-            schedule.menu_schedule_items.select { |row| row.menu_item_id == item.id && (row.variant_id.nil? || row.variant_id == variant.id) }.
+            schedule.menu_schedule_items.select { |row| row.product_id == item.id && (row.variant_id.nil? || row.variant_id == variant.id) }.
               map { |row| [schedule, row] }
           end
           if rows.any? { |_, row| row.hidden }
             # The counter drops a hidden item. The electronic menu may still
             # sell it, at its list price, without changing the counter's read.
             unless allow_hidden
-              raise Conflict.new('This item is not on the menu right now.', reason: 'menu_item_hidden',
-                                                                            details: { menu_item_id: item.prefixed_id })
+              raise Conflict.new('This item is not on the menu right now.', reason: 'product_hidden',
+                                                                            details: { product_id: item.prefixed_id })
             end
 
             rows = rows.reject { |_, row| row.hidden }
@@ -83,7 +92,7 @@ module Spree
 
         def picked_options(item, selections)
           offered = {}
-          groups = item.menu_item_modifier_groups.includes(modifier_group: :modifier_options).map(&:modifier_group)
+          groups = item.pos_product_modifier_groups.includes(modifier_group: :modifier_options).map(&:modifier_group)
           groups.each do |group|
             group.modifier_options.select(&:active).each { |option| offered[option.prefixed_id] = [option, group] }
           end

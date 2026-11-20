@@ -86,21 +86,20 @@ module Spree
           render json: { data: { workspace_id: workspace.prefixed_id, tickets: tickets.map { |ticket| ticket.reload.to_pos } } }
         end
 
-        # The menu items this station makes, and whether each is sold out
-        # today, for the screen's "sold out" list.
-        def menu_items
+        # The prepared products the branch sells that this station makes, and
+        # whether each is sold out today, for the screen's "sold out" list.
+        def products
           station = station_param
           branch = @device.branch
           router = Kitchen::Router.new(branch)
           routed = StationRoute.where(branch_id: branch.id, kitchen_station_id: station&.id).pluck(:product_id, :kitchen_category)
-          sold_out = MenuAvailability.sold_out_ids(branch, BusinessDay.for(branch, Workspace.business_now))
-          items = MenuItem.for_store(branch.store).active.joins(:product).
-                  where(product_id: BranchProduct.where(branch_id: branch.id).select(:product_id)).
-                  includes(:product).order(:position, :id).to_a
-          items.select! { |item| makes?(router, station, routed, item) } if station
+          sold_out = MenuAvailability.sold_out_ids(branch, BusinessDay.for(branch, Workspace.business_now)).to_set
+          rows = Menu::Sellable.prepared(branch).includes(:pos_setting).order(:name, :id).to_a.
+                 map { |product| [product, product.pos_setting&.kitchen_category] }
+          rows.select! { |product, category| makes?(router, station, routed, product.id, category) } if station
           render json: {
-            data: items.map do |item|
-              { id: item.prefixed_id, name: item.product.name, kitchen_category: item.kitchen_category, sold_out: sold_out.include?(item.id) }
+            data: rows.map do |product, category|
+              { product_id: product.prefixed_id, name: product.name, kitchen_category: category, sold_out: sold_out.include?(product.id) }
             end
           }
         end
@@ -125,10 +124,10 @@ module Spree
         end
 
         # Sent here for some service mode: by its own route, or by default.
-        def makes?(router, station, routed, item)
-          return true if routed.any? { |product_id, category| product_id == item.product_id || (category && category == item.kitchen_category) }
+        def makes?(router, station, routed, product_id, kitchen_category)
+          return true if routed.any? { |routed_id, category| routed_id == product_id || (category && category == kitchen_category) }
 
-          router.station_for_product(item.product_id, item.kitchen_category, nil)&.id == station.id
+          router.station_for_product(product_id, kitchen_category, nil)&.id == station.id
         end
       end
     end

@@ -25,14 +25,14 @@ module Spree
             # The kitchen is already making it with these options.
             items.kitchen_sent!(workspace, sale_line, 0)
 
-            item = MenuItem.for_variant(workspace.store, sale_line.variant)
-            raise Conflict.new('This item is not on the menu.', reason: 'modifier_unknown') if item.nil?
+            product = Menu::Pricing.menu_product(workspace.store, sale_line.variant)
+            raise Conflict.new('This item is not on the menu.', reason: 'modifier_unknown') if product.nil?
 
             before = sale_line.line_modifiers.map { |row| { name: row.name, quantity: row.quantity } }
             base_price = sale_line.unit_price - sale_line.line_modifiers.sum(BigDecimal('0')) { |row| row.price_delta * row.quantity }
             pricing = Menu::Pricing.resolve(branch: workspace.branch, variant: sale_line.variant, selections: modifiers,
                                             now: Workspace.business_now, note: note, currency: workspace.order.currency,
-                                            order: workspace.order, menu_item: item, base_price: base_price)
+                                            order: workspace.order, product: product, base_price: base_price)
             variant_unit = items.send(:variant_unit_for_sale_line, workspace, sale_line)
             line_price = UnitNormalizer.unit_price_per_base(price: pricing.unit_price, variant_unit: variant_unit)
             sale_line.assign_attributes(unit_price: pricing.unit_price, line_price: line_price,

@@ -14,7 +14,7 @@ RSpec.describe 'POS menu availabilities API', type: :request do
 
   let(:store) { menu_store }
   let(:branch) { menu_branch(store) }
-  let(:item) { menu_item!(store, branch, name: 'Bánh flan', price: 15_000) }
+  let(:item) { prepared_product!(store, branch, name: 'Bánh flan', price: 15_000) }
   let(:zone) { ActiveSupport::TimeZone['Asia/Ho_Chi_Minh'] }
 
   before { allow(Spree::Store).to receive(:default).and_return(store) }
@@ -27,13 +27,13 @@ RSpec.describe 'POS menu availabilities API', type: :request do
   def sold_out(user, value, target: item)
     put '/api/v3/admin/pos/menu_availabilities',
         headers: { 'Authorization' => "Bearer #{token_for(user)}", 'Idempotency-Key' => SecureRandom.uuid },
-        params: { branch_id: branch.prefixed_id, menu_item_id: target.prefixed_id, sold_out: value }, as: :json
+        params: { branch_id: branch.prefixed_id, product_id: target.prefixed_id, sold_out: value }, as: :json
     response.parsed_body
   end
 
   def menu_row(user)
     get '/api/v3/admin/pos/menu', headers: { 'Authorization' => "Bearer #{token_for(user)}" }, params: { branch_id: branch.prefixed_id }
-    response.parsed_body.dig('data', 'items').find { |row| row['id'] == item.prefixed_id }
+    response.parsed_body.dig('data', 'items').find { |row| row['product_id'] == item.prefixed_id }
   end
 
   it 'marks an item sold out for the business day, refuses it at the counter and lapses the next day' do
@@ -45,11 +45,11 @@ RSpec.describe 'POS menu availabilities API', type: :request do
       expect_pos_schema!(response, 'MenuAvailability')
       expect(body['data']).to include('sold_out' => true, 'business_date' => '2026-11-11')
       event = broadcasts(Spree::Pos::Realtime.stream_name(branch)).map { |raw| JSON.parse(raw) }.find { |row| row['event'] == 'menu.sold_out' }
-      expect(event).to include('id' => item.prefixed_id, 'refs' => { 'menu_item_id' => item.prefixed_id })
+      expect(event).to include('id' => item.prefixed_id, 'refs' => { 'product_id' => item.prefixed_id })
       expect(Spree::Pos::AuditEntry.where(action: 'menu.sold_out').sole.metadata).to include('sold_out' => true)
 
       expect(menu_row(sale.cashier)['sold_out']).to be(true)
-      expect { add_menu(sale, size(item)) }.to raise_error(Spree::Pos::Conflict) { |error| expect(error.reason).to eq('menu_item_sold_out') }
+      expect { add_menu(sale, size(item)) }.to raise_error(Spree::Pos::Conflict) { |error| expect(error.reason).to eq('product_sold_out') }
 
       # The same mark again changes and announces nothing.
       sold_out(lead, true)

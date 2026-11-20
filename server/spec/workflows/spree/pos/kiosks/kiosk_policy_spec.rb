@@ -16,7 +16,7 @@ RSpec.describe 'POS kiosk service account', type: :request do
   let(:account) { kiosk_account(device) }
   let(:staff) { account.staff }
   let(:editor) { Spree::Pos::Kiosks::Policy.editor_id(device) }
-  let(:item) { menu_item!(store, branch, name: 'Trà đào', price: 40_000) }
+  let(:item) { prepared_product!(store, branch, name: 'Trà đào', price: 40_000) }
 
   before do
     kiosk_vietqr!(store)
@@ -29,7 +29,7 @@ RSpec.describe 'POS kiosk service account', type: :request do
   end
 
   def kiosk_order(payment)
-    kiosk_workspace(place_kiosk_order(device, kiosk_items(item.product.default_variant), payment: payment))
+    kiosk_workspace(place_kiosk_order(device, kiosk_items(item.default_variant), payment: payment))
   end
 
   def args(workspace)

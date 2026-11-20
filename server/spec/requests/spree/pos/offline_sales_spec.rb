@@ -17,8 +17,8 @@ RSpec.describe 'POS offline sales API', type: :request do
   let(:manager) { credit_staff(store, branch, PosCreditHelpers::MANAGER) }
   let(:register) { open_drawer(store, branch, cashier) }
   let(:shift) { Spree::Pos::Shift.find_by!(register_id: register.id, status: 'open') }
-  let(:item) { menu_item!(store, branch, name: 'Cà phê sữa', price: 30_000) }
-  let(:variant) { item.product.default_variant }
+  let(:item) { prepared_product!(store, branch, name: 'Cà phê sữa', price: 30_000) }
+  let(:variant) { item.default_variant }
 
   before { allow(Spree::Store).to receive(:default).and_return(store) }
 

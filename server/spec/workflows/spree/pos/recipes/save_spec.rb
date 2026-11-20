@@ -12,7 +12,7 @@ RSpec.describe Spree::Pos::Recipes::Save do
   let(:store) { menu_store }
   let(:branch) { recipe_branch(store) }
   let(:manager) { recipe_manager(store, branch) }
-  let(:item) { menu_item!(store, branch, name: 'Cà phê sữa', price: 25_000) }
+  let(:item) { prepared_product!(store, branch, name: 'Cà phê sữa', price: 25_000) }
   let(:variant) { size(item) }
   let(:milk) { ingredient!(store, branch, name: 'Sữa đặc', base: 'ml', cost: 50) }
   let(:coffee) { ingredient!(store, branch, name: 'Cà phê bột', base: 'g', sale: 'kg', ratio: 1, cost: 200_000) }

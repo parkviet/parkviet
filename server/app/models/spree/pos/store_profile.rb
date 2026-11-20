@@ -21,7 +21,8 @@ module Spree
 
       belongs_to :store, class_name: 'Spree::Store'
       belongs_to :changed_by, class_name: staff_class_name, optional: true
-      # What new menu items are taxed at (Menu::Save), chosen in the F&B setup step.
+      # What new prepared products are taxed at, chosen in the F&B setup step
+      # (the product form reads it from GET /pos/products/settings).
       belongs_to :food_tax_category, class_name: 'Spree::TaxCategory', optional: true
       belongs_to :alcohol_tax_category, class_name: 'Spree::TaxCategory', optional: true
 

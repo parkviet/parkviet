@@ -14,11 +14,11 @@ RSpec.describe Spree::Pos::Kitchen::Board do
   let(:pass) { kitchen_station!(branch, name: 'Ra món', kind: 'expo', position: 2) }
   let!(:kitchen) { kitchen_station!(branch, name: 'Bếp', default: true) }
   let!(:bar) { kitchen_station!(branch, name: 'Bar', kind: 'bar', position: 1) }
-  let(:soup) { size(menu_item!(store, branch, name: 'Phở bò', price: 50_000)) }
-  let(:tea) { menu_item!(store, branch, name: 'Trà đá', price: 5_000) }
+  let(:soup) { size(prepared_product!(store, branch, name: 'Phở bò', price: 50_000)) }
+  let(:tea) { prepared_product!(store, branch, name: 'Trà đá', price: 5_000) }
   let(:screen) { kitchen_screen!(branch, Spree::Pos::Device.new_token) }
 
-  before { station_route!(bar, product: tea.product) }
+  before { station_route!(bar, product: tea) }
 
   def sent_sale(*variants)
     sale = menu_sale(store, branch)

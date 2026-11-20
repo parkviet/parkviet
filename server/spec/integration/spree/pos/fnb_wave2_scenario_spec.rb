@@ -64,8 +64,8 @@ RSpec.describe 'F&B restaurant with tables, waiter and kitchen screens', pos_mod
     expect(Spree::Pos::StationRoute.find_by!(branch: branch, kitchen_category: 'do_uong').kitchen_station).to eq(bar)
 
     profile = Spree::Pos::StoreProfile.find_by!(store: store)
-    pho = size(menu_item!(store, branch, name: 'Phở bò', price: 60_000))
-    tra_da = menu_item!(store, branch, name: 'Trà đá', price: 5_000).tap { |item| item.update!(kitchen_category: 'do_uong') }
+    pho = size(prepared_product!(store, branch, name: 'Phở bò', price: 60_000))
+    tra_da = prepared_product!(store, branch, name: 'Trà đá', price: 5_000, settings: { kitchen_category: 'do_uong' })
     tra_da = size(tra_da)
     pho.product.update!(tax_category: profile.food_tax_category)
     tra_da.product.update!(tax_category: profile.alcohol_tax_category)

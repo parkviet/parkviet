@@ -13,7 +13,7 @@ RSpec.describe 'Platform order lifecycle' do
   let(:store) { menu_store }
   let(:branch) { platform_branch(store, rate: 25) }
   let(:counter) { platform_counter(store, branch) }
-  let(:milk_tea) { menu_item!(store, branch, name: 'Trà sữa', price: 30_000) }
+  let(:milk_tea) { prepared_product!(store, branch, name: 'Trà sữa', price: 30_000) }
   let!(:kitchen) { kitchen_station!(branch, name: 'Bar', kind: 'bar', default: true) }
   let(:screen) { kitchen_screen!(branch, Spree::Pos::Device.new_token) }
   let(:order) { enter_platform(store, counter, lines: [platform_line(size(milk_tea), quantity: 2, price: 40_000)]) }

@@ -161,9 +161,14 @@ module Spree
           [workspace.resource.name, workspace.table_label.presence].compact.join(' ')
         end
 
+        # { combo product id => whether the kitchen screen lists its contents }
+        # for the combos among the lines; a combo without settings lists them.
         def combo_flags(workspace, lines)
-          MenuItem.where(store_id: workspace.store_id, product_id: lines.map { |line| line.variant.product_id }.uniq, kind: 'combo').
-            pluck(:product_id, :show_components_on_kds).to_h
+          product_ids = lines.map { |line| line.variant.product_id }.uniq
+          combo_ids = ComboComponent.joins(:product).where(product_id: product_ids, spree_products: { store_id: workspace.store_id }).
+                      distinct.pluck(:product_id)
+          shown = ProductSetting.where(store_id: workspace.store_id, product_id: combo_ids).pluck(:product_id, :show_components_on_kds).to_h
+          combo_ids.to_h { |id| [id, shown.fetch(id, true)] }
         end
 
         def item_name(line)

@@ -3,12 +3,16 @@
 module Spree
   module Pos
     module Menu
-      # Every change to the store's menu: one idempotent command each, guarded
-      # by Guard, refused while no branch of the store runs `fnb.menu`, and
-      # audited as `<resource>.change` with the operation.
+      # Every change to the store's menu operations: one idempotent command
+      # each, guarded by Guard, refused while no branch of the store runs
+      # `fnb.menu`, and audited as `<resource>.change` with the operation.
+      #
+      # Products themselves (name, sizes, prices, categories, tax) are written
+      # through the Admin API; here only their POS operating data is: the
+      # operating settings, add-on groups and combo contents of a prepared
+      # product ("Sản phẩm chế biến"), the only kind sold as a menu line.
       module Save
-        CATEGORY_FIELDS = %w[name position color active].freeze
-        ITEM_FIELDS = %w[kind kitchen_category cup_label show_components_on_kds position active drink_credit qr_orderable].freeze
+        SETTING_FIELDS = %w[kitchen_category cup_label show_components_on_kds qr_orderable drink_credit].freeze
         GROUP_FIELDS = %w[name min_select max_select allow_quantity position].freeze
         OPTION_FIELDS = %w[name price_delta cost_price default_selected position active].freeze
         SCHEDULE_FIELDS = %w[name days_of_week starts_at ends_at active label].freeze
@@ -16,43 +20,39 @@ module Spree
 
         module_function
 
-        def category(store:, staff:, key:, attributes:, category: nil)
-          command(store, staff, key, 'menu_category', category, attributes) do
-            record = category || MenuCategory.new(store: store)
+        # The product's operating settings: kitchen category, cup label,
+        # whether the kitchen screen lists a combo's contents, table-QR
+        # ordering and a door ticket's drink credit. Fields left out keep
+        # their value; a product without settings starts from the defaults.
+        def product_settings(store:, staff:, key:, product:, attributes:)
+          product_command(store, staff, key, 'product_setting', product, attributes) do
+            record = product.pos_setting || ProductSetting.new(store: store, product: product)
             record.lock! if record.persisted?
-            record.assign_attributes(attributes.slice(*CATEGORY_FIELDS))
-            record.save!
-            record
-          end
-        end
-
-        # A new item names an existing product of the store. It is added to
-        # the assortment of every branch running the menu, so it can be sold there.
-        def item(store:, staff:, key:, attributes:, item: nil)
-          command(store, staff, key, 'menu_item', item, attributes) do
-            record = item || MenuItem.new(store: store, product: product!(store, attributes['product_id']))
-            record.lock! if record.persisted?
-            record.assign_attributes(attributes.slice(*ITEM_FIELDS))
+            record.assign_attributes(attributes.slice(*SETTING_FIELDS))
             record.kitchen_category = record.kitchen_category.presence
             record.drink_credit = record.drink_credit.presence
             # The kitchen categories a door ticket's drink credit pays for.
             if attributes.key?('drink_credit_categories')
               record.drink_credit_categories = Array(attributes['drink_credit_categories']).map { |value| value.to_s.strip }.compact_blank.uniq
             end
-            record.menu_category = category!(store, attributes['menu_category_id']) if attributes.key?('menu_category_id')
-            if attributes.key?('tax_category_id')
-              assign_tax_category!(store, record.product, attributes['tax_category_id'])
-            elsif record.new_record? && unassigned_tax_category?(record.product)
-              default_tax_category!(store, record.product)
-            end
-            new_item = record.new_record?
             record.save!
-            replace_groups!(store, record, attributes['modifier_group_ids']) if attributes.key?('modifier_group_ids')
-            replace_components!(record, attributes['components']) if attributes.key?('components')
-            raise Conflict.new('A combo needs its contents.', reason: 'combo_empty') if record.combo? && record.combo_components.reload.empty?
+          end
+        end
 
-            assign_branches!(store, record.product) if new_item
-            record.reload
+        # The combo contents of a product, replaced as a whole: a product with
+        # contents is a combo, an empty list makes it a single product again.
+        def product_combo(store:, staff:, key:, product:, components:)
+          rows = rows!(components)
+          product_command(store, staff, key, 'product_combo', product, { 'components' => rows }) do
+            replace_components!(store, product, rows)
+          end
+        end
+
+        # The add-on groups offered on a product, replaced as a whole, in order.
+        def product_modifier_groups(store:, staff:, key:, product:, modifier_group_ids:)
+          ids = Array(modifier_group_ids).map(&:to_s)
+          product_command(store, staff, key, 'product_modifier_groups', product, { 'modifier_group_ids' => ids }) do
+            replace_groups!(store, product, ids)
           end
         end
 
@@ -93,21 +93,21 @@ module Spree
         end
 
         # The quick-pick row of a branch, replaced as a whole, in order.
-        def favorites(store:, staff:, key:, branch:, menu_item_ids:)
-          ids = Array(menu_item_ids).map(&:to_s)
-          payload = { 'command' => 'menu_favorites.set', 'branch_id' => branch.prefixed_id, 'menu_item_ids' => ids }
+        def favorites(store:, staff:, key:, branch:, product_ids:)
+          ids = Array(product_ids).map(&:to_s)
+          payload = { 'command' => 'menu_favorites.set', 'branch_id' => branch.prefixed_id, 'product_ids' => ids }
           CommandExecutor.call(store: store, actor: staff, key: key, payload: payload,
                                authorize: -> { Guard.manage_branch!(store, staff, branch) }) do
             ModulePolicy.require!(branch, Guard::MODULE)
             raise Conflict.new('Too many favourites.', reason: 'menu_favorites_limit') if ids.size > MenuFavorite::MAX_PER_BRANCH
             raise Conflict.new('A favourite is listed twice.', reason: 'menu_favorites_duplicate') if ids.uniq.size != ids.size
 
-            items = ids.map { |id| Guard.menu_item!(store, id) }
+            products = ids.map { |id| Guard.product!(store, id) }
             MenuFavorite.where(branch_id: branch.id).delete_all
-            items.each_with_index { |row, index| MenuFavorite.create!(branch: branch, menu_item: row, position: index) }
+            products.each_with_index { |product, index| MenuFavorite.create!(branch: branch, product: product, position: index) }
             AuditEntry.record!(store: store, actor: staff, action: 'menu_favorite.change', subject: branch,
-                               metadata: { op: 'replace', menu_item_ids: ids })
-            { 'branch_id' => branch.prefixed_id, 'menu_item_ids' => ids }
+                               metadata: { op: 'replace', product_ids: ids })
+            { 'branch_id' => branch.prefixed_id, 'product_ids' => ids }
           end
         end
 
@@ -123,17 +123,25 @@ module Spree
           end
         end
 
-        def product!(store, product_id)
-          product = Spree::Product.find_by_prefix_id(product_id.to_s)
-          raise ActiveRecord::RecordNotFound if product.nil? || product.store_id != store.id
+        # One write to a product's POS operating data. Only a prepared product
+        # takes any: every other kind sells as an ordinary line, which neither
+        # the kitchen nor add-ons touch. Answers the product's whole POS data.
+        def product_command(store, staff, key, resource, product, attributes)
+          payload = { 'command' => "#{resource}.set", 'product_id' => product.prefixed_id, 'attributes' => attributes }
+          CommandExecutor.call(store: store, actor: staff, key: key, payload: payload, authorize: -> { Guard.manage!(store, staff) }) do
+            ModulePolicy.require_store!(store, Guard::MODULE)
+            unless product.pos_prepared?
+              raise Conflict.new('Only a prepared product takes add-ons, a combo or kitchen settings.',
+                                 reason: 'product_not_prepared', details: { product_id: product.prefixed_id })
+            end
 
-          product
-        end
-
-        def category!(store, category_id)
-          return if category_id.blank?
-
-          MenuCategory.locate(MenuCategory.for_store(store), category_id) || raise(ActiveRecord::RecordNotFound)
+            # Two writes to one product's POS data take turns.
+            product.lock!
+            yield
+            AuditEntry.record!(store: store, actor: staff, action: "#{resource}.change", subject: product,
+                               metadata: { op: 'set', id: product.prefixed_id, changes: attributes.keys })
+            ProductConfig.to_pos(Spree::Product.includes(*ProductConfig::PRELOAD).find(product.id))
+          end
         end
 
         def variant!(store, variant_id)
@@ -143,56 +151,27 @@ module Spree
           variant
         end
 
-        # A tax category of another store is not found.
-        def assign_tax_category!(store, product, tax_category_id)
-          category = tax_category_id.present? ? Spree::TaxCategory.find_by_prefix_id(tax_category_id.to_s) : nil
-          if tax_category_id.present? && (category.nil? || (category.store_id && category.store_id != store.id))
-            raise ActiveRecord::RecordNotFound
-          end
-
-          product.update!(tax_category: category)
-        end
-
-        # Spree gives a new product its default tax category; that is not a choice.
-        def unassigned_tax_category?(product)
-          product.tax_category_id.nil? || product.tax_category&.is_default?
-        end
-
-        # A new item whose product has no tax category takes the store's
-        # food default from the F&B setup, if there is one.
-        def default_tax_category!(store, product)
-          category_id = StoreProfile.for_store(store).pick(:food_tax_category_id)
-          product.update!(tax_category_id: category_id) if category_id
-        end
-
-        def assign_branches!(store, product)
-          branch_ids = BranchModule.joins(:branch).where(store_id: store.id, module_key: Guard::MODULE, enabled: true).
-                       where(spree_pos_branches: { status: 'active' }).pluck(:branch_id)
-          branch_ids.each { |branch_id| BranchProduct.find_or_create_by!(branch_id: branch_id, product_id: product.id) }
-        end
-
         def rows!(value)
           rows = Array(value)
           raise Conflict.new('Too many rows.', reason: 'menu_rows_limit') if rows.size > MAX_ROWS
           raise Conflict, 'Rows are invalid.' unless rows.all? { |row| row.is_a?(Hash) }
 
-          rows.map(&:stringify_keys)
+          rows.map { |row| row.to_h.stringify_keys }
         end
 
-        def replace_groups!(store, item, group_ids)
-          ids = Array(group_ids).map(&:to_s)
+        def replace_groups!(store, product, ids)
           raise Conflict, 'A modifier group is listed twice.' if ids.uniq.size != ids.size
+          raise Conflict.new('Too many rows.', reason: 'menu_rows_limit') if ids.size > MAX_ROWS
 
           groups = ids.map { |id| ModifierGroup.locate(ModifierGroup.for_store(store), id) || raise(ActiveRecord::RecordNotFound) }
-          item.menu_item_modifier_groups.delete_all
-          groups.each_with_index { |group, index| item.menu_item_modifier_groups.create!(modifier_group: group, position: index) }
+          product.pos_product_modifier_groups.delete_all
+          groups.each_with_index { |group, index| product.pos_product_modifier_groups.create!(modifier_group: group, position: index) }
         end
 
-        def replace_components!(item, components)
-          rows = rows!(components)
-          item.combo_components.delete_all
+        def replace_components!(store, product, rows)
+          product.pos_combo_components.delete_all
           rows.each do |row|
-            item.combo_components.create!(variant: variant!(item.store, row['variant_id']), quantity: row['quantity'].presence || 1)
+            product.pos_combo_components.create!(variant: variant!(store, row['variant_id']), quantity: row['quantity'].presence || 1)
           end
         end
 
@@ -217,9 +196,9 @@ module Spree
           rows = rows!(items)
           schedule.menu_schedule_items.delete_all
           rows.each do |row|
-            item = Guard.menu_item!(store, row['menu_item_id'])
+            product = Guard.product!(store, row['product_id'])
             variant = row['variant_id'].present? ? variant!(store, row['variant_id']) : nil
-            schedule.menu_schedule_items.create!(menu_item: item, variant: variant, price: row['price'].presence,
+            schedule.menu_schedule_items.create!(product: product, variant: variant, price: row['price'].presence,
                                                  hidden: ActiveModel::Type::Boolean.new.cast(row['hidden']) || false)
           end
         end

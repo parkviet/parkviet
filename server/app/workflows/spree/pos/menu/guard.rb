@@ -6,8 +6,8 @@ module Spree
       # Who may read and change the menu. The menu belongs to the store:
       # changing it takes pos.menu.manage at one active branch of the store,
       # or store administration. Branch settings (sold out, favourites) take
-      # the capability at that branch. A kitchen screen marks items sold out
-      # for the person signed in on it.
+      # the capability at that branch. A kitchen screen marks products sold
+      # out for the person signed in on it.
       module Guard
         MODULE = 'fnb.menu'
 
@@ -49,8 +49,12 @@ module Spree
           Branch.locate(Branch.for_store(store), branch_id) || raise(ActiveRecord::RecordNotFound)
         end
 
-        def menu_item!(store, menu_item_id)
-          MenuItem.locate(MenuItem.for_store(store), menu_item_id) || raise(ActiveRecord::RecordNotFound)
+        # A product of the store by prefixed id; another store's is not found.
+        def product!(store, product_id)
+          product = Spree::Product.find_by_prefix_id(product_id.to_s)
+          raise ActiveRecord::RecordNotFound if product.nil? || product.store_id != store.id
+
+          product
         end
       end
     end

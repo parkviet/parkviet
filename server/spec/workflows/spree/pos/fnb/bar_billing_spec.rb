@@ -81,12 +81,11 @@ RSpec.describe 'Bar billing' do
 
   describe 'door tickets' do
     let(:ticket) do
-      menu_item!(store, branch, name: 'Vé vào cửa', price: 200_000).tap do |item|
-        item.update!(drink_credit: 100_000, drink_credit_categories: ['bar'])
-      end
+      prepared_product!(store, branch, name: 'Vé vào cửa', price: 200_000,
+                                       settings: { drink_credit: 100_000, drink_credit_categories: ['bar'] })
     end
-    let(:beer) { menu_item!(store, branch, name: 'Bia', price: 60_000).tap { |item| item.update!(kitchen_category: 'bar') } }
-    let(:snack) { menu_item!(store, branch, name: 'Khô mực', price: 50_000).tap { |item| item.update!(kitchen_category: 'kitchen') } }
+    let(:beer) { prepared_product!(store, branch, name: 'Bia', price: 60_000, settings: { kitchen_category: 'bar' }) }
+    let(:snack) { prepared_product!(store, branch, name: 'Khô mực', price: 50_000, settings: { kitchen_category: 'kitchen' }) }
 
     it 'sells a cover line whose credit pays the allowed drinks in order, never the food' do
       order = open_table(cashier, table!(area, name: 'Bàn 3'))
@@ -118,10 +117,10 @@ RSpec.describe 'Bar billing' do
 
   it 'names the happy-hour price on the line, by the server clock' do
     zone = ActiveSupport::TimeZone[branch.timezone]
-    beer = menu_item!(store, branch, name: 'Bia tươi', price: 50_000)
+    beer = prepared_product!(store, branch, name: 'Bia tươi', price: 50_000)
     schedule = Spree::Pos::MenuSchedule.create!(store: store, name: 'Giờ vàng quầy bar', label: 'Happy hour',
                                                 starts_at: '17:00', ends_at: '19:00')
-    schedule.menu_schedule_items.create!(menu_item: beer, price: 35_000)
+    schedule.menu_schedule_items.create!(product: beer, price: 35_000)
     order = open_table(cashier, table!(area, name: 'Bàn 5'))
     travel_to(zone.local(2026, 11, 11, 18, 0)) { add_dish(order, size(beer)) }
     travel_to(zone.local(2026, 11, 11, 20, 0)) { add_dish(order, size(beer), quantity: 1) }

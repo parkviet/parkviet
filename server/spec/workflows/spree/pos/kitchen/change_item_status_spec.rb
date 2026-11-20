@@ -10,7 +10,7 @@ RSpec.describe Spree::Pos::Kitchen::ChangeItemStatus do
 
   let(:store) { menu_store }
   let(:branch) { kitchen_branch(store, trigger: 'manual') }
-  let(:item) { menu_item!(store, branch, name: 'Phở bò', price: 50_000) }
+  let(:item) { prepared_product!(store, branch, name: 'Phở bò', price: 50_000) }
   let(:screen) { kitchen_screen!(branch, Spree::Pos::Device.new_token) }
   let(:sale) { menu_sale(store, branch) }
   let(:ticket) do

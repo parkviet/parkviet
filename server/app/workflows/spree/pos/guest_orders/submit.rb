@@ -98,7 +98,7 @@ module Spree
               raise Conflict.new('This item cannot be ordered here.', reason: 'item_unavailable', details: { variant_id: row['variant_id'] })
             end
             if item_row[:sold_out]
-              raise Conflict.new('This item is sold out.', reason: 'item_sold_out', details: { menu_item_id: item_row[:id] })
+              raise Conflict.new('This item is sold out.', reason: 'item_sold_out', details: { product_id: item_row[:id] })
             end
 
             variant = Spree::Variant.find_by_prefix_id(row['variant_id'])
@@ -107,7 +107,7 @@ module Spree
                                             allow_hidden: emenu)
             size = item_row[:variants].find { |entry| entry[:id] == row['variant_id'] }
             {
-              'variant_id' => row['variant_id'], 'menu_item_id' => item_row[:id], 'name' => item_row[:name], 'size' => size[:name],
+              'variant_id' => row['variant_id'], 'product_id' => item_row[:id], 'name' => item_row[:name], 'size' => size[:name],
               'quantity' => row['quantity'], 'unit_price' => pricing.unit_price.to_s('F'),
               'amount' => (pricing.unit_price * row['quantity']).to_s('F'), 'note' => pricing.note,
               'modifiers' => pricing.options.map do |picked|

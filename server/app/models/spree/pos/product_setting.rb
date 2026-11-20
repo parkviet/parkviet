@@ -36,6 +36,14 @@ module Spree
         drink_credit.present?
       end
 
+      def to_pos
+        {
+          kitchen_category: kitchen_category, cup_label: cup_label, show_components_on_kds: show_components_on_kds,
+          qr_orderable: qr_orderable, drink_credit: drink_credit&.to_s('F'),
+          drink_credit_categories: Array(drink_credit_categories)
+        }
+      end
+
       private
 
       def drink_credit_categories_valid

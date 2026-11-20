@@ -49,7 +49,7 @@ module Spree
             raise Conflict.new('Menu items are sold by count.', reason: 'menu_count_only') unless kind == 'ordinary'
 
             # A door ticket is a cover of its own, with the drink credit it carries.
-            kind = menu.menu_item.door_ticket? ? Workspaces::TableLines::COVER_KIND : SaleLineKinds::Menu::KIND
+            kind = menu.product.door_ticket? ? Workspaces::TableLines::COVER_KIND : SaleLineKinds::Menu::KIND
             unit_price = menu.unit_price
             # The time-of-day menu the price came from names it ("Happy hour").
             attributes = attributes.merge(price_label: menu.schedule&.label) if menu.schedule&.label.present?

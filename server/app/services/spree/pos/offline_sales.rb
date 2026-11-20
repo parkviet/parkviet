@@ -64,7 +64,7 @@ module Spree
         rows.each do |row|
           entry = menu[row['variant_id']]
           return ['item_unavailable', { 'variant_id' => row['variant_id'] }] if entry.nil?
-          return ['item_sold_out', { 'menu_item_id' => entry[:id], 'variant_id' => row['variant_id'] }] if entry[:sold_out]
+          return ['item_sold_out', { 'product_id' => entry[:id], 'variant_id' => row['variant_id'] }] if entry[:sold_out]
         end
         nil
       end

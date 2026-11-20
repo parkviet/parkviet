@@ -3,7 +3,7 @@
 module Spree
   module Pos
     module Emenu
-      # The best-selling electronic-menu items of the last seven business days:
+      # The best-selling electronic-menu products of the last seven business days:
       # completed sales at the branch, minus quantities already returned.
       # Cached for an hour. An empty result means the section stays hidden.
       module BestSellers
@@ -24,7 +24,7 @@ module Spree
         def cache_key(branch, on_menu, limit)
           today = BusinessDay.for(branch, Time.current)
           digest = Digest::SHA256.hexdigest(on_menu.sort.join(','))[0, 12]
-          "pos-emenu-best-v2-#{branch.id}-#{today}-#{limit}-#{digest}"
+          "pos-emenu-best-v3-#{branch.id}-#{today}-#{limit}-#{digest}"
         end
 
         def rank(branch, on_menu, limit)
@@ -42,23 +42,20 @@ module Spree
             totals[variant_id] = BigDecimal(quantity.to_s) - BigDecimal((returned[variant_id] || 0).to_s)
           end
           variants = Spree::Variant.where(id: net.keys).pluck(:id, :product_id).to_h
-          items = MenuItem.for_store(branch.store).where(product_id: variants.values).pluck(:product_id, :id).to_h
           sold_out = MenuAvailability.sold_out_ids(branch, today).to_set
           allowed = on_menu.to_set
           scores = Hash.new(0)
           net.each do |variant_id, quantity|
             next unless quantity.positive?
 
-            item_id = items[variants[variant_id]]
-            next if item_id.nil? || sold_out.include?(item_id)
+            product_id = variants[variant_id]
+            next if product_id.nil? || sold_out.include?(product_id)
+            next unless allowed.include?(Spree::Product.pos_prefixed_for(product_id))
 
-            prefixed = MenuItem.prefixed_for(item_id)
-            next unless allowed.include?(prefixed)
-
-            scores[item_id] += quantity
+            scores[product_id] += quantity
           end
           scores.sort_by { |id, quantity| [-quantity, id] }.first(limit).map do |id, _|
-            MenuItem.prefixed_for(id)
+            Spree::Product.pos_prefixed_for(id)
           end
         end
       end

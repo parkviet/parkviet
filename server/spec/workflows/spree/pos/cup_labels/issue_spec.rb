@@ -13,7 +13,7 @@ RSpec.describe Spree::Pos::CupLabels::Issue do
   let(:branch) { counter_branch(store, trigger: 'manual') }
   let(:tea) { cup_item!(store, branch, name: 'Trà sữa', price: 30_000, sizes: { 'M' => 30_000, 'L' => 36_000 }) }
   let(:coffee) { cup_item!(store, branch, name: 'Cà phê', price: 20_000) }
-  let(:cake) { menu_item!(store, branch, name: 'Bánh', price: 15_000) }
+  let(:cake) { prepared_product!(store, branch, name: 'Bánh', price: 15_000) }
   let(:ice) { modifier_group!(store, tea, name: 'Đá', options: { 'Ít đá' => 0 }) }
   let!(:printer) { cup_printer!(branch) }
   let(:sale) { menu_sale(store, branch) }

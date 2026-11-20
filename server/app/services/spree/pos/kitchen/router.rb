@@ -67,7 +67,7 @@ module Spree
           product_id = sale_line.variant.product_id
           return @categories[product_id] if @categories.key?(product_id)
 
-          @categories[product_id] = MenuItem.where(store_id: @branch.store_id, product_id: product_id).pick(:kitchen_category)
+          @categories[product_id] = ProductSetting.where(store_id: @branch.store_id, product_id: product_id).pick(:kitchen_category)
         end
       end
     end

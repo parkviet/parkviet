@@ -58,7 +58,7 @@ RSpec.describe 'Karaoke room from setup to payment', pos_modules: :default do
     area = area!(branch)
     vip = room!(area, name: 'VIP 1', type: 'vip')
     normal = room!(area, name: 'P3', type: 'room', x: 4)
-    beer = size(menu_item!(store, branch, name: 'Bia Tiger', price: 30_000))
+    beer = size(prepared_product!(store, branch, name: 'Bia Tiger', price: 30_000))
     beer.product.update!(tax_category: special)
 
     cashier = credit_staff(store, branch, PosTimedHelpers::OPERATOR)
@@ -125,7 +125,7 @@ RSpec.describe 'Karaoke room from setup to payment', pos_modules: :default do
     play = time_service!(store, branch, name: 'Giờ bida', tax_category: profile.food_tax_category)
     rate_plan!(branch, variant: play, type: 'billiard', day: 60_000, evening: 80_000)
     table = room!(area!(branch), name: 'Bàn bida 1', type: 'billiard', kind: 'billiard')
-    beer = size(menu_item!(store, branch, name: 'Bia Tiger', price: 30_000))
+    beer = size(prepared_product!(store, branch, name: 'Bia Tiger', price: 30_000))
     beer.product.update!(tax_category: profile.alcohol_tax_category)
     cashier = credit_staff(store, branch, PosTimedHelpers::OPERATOR)
     Spree::Pos::Shifts::Open.call(store: store, staff: cashier, register: register, opening_float: '0')

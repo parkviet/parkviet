@@ -14,7 +14,7 @@ RSpec.describe Spree::Pos::Recipes::Expand do
   let(:sale) { menu_sale(store, branch) }
   let(:milk) { ingredient!(store, branch, name: 'Sữa tươi', base: 'ml') }
   let(:pearls) { ingredient!(store, branch, name: 'Trân châu', base: 'g') }
-  let(:item) { menu_item!(store, branch, name: 'Trà sữa', price: 30_000, sizes: { 'M' => 30_000, 'L' => 36_000 }) }
+  let(:item) { prepared_product!(store, branch, name: 'Trà sữa', price: 30_000, sizes: { 'M' => 30_000, 'L' => 36_000 }) }
 
   def rows(line)
     described_class.call(line.reload).map { |entry| [entry.ingredient_variant_id, entry.base_quantity, entry.source_key] }.sort
@@ -41,13 +41,12 @@ RSpec.describe Spree::Pos::Recipes::Expand do
   end
 
   it 'takes each combo part from its own recipe, or one stock unit of a stocked part' do
-    burger = menu_item!(store, branch, name: 'Bánh mì', price: 20_000)
+    burger = prepared_product!(store, branch, name: 'Bánh mì', price: 20_000)
     bread = ingredient!(store, branch, name: 'Bánh', base: 'item')
     recipe!(store, manager, size(burger), [[bread, 1, 'item']])
     water = ingredient!(store, branch, name: 'Nước suối', base: 'chai')
-    combo = menu_item!(store, branch, name: 'Combo sáng', price: 35_000, kind: 'combo')
-    combo.combo_components.create!(variant: size(burger), quantity: 2)
-    combo.combo_components.create!(variant: water, quantity: 1)
+    combo = prepared_product!(store, branch, name: 'Combo sáng', price: 35_000)
+    combo_of!(combo, size(burger) => 2, water => 1)
     add_menu(sale, size(combo), quantity: 3)
 
     expect(rows(menu_lines(sale).sole)).to eq([[bread.id, 6, "component:#{size(burger).prefixed_id}"],

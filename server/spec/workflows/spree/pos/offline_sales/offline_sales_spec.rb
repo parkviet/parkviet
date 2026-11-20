@@ -15,8 +15,8 @@ RSpec.describe 'Spree::Pos::OfflineSales' do
   let(:manager) { credit_staff(store, branch, PosCreditHelpers::MANAGER) }
   let(:register) { open_drawer(store, branch, cashier) }
   let(:shift) { Spree::Pos::Shift.find_by!(register_id: register.id, status: 'open') }
-  let(:item) { menu_item!(store, branch, name: 'Cà phê sữa', price: 30_000) }
-  let(:variant) { item.product.default_variant }
+  let(:item) { prepared_product!(store, branch, name: 'Cà phê sữa', price: 30_000) }
+  let(:variant) { item.default_variant }
 
   before { kitchen_station!(branch, name: 'Bar', default: true) }
 
@@ -95,7 +95,7 @@ RSpec.describe 'Spree::Pos::OfflineSales' do
   end
 
   it 'keeps a sale of an item sold out since for review' do
-    Spree::Pos::MenuAvailability.create!(branch: branch, menu_item: item,
+    Spree::Pos::MenuAvailability.create!(branch: branch, product: item,
                                          sold_out_on: Spree::Pos::BusinessDay.for(branch, Spree::Pos::Workspace.business_now))
     result = ingest(sale_params)
 
@@ -159,8 +159,8 @@ RSpec.describe 'Spree::Pos::OfflineSales' do
 
     it 'sells other lines on a new order and cancels the parked one' do
       parked = waiting.workspace
-      tea = menu_item!(store, branch, name: 'Trà đào', price: 30_000)
-      lines = [{ variant_id: tea.product.default_variant.prefixed_id, quantity: 2, unit_price: '30000', name: 'Trà đào' }]
+      tea = prepared_product!(store, branch, name: 'Trà đào', price: 30_000)
+      lines = [{ variant_id: tea.default_variant.prefixed_id, quantity: 2, unit_price: '30000', name: 'Trà đào' }]
       result = resolve(waiting, 'edited', lines: lines, handed_amount: '60000')
 
       expect(result).to include(status: 'completed', resolution: 'edited')

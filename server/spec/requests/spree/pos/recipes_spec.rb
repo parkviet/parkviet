@@ -16,7 +16,7 @@ RSpec.describe 'POS recipes API', type: :request do
     credit_staff(store, branch, [Spree::Pos::Capabilities::INVENTORY_MANAGE, Spree::Pos::Capabilities::REPORT_READ,
                                  Spree::Pos::Capabilities::REPORT_EXPORT])
   end
-  let(:item) { menu_item!(store, branch, name: 'Trà sữa', price: 30_000, sizes: { 'M' => 30_000, 'L' => 36_000 }) }
+  let(:item) { prepared_product!(store, branch, name: 'Trà sữa', price: 30_000, sizes: { 'M' => 30_000, 'L' => 36_000 }) }
   let(:milk) { ingredient!(store, branch, name: 'Sữa tươi', base: 'ml', stock: 1_000, cost: 40) }
 
   before { allow(Spree::Store).to receive(:default).and_return(store) }
@@ -79,7 +79,7 @@ RSpec.describe 'POS recipes API', type: :request do
     cream = option(group, 'Kem')
     recipe!(store, manager, cream, [[milk, 50, 'ml']])
     other_store = menu_store
-    other_item = menu_item!(other_store, recipe_branch(other_store), name: 'Trà sữa khác', price: 30_000)
+    other_item = prepared_product!(other_store, recipe_branch(other_store), name: 'Trà sữa khác', price: 30_000)
     Spree::Pos::Recipe.create!(store: other_store, owner: size(other_item, 0), version: 1, active: true)
 
     data = call(manager, :get, 'recipes/list')
@@ -91,7 +91,7 @@ RSpec.describe 'POS recipes API', type: :request do
     # Sugar has no cost price, so the medium's cost is unknown.
     expect(data['data'].map { |row| [row['version'], row['ingredients'], row['estimated_cost']] }).
       to eq([[1, 1, '2000.0'], [1, 2, nil], [2, 1, '10000.0']])
-    expect(data['data'][2]).to include('owner_id' => large.prefixed_id, 'product_id' => item.product.prefixed_id, 'track_inventory' => false)
+    expect(data['data'][2]).to include('owner_id' => large.prefixed_id, 'product_id' => item.prefixed_id, 'track_inventory' => false)
     expect(data['meta']).to include('count' => 3, 'page' => 1)
 
     expect(call(manager, :get, 'recipes/list', q: 'topp')['data'].map { |row| row['name'] }).to eq(['Kem'])
@@ -163,7 +163,7 @@ RSpec.describe 'POS recipes API', type: :request do
 
     data = call(manager, :get, 'reports/menu_margin', branch_id: branch.prefixed_id, from: business_today, to: business_today)
     expect(response).to have_http_status(:ok)
-    expect(data['data'].map { |row| [row['menu_item'], row['quantity'], row['revenue'], row['cost'], row['costed']] }).
+    expect(data['data'].map { |row| [row['product'], row['quantity'], row['revenue'], row['cost'], row['costed']] }).
       to eq([['Trà sữa · Size: M', 2, '96000.0', '10000.0', true]])
 
     allow(Spree::Pos::SalesSettings).to receive(:for).and_return({ 'warn_below_cost' => true })
@@ -186,7 +186,7 @@ RSpec.describe 'POS recipes API', type: :request do
       data = call(manager, :get, 'reports/ingredient_usage', branch_id: branch.prefixed_id, from: business_today, to: business_today)
       expect(response).to have_http_status(:ok)
       expect_pos_schema!(response, 'IngredientUsageRow')
-      expect(data['data'].map { |row| [row['menu_item'], row['quantity'], row['unit'], row['cost']] }).
+      expect(data['data'].map { |row| [row['product'], row['quantity'], row['unit'], row['cost']] }).
         to contain_exactly(['Trà sữa · Size: L', 400, 'ml', '16000.0'], ['Trà sữa · Size: M', 150, 'ml', '6000.0'])
       expect(data.dig('meta', 'summary')).to include('total_cost' => '22000.0', 'shortages' => 0)
       expect(data.dig('meta', 'summary', 'ingredients').sole).to include('quantity' => 550, 'unit' => 'ml')
@@ -196,7 +196,7 @@ RSpec.describe 'POS recipes API', type: :request do
       data = call(manager, :get, 'reports/menu_margin', branch_id: branch.prefixed_id, from: business_today, to: business_today)
       expect(response).to have_http_status(:ok)
       expect_pos_schema!(response, 'MenuMarginRow')
-      expect(data['data'].map { |row| [row['menu_item'], row['quantity'], row['revenue'], row['cost'], row['margin']] }).
+      expect(data['data'].map { |row| [row['product'], row['quantity'], row['revenue'], row['cost'], row['margin']] }).
         to eq([['Trà sữa · Size: L', 2, '72000.0', '16000.0', '56000.0'], ['Trà sữa · Size: M', 1, '30000.0', '6000.0', '24000.0']])
       expect(data.dig('meta', 'summary')).to include('revenue' => '102000.0', 'cost' => '22000.0', 'margin' => '80000.0')
 

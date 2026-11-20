@@ -12,7 +12,7 @@ RSpec.describe Spree::Pos::Fnb::PourTracker do
   let(:store) { menu_store }
   let(:branch) { recipe_branch(store).tap { |row| set_pos_module(row, 'fnb.pour_tracking', true) } }
   let(:manager) { recipe_manager(store, branch) }
-  let(:item) { menu_item!(store, branch, name: 'Whisky shot', price: 90_000) }
+  let(:item) { prepared_product!(store, branch, name: 'Whisky shot', price: 90_000) }
   let(:whisky) { ingredient!(store, branch, name: 'Chivas 12', base: 'chai', stock: 5, cost: 700_000) }
 
   before do

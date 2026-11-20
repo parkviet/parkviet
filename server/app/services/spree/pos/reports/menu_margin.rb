@@ -3,14 +3,14 @@
 module Spree
   module Pos
     module Reports
-      # Gross margin by menu item size over completed sales: revenue is the
+      # Gross margin by prepared product size over completed sales: revenue is the
       # line amount after line promotions and before added tax (order-level
       # discounts stay on the order), cost is what the recipes consumed at
       # the cost copied when the sale completed, plus the own cost of the
       # options picked, copied when they were picked. A size sold without any
       # consumption or option cost shows `costed: false` and a zero cost.
       class MenuMargin < Grouped
-        COLUMNS = %w[menu_item sku quantity revenue cost margin margin_rate costed].freeze
+        COLUMNS = %w[product sku quantity revenue cost margin margin_rate costed].freeze
         REVENUE_SQL = 'SUM(spree_line_items.price * spree_line_items.quantity + spree_line_items.adjustment_total - ' \
                       'spree_line_items.additional_tax_total)'
 
@@ -34,11 +34,11 @@ module Spree
           rows = sold.map do |variant_id, quantity, revenue|
             revenue = BigDecimal(revenue.to_s)
             cost = BigDecimal((costs[variant_id] || 0).to_s)
-            { menu_item: variant_label(variants[variant_id]), sku: variants[variant_id]&.sku.presence, quantity: quantity.to_i,
+            { product: variant_label(variants[variant_id]), sku: variants[variant_id]&.sku.presence, quantity: quantity.to_i,
               revenue: money(revenue), cost: money(cost), margin: money(revenue - cost), margin_rate: rate(revenue - cost, revenue),
               costed: costs.key?(variant_id) }
           end
-          rows.sort_by { |row| [-BigDecimal(row[:revenue]), row[:menu_item]] }
+          rows.sort_by { |row| [-BigDecimal(row[:revenue]), row[:product]] }
         end
 
         def option_costs_by_variant
@@ -47,7 +47,8 @@ module Spree
         end
 
         def menu_lines
-          products = MenuItem.for_store(scope.store).select(:product_id)
+          # Prepared products, deleted ones included: their sales still count.
+          products = Spree::Product.with_deleted.where(store_id: scope.store.id).pos_prepared(scope.store).select(:id)
           SaleLine.where(workspace_id: workspaces.select(:id)).
             where(variant_id: Spree::Variant.with_deleted.where(product_id: products).select(:id))
         end

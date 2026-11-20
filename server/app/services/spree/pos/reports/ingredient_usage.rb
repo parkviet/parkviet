@@ -8,7 +8,7 @@ module Spree
       # copied when the sale completed. Read from recipe consumptions; an
       # ingredient without a cost price counts as zero and is flagged.
       class IngredientUsage < Grouped
-        COLUMNS = %w[business_date ingredient ingredient_sku menu_item quantity unit cost cost_missing].freeze
+        COLUMNS = %w[business_date ingredient ingredient_sku product quantity unit cost cost_missing].freeze
         COST_SQL = 'SUM(base_quantity * COALESCE(unit_cost, 0))'
 
         def summary
@@ -42,7 +42,7 @@ module Spree
           grouped.map do |date, ingredient_id, unit, item_id, quantity, cost, missing|
             ingredient = variants[ingredient_id]
             { business_date: date.iso8601, ingredient: variant_label(ingredient), ingredient_sku: ingredient&.sku.presence,
-              menu_item: variant_label(variants[item_id]), quantity: quantity.to_i, unit: unit, cost: money(cost),
+              product: variant_label(variants[item_id]), quantity: quantity.to_i, unit: unit, cost: money(cost),
               cost_missing: missing == true }
           end
         end

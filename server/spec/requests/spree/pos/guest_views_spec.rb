@@ -18,7 +18,7 @@ RSpec.describe 'POS guest API', type: :request do
   let(:cashier) { credit_staff(store, branch, PosCreditHelpers::CASHIER) }
   let(:decider) { credit_staff(store, branch, PosGuestHelpers::DECIDER) }
   let(:table) { table!(area!(branch), name: 'Bàn 3') }
-  let!(:item) { menu_item!(store, branch, name: 'Phở bò', price: 55_000) }
+  let!(:item) { prepared_product!(store, branch, name: 'Phở bò', price: 55_000) }
   let(:dish) { size(item) }
   let(:code_token) { table_code!(table).last }
 
@@ -71,6 +71,7 @@ RSpec.describe 'POS guest API', type: :request do
     expect_pos_schema!(response, 'GuestMenu', file: 'pos-guest.yaml')
     row = menu.dig('data', 'items').sole
     expect(row.keys).not_to include('sku', 'barcode', 'list_price', 'kitchen_category', 'tax_category_id')
+    expect(row).to include('id' => item.prefixed_id, 'category_ids' => [])
     expect(row['variants'].sole).to eq('id' => dish.prefixed_id, 'name' => nil, 'price' => '55000.0', 'price_label' => nil)
 
     messages = []
@@ -158,7 +159,7 @@ RSpec.describe 'POS guest API', type: :request do
     sold_out!(item)
     body = guest_order(token, [{ variant_id: dish.prefixed_id }])
     expect(response).to have_http_status(:conflict)
-    expect(body['error']).to include('code' => 'item_sold_out', 'details' => { 'menu_item_id' => item.prefixed_id })
+    expect(body['error']).to include('code' => 'item_sold_out', 'details' => { 'product_id' => item.prefixed_id })
   end
 
   it 'requires an idempotency key and replays the same order for the same key' do

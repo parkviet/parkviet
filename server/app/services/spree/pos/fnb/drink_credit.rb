@@ -4,10 +4,10 @@ module Spree
   module Pos
     module Fnb
       # The drink credit of door tickets. A door ticket is a `cover` line of a
-      # menu item with a `drink_credit`; every ticket sold adds that much to
-      # the order's credit. The credit pays for drinks of the ticket's allowed
-      # kitchen categories (any drink when a ticket names none), in the order
-      # they were added, until it runs out. Each paid drink carries a line
+      # product whose operating settings carry a `drink_credit`; every ticket
+      # sold adds that much to the order's credit. The credit pays for menu
+      # lines of the ticket's allowed kitchen categories (any menu line when a
+      # ticket names none), in the order they were added, until it runs out. Each paid drink carries a line
       # discount intent of source `cover_credit` for what the credit covers;
       # the manual discount adjuster turns it into the line's discount like
       # any item discount. A drink the cashier discounted by hand keeps that
@@ -44,16 +44,16 @@ module Spree
           covers = lines.select { |line| line.kind == COVER_KIND }
           return {} if covers.empty?
 
-          items = MenuItem.for_store(workspace.store).where(product_id: lines.map { |line| line.variant.product_id }.uniq).
-                  index_by(&:product_id)
+          settings = ProductSetting.for_store(workspace.store).where(product_id: lines.map { |line| line.variant.product_id }.uniq).
+                     index_by(&:product_id)
           tickets = covers.filter_map do |line|
-            item = items[line.variant.product_id]
-            item&.door_ticket? ? [item, line] : nil
+            setting = settings[line.variant.product_id]
+            setting&.door_ticket? ? [setting, line] : nil
           end
           return {} if tickets.empty?
 
-          left = tickets.sum { |item, line| (item.drink_credit * line.sale_quantity).floor }
-          categories = tickets.map { |item, _| Array(item.drink_credit_categories) }
+          left = tickets.sum { |setting, line| (setting.drink_credit * line.sale_quantity).floor }
+          categories = tickets.map { |setting, _| Array(setting.drink_credit_categories) }
           any_drink = categories.any?(&:empty?)
           allowed = categories.flatten.to_set
           lines.each_with_object({}) do |line, plan|
@@ -61,8 +61,9 @@ module Spree
             next if line.kind == COVER_KIND
             next if line.line_discount_intent && line.line_discount_intent.source != SOURCE
 
-            item = items[line.variant.product_id]
-            next if item.nil? || (!any_drink && !allowed.include?(item.kitchen_category))
+            # A drink is a menu line; without settings it has no kitchen category.
+            next unless line.kind == SaleLineKinds::Menu::KIND
+            next if !any_drink && !allowed.include?(settings[line.variant.product_id]&.kitchen_category)
 
             take = [left, BigDecimal(line.line_item.amount.to_s).floor].min
             next unless take.positive?
@@ -84,9 +85,12 @@ module Spree
           covers = sale_lines.select { |line| line.kind == COVER_KIND }
           return nil if covers.empty?
 
-          items = MenuItem.for_store(workspace.store).where(product_id: covers.map { |line| line.variant.product_id }).
-                  where.not(drink_credit: nil).index_by(&:product_id)
-          total = covers.sum(BigDecimal('0')) { |line| items[line.variant.product_id] ? (items[line.variant.product_id].drink_credit * line.sale_quantity).floor : 0 }
+          credits = ProductSetting.for_store(workspace.store).where(product_id: covers.map { |line| line.variant.product_id }).
+                    where.not(drink_credit: nil).pluck(:product_id, :drink_credit).to_h
+          total = covers.sum(BigDecimal('0')) do |line|
+            credit = credits[line.variant.product_id]
+            credit ? (credit * line.sale_quantity).floor : 0
+          end
           return nil unless total.positive?
 
           intents = LineDiscountIntent.where(workspace_id: workspace.id, source: SOURCE).select(:id)

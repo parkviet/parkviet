@@ -14,8 +14,8 @@ RSpec.describe 'POS e-Menu', type: :request do
   let(:cashier) { credit_staff(store, branch, PosCreditHelpers::CASHIER + PosGuestHelpers::DECIDER) }
   let(:manager) { credit_staff(store, branch, PosGuestHelpers::MANAGER) }
   let(:table) { table!(area, name: 'Bàn 1') }
-  let!(:item) { menu_item!(store, branch, name: 'Phở bò', price: 55_000) }
-  let!(:tea_item) { menu_item!(store, branch, name: 'Trà đá', price: 10_000) }
+  let!(:item) { prepared_product!(store, branch, name: 'Phở bò', price: 55_000) }
+  let!(:tea_item) { prepared_product!(store, branch, name: 'Trà đá', price: 10_000) }
   let(:dish) { size(item) }
   let(:tea) { size(tea_item) }
 
@@ -91,9 +91,9 @@ RSpec.describe 'POS e-Menu', type: :request do
   end
 
   it 'serves and accepts e-Menu items that are not on the counter BranchProduct list' do
-    emenu_only = menu_item!(store, branch, name: 'Bánh tráng riêng QR', price: 25_000)
-    emenu_only.update!(qr_orderable: false)
-    Spree::Pos::BranchProduct.where(branch_id: branch.id, product_id: emenu_only.product_id).delete_all
+    emenu_only = prepared_product!(store, branch, name: 'Bánh tráng riêng QR', price: 25_000)
+    Spree::Pos::ProductSetting.create!(store: store, product: emenu_only, qr_orderable: false)
+    Spree::Pos::BranchProduct.where(branch_id: branch.id, product_id: emenu_only.id).delete_all
     emenu_variant = size(emenu_only)
 
     staff_put('emenu_menu', branch_id: branch.prefixed_id, categories: [{ name: 'Đặc biệt QR', color: '#123456', items: [emenu_only.prefixed_id] }])

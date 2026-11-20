@@ -17,9 +17,9 @@ module Spree
 
               guard = Spree::Pos::Menu::Guard
               branch = guard.branch!(current_store, params[:branch_id])
-              item = guard.menu_item!(current_store, params[:menu_item_id])
+              product = guard.product!(current_store, params[:product_id])
               result = Spree::Pos::Menu::SetSoldOut.call(
-                store: current_store, staff: current_user, key: key, branch: branch, menu_item: item,
+                store: current_store, staff: current_user, key: key, branch: branch, product: product,
                 sold_out: ActiveModel::Type::Boolean.new.cast(params[:sold_out]) == true, device: @pos_device
               )
               render json: { data: result }

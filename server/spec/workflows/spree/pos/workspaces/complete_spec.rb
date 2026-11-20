@@ -16,7 +16,7 @@ RSpec.describe Spree::Pos::Workspaces::Complete do
   let(:store) { menu_store }
   let(:branch) { recipe_branch(store) }
   let(:manager) { recipe_manager(store, branch) }
-  let(:item) { menu_item!(store, branch, name: 'Trà sữa', price: 30_000, sizes: { 'M' => 30_000, 'L' => 36_000 }) }
+  let(:item) { prepared_product!(store, branch, name: 'Trà sữa', price: 30_000, sizes: { 'M' => 30_000, 'L' => 36_000 }) }
   let(:milk) { ingredient!(store, branch, name: 'Sữa tươi', base: 'ml', stock: 1_000, cost: 40) }
   let(:pearls) { ingredient!(store, branch, name: 'Trân châu', base: 'g', stock: 500, cost: 100) }
   let(:topping) do
@@ -135,7 +135,7 @@ RSpec.describe Spree::Pos::Workspaces::Complete, 'kitchen tickets' do
 
   let(:store) { menu_store }
   let(:branch) { kitchen_branch(store) }
-  let(:item) { menu_item!(store, branch, name: 'Cà phê sữa', price: 25_000) }
+  let(:item) { prepared_product!(store, branch, name: 'Cà phê sữa', price: 25_000) }
   let(:sale) { menu_sale(store, branch) }
   let!(:bar) { kitchen_station!(branch, name: 'Bar', kind: 'bar', default: true) }
 

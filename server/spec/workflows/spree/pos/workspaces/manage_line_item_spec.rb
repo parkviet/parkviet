@@ -13,7 +13,7 @@ RSpec.describe Spree::Pos::Workspaces::ManageLineItem do
 
   let(:store) { menu_store }
   let(:branch) { menu_branch(store) }
-  let(:item) { menu_item!(store, branch, name: 'Trà đào', price: 30_000, sizes: { 'M' => 30_000, 'L' => 36_000 }) }
+  let(:item) { prepared_product!(store, branch, name: 'Trà đào', price: 30_000, sizes: { 'M' => 30_000, 'L' => 36_000 }) }
   let!(:topping) do
     modifier_group!(store, item, name: 'Topping', options: { 'Trân châu' => 5_000, 'Thạch' => 4_000 }, max: 3, allow_quantity: true)
   end
@@ -56,7 +56,7 @@ RSpec.describe Spree::Pos::Workspaces::ManageLineItem do
     expect(rows.map { |row| row['modifiers'].map { |mod| [mod['name'], mod['quantity']] } }).to eq([[['Trân châu', 2]], [['Thạch', 1]]])
     expect(sale.workspace.reload.order.item_total).to eq(86_000)
     audit = Spree::Pos::AuditEntry.where(action: 'workspace.item.add').order(:id).last
-    expect(audit.metadata['menu']).to include('menu_item_id' => item.prefixed_id, 'unit_price' => '40000.0')
+    expect(audit.metadata['menu']).to include('product_id' => item.prefixed_id, 'unit_price' => '40000.0')
   end
 
   it 'merges the same options and note into one line, quantity 2' do
@@ -80,11 +80,10 @@ RSpec.describe Spree::Pos::Workspaces::ManageLineItem do
   end
 
   it 'shows what a combo contains in the order and keeps its price on its own line' do
-    burger = menu_item!(store, branch, name: 'Burger', price: 45_000)
-    fries = menu_item!(store, branch, name: 'Khoai tây', price: 20_000)
-    combo = menu_item!(store, branch, name: 'Combo trưa', price: 55_000, kind: 'combo')
-    combo.combo_components.create!(variant: size(burger), quantity: 1)
-    combo.combo_components.create!(variant: size(fries), quantity: 2)
+    burger = prepared_product!(store, branch, name: 'Burger', price: 45_000)
+    fries = prepared_product!(store, branch, name: 'Khoai tây', price: 20_000)
+    combo = prepared_product!(store, branch, name: 'Combo trưa', price: 55_000)
+    combo_of!(combo, size(burger) => 1, size(fries) => 2)
 
     data = add_menu(sale, size(combo))
     row = data['line_items'].sole
@@ -100,9 +99,9 @@ RSpec.describe Spree::Pos::Workspaces::ManageLineItem do
 
   it 'refuses an item sold out today, and sells it again on the next business day' do
     staff = credit_staff(store, branch, [Spree::Pos::Capabilities::SET_SOLD_OUT])
-    Spree::Pos::Menu::SetSoldOut.call(store: store, staff: staff, key: SecureRandom.uuid, branch: branch, menu_item: item, sold_out: true)
+    Spree::Pos::Menu::SetSoldOut.call(store: store, staff: staff, key: SecureRandom.uuid, branch: branch, product: item, sold_out: true)
     expect(broadcasts(Spree::Pos::Realtime.stream_name(branch)).map { |raw| JSON.parse(raw)['event'] }).to include('menu.sold_out')
-    expect_conflict('menu_item_sold_out') { add_menu(sale, size(item)) }
+    expect_conflict('product_sold_out') { add_menu(sale, size(item)) }
 
     travel_to(1.day.from_now) do
       add_menu(sale, size(item))
@@ -113,7 +112,7 @@ RSpec.describe Spree::Pos::Workspaces::ManageLineItem do
   it 'applies the time-of-day price at the moment of adding and keeps it afterwards' do
     zone = ActiveSupport::TimeZone[branch.timezone]
     schedule = Spree::Pos::MenuSchedule.create!(store: store, name: 'Giờ vàng', starts_at: '14:00', ends_at: '16:00')
-    schedule.menu_schedule_items.create!(menu_item: item, price: 20_000)
+    schedule.menu_schedule_items.create!(product: item, price: 20_000)
     travel_to(zone.local(2026, 11, 11, 15, 0)) do
       add_menu(sale, size(item, 1))
     end
@@ -143,5 +142,14 @@ RSpec.describe Spree::Pos::Workspaces::ManageLineItem do
     expect_conflict('modifier_unknown') { add_menu(sale, product.default_variant, modifiers: picks([option(topping, 'Thạch')])) }
     add_menu(sale, product.default_variant)
     expect(menu_lines(sale).sole.kind).to eq('ordinary')
+  end
+
+  it 'sells a product that is not prepared as an ordinary line, whatever POS data it still carries' do
+    beer = prepared_product!(store, branch, name: 'Bia lon', price: 18_000, type: nil, settings: { kitchen_category: 'bar' })
+    Spree::Pos::ProductModifierGroup.create!(product: beer, modifier_group: topping, position: 0)
+    add_menu(sale, size(beer))
+    expect(menu_lines(sale).sole).to have_attributes(kind: 'ordinary', unit_price: 18_000, modifier_signature: nil)
+    expect(menu_lines(sale).sole.line_modifiers).to be_empty
+    expect_conflict('modifier_unknown') { add_menu(sale, size(beer), modifiers: picks([option(topping, 'Thạch')])) }
   end
 end

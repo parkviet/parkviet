@@ -17,8 +17,8 @@ RSpec.describe 'POS kiosk orders', type: :request do
   let!(:paired) { pair_kiosk!(register, manager) }
   let(:device) { paired.first }
   let!(:station) { kitchen_station!(branch, name: 'Bếp', default: true) }
-  let(:item) { menu_item!(store, branch, name: 'Cà phê sữa', price: 30_000) }
-  let(:variant) { item.product.default_variant }
+  let(:item) { prepared_product!(store, branch, name: 'Cà phê sữa', price: 30_000) }
+  let(:variant) { item.default_variant }
 
   before do
     kiosk_vietqr!(store)
@@ -102,10 +102,10 @@ RSpec.describe 'POS kiosk orders', type: :request do
     first = place_kiosk_order(device, kiosk_items(variant), payment: 'counter', key: key)
     expect(place_kiosk_order(device, kiosk_items(variant), payment: 'counter', key: key)['id']).to eq(first['id'])
 
-    sold_out = menu_item!(store, branch, name: 'Bánh mì', price: 20_000)
-    Spree::Pos::MenuAvailability.create!(branch: branch, menu_item: sold_out,
+    sold_out = prepared_product!(store, branch, name: 'Bánh mì', price: 20_000)
+    Spree::Pos::MenuAvailability.create!(branch: branch, product: sold_out,
                                          sold_out_on: Spree::Pos::BusinessDay.for(branch, Spree::Pos::Workspace.business_now))
-    expect { place_kiosk_order(device, kiosk_items(sold_out.product.default_variant), payment: 'counter') }.
+    expect { place_kiosk_order(device, kiosk_items(sold_out.default_variant), payment: 'counter') }.
       to raise_error(Spree::Pos::Conflict) { |error| expect(error.reason).to eq('item_sold_out') }
 
     Spree::Pos::Kiosks::Shifts.close(store: store, staff: manager, key: SecureRandom.uuid, register_id: register.prefixed_id)

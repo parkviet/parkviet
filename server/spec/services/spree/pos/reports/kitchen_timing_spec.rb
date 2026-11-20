@@ -11,7 +11,7 @@ RSpec.describe Spree::Pos::Reports::KitchenTiming do
   let(:store) { menu_store }
   let(:branch) { kitchen_branch(store, trigger: 'manual') }
   let!(:kitchen) { kitchen_station!(branch, name: 'Bếp', default: true) }
-  let(:soup) { size(menu_item!(store, branch, name: 'Phở bò', price: 50_000)) }
+  let(:soup) { size(prepared_product!(store, branch, name: 'Phở bò', price: 50_000)) }
   let(:screen) { kitchen_screen!(branch, Spree::Pos::Device.new_token) }
 
   def ready_after(minutes)

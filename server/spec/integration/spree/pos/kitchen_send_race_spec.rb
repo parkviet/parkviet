@@ -14,7 +14,7 @@ RSpec.describe 'POS kitchen send race', type: :integration do
   it 'sends each unsent part once' do
     branch = kitchen_branch(store, trigger: 'manual')
     kitchen_station!(branch, name: 'Bếp', default: true)
-    item = menu_item!(store, branch, name: 'Bánh mì', price: 25_000)
+    item = prepared_product!(store, branch, name: 'Bánh mì', price: 25_000)
     sale = menu_sale(store, branch)
     add_menu(sale, size(item), quantity: 3)
     args = editing_args(sale).except(:key)

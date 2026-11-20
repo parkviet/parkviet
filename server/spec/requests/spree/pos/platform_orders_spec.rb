@@ -15,7 +15,7 @@ RSpec.describe 'POS platform orders API', type: :request do
   let(:store) { menu_store }
   let(:branch) { platform_branch(store, rate: 25) }
   let(:counter) { platform_counter(store, branch) }
-  let(:milk_tea) { menu_item!(store, branch, name: 'Trà sữa', price: 30_000) }
+  let(:milk_tea) { prepared_product!(store, branch, name: 'Trà sữa', price: 30_000) }
   let!(:kitchen) { kitchen_station!(branch, name: 'Bar', kind: 'bar', default: true) }
 
   before { allow(Spree::Store).to receive(:default).and_return(store) }

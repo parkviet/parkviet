@@ -10,7 +10,7 @@ RSpec.describe Spree::Pos::Kitchen::Router do
 
   let(:store) { menu_store }
   let(:branch) { kitchen_branch(store) }
-  let(:item) { menu_item!(store, branch, name: 'Bia Sài Gòn', price: 20_000).tap { |row| row.update!(kitchen_category: 'drinks') } }
+  let(:item) { prepared_product!(store, branch, name: 'Bia Sài Gòn', price: 20_000, settings: { kitchen_category: 'drinks' }) }
   let(:line) { Spree::Pos::SaleLine.new(variant: size(item)) }
   let!(:kitchen) { kitchen_station!(branch, name: 'Bếp', default: true) }
   let!(:bar) { kitchen_station!(branch, name: 'Bar', kind: 'bar', position: 1) }
@@ -22,8 +22,8 @@ RSpec.describe Spree::Pos::Kitchen::Router do
   end
 
   it 'takes a product route for the service mode before every other route' do
-    station_route!(pass, product: item.product, mode: 'takeaway')
-    station_route!(cooler, product: item.product)
+    station_route!(pass, product: item, mode: 'takeaway')
+    station_route!(cooler, product: item)
     station_route!(bar, category: 'drinks', mode: 'takeaway')
     station_route!(bar, category: 'drinks')
 
@@ -32,7 +32,7 @@ RSpec.describe Spree::Pos::Kitchen::Router do
   end
 
   it 'takes a product route for every mode before category routes' do
-    station_route!(cooler, product: item.product)
+    station_route!(cooler, product: item)
     station_route!(bar, category: 'drinks', mode: 'takeaway')
 
     expect(station('takeaway')).to eq(cooler)
@@ -55,7 +55,7 @@ RSpec.describe Spree::Pos::Kitchen::Router do
 
     kitchen.update!(active: false)
     bar.update!(active: false)
-    station_route!(bar, product: item.product)
+    station_route!(bar, product: item)
     expect(station).to eq(cooler)
 
     Spree::Pos::KitchenStation.where(branch_id: branch.id).update_all(active: false)

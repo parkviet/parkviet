@@ -197,11 +197,8 @@ module Spree
             now = Time.current
             in_branch = product && BranchProduct.exists?(branch_id: branch.id, product_id: variant.product_id) &&
                         SalesChannel.sellable_products(branch.store).exists?(id: product.id)
-            on_emenu = allow_emenu && product && MenuItem.for_store(branch.store).active.exists?(product_id: product.id) &&
-                       EmenuItem.joins(:emenu_category, :menu_item).exists?(
-                         spree_pos_emenu_categories: { branch_id: branch.id },
-                         spree_pos_menu_items: { product_id: product.id }
-                       )
+            on_emenu = allow_emenu && product&.pos_prepared? &&
+                       EmenuItem.joins(:emenu_category).exists?(spree_pos_emenu_categories: { branch_id: branch.id }, product_id: product.id)
             raise ActiveRecord::RecordNotFound if variant.nil? || product.nil? || product.store_id != branch.store_id ||
               product.status != 'active' || (!in_branch && !on_emenu) ||
               (variant.is_master? && Spree::Variant.where(product_id: product.id, is_master: false).exists?) ||

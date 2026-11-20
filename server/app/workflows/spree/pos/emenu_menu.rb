@@ -3,8 +3,8 @@
 module Spree
   module Pos
     # Replaces a branch's electronic menu in one write: categories in order,
-    # and the store's menu items inside each one. A category id that is sent
-    # again keeps its image.
+    # and the store's prepared products ("Sản phẩm chế biến") inside each
+    # one. A category id that is sent again keeps its image.
     module EmenuMenu
       MAX_CATEGORIES = 30
       MAX_ITEMS = 80
@@ -12,12 +12,12 @@ module Spree
       module_function
 
       def read(branch)
-        EmenuCategory.where(branch_id: branch.id).includes(emenu_items: :menu_item).order(:position, :id).map(&:to_pos)
+        EmenuCategory.where(branch_id: branch.id).includes(emenu_items: :product).order(:position, :id).map(&:to_pos)
       end
 
       def item_ids(branch)
         EmenuItem.joins(:emenu_category).where(spree_pos_emenu_categories: { branch_id: branch.id }).
-          distinct.pluck(:menu_item_id).map { |id| MenuItem.prefixed_for(id) }
+          distinct.pluck(:product_id).map { |id| Spree::Product.pos_prefixed_for(id) }
       end
 
       def replace!(store:, actor:, key:, branch:, categories:)
@@ -37,16 +37,17 @@ module Spree
         end
       end
 
-      # Copies the counter's categories and the items open to the table QR,
-      # as a starting menu. Replaces whatever the electronic menu held.
+      # Copies the counter's categories and the prepared products open to the
+      # table QR, in the counter's order, as a starting menu. Replaces
+      # whatever the electronic menu held.
       def import!(store:, actor:, key:, branch:)
         menu = Menu::Reader.call(branch: branch)
-        allowed = MenuItem.for_store(store).where(qr_orderable: true).pluck(:id).to_set { |id| MenuItem.prefixed_for(id) }
+        allowed = menu[:items].select { |item| item[:product_kind] == 'prepared' && item[:qr_orderable] }
         categories = menu[:categories].filter_map do |category|
-          items = menu[:items].select { |item| item[:menu_category_id] == category[:id] && allowed.include?(item[:id]) }
+          items = allowed.select { |item| item[:category_ids].include?(category[:id]) }
           next if items.empty?
 
-          { 'name' => category[:name], 'color' => category[:color], 'items' => items.sort_by { |item| item[:position] }.map { |item| item[:id] } }
+          { 'name' => category[:name], 'color' => nil, 'items' => items.map { |item| item[:product_id] } }
         end
         replace!(store: store, actor: actor, key: key, branch: branch, categories: categories)
       end
@@ -80,24 +81,25 @@ module Spree
 
           seen_in_category = {}
           ids = items.map do |item|
-            id = item.is_a?(Hash) ? item.stringify_keys['menu_item_id'] : item
+            id = item.is_a?(Hash) ? item.stringify_keys['product_id'] : item
             raise EmenuSettings::Invalid, 'items' unless id.is_a?(String)
             raise EmenuSettings::Invalid, 'items' if seen_in_category[id]
 
             seen_in_category[id] = true
             id
           end
-          raise EmenuSettings::Invalid, 'items' unless ids.all? { |id| menu_item!(store, id) }
+          raise EmenuSettings::Invalid, 'items' unless ids.all? { |id| product!(store, id) }
 
           { 'id' => row['id'].to_s.presence, 'name' => name, 'color' => color, 'items' => ids }
         end
       end
 
-      def menu_item!(store, id)
-        item = MenuItem.find_by_prefix_id(id)
-        raise EmenuSettings::Invalid, 'items' if item.nil? || item.store_id != store.id
+      # Only a prepared product of the store goes on the electronic menu.
+      def product!(store, id)
+        product = Spree::Product.find_by_prefix_id(id)
+        raise EmenuSettings::Invalid, 'items' if product.nil? || product.store_id != store.id || !product.pos_prepared?
 
-        item
+        product
       end
 
       def write_category!(branch, row, index)
@@ -105,9 +107,9 @@ module Spree
         category = found if found&.branch_id == branch.id
         category ||= EmenuCategory.new(branch: branch)
         category.update!(name: row['name'], color: row['color'], position: index)
-        kept_items = row['items'].each_with_index.map do |menu_item_id, position|
-          menu_item = menu_item!(branch.store, menu_item_id)
-          item = category.emenu_items.find_by(menu_item_id: menu_item.id) || category.emenu_items.build(menu_item: menu_item)
+        kept_items = row['items'].each_with_index.map do |product_id, position|
+          product = product!(branch.store, product_id)
+          item = category.emenu_items.find_by(product_id: product.id) || category.emenu_items.build(product: product)
           item.update!(position: position)
           item.id
         end

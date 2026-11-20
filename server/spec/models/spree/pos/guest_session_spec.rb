@@ -51,7 +51,7 @@ RSpec.describe Spree::Pos::GuestSession, type: :model do
     open_table(cashier, table)
     _, token = table_code!(table)
     session, = guest_session!(token)
-    dish = size(menu_item!(store, branch, name: 'Bia', price: 25_000))
+    dish = size(prepared_product!(store, branch, name: 'Bia', price: 25_000))
     order = submit_guest_order(session, guest_items(dish), key: 'same-key')
 
     copy = order.dup.tap { |row| row.append_batch_id = SecureRandom.uuid }

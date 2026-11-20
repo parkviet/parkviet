@@ -3,8 +3,8 @@
 module Spree
   module Pos
     module CupLabels
-      # One print job per cup: every menu line whose item prints cup labels
-      # (`menu_items.cup_label`) gets one label for each unit, "1/3", "2/3",
+      # One print job per cup: every menu line whose product prints cup labels
+      # (`spree_pos_product_settings.cup_label`) gets one label for each unit, "1/3", "2/3",
       # "3/3". A label is one job per (line, cup, trigger): the automatic
       # labels of a kitchen send and of the completion share the trigger
       # `auto`, so a cup the send already printed is never printed again; a
@@ -48,7 +48,7 @@ module Spree
           lines = SaleLine.where(workspace_id: workspace.id, kind: SaleLineKinds::Menu::KIND).order(:id).
                   includes(:line_modifiers, variant: %i[product option_values]).to_a
           lines.select! { |row| row.id == only.id } if only
-          cups = MenuItem.where(store_id: workspace.store_id, product_id: lines.map { |row| row.variant.product_id }, cup_label: true).
+          cups = ProductSetting.where(store_id: workspace.store_id, product_id: lines.map { |row| row.variant.product_id }, cup_label: true).
                  pluck(:product_id).to_set
           lines.select { |row| cups.include?(row.variant.product_id) }.flat_map do |row|
             total = row.sale_quantity.to_i

@@ -140,7 +140,7 @@ module Spree
           rows.each do |row|
             entry = menu[row['variant_id']]
             raise Conflict.new('This item cannot be ordered here.', reason: 'item_unavailable', details: { variant_id: row['variant_id'] }) if entry.nil?
-            raise Conflict.new('This item is sold out.', reason: 'item_sold_out', details: { menu_item_id: entry[:id] }) if entry[:sold_out]
+            raise Conflict.new('This item is sold out.', reason: 'item_sold_out', details: { product_id: entry[:id] }) if entry[:sold_out]
           end
         end
 

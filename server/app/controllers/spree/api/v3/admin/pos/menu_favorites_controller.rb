@@ -16,7 +16,7 @@ module Spree
 
               branch = Spree::Pos::Menu::Guard.branch!(current_store, params[:branch_id])
               result = Spree::Pos::Menu::Save.favorites(store: current_store, staff: current_user, key: key, branch: branch,
-                                                        menu_item_ids: Array(params[:menu_item_ids]).map(&:to_s))
+                                                        product_ids: Array(params[:product_ids]).map(&:to_s))
               render json: { data: result }
             end
           end

@@ -10,7 +10,7 @@ RSpec.describe Spree::Pos::OrderNumbers do
 
   let(:store) { menu_store }
   let(:branch) { counter_branch(store, trigger: 'manual') }
-  let(:item) { menu_item!(store, branch, name: 'Cà phê', price: 20_000) }
+  let(:item) { prepared_product!(store, branch, name: 'Cà phê', price: 20_000) }
   let!(:station) { kitchen_station!(branch, name: 'Bar', default: true) }
 
   def sale_with_item

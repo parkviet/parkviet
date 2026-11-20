@@ -10,7 +10,7 @@ RSpec.describe Spree::Pos::Workspaces::UpdateLineModifiers do
 
   let(:store) { menu_store }
   let(:branch) { menu_branch(store) }
-  let(:item) { menu_item!(store, branch, name: 'Trà sữa', price: 30_000) }
+  let(:item) { prepared_product!(store, branch, name: 'Trà sữa', price: 30_000) }
   let!(:topping) do
     modifier_group!(store, item, name: 'Topping', options: { 'Trân châu' => 5_000, 'Thạch' => 4_000 }, max: 3, allow_quantity: true)
   end

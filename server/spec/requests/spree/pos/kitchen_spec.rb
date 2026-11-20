@@ -14,7 +14,7 @@ RSpec.describe 'POS kitchen API', type: :request do
 
   let(:store) { menu_store }
   let(:branch) { kitchen_branch(store, trigger: 'manual') }
-  let(:item) { menu_item!(store, branch, name: 'Cơm tấm', price: 45_000) }
+  let(:item) { prepared_product!(store, branch, name: 'Cơm tấm', price: 45_000) }
   let!(:station) { kitchen_station!(branch, name: 'Bếp', default: true) }
   let(:token) { Spree::Pos::Device.new_token }
   let!(:screen) { kitchen_screen!(branch, token) }
@@ -105,8 +105,8 @@ RSpec.describe 'POS kitchen API', type: :request do
 
   it 'lists the stations and what a station makes, with today\'s sold-out state' do
     bar = kitchen_station!(branch, name: 'Bar', kind: 'bar', position: 1)
-    tea = menu_item!(store, branch, name: 'Trà đá', price: 5_000)
-    station_route!(bar, product: tea.product)
+    tea = prepared_product!(store, branch, name: 'Trà đá', price: 5_000)
+    station_route!(bar, product: tea)
     item
 
     get '/api/v3/pos_device/kitchen/stations', headers: device
@@ -114,12 +114,12 @@ RSpec.describe 'POS kitchen API', type: :request do
     expect_pos_schema!(response, 'KitchenStation')
     expect(response.parsed_body['data'].map { |row| row['name'] }).to eq(%w[Bếp Bar])
 
-    get '/api/v3/pos_device/kitchen/menu_items', headers: device, params: { station_id: bar.prefixed_id }
+    get '/api/v3/pos_device/kitchen/products', headers: device, params: { station_id: bar.prefixed_id }
     expect(response).to have_http_status(:ok)
-    expect_pos_schema!(response, 'KitchenMenuItem')
+    expect_pos_schema!(response, 'KitchenProduct')
     expect(response.parsed_body['data'].map { |row| row['name'] }).to eq(['Trà đá'])
 
-    get '/api/v3/pos_device/kitchen/menu_items', headers: device, params: { station_id: station.prefixed_id }
+    get '/api/v3/pos_device/kitchen/products', headers: device, params: { station_id: station.prefixed_id }
     expect(response.parsed_body['data'].map { |row| row['name'] }).to eq(['Cơm tấm'])
   end
 

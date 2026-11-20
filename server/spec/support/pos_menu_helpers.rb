@@ -24,8 +24,8 @@ module PosMenuHelpers
       Spree::ProductType.create!(store: store, name: Spree::Pos::ProductKinds::NAMES['prepared'])
   end
 
-  # A top-level Spree category of the store: the menu tab a product shows in.
-  def menu_category!(store, name)
+  # A top-level Spree category of the store: the till tab a product shows in.
+  def till_category!(store, name)
     Spree::Category.create!(store: store, name: name)
   end
 

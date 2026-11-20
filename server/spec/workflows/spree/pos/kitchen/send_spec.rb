@@ -10,8 +10,8 @@ RSpec.describe Spree::Pos::Kitchen::Send do
 
   let(:store) { menu_store }
   let(:branch) { kitchen_branch(store, trigger: 'manual') }
-  let(:milk_tea) { menu_item!(store, branch, name: 'Trà sữa', price: 30_000, sizes: { 'M' => 30_000, 'L' => 36_000 }) }
-  let(:beer) { menu_item!(store, branch, name: 'Bia', price: 20_000).tap { |row| row.update!(kitchen_category: 'drinks') } }
+  let(:milk_tea) { prepared_product!(store, branch, name: 'Trà sữa', price: 30_000, sizes: { 'M' => 30_000, 'L' => 36_000 }) }
+  let(:beer) { prepared_product!(store, branch, name: 'Bia', price: 20_000, settings: { kitchen_category: 'drinks' }) }
   let(:ice) { modifier_group!(store, milk_tea, name: 'Đá', options: { 'Ít đá' => 0 }) }
   let!(:kitchen) { kitchen_station!(branch, name: 'Bếp', default: true) }
   let!(:bar) { kitchen_station!(branch, name: 'Bar', kind: 'bar', position: 1) }
@@ -57,15 +57,14 @@ RSpec.describe Spree::Pos::Kitchen::Send do
   end
 
   it 'lists the parts of a combo only when the combo shows them' do
-    fries = menu_item!(store, branch, name: 'Khoai tây', price: 15_000)
-    combo = menu_item!(store, branch, name: 'Combo trưa', price: 60_000, kind: 'combo')
-    combo.combo_components.create!(variant: size(fries), quantity: 2)
-    combo.update!(show_components_on_kds: false)
+    fries = prepared_product!(store, branch, name: 'Khoai tây', price: 15_000)
+    combo = prepared_product!(store, branch, name: 'Combo trưa', price: 60_000, settings: { show_components_on_kds: false })
+    combo_of!(combo, size(fries) => 2)
     add_menu(sale, size(combo))
     kitchen_send(sale)
     expect(tickets_of(sale).sole.items.sole.components).to eq([])
 
-    combo.update!(show_components_on_kds: true)
+    combo.pos_setting.update!(show_components_on_kds: true)
     add_menu(sale, size(combo))
     kitchen_send(sale)
     expect(tickets_of(sale).last.items.sole.components).to eq([{ 'name' => 'Khoai tây', 'quantity' => '2' }])

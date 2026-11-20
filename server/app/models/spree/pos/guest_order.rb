@@ -75,7 +75,7 @@ module Spree
       private
 
       def staff_item(row)
-        row.slice('variant_id', 'menu_item_id', 'name', 'size', 'quantity', 'unit_price', 'amount', 'note', 'outcome', 'reason').
+        row.slice('variant_id', 'product_id', 'name', 'size', 'quantity', 'unit_price', 'amount', 'note', 'outcome', 'reason').
           merge('modifiers' => Array(row['modifiers']).map { |pick| pick.slice('option_id', 'name', 'quantity') })
       end
 

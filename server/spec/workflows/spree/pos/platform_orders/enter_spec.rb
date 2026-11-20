@@ -12,7 +12,7 @@ RSpec.describe Spree::Pos::PlatformOrders::Enter do
   let(:store) { menu_store }
   let(:branch) { platform_branch(store, rate: 25, trigger: 'manual') }
   let(:counter) { platform_counter(store, branch) }
-  let(:milk_tea) { menu_item!(store, branch, name: 'Trà sữa', price: 30_000) }
+  let(:milk_tea) { prepared_product!(store, branch, name: 'Trà sữa', price: 30_000) }
   let(:pearls) { modifier_group!(store, milk_tea, name: 'Topping', options: { 'Trân châu' => 5_000 }) }
   let!(:kitchen) { kitchen_station!(branch, name: 'Bar', kind: 'bar', default: true) }
 

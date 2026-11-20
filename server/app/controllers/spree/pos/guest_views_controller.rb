@@ -137,7 +137,7 @@ module Spree
       # Only what a guest may read: which item, group or option is meant.
       def guest_details(error)
         details = error.details.is_a?(Hash) ? error.details.stringify_keys : {}
-        details.slice('menu_item_id', 'variant_id', 'group_id', 'option_id', 'min_select', 'max_select', 'retry_after_seconds')
+        details.slice('product_id', 'variant_id', 'group_id', 'option_id', 'min_select', 'max_select', 'retry_after_seconds')
       end
 
       def refuse_paused!

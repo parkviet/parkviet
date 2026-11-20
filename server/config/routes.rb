@@ -221,10 +221,13 @@ Rails.application.routes.draw do
                 post 'prints/:print_id/void', action: :void_print
               end
             end
-            # The store's menu, and a branch's sold-out items and favourites.
+            # The store's menu, the POS operating data of its products, and a
+            # branch's sold-out products and favourites.
             get 'menu', to: 'menu#show'
-            resources :menu_categories, only: [:index, :create, :update, :destroy]
-            resources :menu_items, only: [:index, :create, :update, :destroy]
+            get 'products/settings', to: 'product_settings#index'
+            put 'products/:product_id/settings', to: 'product_settings#update'
+            put 'products/:product_id/combo', to: 'product_settings#update_combo'
+            put 'products/:product_id/modifier_groups', to: 'product_settings#update_modifier_groups'
             resources :modifier_groups, only: [:index, :create, :update, :destroy]
             resources :menu_schedules, only: [:index, :create, :update, :destroy]
             put 'menu_availabilities', to: 'menu_availabilities#update'
@@ -616,7 +619,7 @@ Rails.application.routes.draw do
     get 'stations', action: :stations
     put 'station', action: :select_station
     get 'board', action: :board
-    get 'menu_items', action: :menu_items
+    get 'products', action: :products
     post 'items/:id/start', action: :start
     post 'items/:id/ready', action: :ready
     post 'items/:id/serve', action: :serve

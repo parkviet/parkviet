@@ -3,12 +3,18 @@
 module Spree
   module Pos
     # What a guest's phone reads from the table QR: the branch menu as the
-    # counter sells it now (time-of-day prices, hidden items left out,
-    # today's sold-out marks), restricted to items open to guests, without
-    # anything the guest has no business seeing: SKUs, barcodes, list
-    # prices, kitchen routing, tax or cost. Door tickets stay at the counter.
-    # A self-ordering kiosk (channel: :kiosk) reads the same menu with
-    # every item the counter sells, not only those open to the table QR.
+    # counter sells it now (time-of-day prices, hidden products left out,
+    # today's sold-out marks), restricted to prepared products ("Sản phẩm
+    # chế biến") open to guests, without anything the guest has no business
+    # seeing: SKUs, barcodes, list prices, kitchen routing, tax or cost. Door
+    # tickets stay at the counter. A self-ordering kiosk (channel: :kiosk)
+    # reads the same menu with every prepared product the counter sells, not
+    # only those open to the table QR.
+    #
+    # An item's `id` is its product's id and `category_ids` the categories it
+    # shows in: the counter's Spree categories, or the one electronic-menu
+    # category of that row when the branch has an electronic menu (a product
+    # placed in two of them is two rows).
     module GuestMenu
       module_function
 
@@ -33,7 +39,7 @@ module Spree
         rows = if channel == :qr && emenu?(branch)
                  emenu_rows(branch)
                else
-                 orderable(branch, Menu::Reader.call(branch: branch)[:items], channel)
+                 orderable(branch, Menu::Reader.call(branch: branch)[:items], channel).each_with_index.map { |row, at| item_row(row, at) }
                end
         rows.each_with_object({}) do |row, index|
           row[:variants].each { |variant| index[variant[:id]] = row }
@@ -44,7 +50,7 @@ module Spree
         if emenu?(branch)
           EmenuMenu.item_ids(branch)
         else
-          orderable(branch, Menu::Reader.call(branch: branch)[:items], :qr).map { |row| row[:id] }.uniq
+          orderable(branch, Menu::Reader.call(branch: branch)[:items], :qr).map { |row| row[:product_id] }.uniq
         end
       end
 
@@ -54,13 +60,13 @@ module Spree
 
       def counter_body(branch, channel)
         menu = Menu::Reader.call(branch: branch)
-        items = orderable(branch, menu[:items], channel).map { |row| item_row(row) }
+        items = orderable(branch, menu[:items], channel).each_with_index.map { |row, index| item_row(row, index) }
         group_ids = items.flat_map { |row| row[:modifier_group_ids] }.to_set
-        category_ids = items.filter_map { |row| row[:menu_category_id] }.to_set
+        category_ids = items.flat_map { |row| row[:category_ids] }.to_set
         {
           currency: menu[:currency],
-          categories: menu[:categories].select { |row| category_ids.include?(row[:id]) }.map do |row|
-            row.slice(:id, :name, :position, :color).merge(image_url: nil)
+          categories: menu[:categories].select { |row| category_ids.include?(row[:id]) }.each_with_index.map do |row, index|
+            { id: row[:id], name: row[:name], position: index, color: nil, image_url: nil }
           end,
           items: items,
           modifier_groups: menu[:modifier_groups].select { |row| group_ids.include?(row[:id]) }.map { |row| group_row(row) }
@@ -70,16 +76,16 @@ module Spree
       def orderable(branch, rows, channel = :qr)
         raise ArgumentError, "Unknown menu channel: #{channel}" unless CHANNELS.include?(channel)
 
-        scope = MenuItem.for_store(branch.store).where(drink_credit: nil)
-        scope = scope.where(qr_orderable: true) if channel == :qr
-        allowed = scope.pluck(:id).
-                  to_set { |id| MenuItem.prefixed_for(id) }
-        rows.select { |row| allowed.include?(row[:id]) }
+        rows.select do |row|
+          row[:product_kind] == 'prepared' && row[:drink_credit].nil? && (channel != :qr || row[:qr_orderable])
+        end
       end
 
-      def item_row(row)
+      # A counter menu row as a guest reads it; `position` is its place in the
+      # counter's order.
+      def item_row(row, position)
         {
-          id: row[:id], name: row[:name], kind: row[:kind], menu_category_id: row[:menu_category_id], position: row[:position],
+          id: row[:product_id], name: row[:name], kind: row[:kind], category_ids: row[:category_ids], position: position,
           image_url: row[:image_url], sold_out: row[:sold_out], modifier_group_ids: row[:modifier_group_ids],
           components: row[:components].map { |component| component.slice(:name, :quantity) },
           variants: row[:variants].map { |variant| variant.slice(:id, :name, :price, :price_label) }
@@ -94,8 +100,8 @@ module Spree
         }
       end
 
-      # The branch's own electronic menu, including items a running schedule
-      # hides from the counter or products not placed on the counter. Prices
+      # The branch's own electronic menu, including products a running
+      # schedule hides from the counter or products not placed on the counter. Prices
       # and sold-out marks still come from the same menu data the counter uses.
       def emenu_body(branch)
         items = emenu_rows(branch)
@@ -118,35 +124,34 @@ module Spree
         now = Workspace.business_now
         sold_out = MenuAvailability.sold_out_ids(branch, BusinessDay.for(branch, now)).to_set
         EmenuCategory.where(branch_id: branch.id).includes(
-          emenu_items: { menu_item: [:menu_item_modifier_groups, { combo_components: { variant: :product } },
-                                     { product: [:primary_media, { variants: [:prices, :option_values] }] }] }
+          emenu_items: { product: [*Menu::ProductConfig::PRELOAD, :primary_media, { variants: [:prices, :option_values] }] }
         ).order(:position, :id).flat_map do |category|
           category.emenu_items.filter_map { |placement| emenu_item(branch, category, placement, sold_out, now) }
         end
       end
 
       def emenu_item(branch, category, placement, sold_out, now)
-        item = placement.menu_item
-        product = item&.product
-        return if item.nil? || !item.active? || item.drink_credit.present? || product.nil? || product.status != 'active'
+        product = placement.product
+        return if product.nil? || !product.pos_prepared? || product.door_ticket? || product.status != 'active'
         return if (product.available_on.present? && product.available_on > now) ||
                   (product.discontinue_on.present? && product.discontinue_on <= now)
 
-        variants = item.sizes(now: now).filter_map { |variant| emenu_size(branch, item, variant, now) }
+        variants = product.pos_sizes(now: now).filter_map { |variant| emenu_size(branch, product, variant, now) }
         return if variants.empty?
 
+        config = Menu::ProductConfig.to_pos(product)
         {
-          id: item.prefixed_id, name: product.name, kind: item.kind, menu_category_id: category.prefixed_id,
-          position: placement.position, image_url: thumbnail(product), sold_out: sold_out.include?(item.id),
-          modifier_group_ids: item.menu_item_modifier_groups.map { |row| row.modifier_group.prefixed_id },
-          components: item.combo? ? item.combo_components.map { |component| component.to_pos.slice(:name, :quantity) } : [],
+          id: product.prefixed_id, name: product.name, kind: config[:kind], category_ids: [category.prefixed_id],
+          position: placement.position, image_url: thumbnail(product), sold_out: sold_out.include?(product.id),
+          modifier_group_ids: config[:modifier_group_ids],
+          components: config[:components].map { |component| component.slice(:name, :quantity) },
           variants: variants
         }
       end
 
-      def emenu_size(branch, item, variant, now)
+      def emenu_size(branch, product, variant, now)
         pricing = Menu::Pricing.resolve(branch: branch, variant: variant, selections: [], now: now, currency: branch.store.default_currency,
-                                        menu_item: item, allow_hidden: true)
+                                        product: product, allow_hidden: true)
         { id: variant.prefixed_id, name: variant.is_master? ? nil : variant.options_text.presence, price: pricing.unit_price.to_s('F'),
           price_label: pricing.schedule&.label.presence }
       rescue Conflict
@@ -154,7 +159,7 @@ module Spree
       end
 
       def emenu_categories(branch, items)
-        used = items.to_set { |row| row[:menu_category_id] }
+        used = items.flat_map { |row| row[:category_ids] }.to_set
         EmenuCategory.where(branch_id: branch.id).with_attached_image.order(:position, :id).select { |category| used.include?(category.prefixed_id) }.
           map do |category|
             {

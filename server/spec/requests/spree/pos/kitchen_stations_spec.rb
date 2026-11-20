@@ -56,16 +56,16 @@ RSpec.describe 'POS kitchen setup API', type: :request do
 
   it 'routes a product or a category to a station once per service mode' do
     station = kitchen_station!(branch, name: 'Bar', kind: 'bar')
-    item = menu_item!(store, branch, name: 'Cà phê', price: 25_000)
+    item = prepared_product!(store, branch, name: 'Cà phê', price: 25_000)
 
     body = write(:post, '/api/v3/admin/pos/station_routes', manager,
-                 branch_id: branch.prefixed_id, kitchen_station_id: station.prefixed_id, product_id: item.product.prefixed_id)
+                 branch_id: branch.prefixed_id, kitchen_station_id: station.prefixed_id, product_id: item.prefixed_id)
     expect(response).to have_http_status(:created), response.body
     expect_pos_schema!(response, 'StationRoute')
     expect(body['data']).to include('product_name' => 'Cà phê', 'service_mode' => nil)
 
     write(:post, '/api/v3/admin/pos/station_routes', manager,
-          branch_id: branch.prefixed_id, kitchen_station_id: station.prefixed_id, product_id: item.product.prefixed_id)
+          branch_id: branch.prefixed_id, kitchen_station_id: station.prefixed_id, product_id: item.prefixed_id)
     expect(response).to have_http_status(:conflict)
     expect(response.parsed_body.dig('error', 'details', 'reason')).to eq('station_route_taken')
 
@@ -85,7 +85,7 @@ RSpec.describe 'POS kitchen setup API', type: :request do
     station = kitchen_station!(branch, name: 'Bếp', default: true)
     branch.update!(kitchen_send_trigger: 'manual')
     sale = menu_sale(store, branch)
-    add_menu(sale, size(menu_item!(store, branch, name: 'Bún chả', price: 40_000)))
+    add_menu(sale, size(prepared_product!(store, branch, name: 'Bún chả', price: 40_000)))
     kitchen_send(sale)
 
     write(:delete, "/api/v3/admin/pos/kitchen_stations/#{station.prefixed_id}", manager)

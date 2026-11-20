@@ -12,8 +12,8 @@ RSpec.describe Spree::Pos::DisplayState do
 
   let(:store) { menu_store }
   let(:branch) { counter_branch(store) }
-  let(:coffee) { menu_item!(store, branch, name: 'Cà phê', price: 20_000) }
-  let(:tea) { menu_item!(store, branch, name: 'Trà', price: 25_000) }
+  let(:coffee) { prepared_product!(store, branch, name: 'Cà phê', price: 20_000) }
+  let(:tea) { prepared_product!(store, branch, name: 'Trà', price: 25_000) }
   let!(:bar) { kitchen_station!(branch, name: 'Bar', default: true) }
   let(:first) { menu_sale(store, branch) }
   let(:session) do

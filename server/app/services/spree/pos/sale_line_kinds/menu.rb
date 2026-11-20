@@ -3,12 +3,14 @@
 module Spree
   module Pos
     class SaleLineKinds
-      # The `menu` kind: a line of a menu item, priced by Menu::Pricing and
-      # sold with a snapshot of its options and combo contents. It never goes
-      # through a price override, since the client cannot send a price.
+      # The `menu` kind: a line of a prepared product ("Sản phẩm chế biến")
+      # at a branch running `fnb.menu`, priced by Menu::Pricing and sold with
+      # a snapshot of its options and combo contents. It never goes through a
+      # price override, since the client cannot send a price.
       #
       # A branch without `fnb.menu` sells the same variant as an ordinary
       # line at its list price; only attaching options or a note is refused.
+      # Any other product is an ordinary line everywhere.
       module Menu
         KIND = 'menu'
         MODULE = 'fnb.menu'
@@ -25,8 +27,8 @@ module Spree
             return nil
           end
 
-          item = MenuItem.for_variant(workspace.store, variant)
-          if item.nil?
+          product = Pos::Menu::Pricing.menu_product(workspace.store, variant)
+          if product.nil?
             raise Conflict.new('This item is not on the menu.', reason: 'modifier_unknown') if attached
 
             return nil
@@ -34,25 +36,25 @@ module Spree
 
           # The business-date clock: the database clock, which specs can move.
           now = Workspace.business_now
-          ensure_available!(branch, item, now)
+          ensure_available!(branch, product, now)
           Pos::Menu::Pricing.resolve(branch: branch, variant: variant, selections: modifiers, now: now, note: note,
-                                     currency: workspace.order.currency, order: workspace.order, menu_item: item,
+                                     currency: workspace.order.currency, order: workspace.order, product: product,
                                      allow_hidden: allow_hidden)
         end
 
-        def ensure_available!(branch, item, now)
-          return unless MenuAvailability.sold_out?(branch, item, BusinessDay.for(branch, now))
+        def ensure_available!(branch, product, now)
+          return unless MenuAvailability.sold_out?(branch, product, BusinessDay.for(branch, now))
 
-          raise Conflict.new('This item is sold out.', reason: 'menu_item_sold_out', details: { menu_item_id: item.prefixed_id })
+          raise Conflict.new('This item is sold out.', reason: 'product_sold_out', details: { product_id: product.prefixed_id })
         end
 
-        # More of a menu line already in the order is refused while its item
-        # is sold out at a branch that runs the menu.
+        # More of a menu line already in the order is refused while its
+        # product is sold out at a branch that runs the menu.
         def ensure_line_available!(workspace, sale_line)
           return unless ModulePolicy.enabled?(workspace.branch, MODULE)
 
-          item = MenuItem.for_variant(workspace.store, sale_line.variant)
-          ensure_available!(workspace.branch, item, Workspace.business_now) if item
+          product = Pos::Menu::Pricing.menu_product(workspace.store, sale_line.variant)
+          ensure_available!(workspace.branch, product, Workspace.business_now) if product
         end
 
         def merge_key(variant:, sale_unit_code:, line_price:, pricing:)
@@ -82,7 +84,7 @@ module Spree
 
         def audit(pricing)
           {
-            menu_item_id: pricing.menu_item.prefixed_id, schedule_id: pricing.schedule&.prefixed_id,
+            product_id: pricing.product.prefixed_id, schedule_id: pricing.schedule&.prefixed_id,
             base_price: pricing.base_price.to_s('F'), unit_price: pricing.unit_price.to_s('F'),
             modifiers: pricing.options.map { |row| { option_id: row.option.prefixed_id, quantity: row.quantity } }
           }

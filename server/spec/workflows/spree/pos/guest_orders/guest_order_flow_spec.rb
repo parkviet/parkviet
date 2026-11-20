@@ -13,7 +13,7 @@ RSpec.describe 'Spree::Pos::GuestOrders', type: :model do
   let(:cashier) { credit_staff(store, branch, PosCreditHelpers::CASHIER) }
   let(:decider) { credit_staff(store, branch, PosGuestHelpers::DECIDER) }
   let(:table) { table!(area!(branch), name: 'Bàn 7') }
-  let(:item) { menu_item!(store, branch, name: 'Trà đào', price: 30_000) }
+  let(:item) { prepared_product!(store, branch, name: 'Trà đào', price: 30_000) }
   let(:dish) { size(item) }
   let!(:station) { kitchen_station!(branch, name: 'Bar', default: true) }
 
@@ -58,12 +58,12 @@ RSpec.describe 'Spree::Pos::GuestOrders', type: :model do
     expect { submit_guest_order(session, guest_items(dish)) }.
       to raise_error(Spree::Pos::Conflict) { |error| expect(error.reason).to eq('item_sold_out') }
 
-    hidden = menu_item!(store, branch, name: 'Rượu', price: 200_000)
-    hidden.update!(qr_orderable: false)
+    hidden = prepared_product!(store, branch, name: 'Rượu', price: 200_000)
+    Spree::Pos::ProductSetting.create!(store: store, product: hidden, qr_orderable: false)
     expect { submit_guest_order(session, guest_items(size(hidden))) }.
       to raise_error(Spree::Pos::Conflict) { |error| expect(error.reason).to eq('item_unavailable') }
 
-    tea = size(menu_item!(store, branch, name: 'Trà chanh', price: 20_000))
+    tea = size(prepared_product!(store, branch, name: 'Trà chanh', price: 20_000))
     3.times { submit_guest_order(session, guest_items(tea)) }
     expect { submit_guest_order(session, guest_items(tea)) }.
       to raise_error(Spree::Pos::Conflict) { |error| expect(error.reason).to eq('too_many_pending') }
@@ -71,8 +71,9 @@ RSpec.describe 'Spree::Pos::GuestOrders', type: :model do
 
   it 'accepts through the ordinary add command, as the person accepting, and sends only the new lines' do
     session, workspace = opened_session
+    cake = size(prepared_product!(store, branch, name: 'Bánh', price: 10_000))
     waiter_line = Spree::Pos::Workspaces::AppendItems.call(workspace: workspace, staff: cashier, key: SecureRandom.uuid,
-                                                           items: [{ 'variant_id' => size(menu_item!(store, branch, name: 'Bánh', price: 10_000)).prefixed_id }])
+                                                           items: [{ 'variant_id' => cake.prefixed_id }])
     order = submit_guest_order(session, guest_items(dish, quantity: 2))
     expect(Spree::Pos::Workspaces::AppendItems).to receive(:call).and_call_original
 
@@ -92,7 +93,7 @@ RSpec.describe 'Spree::Pos::GuestOrders', type: :model do
 
   it 'leaves out an item sold out since the guest sent it, and rejects when nothing is left' do
     session, workspace = opened_session
-    other = size(menu_item!(store, branch, name: 'Cà phê', price: 25_000))
+    other = size(prepared_product!(store, branch, name: 'Cà phê', price: 25_000))
     order = submit_guest_order(session, guest_items(dish) + guest_items(other))
     lone = submit_guest_order(session, guest_items(dish))
     sold_out!(item)
@@ -144,7 +145,7 @@ RSpec.describe 'Spree::Pos::GuestOrders', type: :model do
     it 'leaves an order above the amount or item limit pending' do
       session, workspace = opened_session
       expect(submit_guest_order(session, guest_items(dish, quantity: 4)).status).to eq('pending')
-      expect(submit_guest_order(session, guest_items(size(menu_item!(store, branch, name: 'Lẩu', price: 150_000)))).status).to eq('pending')
+      expect(submit_guest_order(session, guest_items(size(prepared_product!(store, branch, name: 'Lẩu', price: 150_000)))).status).to eq('pending')
       expect(Spree::Pos::SaleLine.where(workspace_id: workspace.id)).to be_empty
     end
   end
