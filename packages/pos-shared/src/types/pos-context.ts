@@ -248,18 +248,26 @@ export type PosMenuVariant = {
   price_label?: string | null;
 };
 
-export type PosMenuItem = {
-  id: string;
+// The POS kind of a product, read from its Spree product type.
+export type PosProductKind = 'goods' | 'prepared' | 'service' | 'ingredient';
+
+// One product the branch sells at the till, keyed by product_id. Only a
+// prepared product ("Sản phẩm chế biến") at a branch running fnb.menu is a
+// menu line (isMenuLine); any other reads with no add-ons and no contents.
+export type PosMenuProduct = {
   product_id: string;
   name: string;
+  product_kind: PosProductKind | null;
   kind: 'single' | 'combo';
-  menu_category_id: string | null;
+  // The Spree categories it is attached to directly, in tree order; empty
+  // shows it only under "All".
+  category_ids: string[];
   kitchen_category: string | null;
   // Prints one cup label per unit when the branch runs cup labels.
   cup_label: boolean;
   show_components_on_kds: boolean;
-  position: number;
-  active: boolean;
+  // Guests may order it from the table QR.
+  qr_orderable: boolean;
   tax_category_id: string | null;
   modifier_group_ids: string[];
   components: { id: string; variant_id: string; name: string; quantity: number }[];
@@ -268,16 +276,17 @@ export type PosMenuItem = {
   variants: PosMenuVariant[];
   // A door ticket: each one sold lets the guest drink this much (VND) of
   // the listed kitchen categories (any drink when empty).
-  drink_credit?: string | null;
-  drink_credit_categories?: string[];
+  drink_credit: string | null;
+  drink_credit_categories: string[];
 };
 
-export type PosMenuCategory = {
+// A Spree category with a listed product attached directly: one tab of the
+// till. The list is in tree order; position is among siblings.
+export type PosCategory = {
   id: string;
   name: string;
   position: number;
-  color: string | null;
-  active: boolean;
+  parent_id: string | null;
 };
 
 export type PosMenu = {
@@ -285,11 +294,12 @@ export type PosMenu = {
   currency: string;
   business_date: string;
   module_enabled: boolean;
-  categories: PosMenuCategory[];
-  items: PosMenuItem[];
+  categories: PosCategory[];
+  items: PosMenuProduct[];
   modifier_groups: PosMenuModifierGroup[];
   // Time-of-day menus running now.
-  schedules: { id: string; name: string }[];
+  schedules: { id: string; name: string; label?: string | null }[];
+  // Product ids of the favourites row, in order.
   favorites: string[];
   etag: string;
 };
