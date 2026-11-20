@@ -63,7 +63,7 @@ async function install(page: Page) {
       return route.fulfill({ json: { price_count: prices.length } });
     }
     if (path === '/pos/modifier_groups') return route.fulfill({ json: { data: [{ id: 'grp_topping', name: 'Topping', min_select: 0, max_select: 2, allow_quantity: false, required: false, position: 0, options: [{ id: 'opt_1', name: 'Trân châu', price_delta: '5000' }] }] } });
-    if (path === '/pos/products/settings') return route.fulfill({ json: { data: settings, meta: { tax_defaults: { food: 'tax_food', alcohol: null } } } });
+    if (path === '/pos/products/settings') return route.fulfill({ json: { data: settings } });
     const groups = /^\/pos\/products\/([^/]+)\/modifier_groups$/.exec(path);
     if (groups) {
       const row = settings.find((item) => item.product_id === groups[1]);

@@ -37,8 +37,8 @@ RSpec.describe CreateSpreePosBusinessProfiles, pos_modules: :default do
       expect(Spree::Pos::ModulePolicy.for_branch(branch).slice('retail.units', 'retail.measured', 'retail.traceability').values).to all(be(true))
     end
     profile = Spree::Pos::StoreProfile.find_by!(store: store)
-    expect(profile.attributes.slice('profile_key', 'profile_version', 'wholesale', 'interests')).
-      to eq('profile_key' => 'khac', 'profile_version' => 1, 'wholesale' => false, 'interests' => [])
+    expect(profile.attributes.slice('profile_key', 'profile_version', 'interests')).
+      to eq('profile_key' => 'khac', 'profile_version' => 1, 'interests' => [])
     expect(profile.onboarded_at).to be_within(1.second).of(first.reload.created_at)
     expect(profile.prefixed_id).to start_with('posstoreprof_')
 

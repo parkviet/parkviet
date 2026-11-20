@@ -21,7 +21,6 @@ module Spree
 
               data = Spree::Pos::StoreInfos::Save.call(store: current_store, actor: current_user, attributes: info_params,
                                                        profile_key: params[:profile_key], profile_keys: profile_keys,
-                                                       wholesale: params.key?(:wholesale) ? params[:wholesale] : nil,
                                                        interests: params.key?(:interests) ? Array(params[:interests]) : nil,
                                                        reason: params[:reason].presence || 'store_info')
               render json: { data: data }

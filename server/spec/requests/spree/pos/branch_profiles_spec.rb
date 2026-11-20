@@ -189,9 +189,9 @@ RSpec.describe 'POS branch profiles', type: :request, pos_modules: :default do
       branch
       Spree::Pos::StoreProfile.create!(store: store, profile_key: 'khac', onboarded_at: 1.day.ago)
       modules_before = Spree::Pos::ModulePolicy.for_branch(branch)
-      data = call(manager, :put, 'store_profile', profile_key: 'nha_thuoc', wholesale: true, interests: ['karaoke_bida'], reason: 'Đổi ngành')['data']
+      data = call(manager, :put, 'store_profile', profile_key: 'nha_thuoc', interests: ['karaoke_bida'], reason: 'Đổi ngành')['data']
       expect(response).to have_http_status(:ok)
-      expect(data).to include('profile_key' => 'nha_thuoc', 'wholesale' => true, 'interests' => ['karaoke_bida'], 'changed_by_id' => manager.prefixed_id)
+      expect(data).to include('profile_key' => 'nha_thuoc', 'interests' => ['karaoke_bida'], 'changed_by_id' => manager.prefixed_id)
       expect(branch.reload.profile_key).to eq('khac')
       expect(Spree::Pos::ModulePolicy.for_branch(branch)).to eq(modules_before)
       audit = Spree::Pos::AuditEntry.find_by!(action: 'store_profile.change')
@@ -223,7 +223,7 @@ RSpec.describe 'POS branch profiles', type: :request, pos_modules: :default do
       branch
       data = call(manager, :put, 'store_profile', profile_key: 'me_be', reason: 'Bổ sung')['data']
       expect(response).to have_http_status(:ok)
-      expect(data).to include('profile_key' => 'me_be', 'wholesale' => false, 'interests' => [])
+      expect(data).to include('profile_key' => 'me_be', 'interests' => [])
       expect(data['onboarded_at']).to be_present
       expect(Spree::Pos::AuditEntry.find_by!(action: 'store_profile.change').metadata).to include('from' => nil)
     end

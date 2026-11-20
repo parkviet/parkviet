@@ -136,7 +136,7 @@ RSpec.describe 'POS menu API', type: :request do
     expect(response).to have_http_status(:ok)
     expect_pos_schema!(response, 'ProductPosSettings')
     expect(response.parsed_body['data'].map { |row| row['name'] }).to eq(['Cà phê sữa', 'Sữa tươi'])
-    expect(response.parsed_body['meta']).to have_key('tax_defaults')
+    expect(response.parsed_body).not_to have_key('meta')
 
     expect(Spree::Pos::AuditEntry.where(action: 'product_setting.change').count).to eq(2)
     expect(Spree::Pos::AuditEntry.where(action: %w[product_modifier_groups.change product_combo.change]).count).to eq(3)

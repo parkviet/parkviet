@@ -70,8 +70,6 @@ RSpec.describe Spree::Pos::BusinessProfiles do
       expect(data[:modules].pluck(:status).uniq).to eq(['available'])
       expect(data[:profiles].first.keys).
         to eq(%i[key group order status modules optional_modules branch_defaults display recommended_features sample_units kitchen_stations])
-      expect(data[:tax_categories].map { |row| row[:code] }).to eq(%w[vat_food vat_special])
-      expect(data[:menu_tax_defaults]).to eq('food' => 'vat_food', 'alcohol' => 'vat_special')
     end
 
     it 'presets the wave-one F&B profiles as decided' do

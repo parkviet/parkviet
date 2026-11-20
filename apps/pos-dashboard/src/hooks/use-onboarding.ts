@@ -57,7 +57,6 @@ export function useOnboarding() {
 export type StoreProfile = {
   id: string | null
   profile_key: string
-  wholesale: boolean
   interests: string[]
   onboarded_at: string | null
   changed_by_name: string | null
@@ -72,7 +71,6 @@ function toStoreProfile(value: unknown): StoreProfile | null {
   return {
     id: text(row.id),
     profile_key: row.profile_key,
-    wholesale: row.wholesale === true,
     interests: Array.isArray(row.interests)
       ? row.interests.filter((item): item is string => typeof item === 'string')
       : [],
@@ -104,7 +102,6 @@ export function useStoreProfile(storeId: string | null, enabled: boolean) {
 // on, never an existing branch. Needs `write_pos_topology` and a reason.
 export async function saveStoreProfile(body: {
   profile_key: string
-  wholesale: boolean
   interests: string[]
   reason: string
 }): Promise<StoreProfile | null> {

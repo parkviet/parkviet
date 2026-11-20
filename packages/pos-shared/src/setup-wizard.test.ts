@@ -111,7 +111,6 @@ describe('setup wizard state', () => {
       step: 1,
       profileKey: null,
       interests: [],
-      wholesale: false,
       registerName: 'Quầy 1',
       grantSelf: true,
       features: [],
@@ -133,6 +132,19 @@ describe('setup wizard state', () => {
     });
     // Recommended features stay unticked (D6).
     expect(state.features).toEqual([]);
+  });
+
+  it('selecting another available industry keeps step 1 valid', () => {
+    const state = run([
+      { type: 'add-profile', key: 'thoi_trang', profiles: PROFILES },
+      { type: 'add-profile', key: 'cafe_tra_sua', profiles: PROFILES },
+    ]);
+    expect(state).toMatchObject({
+      profileKey: 'thoi_trang',
+      profileKeys: ['thoi_trang', 'cafe_tra_sua'],
+      choice: 'cafe_tra_sua',
+    });
+    expect(stepProblems(state, 1, { profiles: PROFILES, locationIds: [] })).toEqual([]);
   });
 
   it('a coming-soon card asks first; yes records the interest and suggests a retail profile', () => {
@@ -291,8 +303,8 @@ describe('step checks', () => {
     { type: 'stock-location', value: 'sloc_1' },
   ]);
 
-  it('step 3 needs a name, a valid code, a time zone and an existing stock location', () => {
-    expect(stepProblems(ready, 3, { profiles: PROFILES, locationIds: ['sloc_1'] })).toEqual([]);
+  it('step 2 needs a name, a valid code, a time zone and an existing stock location', () => {
+    expect(stepProblems(ready, 2, { profiles: PROFILES, locationIds: ['sloc_1'] })).toEqual([]);
     const blank = run(
       [
         { type: 'branch-name', value: ' ' },
@@ -302,7 +314,7 @@ describe('step checks', () => {
       ],
       ready,
     );
-    expect(stepProblems(blank, 3, { profiles: PROFILES, locationIds: ['sloc_1'] })).toEqual([
+    expect(stepProblems(blank, 2, { profiles: PROFILES, locationIds: ['sloc_1'] })).toEqual([
       'name',
       'code',
       'timezone',
@@ -310,14 +322,14 @@ describe('step checks', () => {
     ]);
   });
 
-  it('a store without stock locations cannot go past step 3', () => {
-    expect(stepProblems(ready, 3, { profiles: PROFILES, locationIds: [] })).toEqual([
+  it('a store without stock locations cannot go past step 2', () => {
+    expect(stepProblems(ready, 2, { profiles: PROFILES, locationIds: [] })).toEqual([
       'no-locations',
     ]);
-    expect(stepProblems(ready, 2, { profiles: PROFILES, locationIds: [] })).toEqual([]);
+    expect(stepProblems(ready, 1, { profiles: PROFILES, locationIds: [] })).toEqual([]);
   });
 
-  it('step 4 checks the edited defaults', () => {
+  it('step 3 checks the edited defaults', () => {
     const bad = run(
       [
         { type: 'default', field: 'return_window_days', value: '4000' },
@@ -326,12 +338,12 @@ describe('step checks', () => {
       ],
       ready,
     );
-    expect(stepProblems(bad, 4, { profiles: PROFILES, locationIds: ['sloc_1'] })).toEqual([
+    expect(stepProblems(bad, 3, { profiles: PROFILES, locationIds: ['sloc_1'] })).toEqual([
       'return-window',
       'variance',
       'adjustment',
     ]);
-    expect(stepProblems(ready, 6, { profiles: PROFILES, locationIds: ['sloc_1'] })).toEqual([]);
+    expect(stepProblems(ready, 5, { profiles: PROFILES, locationIds: ['sloc_1'] })).toEqual([]);
   });
 });
 
@@ -348,7 +360,6 @@ describe('onboarding payload', () => {
     ]);
     expect(onboardingPayload(state, pharmacy)).toEqual({
       profile_key: 'nha_thuoc',
-      wholesale: false,
       interests: ['karaoke_bida'],
       branch: {
         name: 'Nhà thuốc 1',
@@ -380,7 +391,6 @@ describe('onboarding payload', () => {
   it('keeps edits, drops a blank register, and only sends recommended ticked features', () => {
     const state = run([
       choose('nha_thuoc'),
-      { type: 'wholesale', value: true },
       { type: 'branch-name', value: 'NT' },
       { type: 'stock-location', value: 'sloc_1' },
       { type: 'register-name', value: '   ' },
@@ -394,7 +404,6 @@ describe('onboarding payload', () => {
     const payload = onboardingPayload(state, pharmacy);
     expect(payload).not.toHaveProperty('register');
     expect(payload).toMatchObject({
-      wholesale: true,
       grant_self: false,
       features: ['returns'],
       branch: { return_window_days: null, lot_selection: 'cashier_pick' },
@@ -535,7 +544,6 @@ describe('setup and business model texts', () => {
       'adjustment',
       'station-name',
       'station-duplicate',
-      'tax',
       'table-register',
     ])
       expect(setup).toHaveProperty([`problem_${problem}`]);
@@ -565,38 +573,29 @@ describe('setup and business model texts', () => {
 describe('the F&B shop step', () => {
   const cafe = PROFILES.find((item) => item.key === 'cafe_tra_sua') as BusinessProfile;
   const pharmacy = PROFILES.find((item) => item.key === 'nha_thuoc') as BusinessProfile;
-  const catalogue = {
-    tax_categories: [
-      { code: 'vat_food', rate: '0.08' },
-      { code: 'vat_special', rate: '0.1' },
-    ],
-    menu_tax_defaults: { food: 'vat_food', alcohol: 'vat_special' },
-  };
   const names = (kind: string) => (kind === 'bar' ? 'Bar' : 'Bếp');
-  const shop = shopDefaults(cafe, catalogue, names);
+  const shop = shopDefaults(cafe, names);
 
   it('comes after the preview only for profiles with the menu', () => {
-    expect(setupSteps(cafe)).toEqual([1, 2, 3, 4, 5, 6]);
-    expect(setupSteps(pharmacy)).toEqual([1, 2, 3, 4, 6]);
-    expect(nextStep(4, pharmacy)).toBe(6);
-    expect(previousStep(6, pharmacy)).toBe(4);
-    expect(nextStep(4, cafe)).toBe(5);
-    expect(nextStep(6, cafe)).toBe(6);
+    expect(setupSteps(cafe)).toEqual([1, 2, 3, 4, 5]);
+    expect(setupSteps(pharmacy)).toEqual([1, 2, 3, 5]);
+    expect(nextStep(3, pharmacy)).toBe(5);
+    expect(previousStep(5, pharmacy)).toBe(3);
+    expect(nextStep(3, cafe)).toBe(4);
+    expect(nextStep(5, cafe)).toBe(5);
   });
 
-  it('proposes the profile stations, the tax codes and the send trigger', () => {
+  it('proposes the profile stations and the send trigger', () => {
     expect(shop).toEqual({
       profileKey: 'cafe_tra_sua',
       stations: [
         { kind: 'prep', name: 'Bếp' },
         { kind: 'bar', name: 'Bar' },
       ],
-      foodTax: 'vat_food',
-      alcoholTax: 'vat_special',
       trigger: 'on_complete',
     });
     const noKitchen = profile('menu_only', { modules: ['fnb.menu'], kitchen_stations: ['prep'] });
-    expect(shopDefaults(noKitchen, catalogue, names).stations).toEqual([]);
+    expect(shopDefaults(noKitchen, names).stations).toEqual([]);
   });
 
   it('keeps edits for the same profile and starts over for another', () => {
@@ -606,7 +605,6 @@ describe('the F&B shop step', () => {
       { type: 'station-name', index: 1, value: 'Quầy pha chế' },
       { type: 'station-add', name: 'Bếp 2' },
       { type: 'station-remove', index: 0 },
-      { type: 'shop-tax', role: 'alcohol', value: 'vat_food' },
       { type: 'shop-trigger', value: 'manual' },
       { type: 'shop-init', value: shop },
     ]);
@@ -615,13 +613,12 @@ describe('the F&B shop step', () => {
         { kind: 'bar', name: 'Quầy pha chế' },
         { kind: 'prep', name: 'Bếp 2' },
       ],
-      alcoholTax: 'vat_food',
       trigger: 'manual',
     });
     expect(setupReducer(state, choose('nha_thuoc')).shop).toBeNull();
   });
 
-  it('needs named, distinct stations and both tax choices', () => {
+  it('needs named, distinct stations', () => {
     const state = run([
       choose('cafe_tra_sua'),
       { type: 'branch-name', value: 'Cà phê' },
@@ -629,11 +626,10 @@ describe('the F&B shop step', () => {
       { type: 'shop-init', value: shop },
       { type: 'station-name', index: 1, value: ' bếp ' },
       { type: 'station-add', name: '' },
-      { type: 'shop-tax', role: 'food', value: '' },
     ]);
     const options = { profiles: PROFILES, locationIds: ['sloc_1'] };
-    expect(stepProblems(state, 4, options)).toEqual([]);
-    expect(stepProblems(state, 5, options)).toEqual(['station-name', 'station-duplicate', 'tax']);
+    expect(stepProblems(state, 3, options)).toEqual([]);
+    expect(stepProblems(state, 4, options)).toEqual(['station-name', 'station-duplicate']);
   });
 
   it('sends the step as fnb_setup, and never for a retail profile', () => {
@@ -648,7 +644,6 @@ describe('the F&B shop step', () => {
         { name: 'Bếp nóng', kind: 'prep' },
         { name: 'Bar', kind: 'bar' },
       ],
-      tax_categories: { food: 'vat_food', alcohol: 'vat_special' },
       kitchen_send_trigger: 'on_complete',
     });
     expect(onboardingPayload(run([choose('nha_thuoc')], state), pharmacy)).not.toHaveProperty(
@@ -692,11 +687,11 @@ describe('table service at setup', () => {
 
   it('needs a register for table orders', () => {
     const blank: SetupAction = { type: 'register-name', value: ' ' };
-    expect(stepProblems(ready('quan_an', [blank]), 5, options)).toEqual([]);
+    expect(stepProblems(ready('quan_an', [blank]), 4, options)).toEqual([]);
     expect(
-      stepProblems(ready('quan_an', [blank, { type: 'has-tables', value: true }]), 5, options),
+      stepProblems(ready('quan_an', [blank, { type: 'has-tables', value: true }]), 4, options),
     ).toEqual(['table-register']);
-    expect(stepProblems(ready('nha_hang', [blank]), 6, options)).toEqual(['table-register']);
-    expect(stepProblems(ready('nha_hang'), 6, options)).toEqual([]);
+    expect(stepProblems(ready('nha_hang', [blank]), 5, options)).toEqual(['table-register']);
+    expect(stepProblems(ready('nha_hang'), 5, options)).toEqual([]);
   });
 });

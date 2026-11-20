@@ -19,16 +19,12 @@ module Spree
                             update_combo: %w[write_pos_orders write_pos_topology],
                             update_modifier_groups: %w[write_pos_orders write_pos_topology]
 
-            # meta.tax_defaults: the tax categories the store's F&B setup chose
-            # for food and for alcoholic drinks (ids or null), for the product form.
             def index
               read_store!
               products = Spree::Product.where(store_id: current_store.id).pos_prepared(current_store).
                          includes(*Spree::Pos::Menu::ProductConfig::PRELOAD, { variants: [:prices, :option_values] }).
                          order(:name, :id).to_a
-              profile = Spree::Pos::StoreProfile.for_store(current_store).includes(:food_tax_category, :alcohol_tax_category).first
-              render json: { data: products.map { |product| present(product) },
-                             meta: { tax_defaults: profile&.tax_defaults || { food: nil, alcohol: nil } } }
+              render json: { data: products.map { |product| present(product) } }
             end
 
             # PUT /pos/products/:product_id/settings

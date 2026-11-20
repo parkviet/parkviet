@@ -42,17 +42,11 @@ function useMenuQuery<T>(resource: MenuResource, enabled: boolean) {
   })
 }
 
-// Tax categories new prepared products start with (chosen in the F&B setup
-// step): ids, or null when the store never chose one.
-export type MenuTaxDefaults = { food: string | null; alcohol: string | null }
-
+// Every prepared product of the store comes in one answer.
 type ProductSettingsBody = {
   data: ProductPosSettings[]
-  meta?: { tax_defaults?: MenuTaxDefaults }
 }
 
-// Every prepared product of the store and the tax defaults come in one
-// answer; both hooks share it.
 function useProductSettingsBody<T>(enabled: boolean, select: (body: ProductSettingsBody) => T) {
   const { storeId } = useSession()
   return useQuery({
@@ -65,11 +59,6 @@ function useProductSettingsBody<T>(enabled: boolean, select: (body: ProductSetti
 
 export const useProductSettings = (enabled: boolean) =>
   useProductSettingsBody(enabled, (body) => body.data)
-export const useMenuTaxDefaults = (enabled: boolean) =>
-  useProductSettingsBody(
-    enabled,
-    (body): MenuTaxDefaults => body.meta?.tax_defaults ?? { food: null, alcohol: null },
-  )
 // Option costs come only to the people who manage the menu or stock.
 export const useModifierGroups = (enabled: boolean) =>
   useMenuQuery<AddonGroup>('modifier_groups', enabled)

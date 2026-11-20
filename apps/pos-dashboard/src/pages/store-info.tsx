@@ -42,7 +42,6 @@ import {
 
 type Draft = StoreInfoDraft & {
   cutoff: string
-  wholesale: boolean
   interests: string[]
   provinceName: string
   wardName: string
@@ -69,7 +68,6 @@ function draftFrom(record: StoreInfoRecord): Draft {
     street: record.street ?? '',
     description: record.description ?? '',
     cutoff: record.business_day_cutoff,
-    wholesale: record.wholesale,
     interests: record.interests,
     provinceName: record.province_name ?? '',
     wardName: record.ward_name ?? '',
@@ -150,7 +148,6 @@ function StoreInfoForm({
         street: draft.street.trim() || null,
         description: draft.description.trim() || null,
         profile_keys: draft.profileKeys,
-        wholesale: draft.wholesale,
         interests: draft.interests,
         reason: 'store_info',
       })
@@ -329,13 +326,6 @@ function StoreInfoForm({
             ) : null}
             {record.open_shifts > 0 ? <p className="text-sm">{t('storeInfo.openShifts')}</p> : null}
           </div>
-          <ModelCheck
-            checked={draft.wholesale}
-            disabled={!write}
-            onChange={(wholesale) => patch({ wholesale })}
-          >
-            {t('businessModel.storeWholesale')}
-          </ModelCheck>
           {profiles.some((profile) => profile.status === 'coming_soon') ? (
             <fieldset className="space-y-3">
               <legend>{t('businessModel.storeInterests')}</legend>

@@ -19,7 +19,7 @@ module Spree
               data = Spree::Pos::Onboarding::Setup.call(
                 store: current_store, actor: current_user, key: key, profile_key: params[:profile_key],
                 profile_keys: params.key?(:profile_keys) ? Array(params[:profile_keys]) : nil, branch: params[:branch],
-                wholesale: params[:wholesale], interests: params[:interests], register: params[:register],
+                interests: params[:interests], register: params[:register],
                 grant_self: params[:grant_self], features: params[:features],
                 disabled_modules: params[:disabled_modules], fnb_setup: params[:fnb_setup],
                 answers: params[:answers]

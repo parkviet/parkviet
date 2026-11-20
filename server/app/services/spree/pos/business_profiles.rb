@@ -197,8 +197,7 @@ module Spree
         end
 
         def to_pos
-          { version: version, modules: Modules.all.map(&:to_pos), profiles: all.map(&:to_pos),
-            tax_categories: TaxCategories.options, menu_tax_defaults: TaxCategories::MENU_DEFAULTS }
+          { version: version, modules: Modules.all.map(&:to_pos), profiles: all.map(&:to_pos) }
         end
 
         private

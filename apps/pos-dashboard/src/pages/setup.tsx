@@ -28,7 +28,7 @@ import {
   stepProblems,
   tablesOn,
 } from '@parkviet/pos-shared/setup-wizard'
-import { Button, Label, RadioGroup, RadioGroupItem, Wizard } from '@spree/dashboard-ui'
+import { Button, Wizard } from '@spree/dashboard-ui'
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useEffect, useReducer, useRef, useState } from 'react'
@@ -37,7 +37,7 @@ import { PageSkeleton } from '../components/page-skeleton'
 import { ModelPage, ModelState } from '../components/setup/model-ui'
 import { ProfilePicker } from '../components/setup/profile-picker'
 import { SetupBranchStep } from '../components/setup/setup-branch-step'
-import { SetupFnbStep, stationName, taxLabel } from '../components/setup/setup-fnb-step'
+import { SetupFnbStep, stationName } from '../components/setup/setup-fnb-step'
 import { ModuleName, SetupPreviewStep, unitLabel } from '../components/setup-preview-step'
 import { useBranchSelection } from '../hooks/use-branch-selection'
 import { useBusinessProfiles } from '../hooks/use-business-profiles'
@@ -94,7 +94,6 @@ function SetupWizard({ onDone }: { onDone: () => void }) {
     profiles,
     state.profileKeys.length ? state.profileKeys : state.profileKey ? [state.profileKey] : [],
   )
-  const taxes = catalogue.data?.tax_categories ?? []
   const routingProfile = profile
     ? {
         ...profile,
@@ -123,7 +122,7 @@ function SetupWizard({ onDone }: { onDone: () => void }) {
     if (routingProfile && catalogue.data && hasShopStep(routingProfile) && step >= SHOP_STEP)
       dispatch({
         type: 'shop-init',
-        value: shopDefaults(routingProfile, catalogue.data, stationName(t)),
+        value: shopDefaults(routingProfile, stationName(t)),
       })
     dispatch({ type: 'go', step })
   }
@@ -258,27 +257,6 @@ function SetupWizard({ onDone }: { onDone: () => void }) {
               />
             ) : null}
             {state.step === 2 ? (
-              <fieldset className="space-y-4">
-                <legend className="mb-4">{t('setup.wholesaleQuestion')}</legend>
-                <RadioGroup
-                  value={String(state.wholesale)}
-                  onValueChange={(value) =>
-                    dispatch({ type: 'wholesale', value: value === 'true' })
-                  }
-                >
-                  {([true, false] as const).map((value) => (
-                    <div key={String(value)} className="flex items-center gap-3">
-                      <RadioGroupItem id={`wholesale-${value}`} value={String(value)} />
-                      <Label htmlFor={`wholesale-${value}`}>
-                        {t(value ? 'setup.wholesaleYes' : 'setup.wholesaleNo')}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-                <p className="text-sm text-muted-foreground">{t('setup.wholesaleNote')}</p>
-              </fieldset>
-            ) : null}
-            {state.step === 3 ? (
               <SetupBranchStep
                 state={state}
                 dispatch={dispatch}
@@ -291,7 +269,7 @@ function SetupWizard({ onDone }: { onDone: () => void }) {
                 }}
               />
             ) : null}
-            {state.step === 4 && profile ? (
+            {state.step === 3 && profile ? (
               <SetupPreviewStep
                 profile={profile}
                 catalogue={catalogue.data?.modules ?? []}
@@ -306,7 +284,6 @@ function SetupWizard({ onDone }: { onDone: () => void }) {
                 shop={state.shop}
                 hasTables={state.hasTables}
                 registerName={state.registerName}
-                taxes={taxes}
                 dispatch={dispatch}
                 problems={visibleProblems}
               />
@@ -315,7 +292,6 @@ function SetupWizard({ onDone }: { onDone: () => void }) {
               <SetupSummary
                 state={state}
                 shop={hasShopStep(routingProfile) ? state.shop : null}
-                taxLabel={(code) => taxLabel(t, taxes, code)}
                 profileName={t(profileLabelKey(profile.key))}
                 modules={profileModules(profile, tablesOptional(profile) && state.hasTables).filter(
                   (key) => !state.disabledModules.includes(key),
@@ -365,7 +341,6 @@ function SetupWizard({ onDone }: { onDone: () => void }) {
 function SetupSummary({
   state,
   shop,
-  taxLabel,
   profileName,
   modules,
   tables,
@@ -374,7 +349,6 @@ function SetupSummary({
 }: {
   state: SetupState
   shop: ShopSetup | null
-  taxLabel: (code: string) => string
   profileName: string
   modules: string[]
   tables: boolean
@@ -389,8 +363,6 @@ function SetupSummary({
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(10rem,1fr)_2fr] [&>dt]:font-medium [&>dd]:break-words">
         <dt>{t('setup.summaryProfile')}</dt>
         <dd>{profileName}</dd>
-        <dt>{t('setup.summaryWholesale')}</dt>
-        <dd>{t(state.wholesale ? 'setup.wholesaleYes' : 'setup.wholesaleNo')}</dd>
         {state.interests.length ? (
           <>
             <dt>{t('setup.summaryInterests')}</dt>
@@ -434,13 +406,6 @@ function SetupSummary({
           <>
             <dt>{t('setup.summaryStations')}</dt>
             <dd>{shop.stations.map((row) => row.name.trim()).join(', ') || none}</dd>
-            <dt>{t('setup.summaryTax')}</dt>
-            <dd>
-              {t('setup.summaryTaxValue', {
-                food: taxLabel(shop.foodTax),
-                alcohol: taxLabel(shop.alcoholTax),
-              })}
-            </dd>
             {modules.includes('fnb.kitchen') ? (
               <>
                 <dt>{t('setup.shopTrigger')}</dt>

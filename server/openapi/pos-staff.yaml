@@ -349,14 +349,12 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data, meta]
+                required: [data]
                 properties:
                   data:
                     type: array
                     items:
                       $ref: '#/components/schemas/ProductPosSettings'
-                  meta:
-                    $ref: '#/components/schemas/ProductPosSettingsMeta'
   /api/v3/admin/pos/products/{product_id}/settings:
     put:
       operationId: posProductSettingsUpdate
@@ -8946,25 +8944,6 @@ components:
           description: Reasons a sent item may be voided for, in order; `khac` with a note is always offered.
           items:
             type: string
-    ProductPosSettingsMeta:
-      type: object
-      additionalProperties: false
-      required: [tax_defaults]
-      properties:
-        tax_defaults:
-          $ref: '#/components/schemas/MenuTaxDefaults'
-    MenuTaxDefaults:
-      type: object
-      additionalProperties: false
-      required: [food, alcohol]
-      description: Tax categories new prepared products start with, chosen in the F&B setup step.
-      properties:
-        food:
-          type: string
-          nullable: true
-        alcohol:
-          type: string
-          nullable: true
     HardwareStatus:
       type: object
       additionalProperties: false

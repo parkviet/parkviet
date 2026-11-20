@@ -10,7 +10,6 @@ import {
   productCreateBody,
   productUpdateBody,
   SKU_PREFIX,
-  withDefaultTax,
 } from '../lib/goods-products'
 import {
   type OptionNames,
@@ -284,9 +283,6 @@ export type SaveContext = {
   // The product's stored operating data when it is managed here (null:
   // none yet); absent when the signed-in staff cannot change the menu.
   operations?: { current: ProductPosConfig | null }
-  // The store's food tax category, given to a new prepared product left
-  // without one.
-  foodTaxCategoryId?: string | null
 }
 
 async function attempt(
@@ -317,7 +313,7 @@ export async function saveGoodsProduct(
   const sku = withOptions ? value.sku : value.sku || (await generateSku())
   const existing = context.existing
   const parsed = {
-    ...(existing ? value : withDefaultTax(value, context.foodTaxCategoryId)),
+    ...value,
     sku,
     variants: await namedRows(value.variants),
   }

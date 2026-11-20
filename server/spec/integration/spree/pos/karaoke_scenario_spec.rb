@@ -37,8 +37,7 @@ RSpec.describe 'Karaoke room from setup to payment', pos_modules: :default do
       store: store, actor: owner, key: SecureRandom.uuid, profile_key: 'karaoke_bida', grant_self: true,
       branch: { 'name' => name, 'code' => code, 'timezone' => 'Asia/Ho_Chi_Minh', 'stock_location_id' => location.prefixed_id },
       register: { 'name' => 'Quầy 1' },
-      fnb_setup: { 'stations' => [{ 'name' => 'Bar', 'kind' => 'bar' }],
-                   'tax_categories' => { 'food' => 'vat_food', 'alcohol' => 'vat_special' } }
+      fnb_setup: { 'stations' => [{ 'name' => 'Bar', 'kind' => 'bar' }] }
     ).with_indifferent_access
     [Spree::Pos::Branch.find_by_prefix_id!(result.dig(:branch, :id)), Spree::Pos::Register.find_by_prefix_id!(result.dig(:register, :id))]
   end
@@ -50,8 +49,9 @@ RSpec.describe 'Karaoke room from setup to payment', pos_modules: :default do
     expect(branch.table_register).to eq(register)
     expect(Spree::Pos::ModulePolicy.for_branch(branch)).to include('timed_billing' => true, 'fnb.tables' => true, 'resources' => true)
 
-    # 2. The manager prices the rooms; the singing and the beer are taxed at 10 %.
-    special = Spree::Pos::StoreProfile.find_by!(store: store).alcohol_tax_category
+    # 2. The manager prices the rooms; the singing and the beer each carry 10 % on their own tax category.
+    Spree::Pos::TaxCategories.seed!(store)
+    special = Spree::TaxCategory.find_by!(store_id: store.id, tax_code: 'deduction.vat_10')
     singing = time_service!(store, branch, name: 'Giờ hát', tax_category: special)
     rate_plan!(branch, variant: singing, type: 'vip', day: 200_000, evening: 300_000)
     rate_plan!(branch, variant: singing, type: 'room', day: 100_000, evening: 150_000)
@@ -121,12 +121,14 @@ RSpec.describe 'Karaoke room from setup to payment', pos_modules: :default do
   it 'taxes billiard time at the general rate and the beer at 10 %' do
     clock_at('2026-11-12 13:00')
     branch, register = onboard!('Bida Q3', 'bd-q3')
-    profile = Spree::Pos::StoreProfile.find_by!(store: store)
-    play = time_service!(store, branch, name: 'Giờ bida', tax_category: profile.food_tax_category)
+    Spree::Pos::TaxCategories.seed!(store)
+    general = Spree::TaxCategory.find_by!(store_id: store.id, tax_code: 'deduction.vat_8')
+    special = Spree::TaxCategory.find_by!(store_id: store.id, tax_code: 'deduction.vat_10')
+    play = time_service!(store, branch, name: 'Giờ bida', tax_category: general)
     rate_plan!(branch, variant: play, type: 'billiard', day: 60_000, evening: 80_000)
     table = room!(area!(branch), name: 'Bàn bida 1', type: 'billiard', kind: 'billiard')
     beer = size(prepared_product!(store, branch, name: 'Bia Tiger', price: 30_000))
-    beer.product.update!(tax_category: profile.alcohol_tax_category)
+    beer.product.update!(tax_category: special)
     cashier = credit_staff(store, branch, PosTimedHelpers::OPERATOR)
     Spree::Pos::Shifts::Open.call(store: store, staff: cashier, register: register, opening_float: '0')
 

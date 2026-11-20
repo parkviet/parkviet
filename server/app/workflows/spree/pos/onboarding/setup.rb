@@ -4,8 +4,8 @@ module Spree
   module Pos
     module Onboarding
       # First-run POS setup of a store, in one idempotent command: the store
-      # profile, the first branch (Branches::Create, so the profile's
-      # modules, defaults and sample units), optionally a register and a
+      # profile, the first branch (Branches::Create, so
+      # the profile's modules, defaults and sample units), optionally a register and a
       # membership with every capability for the person setting up, and the
       # risky features they ticked themselves (D6: a profile never turns one
       # on). Runs only while the store still needs the setup (neither a store
@@ -15,9 +15,8 @@ module Spree
       # another payload it is a 409 like every POS command.
       #
       # A profile with the menu (`fnb.menu`) may send `fnb_setup`: kitchen
-      # stations (created through Kitchen::Setup, so with their own audit),
-      # the tax categories new menu items start with (food, alcohol), and
-      # when orders reach the kitchen. Audited as `onboarding.fnb_setup`.
+      # stations (created through Kitchen::Setup, so with their own audit)
+      # and when orders reach the kitchen. Audited as `onboarding.fnb_setup`.
       # Other profiles skip the step; sending it for them is refused.
       class Setup
         PERMISSION = 'write_pos_topology'
@@ -30,13 +29,13 @@ module Spree
         BRANCH_FIELDS = %w[name code timezone stock_location_id receiving_stock_location_id receiving_note return_window_days
                            variance_threshold display_freshness_ttl_seconds lot_selection adjustment_approval_threshold].freeze
 
-        def self.call(store:, actor:, key:, profile_key:, branch:, profile_keys: nil, wholesale: false, interests: [], register: nil,
+        def self.call(store:, actor:, key:, profile_key:, branch:, profile_keys: nil, interests: [], register: nil,
                       grant_self: false, features: [], disabled_modules: nil, fnb_setup: nil, answers: nil)
           branch_params = slice(branch, BRANCH_FIELDS)
           register_params = register.nil? ? nil : slice(register, %w[name code])
           keys = BusinessProfiles.keys_for(profile_key: profile_key, profile_keys: profile_keys) || [profile_key.to_s]
           payload = {
-            'command' => 'onboarding.setup', 'profile_key' => keys.first.to_s, 'wholesale' => wholesale == true,
+            'command' => 'onboarding.setup', 'profile_key' => keys.first.to_s,
             'interests' => strings(interests), 'branch' => branch_params, 'register' => register_params,
             'grant_self' => grant_self == true, 'features' => strings(features)
           }
@@ -60,10 +59,10 @@ module Spree
 
             store_profile = StoreProfile.create!(store: store, profile_key: chosen.first, profile_keys: chosen,
                                                  profile_version: BusinessProfiles.version,
-                                                 wholesale: payload['wholesale'], interests: interests!(payload['interests']),
+                                                 interests: interests!(payload['interests']),
                                                  onboarded_at: Time.current, changed_by: actor)
             AuditEntry.record!(store: store, actor: actor, action: 'store_profile.change', subject: store_profile,
-                               metadata: { from: nil, to: store_profile.slice(:profile_key, :wholesale, :interests), reason: 'onboarding' })
+                               metadata: { from: nil, to: store_profile.slice(:profile_key, :interests), reason: 'onboarding' })
             attributes = Branches::Attributes.call(store: store, params: branch_params)
             attributes[:kitchen_send_trigger] = fnb['kitchen_send_trigger'] if fnb&.dig('kitchen_send_trigger')
             created = Branches::Create.call(store: store, actor: actor, profile_keys: chosen, attributes: attributes)
@@ -75,7 +74,7 @@ module Spree
             payload['features'].each do |feature|
               FeaturePolicy.set!(store: store, actor: actor, feature: feature, enabled: true, reason: "Thiết lập theo ngành: #{profile.key}")
             end
-            fnb_result = fnb && fnb_setup!(store, actor, key, store_profile, created, fnb)
+            fnb_result = fnb && fnb_setup!(store, actor, key, created, fnb)
             table_result = tables ? table_service!(store, actor, created, profile, modules) : nil
             { store_profile: store_profile.reload.to_pos, branch: created.to_pos, register: drawer&.to_pos, membership: membership&.to_pos,
               features: FeaturePolicy.for_branch(store, created), modules: ModulePolicy.for_branch(created), fnb_setup: fnb_result,
@@ -86,20 +85,14 @@ module Spree
         # Stations go through the kitchen setup workflow, each under a key
         # derived from the onboarding key; the onboarding receipt already
         # makes a retry return the first result instead of new stations.
-        def self.fnb_setup!(store, actor, key, store_profile, branch, fnb)
+        def self.fnb_setup!(store, actor, key, branch, fnb)
           stations = fnb['stations'].each_with_index.map do |station, index|
             Kitchen::Setup.create_station(store: store, staff: actor, key: "#{key}:station:#{index}", branch: branch,
                                           attributes: station.merge('is_default' => index.zero?, 'position' => index)).with_indifferent_access
           end
-          taxes = fnb['tax_categories']
-          if taxes
-            TaxCategories.seed!(store)
-            categories = TaxCategories.categories_for(store, taxes.values.uniq)
-            store_profile.update!(food_tax_category: categories[taxes['food']], alcohol_tax_category: categories[taxes['alcohol']])
-          end
-          result = { stations: stations, tax_defaults: store_profile.tax_defaults, kitchen_send_trigger: branch.kitchen_send_trigger }
+          result = { stations: stations, kitchen_send_trigger: branch.kitchen_send_trigger }
           AuditEntry.record!(store: store, actor: actor, action: 'onboarding.fnb_setup', subject: branch,
-                             metadata: { stations: stations.map { |row| row[:id] }, tax_categories: taxes,
+                             metadata: { stations: stations.map { |row| row[:id] },
                                          kitchen_send_trigger: branch.kitchen_send_trigger })
           result
         end
@@ -193,12 +186,7 @@ module Spree
             row = row.stringify_keys
             { 'name' => row['name'].to_s.squish, 'kind' => row['kind'].to_s }
           end
-          taxes = hash['tax_categories']
-          taxes = taxes.to_unsafe_h if taxes.respond_to?(:to_unsafe_h)
-          fnb_invalid!('Tax categories must be an object.') unless taxes.nil? || taxes.is_a?(Hash)
-
           { 'stations' => stations,
-            'tax_categories' => taxes && %w[food alcohol].index_with { |role| taxes.stringify_keys[role]&.to_s },
             'kitchen_send_trigger' => hash['kitchen_send_trigger']&.to_s }
         end
 
@@ -215,10 +203,6 @@ module Spree
             fnb_invalid!('A station kind must be prep or bar.') unless BusinessProfiles::STATION_KINDS.include?(station['kind'])
           end
           fnb_invalid!('Station names must differ.') if stations.map { |row| row['name'].downcase }.uniq.size != stations.size
-          taxes = fnb['tax_categories']
-          if taxes && !taxes.values.all? { |code| TaxCategories::CODES.include?(code) }
-            fnb_invalid!("Tax categories must be one of #{TaxCategories::CODES.join(', ')}.")
-          end
           trigger = fnb['kitchen_send_trigger']
           fnb_invalid!('The send trigger is invalid.') unless trigger.nil? || Kitchen::Send::TRIGGERS.include?(trigger)
         end

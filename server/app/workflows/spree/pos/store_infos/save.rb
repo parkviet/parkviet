@@ -11,7 +11,7 @@ module Spree
 
         module_function
 
-        def call(store:, actor:, attributes:, profile_key: nil, profile_keys: nil, wholesale: nil, interests: nil, reason: 'store_info')
+        def call(store:, actor:, attributes:, profile_key: nil, profile_keys: nil, interests: nil, reason: 'store_info')
           raise CanCan::AccessDenied unless AccessPolicy.new(store: store, staff: actor).permission?(PERMISSION)
 
           ApplicationRecord.transaction do
@@ -26,13 +26,13 @@ module Spree
               AuditEntry.record!(store: store, actor: actor, action: 'store_info.change', subject: record,
                                  metadata: { from: before, to: after })
             end
-            if profile_key.present? || profile_keys.present? || !wholesale.nil? || !interests.nil?
+            if profile_key.present? || profile_keys.present? || !interests.nil?
               keys = if profile_key.present? || profile_keys.present?
                        BusinessProfiles.keys_for(profile_key: profile_key, profile_keys: profile_keys)
                      else
                        StoreProfile.for_store(store).first&.resolved_keys
                      end
-              Profiles::UpdateStore.call(store: store, actor: actor, profile_keys: keys, wholesale: wholesale,
+              Profiles::UpdateStore.call(store: store, actor: actor, profile_keys: keys,
                                          interests: interests, reason: reason)
             end
             present(store, reveal: true)
@@ -93,7 +93,6 @@ module Spree
             logo_url: info && StoreInfo.logo_url(info),
             profile_key: keys.first,
             profile_keys: keys,
-            wholesale: profile&.wholesale == true,
             interests: Array(profile&.interests),
             filled: info ? info.filled_count(keys) : (keys.any? ? 1 : 0),
             filled_total: StoreInfo::FILLED.size,

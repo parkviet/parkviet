@@ -74,11 +74,6 @@ export const BUSINESS_PROFILES = {
     sample_units: row.sample_units ?? [],
     kitchen_stations: row.kitchen_stations ?? [],
   })),
-  tax_categories: [
-    { code: 'vat_food', rate: '0.08' },
-    { code: 'vat_special', rate: '0.1' },
-  ],
-  menu_tax_defaults: { food: 'vat_food', alcohol: 'vat_special' },
 };
 
 export function profileOf(key: string) {

@@ -20,7 +20,7 @@ async function install(page: Page) {
     const body = method === 'GET' || method === 'DELETE' ? null : (request.postDataJSON() as Json);
     if (method !== 'GET') state.writes.push({ method, path, body });
     if (path === '/pos/context') return route.fulfill({ json: { staff: { id: 'staff_admin', full_name: 'Quản trị Hiền' }, store: { id: 'store_1', name: 'Quán Hiền', currency: 'VND' }, administration: { read: true, write: true }, capabilities: [], modules: { 'fnb.menu': true }, branches, registers: [], selection: { branch_id: 'branch_a', register_id: null } } });
-    if (path === '/pos/products/settings') return route.fulfill({ json: { data: settings, meta: { tax_defaults: { food: null, alcohol: null } } } });
+    if (path === '/pos/products/settings') return route.fulfill({ json: { data: settings } });
     const product = /^\/pos\/products\/([^/]+)\/(combo|modifier_groups)$/.exec(path);
     if (product && method === 'PUT') {
       const row = settings.find((entry) => entry.product_id === product[1]);

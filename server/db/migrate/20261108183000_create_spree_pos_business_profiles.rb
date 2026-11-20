@@ -22,8 +22,8 @@ class CreateSpreePosBusinessProfiles < ActiveRecord::Migration[8.1]
         ON CONFLICT (branch_id, module_key) DO NOTHING
       SQL
       <<~SQL.squish
-        INSERT INTO spree_pos_store_profiles (store_id, profile_key, profile_version, wholesale, interests, onboarded_at, created_at, updated_at)
-        SELECT b.store_id, '#{BACKFILL_PROFILE}', 1, FALSE, '{}', MIN(b.created_at), NOW(), NOW()
+        INSERT INTO spree_pos_store_profiles (store_id, profile_key, profile_version, interests, onboarded_at, created_at, updated_at)
+        SELECT b.store_id, '#{BACKFILL_PROFILE}', 1, '{}', MIN(b.created_at), NOW(), NOW()
         FROM spree_pos_branches b
         GROUP BY b.store_id
         ON CONFLICT (store_id) DO NOTHING

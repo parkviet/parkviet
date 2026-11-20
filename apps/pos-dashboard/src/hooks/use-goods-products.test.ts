@@ -326,24 +326,17 @@ describe('saveGoodsProduct with attributes and add-on groups', () => {
 })
 
 describe('saveGoodsProduct for a prepared product', () => {
-  it('gives a new prepared product without a tax category the food default', async () => {
+  it('keeps only the tax category chosen on the product', async () => {
     await saveGoodsProduct(
       parsed({ kind: 'prepared' }),
-      context({ foodTaxCategoryId: 'tc_food', operations: { current: null } }),
+      context({ operations: { current: null } }),
     )
-    expect(sdk.products.create).toHaveBeenCalledWith(
-      expect.objectContaining({ product_type_id: 'pt_prepared', tax_category_id: 'tc_food' }),
-    )
-  })
-
-  it('keeps a chosen tax category and leaves other kinds and edits alone', async () => {
-    await saveGoodsProduct(
-      parsed({ kind: 'prepared', taxCategoryId: 'tc_alcohol' }),
-      context({ foodTaxCategoryId: 'tc_food' }),
-    )
-    expect(sdk.products.create.mock.calls[0][0].tax_category_id).toBe('tc_alcohol')
-    await saveGoodsProduct(parsed(), context({ foodTaxCategoryId: 'tc_food' }))
-    expect(sdk.products.create.mock.calls[1][0]).not.toHaveProperty('tax_category_id')
+    expect(sdk.products.create.mock.calls[0][0].product_type_id).toBe('pt_prepared')
+    expect(sdk.products.create.mock.calls[0][0]).not.toHaveProperty('tax_category_id')
+    await saveGoodsProduct(parsed({ kind: 'prepared', taxCategoryId: 'tc_alcohol' }), context())
+    expect(sdk.products.create.mock.calls[1][0].tax_category_id).toBe('tc_alcohol')
+    await saveGoodsProduct(parsed(), context())
+    expect(sdk.products.create.mock.calls[2][0]).not.toHaveProperty('tax_category_id')
   })
 
   it('writes changed kitchen settings, clears the groups before setting the combo', async () => {

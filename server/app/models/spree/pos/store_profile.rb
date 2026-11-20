@@ -4,8 +4,7 @@ module Spree
   module Pos
     # The store's main industry profile: the default for new branches. A
     # store without one (and without an active branch) still needs the POS
-    # setup. `interests` lists "coming soon" profiles the owner asked for;
-    # `wholesale` is recorded only, until the wholesale module exists.
+    # setup. `interests` lists "coming soon" profiles the owner asked for.
     class StoreProfile < Record
       self.table_name = 'spree_pos_store_profiles'
       has_prefix_id :posstoreprof
@@ -21,31 +20,21 @@ module Spree
 
       belongs_to :store, class_name: 'Spree::Store'
       belongs_to :changed_by, class_name: staff_class_name, optional: true
-      # What new prepared products are taxed at, chosen in the F&B setup step
-      # (the product form reads it from GET /pos/products/settings).
-      belongs_to :food_tax_category, class_name: 'Spree::TaxCategory', optional: true
-      belongs_to :alcohol_tax_category, class_name: 'Spree::TaxCategory', optional: true
 
       include ProfileKeyList
 
       validates :store_id, uniqueness: true
       validates :profile_key, format: { with: Branch::PROFILE_KEY_FORMAT }
       validates :profile_version, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
-      validates :wholesale, inclusion: { in: [true, false] }
       validates :einvoice_type, inclusion: { in: EINVOICE_TYPES }
       validate :interests_are_keys
 
       scope :for_store, ->(store) { where(store_id: store.id) }
 
       def to_pos
-        { id: prefixed_id, profile_key: profile_key, profile_keys: resolved_keys, profile_version: profile_version, wholesale: wholesale,
+        { id: prefixed_id, profile_key: profile_key, profile_keys: resolved_keys, profile_version: profile_version,
           interests: Array(interests), onboarded_at: onboarded_at&.iso8601, changed_by_id: changed_by&.prefixed_id,
-          changed_by_name: StaffName.call(changed_by), updated_at: updated_at&.iso8601,
-          tax_defaults: tax_defaults }
-      end
-
-      def tax_defaults
-        { food: food_tax_category&.prefixed_id, alcohol: alcohol_tax_category&.prefixed_id }
+          changed_by_name: StaffName.call(changed_by), updated_at: updated_at&.iso8601 }
       end
 
       private

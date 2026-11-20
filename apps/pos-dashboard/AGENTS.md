@@ -165,7 +165,7 @@ reported follow-up step, and a variant already gone counts as deleted. A simple 
 given attributes turns its single variant into the first combination. A
 prepared product ("Sản phẩm chế biến") also carries POS operating data keyed by
 its id, read from `GET /pos/products/settings` (every prepared product of the
-store, with `meta.tax_defaults`) and shown only where the add-on groups page is
+store) and shown only where the add-on groups page is
 and only while the form's kind is prepared: the "Vận hành" block (kitchen
 category, cup label, contents on the kitchen screen, QR ordering, drink credit)
 saved with `PUT /pos/products/:id/settings`, add-on groups with
@@ -174,8 +174,7 @@ and the write plan in `lib/product-operations.ts`). Only changed parts are
 written, after the product and its branches; a combo takes no add-on groups, so
 the clearing write goes first. "Copy from another product" fills the block,
 groups and combo from another prepared product (Spree's duplicate and CSV import
-carry no POS data). A new prepared product left without a tax category takes
-`tax_defaults.food`. The server never adds a product to a branch: the branch
+carry no POS data). Tax is set on each product in this form. The server never adds a product to a branch: the branch
 checklist (all active branches by default, for topology writers) is what makes a
 new product sell at the till. Unit conversion opens the
 branch `VariantUnitEditor` through a branch selling the product. The price-list

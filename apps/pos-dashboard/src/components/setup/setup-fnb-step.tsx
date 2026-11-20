@@ -1,6 +1,5 @@
 import {
   type BusinessProfile,
-  type BusinessTaxCategory,
   TABLES_MODULE,
   tablesOptional,
 } from '@parkviet/pos-shared/pos-modules'
@@ -20,32 +19,16 @@ import { ModelCheck, ModelSelect } from './model-ui'
 
 type T = (key: string, options?: Record<string, unknown>) => string
 
-// "0.08" → "8%".
-export function taxRateLabel(rate: string) {
-  const value = Number(rate)
-  return Number.isFinite(value) ? `${Math.round(value * 10000) / 100}%` : rate
-}
-
-export function taxLabel(t: T, taxes: BusinessTaxCategory[], code: string) {
-  const row = taxes.find((item) => item.code === code)
-  return t(`setup.tax_${code}`, {
-    defaultValue: code,
-    rate: row ? taxRateLabel(row.rate) : '',
-  })
-}
-
 export const stationName = (t: T) => (kind: ShopStationKind) => t(`setup.shopStation_${kind}`)
 
 // The F&B "set up the shop" step: kitchen stations (named, removable, up to
-// four), the tax rates new menu items start with, and when orders reach the
-// kitchen, and whether the shop serves tables when the industry leaves it
-// open. The menu itself is entered later under Menu.
+// four), when orders reach the kitchen, and whether the shop serves tables
+// when the industry leaves it open. The menu itself is entered later under Menu.
 export function SetupFnbStep({
   profile,
   shop,
   hasTables,
   registerName,
-  taxes,
   dispatch,
   problems,
 }: {
@@ -53,13 +36,11 @@ export function SetupFnbStep({
   shop: ShopSetup
   hasTables: boolean
   registerName: string
-  taxes: BusinessTaxCategory[]
   dispatch: Dispatch<SetupAction>
   problems: SetupProblem[]
 }) {
   const { t } = useTranslation()
   const kitchen = hasKitchen(profile)
-  const taxOptions = taxes.map((row) => ({ value: row.code, label: taxLabel(t, taxes, row.code) }))
   return (
     <div className="flex flex-col gap-6" data-testid="setup-shop">
       <p className="text-sm text-muted-foreground">{t('setup.shopIntro')}</p>
@@ -163,30 +144,6 @@ export function SetupFnbStep({
           ) : null}
         </section>
       ) : null}
-      <section aria-labelledby="setup-tax-heading" className="space-y-3">
-        <h3 id="setup-tax-heading" className="font-semibold">
-          {t('setup.shopTaxTitle')}
-        </h3>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <ModelSelect
-            id="setup-tax-food"
-            label={t('setup.shopTaxFood')}
-            value={shop.foodTax}
-            invalid={problems.includes('tax')}
-            options={taxOptions}
-            onChange={(value) => dispatch({ type: 'shop-tax', role: 'food', value })}
-          />
-          <ModelSelect
-            id="setup-tax-alcohol"
-            label={t('setup.shopTaxAlcohol')}
-            value={shop.alcoholTax}
-            invalid={problems.includes('tax')}
-            options={taxOptions}
-            onChange={(value) => dispatch({ type: 'shop-tax', role: 'alcohol', value })}
-          />
-        </div>
-        <p className="text-sm text-muted-foreground">{t('setup.shopTaxHint')}</p>
-      </section>
       {kitchen ? (
         <ModelSelect
           id="setup-trigger"

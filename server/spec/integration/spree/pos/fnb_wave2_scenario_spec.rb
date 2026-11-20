@@ -35,8 +35,7 @@ RSpec.describe 'F&B restaurant with tables, waiter and kitchen screens', pos_mod
       store: store, actor: owner, key: SecureRandom.uuid, profile_key: 'nha_hang', grant_self: true,
       branch: { 'name' => 'Nhà hàng Q1', 'code' => 'nh-q1', 'timezone' => 'Asia/Ho_Chi_Minh', 'stock_location_id' => location.prefixed_id },
       register: { 'name' => 'Quầy 1' },
-      fnb_setup: { 'stations' => [{ 'name' => 'Bếp', 'kind' => 'prep' }, { 'name' => 'Bar', 'kind' => 'bar' }],
-                   'tax_categories' => { 'food' => 'vat_food', 'alcohol' => 'vat_special' } }
+      fnb_setup: { 'stations' => [{ 'name' => 'Bếp', 'kind' => 'prep' }, { 'name' => 'Bar', 'kind' => 'bar' }] }
     )
   end
 
@@ -63,12 +62,14 @@ RSpec.describe 'F&B restaurant with tables, waiter and kitchen screens', pos_mod
     expect([kitchen.name, bar.name]).to eq(%w[Bếp Bar])
     expect(Spree::Pos::StationRoute.find_by!(branch: branch, kitchen_category: 'do_uong').kitchen_station).to eq(bar)
 
-    profile = Spree::Pos::StoreProfile.find_by!(store: store)
+    Spree::Pos::TaxCategories.seed!(store)
+    eight = Spree::TaxCategory.find_by!(store_id: store.id, tax_code: 'deduction.vat_8')
+    ten = Spree::TaxCategory.find_by!(store_id: store.id, tax_code: 'deduction.vat_10')
     pho = size(prepared_product!(store, branch, name: 'Phở bò', price: 60_000))
     tra_da = prepared_product!(store, branch, name: 'Trà đá', price: 5_000, settings: { kitchen_category: 'do_uong' })
     tra_da = size(tra_da)
-    pho.product.update!(tax_category: profile.food_tax_category)
-    tra_da.product.update!(tax_category: profile.alcohol_tax_category)
+    pho.product.update!(tax_category: eight)
+    tra_da.product.update!(tax_category: ten)
     table = table!(area!(branch), name: 'Bàn 5')
 
     # 2. The cashier opens the shift; the waiter seats four at table 5 and orders round one.
@@ -151,7 +152,7 @@ RSpec.describe 'F&B restaurant with tables, waiter and kitchen screens', pos_mod
     tile = Spree::Pos::ResourceState.for(branch)[:resources].find { |row| row[:id] == table.prefixed_id }
     expect(tile[:state]).to eq('available')
     taxed = Spree::TaxLine.where(line_item_id: spree_order.line_items.select(:id)).includes(tax_rate: :tax_category).to_a
-    expect(taxed.map { |row| row.tax_rate.tax_category }.uniq).to contain_exactly(profile.food_tax_category, profile.alcohol_tax_category)
+    expect(taxed.map { |row| row.tax_rate.tax_category }.uniq).to contain_exactly(eight, ten)
     expect(spree_order.fees.find_by!(kind: 'service_charge').amount).to eq(7_000)
     expect(spree_order.total).to eq(spree_order.item_total + spree_order.fee_total + spree_order.additional_tax_total)
   end

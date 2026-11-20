@@ -331,16 +331,6 @@ export function formFromProduct(
     comboComponents: comboRows(context.pos?.components ?? []),
   }
 }
-// A new prepared product left without a tax category takes the store's food
-// default from the F&B setup (null: the store chose none).
-export const withDefaultTax = <T extends Pick<ParsedGoodsProduct, 'kind' | 'taxCategoryId'>>(
-  value: T,
-  foodTaxCategoryId: string | null | undefined,
-): T =>
-  value.kind === 'prepared' && !value.taxCategoryId && foodTaxCategoryId
-    ? { ...value, taxCategoryId: foodTaxCategoryId }
-    : value
-
 // Whether the form can edit a product's variants: a product whose stored
 // variants do not each name one value of every attribute cannot.
 export const variantsEditable = (product: Pick<ProductSlice, 'variants'>) =>

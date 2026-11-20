@@ -8,7 +8,7 @@ function world() {
   return {
     branch: { id: 'branch_main', name: 'Siêu thị Hiền', code: 'main', status: 'active', timezone: 'Asia/Ho_Chi_Minh', stock_location_id: 'stock_main', profile_key: 'khac', return_window_days: null as number | null, lot_selection: 'cashier_pick' },
     modules: { 'retail.units': true, 'retail.measured': true, 'retail.traceability': true } as Record<string, boolean>,
-    stored: { profile_key: 'khac', wholesale: false, interests: [] as string[] },
+    stored: { profile_key: 'khac', interests: [] as string[] },
     writes: [] as Array<{ path: string; body: Record<string, unknown> }>,
     previews: [] as string[], moved: '', read: true, write: true, manager: false,
     profiles: BUSINESS_PROFILES,
@@ -30,12 +30,12 @@ async function install(page: Page, state: ReturnType<typeof world>, target = '/s
     if (path === '/pos/store_info') {
       if (request.method() === 'PATCH') {
         const keys = Array.isArray(body.profile_keys) ? body.profile_keys.map(String) : [state.stored.profile_key];
-        state.stored = { profile_key: keys[0] ?? state.stored.profile_key, wholesale: body.wholesale === true, interests: (body.interests as string[]) ?? [] };
+        state.stored = { profile_key: keys[0] ?? state.stored.profile_key, interests: (body.interests as string[]) ?? [] };
       }
-      return ok({ id: null, name: null, phone: null, profile_key: state.stored.profile_key, profile_keys: [state.stored.profile_key], wholesale: state.stored.wholesale, interests: state.stored.interests, business_day_cutoff: '04:00', filled: 2, filled_total: 11, open_shifts: 0, representative_id_set: false, fallback: { name: branch.name, phone: null, contact_email: null, address: null, logo_url: null } });
+      return ok({ id: null, name: null, phone: null, profile_key: state.stored.profile_key, profile_keys: [state.stored.profile_key], interests: state.stored.interests, business_day_cutoff: '04:00', filled: 2, filled_total: 11, open_shifts: 0, representative_id_set: false, fallback: { name: branch.name, phone: null, contact_email: null, address: null, logo_url: null } });
     }
     if (path === '/pos/store_profile') {
-      if (request.method() === 'PUT') state.stored = { profile_key: String(body.profile_key), wholesale: body.wholesale === true, interests: body.interests as string[] };
+      if (request.method() === 'PUT') state.stored = { profile_key: String(body.profile_key), interests: body.interests as string[] };
       return ok(state.stored);
     }
     if (path.endsWith('/profile/preview')) {
@@ -125,18 +125,17 @@ test('module dependency is blocked, disable needs reason, enable confirms depend
   expect(state.modules['retail.units']).toBe(true);
 });
 
-test('store info stores several business types, wholesale and interests without changing the branch', async ({ page }) => {
+test('store info stores several business types and interests without changing the branch', async ({ page }) => {
   const state = world(); state.profiles = withComingSoon('karaoke_bida'); await install(page, state, '/store_1/settings/store-info');
   const section = page.getByRole('region', { name: 'Thông tin chung & liên hệ' });
   await section.getByRole('combobox', { name: 'Loại hình kinh doanh' }).click();
   await page.getByRole('option', { name: 'Nhà thuốc', exact: true }).click();
   await section.getByRole('button', { name: 'Đặt làm chính' }).click();
   await section.getByRole('button', { name: 'Bỏ Khác' }).click();
-  await section.getByRole('checkbox', { name: /Có bán sỉ/ }).check();
   await section.getByRole('checkbox', { name: 'Karaoke, Bida', exact: true }).check();
   await page.getByRole('button', { name: 'Lưu thay đổi' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Đã lưu thông tin cửa hàng' })).toBeVisible();
-  expect(state.stored).toEqual({ profile_key: 'nha_thuoc', wholesale: true, interests: ['karaoke_bida'] });
+  expect(state.stored).toEqual({ profile_key: 'nha_thuoc', interests: ['karaoke_bida'] });
   expect(state.branch.profile_key).toBe('khac');
 });
 

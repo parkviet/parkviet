@@ -192,7 +192,7 @@ describe('business profile catalogue', () => {
     });
   });
 
-  it('reads the selling surface, the proposed stations and the tax choices', () => {
+  it('reads the selling surface and the proposed stations', () => {
     const catalog = normalizeBusinessProfiles({
       profiles: [
         {
@@ -201,15 +201,11 @@ describe('business profile catalogue', () => {
           kitchen_stations: ['prep', 'bar', 3],
         },
       ],
-      tax_categories: [{ code: 'vat_food', rate: '0.08' }, { code: 7 }],
-      menu_tax_defaults: { food: 'vat_food', alcohol: 'vat_special', other: 1 },
     });
     expect(catalog.profiles[0]).toMatchObject({
       display: { surface: 'menu_grid' },
       kitchen_stations: ['prep', 'bar'],
     });
-    expect(catalog.tax_categories).toEqual([{ code: 'vat_food', rate: '0.08' }]);
-    expect(catalog.menu_tax_defaults).toEqual({ food: 'vat_food', alcohol: 'vat_special' });
   });
 
   it('adds the optional table modules only for a shop that serves tables', () => {
@@ -372,8 +368,6 @@ describe('business profile catalogue', () => {
       version: null,
       modules: [],
       profiles: [],
-      tax_categories: [],
-      menu_tax_defaults: {},
     };
     expect(normalizeBusinessProfiles(undefined)).toEqual(empty);
     expect(normalizeBusinessProfiles([])).toEqual(empty);

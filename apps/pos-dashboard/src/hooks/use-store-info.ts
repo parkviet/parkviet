@@ -24,7 +24,6 @@ export type StoreInfoRecord = {
   logo_url: string | null
   profile_key: string | null
   profile_keys: string[]
-  wholesale: boolean
   interests: string[]
   filled: number
   filled_total: number
@@ -71,7 +70,6 @@ export function normalizeStoreInfo(value: unknown): StoreInfoRecord {
     logo_url: text(row.logo_url),
     profile_key: text(row.profile_key),
     profile_keys: keys,
-    wholesale: row.wholesale === true,
     interests: Array.isArray(row.interests)
       ? row.interests.filter((key): key is string => typeof key === 'string')
       : [],

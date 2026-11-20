@@ -36,7 +36,7 @@ async function install(page: Page) {
       groups[index] = saveGroup(group[1], { ...groups[index], ...body });
       return route.fulfill({ json: { data: groups[index] } });
     }
-    if (path === '/pos/products/settings') return route.fulfill({ json: { data: items, meta: { tax_defaults: { food: null, alcohol: null } } } });
+    if (path === '/pos/products/settings') return route.fulfill({ json: { data: items } });
     const product = /^\/pos\/products\/([^/]+)\/modifier_groups$/.exec(path);
     if (product && method === 'PUT') { const row = items.find((entry) => entry.product_id === product[1]); if (row) row.modifier_group_ids = body?.modifier_group_ids as string[]; return route.fulfill({ json: { data: row } }); }
     return route.fulfill({ json: { data: [], meta: { page: 1, pages: 1, count: 0, next: null } } });

@@ -35,19 +35,18 @@ const next = (page: Page) => page.getByRole('button', { name: 'Tiếp tục', ex
 const step = (page: Page, name: string) => page.getByRole('heading', { level: 2, name: new RegExp(`${name.replace(/[?.*+()[\]\\]/g, '\\$&')}$`) });
 async function chooseLocation(page: Page, name = 'Kho chính') { await page.getByRole('combobox', { name: 'Kho bán hàng', exact: true }).click(); await page.getByRole('option', { name, exact: true }).click(); }
 async function toSummary(page: Page, profile = 'Thời trang') {
-  await page.getByRole('checkbox', { name: profile, exact: true }).check(); await next(page); await next(page);
+  await page.getByRole('checkbox', { name: profile, exact: true }).check(); await next(page);
   await page.getByLabel('Tên chi nhánh', { exact: true }).fill('Cửa hàng Hoa'); await chooseLocation(page); await next(page); await next(page);
 }
 
-test('empty store redirects to five-step setup; pharmacy defaults and risky opt-in produce one command', async ({ page }) => {
+test('empty store redirects to four-step setup; pharmacy defaults and risky opt-in produce one command', async ({ page }) => {
   const state = world(); await install(page, state, true);
   await expect(page).toHaveURL(/\/store_1\/setup/);
   await expect(page.getByRole('group', { name: /Bạn kinh doanh gì/ }).getByRole('checkbox')).toHaveCount(19);
   await expect(page.getByRole('group', { name: 'Bán buôn, bán lẻ' }).getByRole('checkbox')).toHaveCount(13);
   await expect(page.getByRole('group', { name: 'Ăn uống, giải trí' }).getByRole('checkbox')).toHaveCount(6);
   await page.getByRole('checkbox', { name: 'Nhà thuốc', exact: true }).check(); await next(page);
-  await expect(step(page, 'Có bán sỉ không?')).toBeFocused();
-  await expect(page.getByRole('radio', { name: 'Không bán sỉ', exact: true })).toBeChecked(); await next(page);
+  await expect(step(page, 'Chi nhánh đầu tiên')).toBeFocused();
   await page.getByLabel('Tên chi nhánh', { exact: true }).fill('Nhà thuốc Minh Châu');
   await expect(page.getByLabel('Mã chi nhánh', { exact: true })).toHaveValue('nha-thuoc-minh-chau');
   await expect(page.getByRole('combobox', { name: 'Múi giờ', exact: true })).toContainText('Asia/Ho_Chi_Minh');
@@ -63,7 +62,7 @@ test('empty store redirects to five-step setup; pharmacy defaults and risky opt-
   await page.getByRole('button', { name: 'Tạo cửa hàng', exact: true }).last().click();
   await expect(page).not.toHaveURL(/\/setup/);
   expect(state.posts).toHaveLength(1); expect(state.posts[0].key).toMatch(/^[0-9a-f-]{36}$/);
-  expect(state.posts[0].body).toEqual({ profile_key: 'nha_thuoc', wholesale: false, interests: [], branch: { name: 'Nhà thuốc Minh Châu', code: 'nha-thuoc-minh-chau', timezone: 'Asia/Ho_Chi_Minh', stock_location_id: 'sloc_main', return_window_days: 7, lot_selection: 'fefo' }, register: { name: 'Quầy 1' }, grant_self: true, features: [], disabled_modules: ['retail.traceability'] });
+  expect(state.posts[0].body).toEqual({ profile_key: 'nha_thuoc', interests: [], branch: { name: 'Nhà thuốc Minh Châu', code: 'nha-thuoc-minh-chau', timezone: 'Asia/Ho_Chi_Minh', stock_location_id: 'sloc_main', return_window_days: 7, lot_selection: 'fefo' }, register: { name: 'Quầy 1' }, grant_self: true, features: [], disabled_modules: ['retail.traceability'] });
   expect(state.branches).toHaveLength(1);
 });
 
@@ -82,7 +81,7 @@ test('lost onboarding result locks answers and closing until same-key same-body 
   expect(state.branches).toHaveLength(1);
 });
 
-test('coming-soon interest never creates food branch; wholesale, optional register and risky feature are explicit', async ({ page }) => {
+test('coming-soon interest never creates food branch; optional register and risky feature are explicit', async ({ page }) => {
   // A profile not open yet is recorded as an interest.
   const state = world(); state.profiles = withComingSoon('karaoke_bida'); await install(page, state);
   await page.getByRole('checkbox', { name: 'Karaoke, Bida', exact: true }).check(); await next(page);
@@ -91,19 +90,19 @@ test('coming-soon interest never creates food branch; wholesale, optional regist
   await expect(page.getByRole('status').filter({ hasText: 'Đã ghi nhận bạn quan tâm Karaoke, Bida' })).toBeVisible();
   // A supported profile that suggests credit sales, which stay off until ticked.
   await page.getByRole('checkbox', { name: 'Vật liệu xây dựng', exact: true }).check();
-  await next(page); await page.getByRole('radio', { name: 'Có bán sỉ', exact: true }).check(); await next(page);
+  await next(page);
   await page.getByLabel('Tên chi nhánh', { exact: true }).fill('Vật liệu Bến Xe'); await chooseLocation(page);
   await page.getByLabel('Tên quầy đầu tiên (không bắt buộc)').fill(''); await page.getByRole('checkbox', { name: /Cấp cho tôi toàn quyền/ }).uncheck(); await next(page);
   await expect(page.getByRole('checkbox', { name: 'Bán ghi nợ', exact: true })).not.toBeChecked();
   await page.getByRole('checkbox', { name: 'Bán ghi nợ', exact: true }).check(); await next(page);
   await page.getByRole('button', { name: 'Tạo cửa hàng', exact: true }).last().click(); await expect(page).not.toHaveURL(/\/setup/);
-  expect(state.posts[0].body).toMatchObject({ profile_key: 'vat_lieu_xay_dung', wholesale: true, interests: ['karaoke_bida'], grant_self: false, features: ['credit'] });
+  expect(state.posts[0].body).toMatchObject({ profile_key: 'vat_lieu_xay_dung', interests: ['karaoke_bida'], grant_self: false, features: ['credit'] });
   expect(state.posts[0].body).not.toHaveProperty('register');
 });
 
-test('food shop adds the shop step: stations, menu taxes and kitchen send trigger go out in the same command', async ({ page }) => {
+test('food shop adds the shop step: stations and kitchen send trigger go out in the same command', async ({ page }) => {
   const state = world(); await install(page, state);
-  await page.getByRole('checkbox', { name: 'Cafe, Trà sữa', exact: true }).check(); await next(page); await next(page);
+  await page.getByRole('checkbox', { name: 'Cafe, Trà sữa', exact: true }).check(); await next(page);
   await page.getByLabel('Tên chi nhánh', { exact: true }).fill('Cafe Hồ Gươm'); await chooseLocation(page); await next(page);
   await expect(step(page, 'Xem trước')).toBeVisible();
   await expect(page.getByText('Màn bán hàng mở thẳng lưới thực đơn.', { exact: true })).toBeVisible();
@@ -121,14 +120,13 @@ test('food shop adds the shop step: stations, menu taxes and kitchen send trigge
   await page.getByRole('combobox', { name: 'Gửi món xuống bếp', exact: true }).click();
   await page.getByRole('option', { name: 'Khi thu ngân bấm Gửi bếp', exact: true }).click();
   await next(page); expect(state.posts).toHaveLength(0);
-  await expect(page.getByText('Đồ ăn, đồ uống: Đồ ăn, đồ uống (8%) · Rượu, bia: Thuế suất thường (10%)', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Tạo cửa hàng', exact: true }).last().click();
   await expect(page).toHaveURL(/\/store_1\/branches\/branch_new\/hardware/);
   expect(state.posts).toHaveLength(1);
   expect(state.posts[0].body).toMatchObject({
     profile_key: 'cafe_tra_sua',
     branch: { name: 'Cafe Hồ Gươm', stock_location_id: 'sloc_main' },
-    fnb_setup: { stations: [{ name: 'Bếp', kind: 'prep' }, { name: 'Quầy trà sữa', kind: 'bar' }], tax_categories: { food: 'vat_food', alcohol: 'vat_special' }, kitchen_send_trigger: 'manual' },
+    fnb_setup: { stations: [{ name: 'Bếp', kind: 'prep' }, { name: 'Quầy trà sữa', kind: 'bar' }], kitchen_send_trigger: 'manual' },
   });
 });
 
@@ -140,7 +138,7 @@ test('retail setup sends no shop step', async ({ page }) => {
 
 test('missing active stock location blocks branch step; reloading a sole new location selects it', async ({ page }) => {
   const state = world(); state.locations = [{ id: 'old', name: 'Kho cũ', active: false }]; await install(page, state);
-  await page.getByRole('checkbox', { name: 'Mỹ phẩm', exact: true }).check(); await next(page); await next(page);
+  await page.getByRole('checkbox', { name: 'Mỹ phẩm', exact: true }).check(); await next(page);
   await page.getByLabel('Tên chi nhánh', { exact: true }).fill('Mỹ phẩm Lan'); await next(page);
   await expect(step(page, 'Chi nhánh đầu tiên')).toBeVisible();
   const blocker = page.getByRole('alert').filter({ hasText: 'Cửa hàng chưa có kho hàng' }).first(); await expect(blocker).toBeVisible();
@@ -160,7 +158,7 @@ test('keyboard industry selection and Enter advance with focused step heading', 
   await page.getByRole('checkbox', { name: 'Nhà thuốc', exact: true }).focus();
   await page.keyboard.press('Space');
   await expect(page.getByRole('checkbox', { name: 'Nhà thuốc', exact: true })).toBeChecked();
-  await page.keyboard.press('Enter'); await expect(step(page, 'Có bán sỉ không?')).toBeFocused();
+  await page.keyboard.press('Enter'); await expect(step(page, 'Chi nhánh đầu tiên')).toBeFocused();
 });
 
 test('completed setup never offers a second wizard', async ({ page }) => {
@@ -188,7 +186,7 @@ test.describe('real API onboarding', () => {
     const fixture = requireLiveOnboarding(1); const store = fixture.stores[0];
     const api = await liveStoreApi(request, fixture, store.store_id);
     await loginOwner(page, fixture.owner, store.store_id);
-    await page.getByRole('checkbox', { name: 'Nhà thuốc', exact: true }).check(); await next(page); await next(page);
+    await page.getByRole('checkbox', { name: 'Nhà thuốc', exact: true }).check(); await next(page);
     const name = `Nhà thuốc Dashboard ${fixture.tag}`;
     await page.getByLabel('Tên chi nhánh', { exact: true }).fill(name);
     await liveExpect(page.getByRole('combobox', { name: 'Kho bán hàng', exact: true })).toContainText(store.stock_location_name);
@@ -224,7 +222,7 @@ test.describe('real API onboarding', () => {
     const fixture = requireLiveOnboarding(2); const store = fixture.stores[1];
     const api = await liveStoreApi(request, fixture, store.store_id);
     await loginOwner(page, fixture.owner, store.store_id);
-    await page.getByRole('checkbox', { name: 'Thời trang', exact: true }).check(); await next(page); await next(page);
+    await page.getByRole('checkbox', { name: 'Thời trang', exact: true }).check(); await next(page);
     await page.getByLabel('Tên chi nhánh', { exact: true }).fill(`Thời trang Dashboard ${fixture.tag}`);
     await liveExpect(page.getByRole('combobox', { name: 'Kho bán hàng', exact: true })).toContainText(store.stock_location_name);
     await page.getByRole('checkbox', { name: /Cấp cho tôi toàn quyền/ }).uncheck(); await next(page); await next(page);

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_20_104600) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_20_151459) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -4866,15 +4866,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_104600) do
     t.bigint "store_id", null: false
     t.string "profile_key", limit: 40, null: false
     t.integer "profile_version", default: 1, null: false
-    t.boolean "wholesale", default: false, null: false
     t.string "interests", default: [], null: false, array: true
     t.datetime "onboarded_at"
     t.bigint "changed_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "einvoice_type", limit: 16, default: "none", null: false
-    t.bigint "food_tax_category_id"
-    t.bigint "alcohol_tax_category_id"
     t.jsonb "profile_keys", default: [], null: false
     t.index ["store_id"], name: "index_spree_pos_store_profiles_on_store_id", unique: true
     t.check_constraint "einvoice_type::text = ANY (ARRAY['none'::character varying, 'cash_register'::character varying, 'coded'::character varying]::text[])", name: "chk_pos_store_profiles_einvoice_type"
@@ -7528,8 +7525,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_104600) do
   add_foreign_key "spree_pos_store_infos", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_store_profiles", "spree_admin_users", column: "changed_by_id"
   add_foreign_key "spree_pos_store_profiles", "spree_stores", column: "store_id"
-  add_foreign_key "spree_pos_store_profiles", "spree_tax_categories", column: "alcohol_tax_category_id"
-  add_foreign_key "spree_pos_store_profiles", "spree_tax_categories", column: "food_tax_category_id"
   add_foreign_key "spree_pos_stored_value_accounts", "spree_pos_branches", column: "branch_id"
   add_foreign_key "spree_pos_stored_value_accounts", "spree_pos_customers", column: "customer_profile_id"
   add_foreign_key "spree_pos_stored_value_accounts", "spree_stores", column: "store_id"

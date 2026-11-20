@@ -292,15 +292,10 @@ export function combineProfiles(
   };
 }
 
-export type BusinessTaxCategory = { code: string; rate: string };
-
 export type BusinessProfiles = {
   version: number | null;
   modules: BusinessModule[];
   profiles: BusinessProfile[];
-  tax_categories: BusinessTaxCategory[];
-  // Tax codes proposed for new menu items: `food` and `alcohol`.
-  menu_tax_defaults: Record<string, string>;
 };
 
 function strings(value: unknown): string[] {
@@ -354,19 +349,6 @@ export function normalizeBusinessProfiles(value: unknown): BusinessProfiles {
       typeof source.version === 'number' && Number.isFinite(source.version) ? source.version : null,
     modules,
     profiles,
-    tax_categories: (Array.isArray(source.tax_categories) ? source.tax_categories : []).flatMap(
-      (row) => {
-        const item = record(row);
-        return item && typeof item.code === 'string' && item.code && typeof item.rate === 'string'
-          ? [{ code: item.code, rate: item.rate }]
-          : [];
-      },
-    ),
-    menu_tax_defaults: Object.fromEntries(
-      Object.entries(record(source.menu_tax_defaults) ?? {}).filter(
-        (entry): entry is [string, string] => typeof entry[1] === 'string',
-      ),
-    ),
   };
 }
 

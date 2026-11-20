@@ -395,7 +395,7 @@ async function install(page: Page, writes: WriteCall[]) {
         dish('prod_coffee', 'Cà phê sữa', '29000.0'),
         dish('prod_cake', 'Bánh flan', '25000.0'),
       ]
-      return route.fulfill({ json: { data: items, meta: { tax_defaults: { food: null, alcohol: null } } } })
+      return route.fulfill({ json: { data: items } })
     }
     return route.fulfill({
       json: { data: [], meta: { page: 1, pages: 1, count: 0, next: null } },

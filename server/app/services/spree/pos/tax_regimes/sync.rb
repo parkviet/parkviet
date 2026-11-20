@@ -19,8 +19,8 @@ module Spree
       # * the other method's categories are retired (soft-deleted), so old
       #   orders keep the category they were sold under.
       module Sync
-        # The categories the F&B setup step and earlier seeds created before
-        # the catalog existed, and the options they are.
+        # The categories earlier seeds created before the catalog existed,
+        # and the options they are.
         LEGACY_CODES = { 'vat_food' => 'deduction.vat_8', 'vat_special' => 'deduction.vat_10' }.freeze
         VN = 'VN'
 
@@ -170,8 +170,6 @@ module Spree
 
           ids = retired.map(&:id)
           Branch.where(store_id: store.id, service_charge_tax_category_id: ids).update_all(service_charge_tax_category_id: nil)
-          StoreProfile.where(store_id: store.id, food_tax_category_id: ids).update_all(food_tax_category_id: nil)
-          StoreProfile.where(store_id: store.id, alcohol_tax_category_id: ids).update_all(alcohol_tax_category_id: nil)
           retired.each(&:destroy!)
         end
 

@@ -685,7 +685,6 @@ function StoreProfileForm({
   const { storeId } = useStore()
   const mutation = useMutation({ mutationFn: saveStoreProfile })
   const [profileKey, setProfileKey] = useState(stored?.profile_key ?? 'khac')
-  const [wholesale, setWholesale] = useState(stored?.wholesale ?? false)
   const [interests, setInterests] = useState<string[]>(stored?.interests ?? [])
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
@@ -693,7 +692,6 @@ function StoreProfileForm({
   const changed =
     !stored ||
     profileKey !== stored.profile_key ||
-    wholesale !== stored.wholesale ||
     [...interests].sort().join() !== [...stored.interests].sort().join()
   async function save(event: FormEvent) {
     event.preventDefault()
@@ -702,7 +700,7 @@ function StoreProfileForm({
     setBusy(true)
     setNotice(null)
     try {
-      await mutation.mutateAsync({ profile_key: profileKey, wholesale, interests, reason: note })
+      await mutation.mutateAsync({ profile_key: profileKey, interests, reason: note })
       setReason('')
       setNotice({ text: t('businessModel.storeSaved'), failed: false })
       await refreshBusinessModel(storeId)
@@ -733,14 +731,6 @@ function StoreProfileForm({
               label: t(profileLabelKey(profile.key), { defaultValue: profile.key }),
             }))}
         />
-        <ModelCheck
-          checked={wholesale}
-          disabled={busy}
-          onChange={setWholesale}
-          description={t('setup.wholesaleNote')}
-        >
-          {t('businessModel.storeWholesale')}
-        </ModelCheck>
         {profiles.some((profile) => profile.status === 'coming_soon') ? (
           <fieldset className="space-y-3 rounded-md border p-4">
             <legend>{t('businessModel.storeInterests')}</legend>

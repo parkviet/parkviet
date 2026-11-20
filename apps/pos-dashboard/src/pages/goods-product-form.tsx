@@ -48,7 +48,7 @@ import {
   useProductUnit,
 } from '../hooks/use-goods-products'
 import { GoodsSetupError, useGoodsSetup } from '../hooks/use-goods-setup'
-import { useMenuTaxDefaults, useModifierGroups, useProductSettings } from '../hooks/use-menu-admin'
+import { useModifierGroups, useProductSettings } from '../hooks/use-menu-admin'
 import { usePosSession } from '../hooks/use-pos-session'
 import { useSession } from '../hooks/use-session'
 import {
@@ -120,8 +120,6 @@ export function GoodsProductFormPage({ productId }: { productId?: string }) {
     () => (productId ? (settings.data?.find((row) => row.product_id === productId) ?? null) : null),
     [settings.data, productId],
   )
-  // A new prepared product left without a tax category takes the food default.
-  const taxDefaults = useMenuTaxDefaults(!editing)
   const [notice, setNotice] = useState<Notice | null>(() =>
     productId ? (afterCreate.get(productId) ?? null) : null,
   )
@@ -196,7 +194,6 @@ export function GoodsProductFormPage({ productId }: { productId?: string }) {
             }
           : null
       }
-      foodTaxCategoryId={taxDefaults.data?.food ?? null}
       notice={notice}
       setNotice={setNotice}
     />
@@ -220,7 +217,6 @@ function ProductForm({
   branches,
   manageBranches,
   operations,
-  foodTaxCategoryId,
   notice,
   setNotice,
 }: {
@@ -229,7 +225,6 @@ function ProductForm({
   branches: Branch[]
   manageBranches: boolean
   operations: OperationsState | null
-  foodTaxCategoryId: string | null
   notice: Notice | null
   setNotice: (notice: Notice | null) => void
 }) {
@@ -299,7 +294,6 @@ function ProductForm({
           image,
           existing,
           operations: operations?.ready ? { current: operations.current } : undefined,
-          foodTaxCategoryId,
         },
       })
       const next = followUpNotice(outcome.failures, t, !existing)

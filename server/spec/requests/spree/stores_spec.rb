@@ -32,7 +32,7 @@ RSpec.describe 'Opening another store', type: :request do
     expect(created.default_channel).to be_present
     expect(created.default_market).to have_attributes(currency: 'VND', default_locale: 'vi')
     expect(created.stock_locations.where(default: true)).to exist
-    expect(Spree::TaxCategory.where(store: created, tax_code: Spree::Pos::TaxCategories::CATALOG_KEYS.values).count).to eq(2)
+    expect(Spree::TaxCategory.where(store: created, tax_code: %w[deduction.vat_8 deduction.vat_10]).count).to eq(2)
     expect(Spree::Pos::TaxRegime.current(created)).to have_attributes(tax_method: 'deduction')
     expect(created.mail_from_address).to eq(store.mail_from_address)
   end
