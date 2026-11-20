@@ -71,7 +71,7 @@ module Spree
           kitchen_sent_quantity: kitchen_sent_quantity.to_s('F'),
           pending_kitchen_quantity: pending_kitchen_quantity.to_s('F'), row_version: row_version,
           added_by: added_by_id && { id: added_by.prefixed_id, name: KitchenSend.staff_name(added_by) },
-          course: course, course_status: course_status, seat: seat,
+          course: course, course_status: course_status, seat: seat, priority: priority,
           buffet_tier_id: BuffetTier.prefixed_for(buffet_tier_id),
           buffet_cover_line_id: SaleLine.prefixed_for(buffet_cover_line_id),
           # The time-of-day price it was sold at, such as "Happy hour".

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_20_151459) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_20_160100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -2547,11 +2547,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_151459) do
     t.integer "reservation_close_buffer_minutes", default: 0, null: false
     t.integer "reservation_min_lead_minutes", default: 0, null: false
     t.jsonb "emenu_settings", default: {}, null: false
+    t.boolean "is_default", default: false, null: false
     t.index ["cup_label_printer_id"], name: "index_spree_pos_branches_on_cup_label_printer_id"
     t.index ["service_charge_tax_category_id"], name: "index_spree_pos_branches_on_service_charge_tax_category_id"
     t.index ["stock_location_id"], name: "index_spree_pos_branches_on_stock_location_id"
     t.index ["store_id", "code"], name: "index_spree_pos_branches_on_store_id_and_code", unique: true
     t.index ["store_id"], name: "index_spree_pos_branches_on_store_id"
+    t.index ["store_id"], name: "index_spree_pos_branches_one_default_per_store", unique: true, where: "is_default"
     t.index ["table_register_id"], name: "index_spree_pos_branches_on_table_register_id"
     t.check_constraint "adjustment_approval_threshold IS NULL OR adjustment_approval_threshold >= 0", name: "chk_pos_branches_adjustment_threshold"
     t.check_constraint "bottle_keep_days >= 1 AND bottle_keep_days <= 3650", name: "chk_pos_branches_bottle_keep_days"
@@ -3418,8 +3420,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_151459) do
     t.integer "recall_count", default: 0, null: false
     t.integer "prep_seconds"
     t.boolean "late", default: false, null: false
+    t.boolean "priority", default: false, null: false
+    t.datetime "priority_at"
+    t.string "priority_by_type"
+    t.bigint "priority_by_id"
     t.index ["kitchen_ticket_id", "status"], name: "idx_pos_kitchen_ticket_items_status"
     t.index ["kitchen_ticket_id"], name: "index_spree_pos_kitchen_ticket_items_on_kitchen_ticket_id"
+    t.index ["kitchen_ticket_id"], name: "index_spree_pos_kitchen_ticket_items_on_priority_ticket", where: "priority"
     t.index ["ready_at"], name: "idx_pos_kitchen_ticket_items_ready", where: "(ready_at IS NOT NULL)"
     t.index ["sale_line_id"], name: "index_spree_pos_kitchen_ticket_items_on_sale_line_id"
     t.check_constraint "quantity > 0::numeric", name: "chk_pos_kitchen_ticket_items_qty"
@@ -4629,6 +4636,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_151459) do
     t.bigint "buffet_tier_id"
     t.bigint "buffet_cover_line_id"
     t.string "price_label", limit: 40
+    t.boolean "priority", default: false, null: false
     t.index ["buffet_cover_line_id"], name: "idx_pos_sale_lines_buffet_cover", where: "(buffet_cover_line_id IS NOT NULL)"
     t.index ["line_item_id"], name: "index_spree_pos_sale_lines_on_line_item_id", unique: true
     t.index ["order_id"], name: "index_spree_pos_sale_lines_on_order_id"

@@ -81,6 +81,11 @@ module Spree
           mode
         end
 
+        # `priority=1` on a board narrows it to the urgent dishes.
+        def priority_filter?(value)
+          %w[1 true].include?(value.to_s.downcase)
+        end
+
         def item!(branch, item_id)
           scope = KitchenTicketItem.joins(:kitchen_ticket).where(spree_pos_kitchen_tickets: { branch_id: branch.id })
           KitchenTicketItem.locate(scope, item_id) || raise(ActiveRecord::RecordNotFound)

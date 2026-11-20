@@ -124,7 +124,9 @@ module Spree
             raise Conflict.new('Items can be recalled for 30 minutes after they are ready.', reason: 'kitchen_recall_expired')
           end
 
-          item.update!(**times(item, action, now), status: to, changed_by: actor)
+          # A dish made again is for a guest who is already waiting.
+          raised = action == 'recall' ? { priority: true, priority_at: now, priority_by: actor } : {}
+          item.update!(**times(item, action, now), **raised, status: to, changed_by: actor)
           audit_recall!(item, actor) if action == 'recall'
           true
         end

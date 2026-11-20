@@ -83,7 +83,9 @@ module Spree
         end
 
         def item_blocks(item, void: item.kitchen_ticket.kind == 'void')
-          blocks = [text(["#{void ? '-' : ''}#{quantity(item.quantity)} x #{item.name}"], size: 'l', bold: true)]
+          blocks = []
+          blocks << text(['ƯU TIÊN'], size: 'l', bold: true, align: 'center', invert: true) if item.priority && item.open? && !void
+          blocks << text(["#{void ? '-' : ''}#{quantity(item.quantity)} x #{item.name}"], size: 'l', bold: true)
           options = Array(item.modifiers).map do |row|
             count = row['quantity'].to_i > 1 ? " x#{row['quantity']}" : ''
             "+ #{row['name']}#{count}"

@@ -2489,7 +2489,7 @@ paths:
     get:
       operationId: posKitchenBoard
       description: >
-        Open tickets of a station (late first, then oldest), those finished
+        Open tickets of a station (urgent first, then late, then oldest), those finished
         in the last 30 minutes, the open items by dish and the ready items at
         the pass. Without `station_id` or `station_ids`, every station of
         the branch. Needs `pos.kitchen.operate`; a kitchen screen uses
@@ -2503,6 +2503,7 @@ paths:
             type: string
         - $ref: '#/components/parameters/KitchenStationIds'
         - $ref: '#/components/parameters/KitchenServiceMode'
+        - $ref: '#/components/parameters/KitchenPriorityOnly'
       responses:
         '200':
           description: The board
@@ -2553,6 +2554,28 @@ paths:
           $ref: '#/components/responses/KitchenTicketChanged'
         '409':
           $ref: '#/components/responses/KitchenRefused'
+  /api/v3/admin/pos/kitchen/items/{id}/priority:
+    post:
+      operationId: posKitchenItemPriority
+      description: >
+        Marks one dish urgent or takes the mark off. Only an item still to
+        make (new, preparing) can change; a ready, served or voided one is
+        refused (`kitchen_status_invalid`). Who marked it and when are kept.
+        A recall marks the item by itself. Repeating the same value changes
+        nothing; announced with `kitchen_ticket.updated`.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KitchenPriorityInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/KitchenTicketChanged'
+        '409':
+          $ref: '#/components/responses/KitchenRefused'
   /api/v3/admin/pos/kitchen/tickets/{id}/bump:
     post:
       operationId: posKitchenTicketBump
@@ -2562,6 +2585,26 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/KitchenTicketChanged'
+  /api/v3/admin/pos/kitchen/tickets/{id}/priority:
+    post:
+      operationId: posKitchenTicketPriority
+      description: >
+        Marks every dish of the ticket still to make urgent, or takes the
+        mark off them. Dishes already ready, served or voided keep what they
+        had.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KitchenPriorityInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/KitchenTicketChanged'
+        '409':
+          $ref: '#/components/responses/KitchenRefused'
   /api/v3/admin/pos/kitchen/all_day/bump:
     post:
       operationId: posKitchenAllDayBump
@@ -3225,6 +3268,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v3/admin/pos/workspaces/{workspace_id}/sale_lines/{sale_line_id}/priority:
+    post:
+      operationId: posWorkspaceLinePriority
+      description: >
+        Marks a menu line urgent, or takes the mark off, on any open order
+        (table, tab or counter sale). It changes no money and tells the
+        kitchen nothing new, so it needs no lease and no revision: the line's
+        own `row_version` is checked, and the order's revision moves (use the
+        returned order). A line already sent passes the mark on to its items
+        still being made. Repeating the same value changes nothing. Staff
+        only; guest, kiosk and platform orders have no way to set it.
+      parameters:
+        - $ref: '#/components/parameters/KitchenIdempotencyKey'
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: sale_line_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinePriorityInput'
+      responses:
+        '200':
+          description: The order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResult'
+        '409':
+          description: >
+            Refused; `error.details.reason` is `line_changed` (with the line
+            as it is now in `error.details.sale_line`), `line_not_menu`,
+            `workspace_closed` or `kitchen_priority_invalid`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v3/admin/pos/workspaces/{workspace_id}/sale_lines/{sale_line_id}/kitchen_voids:
     post:
       operationId: posKitchenVoid
@@ -3696,6 +3780,7 @@ paths:
             type: string
         - $ref: '#/components/parameters/KitchenStationIds'
         - $ref: '#/components/parameters/KitchenServiceMode'
+        - $ref: '#/components/parameters/KitchenPriorityOnly'
       responses:
         '200':
           description: The board
@@ -3770,6 +3855,28 @@ paths:
           $ref: '#/components/responses/KitchenTicketChanged'
         '409':
           $ref: '#/components/responses/KitchenRefused'
+  /api/v3/pos_device/kitchen/items/{id}/priority:
+    post:
+      operationId: posDeviceKitchenItemPriority
+      description: >
+        Marks one dish urgent or takes the mark off. Only an item still to
+        make (new, preparing) can change; a ready, served or voided one is
+        refused (`kitchen_status_invalid`). Who marked it and when are kept.
+        A recall marks the item by itself. Repeating the same value changes
+        nothing; announced with `kitchen_ticket.updated`.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KitchenPriorityInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/KitchenTicketChanged'
+        '409':
+          $ref: '#/components/responses/KitchenRefused'
   /api/v3/pos_device/kitchen/tickets/{id}/bump:
     post:
       operationId: posDeviceKitchenTicketBump
@@ -3778,6 +3885,26 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/KitchenTicketChanged'
+  /api/v3/pos_device/kitchen/tickets/{id}/priority:
+    post:
+      operationId: posDeviceKitchenTicketPriority
+      description: >
+        Marks every dish of the ticket still to make urgent, or takes the
+        mark off them. Dishes already ready, served or voided keep what they
+        had.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KitchenPriorityInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/KitchenTicketChanged'
+        '409':
+          $ref: '#/components/responses/KitchenRefused'
   /api/v3/pos_device/kitchen/all_day/bump:
     post:
       operationId: posDeviceKitchenAllDayBump
@@ -5927,10 +6054,25 @@ paths:
         - name: status
           in: query
           required: false
-          description: One status, or `all`; `pending` by default.
+          description: >
+            One status, a list (`status[]=granted&status[]=declined`) or
+            `all`; `pending` by default.
           schema:
-            type: string
-            enum: [pending, granted, declined, expired, canceled, all]
+            type: array
+            items:
+              type: string
+              enum: [pending, granted, declined, expired, canceled, all]
+        - name: action
+          in: query
+          required: false
+          description: >
+            Only requests for this action, or a list of them
+            (`action[]=kitchen.void_sent`). An action the API does not know
+            is refused with 422 `parameter_invalid`. `action_name` is an alias.
+          schema:
+            type: array
+            items:
+              type: string
         - name: mine
           in: query
           required: false
@@ -6271,6 +6413,14 @@ components:
       schema:
         type: string
         enum: [counter, dine_in, takeaway, delivery, tab, timed]
+    KitchenPriorityOnly:
+      name: priority
+      in: query
+      required: false
+      description: '`1` keeps only the tickets with a dish marked urgent (in `all_day`, only those dishes).'
+      schema:
+        type: string
+        enum: ['1', 'true']
     WorkspaceId:
       name: workspace_id
       in: path
@@ -6328,7 +6478,7 @@ components:
     KitchenRefused:
       description: >
         Refused; `error.details.reason` is `kitchen_status_invalid`,
-        `kitchen_action_invalid` or `kitchen_recall_expired`
+        `kitchen_action_invalid`, `kitchen_recall_expired` or `kitchen_priority_invalid`
       content:
         application/json:
           schema:
@@ -6694,6 +6844,11 @@ components:
         row_version:
           type: integer
           description: Moves on every change of the line; unsent-line edits send it back.
+        priority:
+          type: boolean
+          description: >
+            Marked urgent by staff; the kitchen board puts it first. Set with
+            POST .../sale_lines/{sale_line_id}/priority.
         added_by:
           description: Who added the line.
           oneOf:
@@ -9188,8 +9343,17 @@ components:
       type: object
       additionalProperties: false
       required: [id, sale_line_id, name, modifiers, components, note, quantity, status, started_at, ready_at, served_at, voided_at,
-                 recalled_at, recall_count, prep_seconds, late, seat, course]
+                 recalled_at, recall_count, prep_seconds, late, seat, course, priority, priority_at]
       properties:
+        priority:
+          type: boolean
+          description: >
+            Marked urgent by staff (at the counter or on the board), or by a
+            recall. Only an item still to make can change.
+        priority_at:
+          type: [string, 'null']
+          format: date-time
+          description: When it was marked; null while it is not a priority.
         seat:
           type: [integer, 'null']
           description: The seat that ordered it, from its sale line.
@@ -9265,8 +9429,11 @@ components:
       type: object
       additionalProperties: false
       description: What one send told one station. Written once; only item statuses move.
-      required: [id, workspace_id, branch_id, kitchen_station_id, station_name, station_kind, sequence, kind, service_mode, business_date, header, sent_at, done, done_at, items]
+      required: [id, workspace_id, branch_id, kitchen_station_id, station_name, station_kind, sequence, kind, service_mode, business_date, header, sent_at, done, done_at, priority, items]
       properties:
+        priority:
+          type: boolean
+          description: An item still to make is marked urgent.
         id:
           type: string
         workspace_id:
@@ -9431,8 +9598,11 @@ components:
     KitchenAllDayRow:
       type: object
       additionalProperties: false
-      required: [key, name, modifiers, quantity, oldest_sent_at, item_ids]
+      required: [key, name, modifiers, quantity, oldest_sent_at, priority, item_ids]
       properties:
+        priority:
+          type: boolean
+          description: At least one of its open items is marked urgent.
         key:
           type: string
           description: Names the dish and its options; send it to the all-day bump.
@@ -11234,6 +11404,23 @@ components:
           minimum: 1
           maximum: 99
         hold:
+          type: boolean
+    KitchenPriorityInput:
+      type: object
+      additionalProperties: true
+      required: [priority]
+      properties:
+        priority:
+          type: boolean
+    LinePriorityInput:
+      type: object
+      additionalProperties: true
+      required: [row_version, priority]
+      properties:
+        row_version:
+          type: integer
+          description: The line's `row_version` as the screen last saw it.
+        priority:
           type: boolean
     KitchenVoidInput:
       type: object

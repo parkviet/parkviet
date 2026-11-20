@@ -9,12 +9,19 @@ module Spree
             # "Done" for a whole ticket: every open item becomes ready.
             class TicketsController < BaseController
               scoped_resource :pos_orders
-              pos_permissions bump: %w[write_pos_orders], bump_all_day: %w[write_pos_orders]
+              pos_permissions bump: %w[write_pos_orders], bump_all_day: %w[write_pos_orders], priority: %w[write_pos_orders]
 
               def bump
                 ticket = Spree::Pos::Kitchen::Guard.staff_ticket!(current_store, current_user, params[:id])
                 Spree::Pos::Kitchen::ChangeItemStatus.bump(ticket: ticket, actor: current_user)
                 render json: { data: ticket.reload.to_pos }
+              end
+
+              # Marks every dish of the ticket still to make urgent, or takes the mark off.
+              def priority
+                ticket = Spree::Pos::Kitchen::Guard.staff_ticket!(current_store, current_user, params[:id])
+                Spree::Pos::Kitchen::Priority.set_ticket(ticket: ticket, priority: params[:priority], actor: current_user)
+                render json: { data: ticket.to_pos }
               end
 
               # One dish on the "by dish" tab: its oldest open items become ready.

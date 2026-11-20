@@ -22,7 +22,8 @@ module Spree
                 station = params[:station_id].present? ? guard.station!(branch, params[:station_id]) : nil
                 stations = guard.stations!(branch, params[:station_ids])
                 render json: { data: Spree::Pos::Kitchen::Board.call(branch: branch, station: station, stations: stations,
-                                                                     service_mode: guard.service_mode!(params[:service_mode])) }
+                                                                     service_mode: guard.service_mode!(params[:service_mode]),
+                                                                     priority: guard.priority_filter?(params[:priority])) }
               end
             end
           end

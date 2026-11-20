@@ -249,7 +249,9 @@ Rails.application.routes.draw do
             post 'kitchen/items/:id/ready', to: 'kitchen/items#ready'
             post 'kitchen/items/:id/serve', to: 'kitchen/items#serve'
             post 'kitchen/items/:id/recall', to: 'kitchen/items#recall'
+            post 'kitchen/items/:id/priority', to: 'kitchen/items#priority'
             post 'kitchen/tickets/:id/bump', to: 'kitchen/tickets#bump'
+            post 'kitchen/tickets/:id/priority', to: 'kitchen/tickets#priority'
             post 'kitchen/all_day/bump', to: 'kitchen/tickets#bump_all_day'
             # Call numbers waiting at the counter, and handing an order over.
             get 'kitchen/orders', to: 'kitchen/orders#index'
@@ -507,6 +509,7 @@ Rails.application.routes.draw do
               post 'items/append', to: 'workspaces/append_items#create'
               patch 'sale_lines/:id', to: 'workspaces/sale_lines#update'
               delete 'sale_lines/:id', to: 'workspaces/sale_lines#destroy'
+              post 'sale_lines/:sale_line_id/priority', to: 'workspaces/sale_lines#priority'
               post 'sale_lines/:sale_line_id/kitchen_voids', to: 'workspaces/kitchen_voids#create'
               get 'kitchen_history', to: 'workspaces/kitchen_histories#show'
               post 'items/:id/update', to: 'workspaces/items#update'
@@ -624,7 +627,9 @@ Rails.application.routes.draw do
     post 'items/:id/ready', action: :ready
     post 'items/:id/serve', action: :serve
     post 'items/:id/recall', action: :recall
+    post 'items/:id/priority', action: :item_priority
     post 'tickets/:id/bump', action: :bump
+    post 'tickets/:id/priority', action: :ticket_priority
     post 'all_day/bump', action: :bump_all_day
     post 'orders/:workspace_id/serve', action: :serve_order
     post 'workspaces/:workspace_id/courses/:course/fire', action: :fire_course

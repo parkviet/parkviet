@@ -59,7 +59,18 @@ module Spree
 
             attrs[:adjustment_approval_threshold] = value.empty? ? nil : Integer(value, 10)
           end
+          attrs[:is_default] = default_flag!(params[:is_default], record) if params.key?(:is_default)
           attrs
+        end
+
+        # Only turning the flag on is a request: a store always has one
+        # default, so it moves by choosing another branch.
+        def default_flag!(value, record)
+          flag = ActiveModel::Type::Boolean.new.cast(value)
+          return true if flag
+          raise Conflict.new('Choose another branch as the default instead.', reason: 'default_branch_required') if record&.is_default
+
+          false
         end
 
         def normalize(params)

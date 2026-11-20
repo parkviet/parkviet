@@ -26,6 +26,21 @@ module Spree
                 render json: { data: result }
               end
 
+              # Marks a menu line urgent, or takes the mark off: no lease, the
+              # line's own `row_version` is checked.
+              def priority
+                return if channel_rejected?
+
+                key = idempotency_key
+                return if key.nil?
+
+                result = Spree::Pos::Workspaces::SetLinePriority.call(
+                  workspace: workspace!(params[:workspace_id]), staff: current_user, key: key, sale_line_id: params[:sale_line_id],
+                  row_version: params[:row_version], priority: params[:priority]
+                )
+                render json: { data: result }
+              end
+
               def destroy
                 return if channel_rejected?
 

@@ -10,11 +10,18 @@ module Spree
             class ItemsController < BaseController
               scoped_resource :pos_orders
               pos_permissions start: %w[write_pos_orders], ready: %w[write_pos_orders], serve: %w[write_pos_orders],
-                              recall: %w[write_pos_orders]
+                              recall: %w[write_pos_orders], priority: %w[write_pos_orders]
 
               def start = change('start')
               def ready = change('ready')
               def recall = change('recall')
+
+              # Marks the dish urgent or takes the mark off (`priority`: true|false).
+              def priority
+                item = Spree::Pos::Kitchen::Guard.staff_item!(current_store, current_user, params[:id])
+                Spree::Pos::Kitchen::Priority.set_item(item: item, priority: params[:priority], actor: current_user)
+                render json: { data: item.kitchen_ticket.reload.to_pos }
+              end
 
               # The pass hands a ready dish out (Kitchen::MarkServed).
               def serve

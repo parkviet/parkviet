@@ -15,15 +15,18 @@ module Spree
       # - `expo`: ready items at the pass, grouped by order. A pass shows what
       #   the stations handing to it (`expo_station_id`) finished; the board
       #   of every station shows every ready item.
-      # `service_mode` narrows the board to one way of serving. `server_now`
-      # lets the screen run its timers on the server's clock.
+      # `service_mode` narrows the board to one way of serving. `priority`
+      # keeps only the tickets with a dish marked urgent in `open`, and only
+      # those dishes in `all_day`. Urgent tickets come first in `open`, then
+      # late ones, then the oldest. `server_now` lets the screen run its
+      # timers on the server's clock.
       module Board
         # How long a ready item waits at the pass before it leaves the board.
         EXPO_WINDOW = 2.hours
 
         module_function
 
-        def call(branch:, station: nil, stations: nil, service_mode: nil, now: Workspace.database_now)
+        def call(branch:, station: nil, stations: nil, service_mode: nil, priority: false, now: Workspace.database_now)
           chosen = stations.presence || Array(station).presence
           every = KitchenStation.where(branch_id: branch.id).active.ordered.to_a
           shown = chosen || every
@@ -31,11 +34,12 @@ module Spree
           own, fed = tickets((shown | feeders(chosen, every)).map(&:id), service_mode, cutoff).
                      partition { |ticket| shown.any? { |row| row.id == ticket.kitchen_station_id } }
           open, done = own.partition { |ticket| !ticket.done? }
+          open = open.select(&:priority?) if priority
           {
             branch_id: branch.prefixed_id, station: chosen&.one? ? chosen.first.to_pos : nil,
             stations: shown.map(&:to_pos), service_mode: service_mode.presence, server_now: now.iso8601(3),
-            open: open.sort_by { |ticket| [late?(ticket, now) ? 0 : 1, ticket.sent_at, ticket.id] }.map(&:to_pos),
-            done: recent(done, cutoff).map(&:to_pos), all_day: all_day(open),
+            open: open.sort_by { |ticket| [ticket.priority? ? 0 : 1, late?(ticket, now) ? 0 : 1, ticket.sent_at, ticket.id] }.map(&:to_pos),
+            done: recent(done, cutoff).map(&:to_pos), all_day: all_day(open, priority),
             expo: expo(chosen ? fed + own.select { |ticket| ticket.kitchen_station.kind == 'expo' } : own),
             held: chosen.nil? || chosen.any? { |row| row.kind == 'expo' } ? held(branch, service_mode) : []
           }
@@ -100,16 +104,16 @@ module Spree
           Digest::SHA256.hexdigest([item.name, options].to_json)[0, 16]
         end
 
-        def all_day(open)
+        def all_day(open, priority_only = false)
           rows = open.select { |ticket| ticket.kind == 'fire' }.sort_by { |ticket| [ticket.sent_at, ticket.id] }.flat_map do |ticket|
-            ticket.items.select { |item| KitchenTicketItem::OPEN.include?(item.status) }.map { |item| [ticket, item] }
+            ticket.items.select { |item| item.open? && (!priority_only || item.priority) }.map { |item| [ticket, item] }
           end
           rows.group_by { |_, item| all_day_key(item) }.map do |key, group|
             first = group.first.last
             {
               key: key, name: first.name, modifiers: first.modifiers,
               quantity: group.sum { |_, item| item.quantity }.to_s('F'),
-              oldest_sent_at: group.first.first.sent_at.iso8601(3),
+              oldest_sent_at: group.first.first.sent_at.iso8601(3), priority: group.any? { |_, item| item.priority },
               item_ids: group.map { |_, item| item.prefixed_id }
             }
           end

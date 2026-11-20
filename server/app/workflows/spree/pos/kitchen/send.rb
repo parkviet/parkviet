@@ -130,7 +130,8 @@ module Spree
                                         modifiers: line.line_modifiers.map { |row| modifier(row) },
                                         components: combos[line.variant.product_id] ? line.line_components.map { |row| component(row) } : [],
                                         note: line.note.presence, quantity: line.sale_quantity - line.kitchen_sent_quantity,
-                                        status: 'new')
+                                        status: 'new', priority: line.priority, priority_at: line.priority ? now : nil,
+                                        priority_by: line.priority ? actor : nil)
               line.update!(kitchen_sent_quantity: line.sale_quantity)
             end
             Realtime.publish(workspace.branch, 'kitchen_ticket.updated',

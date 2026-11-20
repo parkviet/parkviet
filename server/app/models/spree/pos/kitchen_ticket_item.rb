@@ -17,6 +17,8 @@ module Spree
       # Gone once the line was voided to nothing; the ticket keeps what it said.
       belongs_to :sale_line, class_name: 'Spree::Pos::SaleLine', optional: true
       belongs_to :changed_by, polymorphic: true, optional: true
+      # Who raised the priority (staff or a kitchen screen), kept to spot overuse.
+      belongs_to :priority_by, polymorphic: true, optional: true
 
       validates :name, presence: true
       validates :status, inclusion: { in: STATUSES }
@@ -29,8 +31,12 @@ module Spree
           note: note, quantity: quantity.to_s('F'), status: status, started_at: started_at&.iso8601(3),
           ready_at: ready_at&.iso8601(3), served_at: served_at&.iso8601(3), voided_at: voided_at&.iso8601(3),
           recalled_at: recalled_at&.iso8601(3), recall_count: recall_count, prep_seconds: prep_seconds, late: late,
-          seat: sale_line&.seat, course: sale_line&.course
+          seat: sale_line&.seat, course: sale_line&.course, priority: priority, priority_at: priority_at&.iso8601(3)
         }
+      end
+
+      def open?
+        OPEN.include?(status)
       end
 
       private

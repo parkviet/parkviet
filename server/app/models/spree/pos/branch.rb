@@ -27,6 +27,12 @@ module Spree
       has_many :memberships, class_name: 'Spree::Pos::StaffMembership', dependent: :restrict_with_error
 
       before_validation :keep_receiving_note
+      # The store's default branch opens first when nothing names one. A
+      # store has at most one; a disabled branch cannot hold it.
+      before_validation :release_default_when_disabled
+      before_save :take_default_from_others, if: -> { is_default && will_save_change_to_is_default? }
+      before_create :default_when_first
+      after_save :ensure_store_default, if: :saved_change_to_status?
 
       validates :name, :code, :timezone, :status, presence: true
       validates :code, uniqueness: { scope: :store_id }, format: { with: /\A[a-z0-9][a-z0-9_-]{0,31}\z/ }
@@ -72,6 +78,7 @@ module Spree
       validate :locations_belong_to_store
       validate :table_settings_of_store
       validate :stock_location_fixed_for_open_drafts, on: :update
+      validate :default_is_active
 
       scope :for_store, ->(store) { where(store_id: store.id) }
 
@@ -113,7 +120,7 @@ module Spree
           name: name,
           code: code,
           timezone: timezone,
-          status: status,
+          status: status, is_default: is_default,
           stock_location_id: stock_location.prefixed_id,
           receiving_stock_location_id: receiving_stock_location&.prefixed_id,
           receiving_note: receiving_config['note'],
@@ -132,6 +139,34 @@ module Spree
       end
 
       private
+
+      def default_is_active
+        errors.add(:is_default, :invalid) if is_default && disabled?
+      end
+
+      # The first branch a store gets, or one made while the store has no
+      # default (every other branch is disabled), becomes its default.
+      def default_when_first
+        return if is_default || disabled?
+
+        self.is_default = true unless self.class.where(store_id: store_id, is_default: true).exists?
+      end
+
+      def take_default_from_others
+        self.class.where(store_id: store_id, is_default: true).where.not(id: id).update_all(is_default: false, updated_at: Time.current)
+      end
+
+      # Disabling the default branch drops its flag here; the oldest active
+      # branch takes it over after the save (ensure_store_default).
+      def release_default_when_disabled
+        self.is_default = false if persisted? && disabled? && is_default && will_save_change_to_status? && !will_save_change_to_is_default?
+      end
+
+      def ensure_store_default
+        return if self.class.where(store_id: store_id, is_default: true).exists?
+
+        self.class.where(store_id: store_id, status: 'active').order(:created_at, :id).first&.update_columns(is_default: true, updated_at: Time.current)
+      end
 
       def keep_receiving_note
         source = receiving_config.is_a?(Hash) ? receiving_config : {}

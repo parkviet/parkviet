@@ -36,7 +36,8 @@ module Spree
           stations = Kitchen::Guard.stations!(@device.branch, params[:station_ids])
           station = stations.empty? ? station_param : nil
           render json: { data: Kitchen::Board.call(branch: @device.branch, station: station, stations: stations,
-                                                   service_mode: Kitchen::Guard.service_mode!(params[:service_mode])) }
+                                                   service_mode: Kitchen::Guard.service_mode!(params[:service_mode]),
+                                                   priority: Kitchen::Guard.priority_filter?(params[:priority])) }
         end
 
         # The oldest open items of one dish on the "by dish" tab become ready.
@@ -47,6 +48,20 @@ module Spree
           tickets = Kitchen::ChangeItemStatus.bump_all_day(stations: stations, key: params[:key], quantity: params[:quantity] || 1,
                                                            actor: @device)
           render json: { data: tickets.map(&:to_pos) }
+        end
+
+        # Marks one dish urgent or takes the mark off (`priority`: true|false).
+        def item_priority
+          item = Kitchen::Guard.item!(@device.branch, params[:id])
+          Kitchen::Priority.set_item(item: item, priority: params[:priority], actor: @device)
+          render json: { data: item.kitchen_ticket.reload.to_pos }
+        end
+
+        # The same for every dish of the ticket still to make.
+        def ticket_priority
+          ticket = Kitchen::Guard.ticket!(@device.branch, params[:id])
+          Kitchen::Priority.set_ticket(ticket: ticket, priority: params[:priority], actor: @device)
+          render json: { data: ticket.to_pos }
         end
 
         def start = change('start')

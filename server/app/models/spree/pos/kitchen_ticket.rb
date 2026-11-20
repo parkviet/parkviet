@@ -47,12 +47,17 @@ module Spree
         items.filter_map { |item| item.ready_at || item.served_at || item.voided_at }.max
       end
 
+      # Whether an item still to make is marked urgent.
+      def priority?
+        items.any? { |item| item.open? && item.priority }
+      end
+
       def to_pos
         {
           id: prefixed_id, workspace_id: workspace.prefixed_id, branch_id: branch.prefixed_id,
           kitchen_station_id: kitchen_station.prefixed_id, station_name: kitchen_station.name, station_kind: kitchen_station.kind,
           sequence: sequence, kind: kind, service_mode: service_mode, business_date: business_date.iso8601,
-          header: header, sent_at: sent_at.iso8601(3), done: done?, done_at: done_at&.iso8601(3),
+          header: header, sent_at: sent_at.iso8601(3), done: done?, done_at: done_at&.iso8601(3), priority: priority?,
           items: items.map(&:to_pos)
         }
       end

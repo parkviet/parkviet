@@ -77,4 +77,25 @@ RSpec.describe Spree::Pos::Kitchen::Board do
     other = kitchen_station!(kitchen_branch(store), name: 'Ra món', kind: 'expo')
     expect(kitchen.update(expo_station: other)).to be(false)
   end
+
+  it 'puts an urgent ticket before a late one, and keeps only urgent dishes when asked' do
+    late_sale = sent_sale(soup)
+    plain_sale = sent_sale(soup)
+    urgent_sale = sent_sale(soup, soup_two = size(prepared_product!(store, branch, name: 'Bún chả', price: 40_000)))
+    late = tickets_of(late_sale).sole
+    late.class.where(id: late.id).update_all(sent_at: 20.minutes.ago)
+    urgent = tickets_of(urgent_sale).sole
+    urgent.items.find { |item| item.name == soup_two.product.name }.update!(priority: true, priority_at: Time.current)
+
+    board = described_class.call(branch: branch, station: kitchen)
+    expect(board[:open].map { |row| row[:id] }).to eq([urgent.prefixed_id, late.prefixed_id, tickets_of(plain_sale).sole.prefixed_id])
+    expect(board[:open].first).to include(priority: true)
+    expect(board[:open].last).to include(priority: false)
+    expect(board[:all_day].map { |row| [row[:name], row[:priority]] }).
+      to contain_exactly([urgent.items.first.name, false], [soup_two.product.name, true])
+
+    only = described_class.call(branch: branch, station: kitchen, priority: true)
+    expect(only[:open].map { |row| row[:id] }).to eq([urgent.prefixed_id])
+    expect(only[:all_day].sole).to include(name: soup_two.product.name, priority: true, quantity: '1.0')
+  end
 end

@@ -203,4 +203,42 @@ RSpec.describe 'POS approval requests', type: :request do
     expect(Spree::Pos::PushDeliveryJob).to have_received(:perform_later).
       with(registration.id, 'approval_request.created', response.parsed_body.dig('data', 'id')).once
   end
+
+  describe 'filters' do
+    def request_row(action, status)
+      Spree::Pos::ApprovalRequest.create!(store: store, branch: branch, requester: cashier, action: action, subject_type: sale.workspace.class.name,
+                                          subject_id: sale.workspace.id, revision: '1', status: status, expires_at: 1.hour.from_now,
+                                          decided_by: status == 'pending' ? nil : manager, decided_at: status == 'pending' ? nil : Time.current)
+    end
+
+    def listed(params)
+      get '/api/v3/admin/pos/approval_requests', headers: headers_for(manager), params: { branch_id: branch.prefixed_id }.merge(params)
+      response.parsed_body['data']
+    end
+
+    it 'narrows by action, one or several, and by a list of statuses' do
+      void = request_row('kitchen.void_sent', 'pending')
+      expired = request_row('kitchen.void_sent', 'expired')
+      declined = request_row('kitchen.void_sent', 'declined')
+      discount = request_row('workspace.apply_discount', 'pending')
+
+      expect(listed(action: 'kitchen.void_sent').pluck('id')).to eq([void.prefixed_id])
+      expect(listed(action: 'kitchen.void_sent', status: 'all').pluck('id')).
+        to contain_exactly(void.prefixed_id, expired.prefixed_id, declined.prefixed_id)
+      expect(listed(action: %w[kitchen.void_sent workspace.apply_discount]).pluck('id')).to contain_exactly(void.prefixed_id, discount.prefixed_id)
+      expect(listed(action_name: 'workspace.apply_discount').pluck('id')).to eq([discount.prefixed_id])
+      expect(listed(action: 'kitchen.void_sent', status: %w[granted declined expired]).pluck('id')).
+        to contain_exactly(expired.prefixed_id, declined.prefixed_id)
+      # No filter keeps what it always did: every pending request.
+      expect(listed({}).pluck('id')).to contain_exactly(void.prefixed_id, discount.prefixed_id)
+    end
+
+    it 'refuses an unknown action or status' do
+      listed(action: 'kitchen.make_coffee')
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body.dig('error', 'code')).to eq('parameter_invalid')
+      listed(status: %w[granted nonsense])
+      expect(response).to have_http_status(:unprocessable_content)
+    end
+  end
 end

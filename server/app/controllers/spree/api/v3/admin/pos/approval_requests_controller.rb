@@ -29,12 +29,20 @@ module Spree
               scope = mine? ? scope.where(requester_id: current_user.id) : scope.where(branch_id: deciding_branch_ids)
               scope = scope.where(branch_id: branch!(params[:branch_id]).id) if params[:branch_id].present?
               Spree::Pos::ApprovalRequest.expire_due!(scope)
-              status = params[:status].presence || 'pending'
-              unless status == 'all' || STATUSES.include?(status)
+              statuses = filter_values(params[:status]).presence || ['pending']
+              unless statuses.include?('all') || (statuses - STATUSES).empty?
                 return render_error(code: 'parameter_invalid', message: 'Unknown status.', status: :unprocessable_content)
               end
 
-              scope = scope.where(status: status) unless status == 'all'
+              # `action` is also the name Rails gives the route's action, so it
+              # is read from the query string; `action_name` is the same filter.
+              actions = filter_values(request.query_parameters['action'] || params[:action_name])
+              unless (actions - Spree::Pos::ApprovalRequest::ACTIONS).empty?
+                return render_error(code: 'parameter_invalid', message: 'Unknown action.', status: :unprocessable_content)
+              end
+
+              scope = scope.where(status: statuses) unless statuses.include?('all')
+              scope = scope.where(action: actions) if actions.any?
               render_page(scope.includes(:branch, :requester, :approval, :decided_by).order(created_at: :desc, id: :desc))
             end
 
@@ -79,6 +87,11 @@ module Spree
 
               result = workflow.call(request: approval_request!, staff: current_user, key: key, **options)
               render json: { data: result['approval_request'] }
+            end
+
+            # One value or a list (`status[]=a&status[]=b`), as plain strings.
+            def filter_values(raw)
+              Array(raw).map(&:to_s).map(&:strip).reject(&:empty?).uniq
             end
 
             def mine?
