@@ -15,6 +15,7 @@ import {
   lineAmount,
   lineSignature,
   menuLine,
+  offlineMenu,
   provisionalNumber,
   queueBlock,
   saleTotal,
@@ -206,7 +207,7 @@ export function OfflineSalePage() {
           <div className="offline-sale-body">
             <MenuGrid
               branchId={snapshot.branch.id}
-              menuData={snapshot.menu}
+              menuData={offlineMenu(snapshot.menu)}
               addDisabled={Boolean(sellBlocked)}
               addDisabledReason={sellBlocked || undefined}
               canSetSoldOut={false}

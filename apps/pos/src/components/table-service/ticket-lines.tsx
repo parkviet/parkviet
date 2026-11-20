@@ -1,4 +1,5 @@
 import { formatMoney } from '@parkviet/pos-shared/money';
+import { menuProductOfVariant } from '@parkviet/pos-shared/pos-menu';
 import {
   type TicketGroup,
   type TicketGroupMode,
@@ -12,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useCupLabelReprint } from '../../hooks/use-kitchen';
 import { kitchenSent } from '../../lib/kitchen';
 import { linePicks } from '../../lib/menu-selection';
-import type { PosLineItem, PosMenuItem, PosWorkspace } from '../../lib/pos-context';
+import type { PosLineItem, PosMenuProduct, PosWorkspace } from '../../lib/pos-context';
 import { MAX_COUNT_QUANTITY } from '../../lib/quantity';
 import { snapshotLocked } from '../../lib/request-failure';
 import { courseName, seatsOf } from '../../lib/table-courses';
@@ -60,7 +61,7 @@ export function TicketLines({
   const { workspaces, command, run, placement, setPlacement, canAppend, busy } = selling;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [editing, setEditing] = useState<{ line: PosLineItem; item: PosMenuItem } | null>(null);
+  const [editing, setEditing] = useState<{ line: PosLineItem; item: PosMenuProduct } | null>(null);
   const menu = selling.menu.data ?? null;
   const currency = active.totals?.currency ?? 'VND';
   const table = selling.activeTable.table !== null;
@@ -310,7 +311,7 @@ function TicketLine({
   selected: boolean;
   onSelect: () => void;
   onChange: (action: (current: PosWorkspace) => Promise<PosWorkspace>) => void;
-  onEditNote: (item: PosMenuItem) => void;
+  onEditNote: (item: PosMenuProduct) => void;
   cupTools: boolean;
 }) {
   const { t } = useTranslation();
@@ -384,12 +385,9 @@ function TicketLine({
   );
 }
 
-function menuItemOf(selling: SellingWorkspace, line: PosLineItem): PosMenuItem | null {
-  return (
-    selling.menu.data?.items.find((item) =>
-      item.variants.some((variant) => variant.id === line.variant_id),
-    ) ?? null
-  );
+function menuProductOf(selling: SellingWorkspace, line: PosLineItem): PosMenuProduct | null {
+  const items = selling.menu.data?.items;
+  return items ? (menuProductOfVariant(items, line.variant_id) ?? null) : null;
 }
 
 // The tools of the line the cashier tapped: the count, its note and
@@ -406,7 +404,7 @@ function LineActions({
   active: PosWorkspace;
   line: PosLineItem;
   onChange: (action: (current: PosWorkspace) => Promise<PosWorkspace>) => void;
-  onEditNote: (item: PosMenuItem) => void;
+  onEditNote: (item: PosMenuProduct) => void;
   cupTools: boolean;
 }) {
   const { t } = useTranslation();
@@ -430,7 +428,7 @@ function LineActions({
   // Play time and scale labels change only where they come from.
   const fixed = line.kind === 'timed' || line.kind === 'measured' || Boolean(line.label_barcode);
   const voidable = sent && kitchenOn && !active.payments && !countDisabled;
-  const item = line.kind === 'menu' && !sent ? menuItemOf(selling, line) : null;
+  const item = line.kind === 'menu' && !sent ? menuProductOf(selling, line) : null;
   const seats = Math.min(
     SEAT_MAX,
     Math.max(MIN_SEATS, activeTable.guestCount ?? 0, ...seatsOf(active), line.seat ?? 0),
@@ -588,7 +586,7 @@ function CupTools({
   if (line.kind !== 'menu' || !line.sale_line_id) return null;
   const saleLineId = line.sale_line_id;
   const same = sameSelections(line);
-  const item = menuItemOf(selling, line);
+  const item = menuProductOf(selling, line);
   const printsLabels =
     selling.cupLabels &&
     item?.cup_label === true &&

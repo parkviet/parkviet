@@ -1,8 +1,9 @@
+import { isMenuLine, productsInCategory } from '@parkviet/pos-shared/pos-menu';
 import type {
   PosLineItem,
   PosMenu,
-  PosMenuItem,
   PosMenuModifierGroup,
+  PosMenuProduct,
   PosModifierSelection,
 } from './pos-context';
 import { conflictReason, describeFailure } from './request-failure';
@@ -16,9 +17,9 @@ export const MAX_OPTION_QUANTITY = 10;
 
 export type GroupProblem = 'min' | 'max' | null;
 
-// The groups offered on an item, in the order the item lists them, with
+// The groups offered on a product, in the order the product lists them, with
 // inactive options left out.
-export function itemGroups(menu: PosMenu, item: PosMenuItem): PosMenuModifierGroup[] {
+export function itemGroups(menu: PosMenu, item: PosMenuProduct): PosMenuModifierGroup[] {
   const byId = new Map(menu.modifier_groups.map((group) => [group.id, group]));
   return item.modifier_group_ids.flatMap((id) => {
     const group = byId.get(id);
@@ -148,8 +149,7 @@ export function estimatePrice(
   return fromHundredths(total);
 }
 
-// Tiles of one tab: a category, or every item. Quick search narrows by
-// name or code without accents mattering.
+// Quick search narrows by name or code without accents mattering.
 export function fold(text: string): string {
   return text
     .normalize('NFD')
@@ -160,14 +160,15 @@ export function fold(text: string): string {
     .trim();
 }
 
+// Tiles of one tab: a category, or every product ("All", null), the ones
+// without a category included.
 export function visibleItems(
   menu: PosMenu,
   categoryId: string | null,
   query: string,
-): PosMenuItem[] {
+): PosMenuProduct[] {
   const needle = fold(query);
-  return menu.items.filter((item) => {
-    if (categoryId && item.menu_category_id !== categoryId) return false;
+  return productsInCategory(menu.items, categoryId).filter((item) => {
     if (!needle) return true;
     return (
       fold(item.name).includes(needle) ||
@@ -186,8 +187,8 @@ export const DRINK_CATEGORY = 'do_uong';
 // A bar tab's menu: drinks and shots lead, in the categories and in the list,
 // each keeping its own order.
 export function drinksFirst(menu: PosMenu): PosMenu {
-  const drink = (item: PosMenuItem) => item.kitchen_category === DRINK_CATEGORY;
-  const drinkCategories = new Set(menu.items.filter(drink).map((item) => item.menu_category_id));
+  const drink = (item: PosMenuProduct) => item.kitchen_category === DRINK_CATEGORY;
+  const drinkCategories = new Set(menu.items.filter(drink).flatMap((item) => item.category_ids));
   const lead = <T>(rows: T[], first: (row: T) => boolean) => [
     ...rows.filter(first),
     ...rows.filter((row) => !first(row)),
@@ -199,8 +200,9 @@ export function drinksFirst(menu: PosMenu): PosMenu {
   };
 }
 
-export function favoriteItems(menu: PosMenu): PosMenuItem[] {
-  const byId = new Map(menu.items.map((item) => [item.id, item]));
+// The favourites row: product ids, in the order the branch set.
+export function favoriteItems(menu: PosMenu): PosMenuProduct[] {
+  const byId = new Map(menu.items.map((item) => [item.product_id, item]));
   return menu.favorites.flatMap((id) => {
     const item = byId.get(id);
     return item ? [item] : [];
@@ -210,8 +212,8 @@ export function favoriteItems(menu: PosMenu): PosMenuItem[] {
 // Refusals of the menu with a counter wording; anything else reads as any
 // other workspace command failure.
 const MENU_REASONS = [
-  'menu_item_sold_out',
-  'menu_item_hidden',
+  'product_sold_out',
+  'product_hidden',
   'modifier_unknown',
   'modifier_min',
   'modifier_max',
@@ -225,13 +227,20 @@ export function describeMenuFailure(error: unknown, translate: (key: string) => 
   return describeFailure(error, translate);
 }
 
-// An item adds in one tap when there is nothing to choose: one size, no
+// A product adds in one tap when there is nothing to choose: one size, no
 // groups. Defaults still apply on the server.
-export function addsInOneTap(menu: PosMenu, item: PosMenuItem): boolean {
+export function addsInOneTap(menu: PosMenu, item: PosMenuProduct): boolean {
   return item.variants.length === 1 && itemGroups(menu, item).length === 0;
 }
 
-// The variants of the dishes sold out today, so a catalogue search can dim
+// The menu with only the products that sell as menu lines (a prepared
+// product where the branch runs the menu): the pickers whose orders the
+// server takes from the menu alone, such as platform orders.
+export function onlyMenuLines(menu: PosMenu): PosMenu {
+  return { ...menu, items: menu.items.filter((item) => isMenuLine(menu, item)) };
+}
+
+// The variants of the products sold out today, so a catalogue search can dim
 // them as the menu grid does. The server still refuses them.
 export function soldOutVariantIds(menu: PosMenu | null | undefined): ReadonlySet<string> {
   const ids = new Set<string>();

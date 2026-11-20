@@ -1,6 +1,8 @@
-// A branch menu for the retail API fixture: tiles, option groups, sold-out
-// marks and a time-of-day price, priced the way the server prices menu lines
-// (base or scheduled price plus the options; the client sends no price).
+// A branch menu for the retail API fixture: the products the branch sells,
+// keyed by product, with their Spree categories, option groups, sold-out
+// marks and a time-of-day price. A prepared product prices the way the
+// server prices menu lines (base or scheduled price plus the options; the
+// client sends no price); any other product is an ordinary line.
 // Presentation fixtures only: no real account privileges.
 
 export type MenuOptionFixture = { id: string; name: string; delta: number; default?: boolean };
@@ -12,21 +14,29 @@ export type MenuGroupFixture = {
   allowQuantity?: boolean;
   options: MenuOptionFixture[];
 };
-export type MenuItemFixture = {
-  id: string;
+export type MenuProductFixture = {
+  productId: string;
   variantId: string;
   name: string;
   price: number;
-  categoryId: string;
+  // Spree categories the product is attached to directly; none shows it under "All" only.
+  categoryIds: string[];
   groupIds: string[];
-  // A running time-of-day menu's price for this item.
+  // The POS kind of the product; only a prepared product is a menu line. Prepared when absent.
+  productKind?: 'goods' | 'prepared' | 'service' | null;
+  // A running time-of-day menu's price for this product.
   scheduledPrice?: number;
 };
 
+export type CategoryFixture = { id: string; name: string; parentId?: string };
+
 export type MenuWorld = {
-  items: MenuItemFixture[];
+  items: MenuProductFixture[];
+  categories: CategoryFixture[];
   groups: MenuGroupFixture[];
+  // Product ids sold out today.
   soldOut: Set<string>;
+  // Product ids of the favourites row.
   favorites: string[];
 };
 
@@ -44,9 +54,13 @@ const money = (value: number) => `${value}.0`;
 export function teaMenu(): MenuWorld {
   return {
     items: [
-      { id: 'posmenuitem_tea', variantId: 'v_tea', name: 'Trà sữa', price: 30000, categoryId: 'posmenucat_tea', groupIds: ['posmodgroup_sugar', 'posmodgroup_topping'] },
-      { id: 'posmenuitem_peach', variantId: 'v_peach', name: 'Trà đào', price: 35000, categoryId: 'posmenucat_tea', groupIds: [], scheduledPrice: 25000 },
-      { id: 'posmenuitem_flan', variantId: 'v_flan', name: 'Bánh flan', price: 15000, categoryId: 'posmenucat_cake', groupIds: [] },
+      { productId: 'prod_tea', variantId: 'v_tea', name: 'Trà sữa', price: 30000, categoryIds: ['ctg_tea'], groupIds: ['posmodgroup_sugar', 'posmodgroup_topping'] },
+      { productId: 'prod_peach', variantId: 'v_peach', name: 'Trà đào', price: 35000, categoryIds: ['ctg_tea'], groupIds: [], scheduledPrice: 25000 },
+      { productId: 'prod_flan', variantId: 'v_flan', name: 'Bánh flan', price: 15000, categoryIds: ['ctg_cake'], groupIds: [] },
+    ],
+    categories: [
+      { id: 'ctg_tea', name: 'Trà' },
+      { id: 'ctg_cake', name: 'Bánh' },
     ],
     groups: [
       {
@@ -65,12 +79,17 @@ export function teaMenu(): MenuWorld {
       },
     ],
     soldOut: new Set(),
-    favorites: ['posmenuitem_peach', 'posmenuitem_tea'],
+    favorites: ['prod_peach', 'prod_tea'],
   };
 }
 
-export function menuItemByVariant(menu: MenuWorld, variantId: string) {
+export function menuProductByVariant(menu: MenuWorld, variantId: string) {
   return menu.items.find((item) => item.variantId === variantId);
+}
+
+// The branch runs the menu, so a prepared product sells as a menu line.
+export function sellsAsMenuLine(item: MenuProductFixture) {
+  return (item.productKind ?? 'prepared') === 'prepared';
 }
 
 export function menuBody(menu: MenuWorld) {
@@ -79,16 +98,18 @@ export function menuBody(menu: MenuWorld) {
     currency: 'VND',
     business_date: '2026-11-11',
     module_enabled: true,
-    categories: [
-      { id: 'posmenucat_tea', name: 'Trà', position: 0, color: null, active: true },
-      { id: 'posmenucat_cake', name: 'Bánh', position: 1, color: null, active: true },
-    ],
-    items: menu.items.map((item, position) => ({
-      id: item.id, product_id: `p_${item.variantId}`, name: item.name, kind: 'single', menu_category_id: item.categoryId,
-      kitchen_category: null, cup_label: false, show_components_on_kds: false, position, active: true, tax_category_id: null,
-      modifier_group_ids: item.groupIds, components: [], image_url: null, sold_out: menu.soldOut.has(item.id),
+    // Only the categories with a listed product attached directly, as the server lists them.
+    categories: menu.categories
+      .filter((category) => menu.items.some((item) => item.categoryIds.includes(category.id)))
+      .map((category, position) => ({ id: category.id, name: category.name, position, parent_id: category.parentId ?? null })),
+    items: menu.items.map((item) => ({
+      product_id: item.productId, name: item.name, product_kind: item.productKind === undefined ? 'prepared' : item.productKind,
+      kind: 'single', category_ids: item.categoryIds, kitchen_category: null, cup_label: false, show_components_on_kds: false,
+      qr_orderable: sellsAsMenuLine(item), drink_credit: null, drink_credit_categories: [], tax_category_id: null,
+      modifier_group_ids: sellsAsMenuLine(item) ? item.groupIds : [], components: [], image_url: null,
+      sold_out: menu.soldOut.has(item.productId),
       variants: [{
-        id: item.variantId, name: null, sku: item.id.toUpperCase(), barcode: null,
+        id: item.variantId, name: null, sku: item.productId.toUpperCase(), barcode: null,
         price: money(item.scheduledPrice ?? item.price), list_price: money(item.price),
         schedule_id: item.scheduledPrice === undefined ? null : 'posmenusched_golden',
       }],
@@ -112,10 +133,10 @@ type Refusal = { refused: string; reason: string };
 // Prices one menu add. Absent `modifiers` take the defaults; `[]` takes none.
 export function priceMenuAdd(
   menu: MenuWorld,
-  item: MenuItemFixture,
+  item: MenuProductFixture,
   body: Record<string, unknown>,
 ): MenuLine | Refusal {
-  if (menu.soldOut.has(item.id)) return { refused: 'This item is sold out today.', reason: 'menu_item_sold_out' };
+  if (menu.soldOut.has(item.productId)) return { refused: 'This product is sold out today.', reason: 'product_sold_out' };
   if (body.price_override !== undefined) return { refused: 'The menu sets the price.', reason: 'menu_price_fixed' };
   const groups = menu.groups.filter((group) => item.groupIds.includes(group.id));
   const sent = body.modifiers as Array<{ option_id: string; quantity?: number }> | undefined;

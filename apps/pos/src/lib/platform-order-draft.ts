@@ -1,6 +1,7 @@
 // A platform order being typed in: menu lines picked from the grid, each with
 // the quantity and the platform's own unit price read off the platform's
 // tablet. Pure, so the form and its tests share it.
+import { isMenuLine, menuProductOfVariant } from '@parkviet/pos-shared/pos-menu';
 import { estimatePrice } from './menu-selection';
 import type { PosMenu, PosModifierSelection } from './pos-context';
 
@@ -30,16 +31,17 @@ export const PLATFORM_MAX_LINES = 50;
 export const PLATFORM_MAX_QUANTITY = 100;
 
 // The line a pick from the menu grid makes, or null when the menu no longer
-// has the variant.
+// has the variant or it does not sell as a menu line (platform orders take
+// menu lines only).
 export function draftLine(
   menu: PosMenu,
   variantId: string,
   extra: { modifiers?: PosModifierSelection[]; note?: string },
   key: string,
 ): PlatformDraftLine | null {
-  const item = menu.items.find((row) => row.variants.some((variant) => variant.id === variantId));
+  const item = menuProductOfVariant(menu.items, variantId);
   const variant = item?.variants.find((row) => row.id === variantId);
-  if (!item || !variant) return null;
+  if (!item || !variant || !isMenuLine(menu, item)) return null;
   const groups = menu.modifier_groups.filter((group) => item.modifier_group_ids.includes(group.id));
   const modifiers = extra.modifiers ?? [];
   const picks = Object.fromEntries(modifiers.map((row) => [row.option_id, row.quantity ?? 1]));

@@ -1,4 +1,5 @@
 import { formatMoney } from '@parkviet/pos-shared/money';
+import { isMenuLine } from '@parkviet/pos-shared/pos-menu';
 import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModalFocus } from '../lib/dialog-focus';
@@ -18,8 +19,8 @@ import {
 } from '../lib/menu-selection';
 import type {
   PosMenu,
-  PosMenuItem,
   PosMenuModifierGroup,
+  PosMenuProduct,
   PosModifierSelection,
 } from '../lib/pos-context';
 import { PosIcon } from './pos-icon';
@@ -60,7 +61,8 @@ function splitNote(note: string) {
 
 // Size, option groups and a note. Required groups are marked and the add
 // button waits until every group has enough picks. The price is an estimate;
-// the line takes the price the server works out.
+// the line takes the price the server works out. A product that is not a
+// menu line (isMenuLine) takes no note: only its size is chosen.
 export function ModifierForm({
   menu,
   item,
@@ -72,7 +74,7 @@ export function ModifierForm({
   panel,
 }: {
   menu: PosMenu;
-  item: PosMenuItem;
+  item: PosMenuProduct;
   // Picks of a line being edited; its size stays as sold.
   initial?: { variantId: string; picks: MenuPicks; note: string };
   editing?: boolean;
@@ -85,6 +87,7 @@ export function ModifierForm({
   const { t } = useTranslation();
   const formId = useId();
   const listed = useMemo(() => itemGroups(menu, item), [menu, item]);
+  const takesNote = isMenuLine(menu, item);
   const [startPicks] = useState<MenuPicks>(() => initial?.picks ?? defaultPicks(listed));
   const [picks, setPicks] = useState<MenuPicks>(startPicks);
   const groups = useMemo(
@@ -111,7 +114,11 @@ export function ModifierForm({
     setBusy(true);
     setError('');
     try {
-      await onSubmit({ variantId: variant.id, modifiers: toSelections(picks), note: note.trim() });
+      await onSubmit({
+        variantId: variant.id,
+        modifiers: toSelections(picks),
+        note: takesNote ? note.trim() : '',
+      });
       onDone();
     } catch (failure) {
       setError(describeMenuFailure(failure, t));
@@ -249,7 +256,7 @@ export function ModifierForm({
           </fieldset>
         );
       })}
-      {panel && panel.quickNotes.length > 0 ? (
+      {takesNote && panel && panel.quickNotes.length > 0 ? (
         <fieldset className="modifier-group modifier-quick-notes" disabled={busy}>
           <legend>
             {t('menuQuickNotes')} <small className="muted">{t('menuQuickNotesHint')}</small>
@@ -270,17 +277,19 @@ export function ModifierForm({
           </div>
         </fieldset>
       ) : null}
-      <label className="modifier-note">
-        <span>{t('menuNote')}</span>
-        <textarea
-          value={note}
-          maxLength={MENU_NOTE_LIMIT}
-          rows={2}
-          disabled={busy}
-          placeholder={t('menuNotePlaceholder')}
-          onChange={(event) => setNote(event.target.value)}
-        />
-      </label>
+      {takesNote ? (
+        <label className="modifier-note">
+          <span>{t('menuNote')}</span>
+          <textarea
+            value={note}
+            maxLength={MENU_NOTE_LIMIT}
+            rows={2}
+            disabled={busy}
+            placeholder={t('menuNotePlaceholder')}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </label>
+      ) : null}
       {error ? (
         <p className="error" role="alert">
           {error}
@@ -323,7 +332,7 @@ export function ModifierSheet({
   onClose,
 }: {
   menu: PosMenu;
-  item: PosMenuItem;
+  item: PosMenuProduct;
   // Picks of a line being edited; its size stays as sold.
   initial?: { variantId: string; picks: MenuPicks; note: string };
   editing?: boolean;

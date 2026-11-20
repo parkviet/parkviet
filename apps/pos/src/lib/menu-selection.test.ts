@@ -8,6 +8,7 @@ import {
   groupProblem,
   itemGroups,
   linePicks,
+  onlyMenuLines,
   picksReady,
   soldOutVariantIds,
   stepPick,
@@ -15,7 +16,7 @@ import {
   toSelections,
   visibleItems,
 } from './menu-selection';
-import type { PosLineItem, PosMenu, PosMenuItem, PosMenuModifierGroup } from './pos-context';
+import type { PosLineItem, PosMenu, PosMenuModifierGroup, PosMenuProduct } from './pos-context';
 
 function group(overrides: Partial<PosMenuModifierGroup> = {}): PosMenuModifierGroup {
   return {
@@ -62,18 +63,19 @@ function group(overrides: Partial<PosMenuModifierGroup> = {}): PosMenuModifierGr
 type Option = PosMenuModifierGroup['options'][number];
 const [pearl, jelly] = group().options as [Option, Option, Option];
 
-function item(overrides: Partial<PosMenuItem> = {}): PosMenuItem {
+function item(overrides: Partial<PosMenuProduct> = {}): PosMenuProduct {
   return {
-    id: 'posmenuitem_1',
     product_id: 'prod_1',
     name: 'Trà đào',
+    product_kind: 'prepared',
     kind: 'single',
-    menu_category_id: 'posmenucat_1',
+    category_ids: ['ctg_1'],
     kitchen_category: null,
     cup_label: false,
     show_components_on_kds: false,
-    position: 0,
-    active: true,
+    qr_orderable: true,
+    drink_credit: null,
+    drink_credit_categories: [],
     tax_category_id: null,
     modifier_group_ids: ['posmodgroup_1'],
     components: [],
@@ -94,7 +96,7 @@ function item(overrides: Partial<PosMenuItem> = {}): PosMenuItem {
   };
 }
 
-function menu(items: PosMenuItem[], groups = [group()]): PosMenu {
+function menu(items: PosMenuProduct[], groups = [group()]): PosMenu {
   return {
     branch_id: 'posbranch_1',
     currency: 'VND',
@@ -104,7 +106,7 @@ function menu(items: PosMenuItem[], groups = [group()]): PosMenu {
     items,
     modifier_groups: groups,
     schedules: [],
-    favorites: ['posmenuitem_2', 'posmenuitem_gone', 'posmenuitem_1'],
+    favorites: ['prod_2', 'prod_gone', 'prod_1'],
     etag: 'e',
   };
 }
@@ -182,27 +184,43 @@ describe('menu picks', () => {
 
 describe('menu tiles', () => {
   const tea = item();
-  const teaSize = tea.variants[0] as PosMenuItem['variants'][number];
+  const teaSize = tea.variants[0] as PosMenuProduct['variants'][number];
   const coffee = item({
-    id: 'posmenuitem_2',
+    product_id: 'prod_2',
     name: 'Cà phê đen',
-    menu_category_id: 'posmenucat_2',
+    category_ids: ['ctg_2', 'ctg_1'],
     modifier_group_ids: [],
     variants: [{ ...teaSize, id: 'var_cf', sku: 'CF', barcode: null }],
   });
 
+  const loose = item({ product_id: 'prod_3', name: 'Khăn lạnh', category_ids: [] });
+
   it('filters by category and by name without accents, sku or barcode', () => {
     const data = menu([tea, coffee]);
-    expect(visibleItems(data, 'posmenucat_2', '').map((row) => row.id)).toEqual(['posmenuitem_2']);
-    expect(visibleItems(data, null, 'ca phe').map((row) => row.id)).toEqual(['posmenuitem_2']);
-    expect(visibleItems(data, null, 'td-m').map((row) => row.id)).toEqual(['posmenuitem_1']);
-    expect(visibleItems(data, null, '893001').map((row) => row.id)).toEqual(['posmenuitem_1']);
+    expect(visibleItems(data, 'ctg_2', '').map((row) => row.product_id)).toEqual(['prod_2']);
+    expect(visibleItems(data, null, 'ca phe').map((row) => row.product_id)).toEqual(['prod_2']);
+    expect(visibleItems(data, null, 'td-m').map((row) => row.product_id)).toEqual(['prod_1']);
+    expect(visibleItems(data, null, '893001').map((row) => row.product_id)).toEqual(['prod_1']);
   });
 
-  it('lists favourites in their order, skipping items no longer on the menu', () => {
-    expect(favoriteItems(menu([tea, coffee])).map((row) => row.id)).toEqual([
-      'posmenuitem_2',
-      'posmenuitem_1',
+  it('shows a product under each category it is attached to, one without a category under All only', () => {
+    const data = menu([tea, coffee, loose]);
+    expect(visibleItems(data, 'ctg_1', '').map((row) => row.product_id)).toEqual([
+      'prod_1',
+      'prod_2',
+    ]);
+    expect(visibleItems(data, null, '').map((row) => row.product_id)).toEqual([
+      'prod_1',
+      'prod_2',
+      'prod_3',
+    ]);
+    expect(visibleItems(data, 'ctg_1', 'khan')).toEqual([]);
+  });
+
+  it('lists favourites by product in their order, skipping products no longer on the menu', () => {
+    expect(favoriteItems(menu([tea, coffee])).map((row) => row.product_id)).toEqual([
+      'prod_2',
+      'prod_1',
     ]);
   });
 
@@ -213,9 +231,19 @@ describe('menu tiles', () => {
   });
 });
 
+describe('menu lines only', () => {
+  it('keeps the prepared products, and none where the branch does not run the menu', () => {
+    const water = item({ product_id: 'prod_water', product_kind: 'goods' });
+    const untyped = item({ product_id: 'prod_untyped', product_kind: null });
+    const data = menu([item(), water, untyped]);
+    expect(onlyMenuLines(data).items.map((row) => row.product_id)).toEqual(['prod_1']);
+    expect(onlyMenuLines({ ...data, module_enabled: false }).items).toEqual([]);
+  });
+});
+
 describe('sold-out dishes in the catalogue', () => {
   it('names the variants of every dish sold out today', () => {
-    const soldOut = item({ id: 'posmenuitem_9', sold_out: true });
+    const soldOut = item({ product_id: 'prod_9', sold_out: true });
     const ids = soldOutVariantIds(menu([item(), soldOut]));
     expect([...ids]).toEqual(soldOut.variants.map((variant) => variant.id));
     expect(soldOutVariantIds(null).size).toBe(0);
@@ -224,21 +252,28 @@ describe('sold-out dishes in the catalogue', () => {
 
 describe('drinksFirst', () => {
   it('leads with drinks and their categories, keeping each order', () => {
-    const food = item({ id: 'food', menu_category_id: 'cat_food' });
-    const beer = item({ id: 'beer', menu_category_id: 'cat_bar', kitchen_category: 'do_uong' });
-    const shot = item({ id: 'shot', menu_category_id: 'cat_bar', kitchen_category: 'do_uong' });
+    const food = item({ product_id: 'food', category_ids: ['cat_food'] });
+    const beer = item({
+      product_id: 'beer',
+      category_ids: ['cat_bar'],
+      kitchen_category: 'do_uong',
+    });
+    const shot = item({
+      product_id: 'shot',
+      category_ids: ['cat_bar'],
+      kitchen_category: 'do_uong',
+    });
     const category = (id: string, position: number) => ({
       id,
       name: id,
       position,
-      color: null,
-      active: true,
+      parent_id: null,
     });
     const result = drinksFirst({
       ...menu([food, beer, shot]),
       categories: [category('cat_food', 0), category('cat_bar', 1)],
     });
-    expect(result.items.map((row) => row.id)).toEqual(['beer', 'shot', 'food']);
+    expect(result.items.map((row) => row.product_id)).toEqual(['beer', 'shot', 'food']);
     expect(result.categories.map((row) => row.id)).toEqual(['cat_bar', 'cat_food']);
   });
 });

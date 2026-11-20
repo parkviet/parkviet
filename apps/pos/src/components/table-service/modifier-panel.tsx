@@ -1,7 +1,7 @@
 import { formatMoney } from '@parkviet/pos-shared/money';
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { PosMenu, PosMenuItem } from '../../lib/pos-context';
+import type { PosMenu, PosMenuProduct } from '../../lib/pos-context';
 import { ModifierForm, type ModifierSheetResult } from '../modifier-sheet';
 import { PosIcon } from '../pos-icon';
 
@@ -16,7 +16,7 @@ export function ModifierPanel({
   onClose,
 }: {
   menu: PosMenu;
-  item: PosMenuItem;
+  item: PosMenuProduct;
   // Seat and course of the dish, at the bottom of the panel.
   placement?: ReactNode;
   onSubmit: (result: ModifierSheetResult) => Promise<unknown>;
@@ -67,7 +67,7 @@ export function ModifierPanel({
         </div>
       </header>
       <ModifierForm
-        key={item.id}
+        key={item.product_id}
         menu={menu}
         item={item}
         onSubmit={onSubmit}

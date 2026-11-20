@@ -85,7 +85,7 @@ test('changing the options of a line reprices it and joins a line with the same 
 
 test('a sold-out item cannot be added', async ({ page }) => {
   const menu = teaMenu();
-  menu.soldOut.add('posmenuitem_flan');
+  menu.soldOut.add('prod_flan');
   const world = newWorld({ modules: MENU_ON, menu });
   await open(page, world);
   const flan = page.getByRole('list', { name: 'Thực đơn' }).getByRole('button', { name: 'Bánh flan · Hết món' });
@@ -107,4 +107,28 @@ test('the time-of-day price shows on the tile and is the price of the line', asy
   await peach.click();
   await expect(lines(page)).toHaveCount(1);
   await expect(lines(page).first()).toContainText('50.000 ₫');
+});
+
+test('the category rail lists All and the categories holding a product; a product without one shows under All only', async ({ page }) => {
+  const menu = teaMenu();
+  menu.categories.push({ id: 'ctg_empty', name: 'Đồ uống' });
+  menu.items.push({ productId: 'prod_soda', variantId: 'v_soda', name: 'Nước ngọt', price: 12000, categoryIds: [], groupIds: [], productKind: 'goods' });
+  const world = newWorld({ modules: MENU_ON, menu });
+  await open(page, world);
+  const rail = page.getByRole('navigation', { name: 'Danh mục' });
+  const tab = (name: string) => rail.getByRole('button').filter({ has: page.locator('.category-rail-name', { hasText: new RegExp(`^${name}$`) }) });
+  await expect(rail.locator('.category-rail-name')).toHaveText(['Tất cả', 'Trà', 'Bánh']);
+  await expect(tab('Tất cả')).toHaveAttribute('aria-pressed', 'true');
+  await expect(tile(page, 'Nước ngọt')).toBeVisible();
+  await tab('Trà').click();
+  await expect(page.getByRole('list', { name: 'Thực đơn' }).locator('.menu-item-name')).toHaveText(['Trà sữa', 'Trà đào']);
+  await tab('Tất cả').click();
+  // A product that is not prepared is an ordinary line: one tap, no options, no note.
+  await tile(page, 'Nước ngọt').click();
+  await expect(lines(page)).toHaveCount(1);
+  await expect(lines(page).first()).toContainText('Nước ngọt');
+  const body = postsOf(world, 'items').at(-1)?.body ?? {};
+  expect(body).toMatchObject({ variant_id: 'v_soda' });
+  expect(body.note).toBeUndefined();
+  expect(body.modifiers).toBeUndefined();
 });

@@ -1,6 +1,7 @@
+import { isMenuLine, menuProductOfVariant } from '@parkviet/pos-shared/pos-menu';
 import { estimatePrice, itemGroups } from './menu-selection';
 import type { OfflineSaleLine, QueuedSale, StoredSnapshot } from './offline-store';
-import type { PosMenu, PosModifierSelection } from './pos-context';
+import type { PosMenu, PosMenuProduct, PosModifierSelection } from './pos-context';
 
 // The rules of selling offline: cash sales of menu items only, from a fresh
 // snapshot of the cashier's open shift, with a bounded queue. Anything the
@@ -106,17 +107,30 @@ export function itemCount(lines: OfflineSaleLine[]): number {
   return lines.reduce((sum, line) => sum + line.quantity, 0);
 }
 
+// What sells offline: the menu lines (prepared products) that are not door
+// tickets, the server's kiosk menu. Anything else is refused on replay.
+export function sellsOffline(menu: PosMenu, product: PosMenuProduct): boolean {
+  return isMenuLine(menu, product) && product.drink_credit === null;
+}
+
+// The snapshot's menu with only what sells offline, for the offline grid.
+export function offlineMenu(menu: PosMenu): PosMenu {
+  return { ...menu, items: menu.items.filter((product) => sellsOffline(menu, product)) };
+}
+
 // One menu pick as an offline line, priced the way the menu shows it. Null
-// when the item cannot be sold offline (sold out, no price, not on the menu).
+// when the product cannot be sold offline (sold out, no price, not on the
+// offline menu).
 export function menuLine(
   menu: PosMenu,
   variantId: string,
   modifiers: PosModifierSelection[] | undefined,
   note: string | undefined,
 ): OfflineSaleLine | null {
-  const item = menu.items.find((row) => row.variants.some((variant) => variant.id === variantId));
+  const item = menuProductOfVariant(menu.items, variantId);
   const variant = item?.variants.find((row) => row.id === variantId);
-  if (!item || !variant || item.sold_out || variant.price === null) return null;
+  if (!item || !variant || !sellsOffline(menu, item) || item.sold_out || variant.price === null)
+    return null;
   const groups = itemGroups(menu, item);
   const picks: Record<string, number> = {};
   if (modifiers === undefined) {

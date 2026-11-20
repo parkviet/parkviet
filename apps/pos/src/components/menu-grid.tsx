@@ -1,4 +1,5 @@
 import { formatMoney } from '@parkviet/pos-shared/money';
+import { categoriesWithProducts } from '@parkviet/pos-shared/pos-menu';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMenu, useSoldOutToggle } from '../hooks/use-menu';
@@ -7,9 +8,10 @@ import {
   describeMenuFailure,
   favoriteItems,
   drinksFirst as leadWithDrinks,
+  onlyMenuLines,
   visibleItems,
 } from '../lib/menu-selection';
-import type { PosMenu, PosMenuItem, PosModifierSelection } from '../lib/pos-context';
+import type { PosMenu, PosMenuProduct, PosModifierSelection } from '../lib/pos-context';
 import { ModifierSheet } from './modifier-sheet';
 import { PosIcon } from './pos-icon';
 
@@ -38,15 +40,17 @@ export function popupOpen() {
   );
 }
 
-// The selling surface of a branch running the menu: category tabs, picture
-// tiles with the current price and a sold-out mark, a favourites row and a
-// quick search. A tile with sizes or options opens the modifier sheet.
+// The selling surface of a branch running the menu: an "All" tab and one tab
+// per category holding a product, picture tiles with the current price and a
+// sold-out mark, a favourites row and a quick search. A tile with sizes or
+// options opens the modifier sheet.
 export function MenuGrid({
   branchId,
   addDisabled,
   addDisabledReason,
   canSetSoldOut,
   drinksFirst = false,
+  menuLinesOnly = false,
   menuData,
   onAdd,
 }: {
@@ -56,6 +60,8 @@ export function MenuGrid({
   canSetSoldOut: boolean;
   // A bar tab: drinks and shots come first.
   drinksFirst?: boolean;
+  // Only the products that sell as menu lines (platform orders take no other).
+  menuLinesOnly?: boolean;
   // A menu already at hand (the offline snapshot) instead of reading it.
   menuData?: PosMenu;
   onAdd?: MenuAdd;
@@ -65,17 +71,18 @@ export function MenuGrid({
   const setSoldOut = useSoldOutToggle(branchId);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [sheetItem, setSheetItem] = useState<PosMenuItem | null>(null);
+  const [sheetItem, setSheetItem] = useState<PosMenuProduct | null>(null);
   const [notice, setNotice] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
-  const source = menuData ?? menu.data;
+  const loaded = menuData ?? menu.data;
+  const source = loaded && menuLinesOnly ? onlyMenuLines(loaded) : loaded;
   const data = source && drinksFirst ? leadWithDrinks(source) : source;
 
-  async function pick(item: PosMenuItem) {
+  async function pick(item: PosMenuProduct) {
     if (!data || !onAdd || addDisabled) return;
     setNotice('');
     if (item.sold_out) {
-      setNotice(t('menuFailure_menu_item_sold_out'));
+      setNotice(t('menuFailure_product_sold_out'));
       return;
     }
     const variant = item.variants[0];
@@ -132,10 +139,10 @@ export function MenuGrid({
     };
   }, []);
 
-  async function toggleSoldOut(item: PosMenuItem) {
+  async function toggleSoldOut(item: PosMenuProduct) {
     setNotice('');
     try {
-      await setSoldOut(item.id, !item.sold_out);
+      await setSoldOut(item.product_id, !item.sold_out);
     } catch (failure) {
       setNotice(describeMenuFailure(failure, t));
     }
@@ -191,7 +198,7 @@ export function MenuGrid({
         <section className="menu-favorites" aria-label={t('menuFavorites')}>
           {favorites.map((item, index) => (
             <button
-              key={item.id}
+              key={item.product_id}
               type="button"
               className="menu-favorite"
               data-sold-out={item.sold_out}
@@ -206,7 +213,7 @@ export function MenuGrid({
         </section>
       ) : null}
       {data ? (
-        <div className="menu-tabs" role="tablist" aria-label={t('menuCategories')}>
+        <div className="menu-tabs" role="tablist" aria-label={t('menuTabs')}>
           <button
             type="button"
             role="tab"
@@ -215,13 +222,12 @@ export function MenuGrid({
           >
             {t('menuAll')}
           </button>
-          {data.categories.map((category) => (
+          {categoriesWithProducts(data.categories, data.items).map((category) => (
             <button
               key={category.id}
               type="button"
               role="tab"
               aria-selected={categoryId === category.id}
-              style={category.color ? { borderColor: category.color } : undefined}
               onClick={() => setCategoryId(category.id)}
             >
               {category.name}
@@ -234,7 +240,7 @@ export function MenuGrid({
         <ul className="menu-tiles" aria-label={t('menuTitle')}>
           {items.map((item) => (
             <MenuTile
-              key={item.id}
+              key={item.product_id}
               item={item}
               menu={data}
               disabled={addDisabled || !onAdd}
@@ -273,7 +279,7 @@ function MenuTile({
   onPick,
   onToggleSoldOut,
 }: {
-  item: PosMenuItem;
+  item: PosMenuProduct;
   menu: PosMenu;
   disabled: boolean;
   disabledReason?: string;

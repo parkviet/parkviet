@@ -41,17 +41,17 @@ export async function fetchMenu(branchId: string | null): Promise<PosMenu> {
   }
 }
 
-// Staff with pos.menu.sold_out mark an item sold out for today at the branch.
+// Staff with pos.menu.sold_out mark a product sold out for today at the branch.
 export function useSoldOutToggle(branchId: string | null) {
   const snapshot = useSession();
   const queryClient = useQueryClient();
-  return async (menuItemId: string, soldOut: boolean) => {
+  return async (productId: string, soldOut: boolean) => {
     const key = crypto.randomUUID();
     try {
       await session.request('PUT', '/pos/menu_availabilities', {
         body: {
           branch_id: branchId,
-          menu_item_id: menuItemId,
+          product_id: productId,
           sold_out: soldOut,
           idempotency_key: key,
         },

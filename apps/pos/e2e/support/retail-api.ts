@@ -1,5 +1,7 @@
 import { goToMenuPage } from './menu';
-import { isRefusal, menuBody, menuItemByVariant, type MenuLine, type MenuWorld, priceMenuAdd } from './menu-api';
+import {
+  isRefusal, menuBody, type MenuLine, menuProductByVariant, type MenuWorld, priceMenuAdd, sellsAsMenuLine,
+} from './menu-api';
 import { type BrowserContext, expect, type Page, type Request, type Route } from '@playwright/test';
 
 // An in-memory POS server for whole-day journeys. It keeps one shared state
@@ -319,7 +321,7 @@ export function newWorld(
     menu: options.menu,
     products: [
       ...(options.menu?.items ?? []).map((item) => ({
-        id: item.variantId, name: item.name, sku: item.id.toUpperCase(), barcode: null, price: item.price, mode: 'ordinary' as const,
+        id: item.variantId, name: item.name, sku: item.productId.toUpperCase(), barcode: null, price: item.price, mode: 'ordinary' as const,
       })),
       { id: 'v_rice', name: 'Gạo ST25', sku: 'GAO-1', barcode: '8930000000011', price: 100000, mode: 'ordinary' },
       { id: 'v_water', name: 'Nước suối', sku: 'NUOC-1', barcode: '8930000000028', price: 5000, mode: 'ordinary' },
@@ -1493,7 +1495,11 @@ function run(world: World, family: Family, path: string, body: Record<string, un
         const item = productOf(world, String(body.variant_id));
         if (!item) return conflict('Unknown variant.');
         const quantity = Number(body.quantity);
-        const menuEntry = world.menu ? menuItemByVariant(world.menu, item.id) : undefined;
+        const listed = world.menu ? menuProductByVariant(world.menu, item.id) : undefined;
+        const menuEntry = listed && sellsAsMenuLine(listed) ? listed : undefined;
+        // Only a menu line takes options or a note.
+        if (listed && !menuEntry && (body.note || (Array.isArray(body.modifiers) && body.modifiers.length > 0)))
+          return conflict('Only a menu line has options.', 'modifier_unknown');
         if (item.mode === 'serial') {
           const serials = (body.serial_codes as string[] | undefined) ?? [];
           if (serials.length !== quantity) return conflict('Serials required.', 'trace_serial_required');
@@ -1526,11 +1532,18 @@ function run(world: World, family: Family, path: string, body: Record<string, un
         return conflict('Payments recorded.', 'snapshot_locked');
       const batch = String(body.append_batch_id ?? crypto.randomUUID());
       for (const input of (body.items as Array<Record<string, unknown>>) ?? []) {
-        const entry = menuItemByVariant(world.menu, String(input.variant_id));
+        const entry = menuProductByVariant(world.menu, String(input.variant_id));
         if (!entry) return conflict('Unknown variant.');
+        const quantity = Number(input.quantity ?? 1);
+        // Any product other than a prepared one is an ordinary line: no kitchen, no options.
+        if (!sellsAsMenuLine(entry)) {
+          const same = sheet.lines.find((line) => line.batch === batch && !line.menu && line.variantId === entry.variantId);
+          if (same) same.quantity += quantity;
+          else sheet.lines.push({ saleLineId: `sl_${sheet.id}_${sheet.lines.length + 1}`, variantId: entry.variantId, quantity, batch });
+          continue;
+        }
         const priced = priceMenuAdd(world.menu, entry, input);
         if (isRefusal(priced)) return conflict(priced.refused, priced.reason);
-        const quantity = Number(input.quantity ?? 1);
         const course = typeof input.course === 'number' ? input.course : null;
         const seat = typeof input.seat === 'number' ? input.seat : null;
         const courseStatus = course && input.hold === true ? 'held' : 'none';
@@ -1619,7 +1632,7 @@ function run(world: World, family: Family, path: string, body: Record<string, un
       const refused = guard(world, sheet, body);
       if (refused) return refused;
       const line = sheet.lines.find((row) => row.saleLineId === segments[5]);
-      const entry = line?.menu ? menuItemByVariant(world.menu, line.variantId) : undefined;
+      const entry = line?.menu ? menuProductByVariant(world.menu, line.variantId) : undefined;
       if (!line || !entry) return conflict('Only a menu line has options.', 'modifier_unknown');
       const priced = priceMenuAdd(world.menu, { ...entry, scheduledPrice: undefined, price: line.menu?.basePrice ?? entry.price }, {
         modifiers: body.modifiers ?? [],

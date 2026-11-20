@@ -258,6 +258,7 @@ export function PlatformOrderForm({
         </form>
         <MenuGrid
           branchId={branchId}
+          menuLinesOnly
           addDisabled={submitting || lines.length >= PLATFORM_MAX_LINES}
           canSetSoldOut={false}
           onAdd={add}

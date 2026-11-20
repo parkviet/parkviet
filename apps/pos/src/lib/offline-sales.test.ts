@@ -8,13 +8,14 @@ import {
   MAX_PENDING_AGE_MS,
   MAX_QUEUED_SALES,
   menuLine,
+  offlineMenu,
   provisionalNumber,
   queueBlock,
   saleTotal,
   snapshotState,
 } from './offline-sales';
 import type { OfflineSaleLine, OfflineSnapshot, QueuedSale, StoredSnapshot } from './offline-store';
-import type { PosMenu } from './pos-context';
+import type { PosMenu, PosMenuProduct } from './pos-context';
 
 const menu: PosMenu = {
   branch_id: 'posbranch_1',
@@ -24,16 +25,17 @@ const menu: PosMenu = {
   categories: [],
   items: [
     {
-      id: 'posmenuitem_tea',
       product_id: 'prod_1',
       name: 'Trà sữa',
+      product_kind: 'prepared',
       kind: 'single',
-      menu_category_id: 'posmenucat_1',
+      category_ids: ['ctg_1'],
       kitchen_category: null,
       cup_label: false,
       show_components_on_kds: false,
-      position: 0,
-      active: true,
+      qr_orderable: true,
+      drink_credit: null,
+      drink_credit_categories: [],
       tax_category_id: null,
       modifier_group_ids: ['posmodgroup_topping'],
       components: [],
@@ -52,16 +54,17 @@ const menu: PosMenu = {
       ],
     },
     {
-      id: 'posmenuitem_flan',
       product_id: 'prod_2',
       name: 'Bánh flan',
+      product_kind: 'prepared',
       kind: 'single',
-      menu_category_id: 'posmenucat_1',
+      category_ids: ['ctg_1'],
       kitchen_category: null,
       cup_label: false,
       show_components_on_kds: false,
-      position: 1,
-      active: true,
+      qr_orderable: true,
+      drink_credit: null,
+      drink_credit_categories: [],
       tax_category_id: null,
       modifier_group_ids: [],
       components: [],
@@ -202,6 +205,16 @@ describe('offline lines', () => {
   it('refuses an item sold out or not on the menu', () => {
     expect(menuLine(menu, 'variant_flan', undefined, undefined)).toBeNull();
     expect(menuLine(menu, 'variant_gone', undefined, undefined)).toBeNull();
+  });
+
+  it('sells offline only prepared products that are not door tickets', () => {
+    const [tea, flan] = menu.items as [PosMenuProduct, PosMenuProduct];
+    const water = { ...tea, product_id: 'prod_water', product_kind: 'goods' as const };
+    const ticket = { ...flan, product_id: 'prod_ticket', sold_out: false, drink_credit: '100000' };
+    const mixed = { ...menu, items: [tea, water, ticket] };
+    expect(offlineMenu(mixed).items.map((row) => row.product_id)).toEqual(['prod_1']);
+    expect(menuLine({ ...menu, items: [water] }, 'variant_tea', undefined, undefined)).toBeNull();
+    expect(menuLine({ ...menu, items: [ticket] }, 'variant_flan', undefined, undefined)).toBeNull();
   });
 
   it('joins the same pick, sums in hundredths and keeps the server limits', () => {

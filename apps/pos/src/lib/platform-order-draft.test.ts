@@ -41,16 +41,17 @@ const menu: PosMenu = {
   ],
   items: [
     {
-      id: 'posmitem_1',
       product_id: 'prod_1',
       name: 'Trà sữa',
+      product_kind: 'prepared',
       kind: 'single',
-      menu_category_id: null,
+      category_ids: [],
       kitchen_category: null,
       cup_label: false,
       show_components_on_kds: false,
-      position: 0,
-      active: true,
+      qr_orderable: true,
+      drink_credit: null,
+      drink_credit_categories: [],
       tax_category_id: null,
       modifier_group_ids: ['posmgroup_1'],
       components: [],
@@ -97,6 +98,12 @@ describe('platform order draft', () => {
       platformPrice: '',
     });
     expect(draftLine(menu, 'variant_gone', {}, 'line-2')).toBeNull();
+  });
+
+  it('takes no product that is not a menu line', () => {
+    const goods = menu.items.map((row) => ({ ...row, product_kind: 'goods' as const }));
+    expect(draftLine({ ...menu, items: goods }, 'variant_m', {}, 'line-3')).toBeNull();
+    expect(draftLine({ ...menu, module_enabled: false }, 'variant_m', {}, 'line-4')).toBeNull();
   });
 
   it('reads platform prices as whole amounts, with or without thousands dots', () => {

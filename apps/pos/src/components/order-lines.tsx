@@ -1,4 +1,5 @@
 import { formatMoney, parseVndAmount } from '@parkviet/pos-shared/money';
+import { menuProductOfVariant } from '@parkviet/pos-shared/pos-menu';
 import { normalizeSalesSettings } from '@parkviet/pos-shared/sales-settings';
 import {
   describeTraceFailure,
@@ -13,19 +14,19 @@ import { linePicks, toSelections } from '../lib/menu-selection';
 import type {
   PosLineItem,
   PosMenu,
-  PosMenuItem,
+  PosMenuProduct,
   PosModifierSelection,
   PosTimedSegment,
   PosWorkspace,
 } from '../lib/pos-context';
 import { MAX_COUNT_QUANTITY, parseCountQuantity, parseMeasuredQuantity } from '../lib/quantity';
-import { usePosSelection } from './pos-selection';
 import { snapshotLocked } from '../lib/request-failure';
 import { lineChanged, lineSent } from '../lib/table-kitchen';
 import { ItemDiscountEditor } from './item-discount-editor';
 import { LinePriceEditor } from './line-price-editor';
 import { ModifierSheet } from './modifier-sheet';
 import { PosIcon } from './pos-icon';
+import { usePosSelection } from './pos-selection';
 import { lotLabel } from './sold-trace';
 
 export function OrderLines({
@@ -97,7 +98,7 @@ export function OrderLines({
 }) {
   const { t } = useTranslation();
   const [quantities, setQuantities] = useState<Record<string, string>>({});
-  const [editing, setEditing] = useState<{ line: PosLineItem; item: PosMenuItem } | null>(null);
+  const [editing, setEditing] = useState<{ line: PosLineItem; item: PosMenuProduct } | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const reprint = useCupLabelReprint();
@@ -252,7 +253,9 @@ export function OrderLines({
                       ) : null}
                       {line.kind === 'menu' && line.sale_line_id
                         ? (() => {
-                            const item = menuItemOf(menu, line);
+                            const item = menu
+                              ? (menuProductOfVariant(menu.items, line.variant_id) ?? null)
+                              : null;
                             const same = sameSelections(line);
                             const printsLabels =
                               cupLabels &&
@@ -511,13 +514,6 @@ export function OrderLines({
         />
       ) : null}
     </>
-  );
-}
-
-function menuItemOf(menu: PosMenu | null, line: PosLineItem): PosMenuItem | null {
-  return (
-    menu?.items.find((item) => item.variants.some((variant) => variant.id === line.variant_id)) ??
-    null
   );
 }
 

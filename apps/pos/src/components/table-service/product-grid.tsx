@@ -10,7 +10,7 @@ import {
   saveMenuImages,
 } from '../../lib/menu-density';
 import { addsInOneTap, visibleItems } from '../../lib/menu-selection';
-import type { PosMenu, PosMenuItem } from '../../lib/pos-context';
+import type { PosMenu, PosMenuProduct } from '../../lib/pos-context';
 import { popupOpen, typingTarget } from '../menu-grid';
 import { PosIcon } from '../pos-icon';
 
@@ -20,11 +20,11 @@ const DENSITY_LABELS: Record<MenuDensity, string> = {
   dense: 'menuDensityDense',
 };
 
-// The dishes of the order screen as tiles: the search box (`/` jumps to
-// it), the density of this device and whether it shows the dishes'
-// pictures, and per dish its category stripe, its picture when it has one,
-// its price, how many the open order already has, and a dimmed "sold out".
-export function MenuItemGrid({
+// The products of the order screen as tiles: the search box (`/` jumps to
+// it), the density of this device and whether it shows the pictures, and
+// per product its picture when it has one, its price, how many the open
+// order already has, and a dimmed "sold out".
+export function ProductGrid({
   menu,
   categoryId,
   quantities,
@@ -38,15 +38,15 @@ export function MenuItemGrid({
   menu: PosMenu;
   // Search looks through every category.
   categoryId: string | null;
-  // Units of each dish (by item id) on the open order.
+  // Units of each product (by product id) on the open order.
   quantities: ReadonlyMap<string, number>;
   disabled: boolean;
   disabledReason?: string;
   canSetSoldOut: boolean;
   // Pictures until this device says otherwise (the quick counter shows them).
   imagesByDefault?: boolean;
-  onPick: (item: PosMenuItem) => void;
-  onToggleSoldOut: (item: PosMenuItem) => void;
+  onPick: (item: PosMenuProduct) => void;
+  onToggleSoldOut: (item: PosMenuProduct) => void;
 }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
@@ -54,7 +54,6 @@ export function MenuItemGrid({
   const [images, setImages] = useState(() => savedMenuImages(imagesByDefault));
   const searchRef = useRef<HTMLInputElement>(null);
   const items = visibleItems(menu, query.trim() ? null : categoryId, query);
-  const colors = new Map(menu.categories.map((category) => [category.id, category.color]));
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -140,15 +139,9 @@ export function MenuItemGrid({
           const scheduled = item.variants.find(
             (variant) => variant.schedule_id && variant.price !== variant.list_price,
           );
-          const quantity = quantities.get(item.id) ?? 0;
-          const color = item.menu_category_id ? colors.get(item.menu_category_id) : null;
+          const quantity = quantities.get(item.product_id) ?? 0;
           return (
-            <li
-              key={item.id}
-              className="menu-item"
-              data-sold-out={item.sold_out}
-              style={color ? { borderTopColor: color } : undefined}
-            >
+            <li key={item.product_id} className="menu-item" data-sold-out={item.sold_out}>
               <button
                 type="button"
                 className="menu-item-pick"

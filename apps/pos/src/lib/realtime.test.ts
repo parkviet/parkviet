@@ -62,9 +62,9 @@ describe('print queue invalidation', () => {
 });
 
 describe('menu invalidation', () => {
-  it('reads the menu again when an item is marked sold out or back on sale', () => {
+  it('reads the menu again when a product is marked sold out or back on sale', () => {
     const menu = ['pos', 'menu', 3, 'br_1'];
-    expect(matched(event({ event: 'menu.sold_out', id: 'posmenuitem_1' }), menu)).toBe(true);
+    expect(matched(event({ event: 'menu.sold_out', id: 'prod_1' }), menu)).toBe(true);
     expect(matched(event({ event: 'print_job.created', id: 'posprintjob_1' }), menu)).toBe(false);
   });
 });
@@ -79,7 +79,7 @@ describe('guest order invalidation', () => {
     for (const name of ['guest_request.created', 'guest_request.updated']) {
       expect(matched(event({ event: name, id: 'posguestreq_1' }), requests)).toBe(true);
     }
-    expect(matched(event({ event: 'menu.sold_out', id: 'posmenuitem_1' }), orders)).toBe(false);
+    expect(matched(event({ event: 'menu.sold_out', id: 'prod_1' }), orders)).toBe(false);
   });
 });
 

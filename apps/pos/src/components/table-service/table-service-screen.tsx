@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useSoldOutToggle } from '../../hooks/use-menu';
 import { type SellingView, useSellingWorkspace } from '../../hooks/use-selling-workspace';
 import { addsInOneTap, describeMenuFailure } from '../../lib/menu-selection';
-import type { PosMenu, PosMenuItem, PosWorkspace } from '../../lib/pos-context';
+import type { PosMenu, PosMenuProduct, PosWorkspace } from '../../lib/pos-context';
 import { autoPrintEnabled } from '../../lib/receipt-preferences';
 import { CourseSeatPicker } from '../course-seat-picker';
 import type { MenuAdd } from '../menu-grid';
@@ -12,9 +12,9 @@ import { usePosSelection } from '../pos-selection';
 import { ReceiptPrintDialog } from '../receipt-print-dialog';
 import { SellingCatalog, SellingNotices, type SellingWorkspace } from '../workspace-tabs';
 import { CategoryRail } from './category-rail';
-import { MenuItemGrid } from './menu-item-grid';
 import { ModifierPanel } from './modifier-panel';
 import { PaymentScreen } from './payment-screen';
+import { ProductGrid } from './product-grid';
 import { runningClockOf, type StopAndPay, StopAndPayDialog } from './stop-and-pay-dialog';
 import { TabColumn } from './tab-column';
 import { TableBoard } from './table-board';
@@ -248,17 +248,17 @@ export function TableServiceScreen() {
   );
 }
 
-// Units of each dish on the order, counted from its lines by variant.
+// Units of each product on the order, counted from its lines by variant.
 function dishQuantities(menu: PosMenu, workspace: PosWorkspace | null): Map<string, number> {
-  const itemOf = new Map<string, string>();
+  const productOf = new Map<string, string>();
   for (const item of menu.items)
-    for (const variant of item.variants) itemOf.set(variant.id, item.id);
+    for (const variant of item.variants) productOf.set(variant.id, item.product_id);
   const quantities = new Map<string, number>();
   for (const line of workspace?.line_items ?? []) {
-    const itemId = itemOf.get(line.variant_id);
+    const productId = productOf.get(line.variant_id);
     const quantity = Number(line.quantity);
-    if (!itemId || !Number.isFinite(quantity)) continue;
-    quantities.set(itemId, (quantities.get(itemId) ?? 0) + quantity);
+    if (!productId || !Number.isFinite(quantity)) continue;
+    quantities.set(productId, (quantities.get(productId) ?? 0) + quantity);
   }
   return quantities;
 }
@@ -296,7 +296,7 @@ export function OrderMenu({
   const setSoldOut = useSoldOutToggle(selection.branchId);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   // The dish whose options are open, for the order it was picked on.
-  const [panel, setPanel] = useState<{ item: PosMenuItem; orderId: string } | null>(null);
+  const [panel, setPanel] = useState<{ item: PosMenuProduct; orderId: string } | null>(null);
   const panelItem = panel && panel.orderId === active?.id ? panel.item : null;
   const [notice, setNotice] = useState('');
   const quantities = useMemo(() => dishQuantities(menu, active), [menu, active]);
@@ -308,11 +308,11 @@ export function OrderMenu({
     : undefined;
   const addDisabled = quickAddDisabled || !onAdd;
 
-  async function pick(item: PosMenuItem) {
+  async function pick(item: PosMenuProduct) {
     if (!onAdd || addDisabled) return;
     setNotice('');
     if (item.sold_out) {
-      setNotice(t('menuFailure_menu_item_sold_out'));
+      setNotice(t('menuFailure_product_sold_out'));
       return;
     }
     const variant = item.variants[0];
@@ -327,10 +327,10 @@ export function OrderMenu({
     }
   }
 
-  async function toggleSoldOut(item: PosMenuItem) {
+  async function toggleSoldOut(item: PosMenuProduct) {
     setNotice('');
     try {
-      await setSoldOut(item.id, !item.sold_out);
+      await setSoldOut(item.product_id, !item.sold_out);
     } catch (failure) {
       setNotice(describeMenuFailure(failure, t));
     }
@@ -373,7 +373,7 @@ export function OrderMenu({
         ) : (
           <>
             <CategoryRail menu={menu} value={categoryId} onChange={setCategoryId} />
-            <MenuItemGrid
+            <ProductGrid
               menu={menu}
               categoryId={categoryId}
               quantities={quantities}
