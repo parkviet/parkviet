@@ -6,8 +6,18 @@ module Spree
     # Never resolve through the default channel or a client-supplied channel ID.
     module SalesChannel
       CODE = 'pos'
+      NAME = 'Point of Sale'
 
       module_function
+
+      # The store's `pos` channel, created active and not the default when the
+      # store has none yet. A channel already there — switched off included —
+      # is the store's own and is returned as it is. The caller must already
+      # serialize first-time setup of the store (onboarding holds `store.lock!`).
+      def ensure!(store)
+        store.channels.find_by(code: CODE) ||
+          store.channels.create!(code: CODE, name: NAME, active: true, default: false)
+      end
 
       def status(store)
         channel = store.channels.find_by(code: CODE)
