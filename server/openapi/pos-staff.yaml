@@ -10270,6 +10270,8 @@ components:
           enum: [table, room, billiard, vip]
         area_id:
           type: [string, 'null']
+        area_name:
+          type: [string, 'null']
     WorkspaceServiceCharge:
       type: object
       additionalProperties: false
