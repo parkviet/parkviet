@@ -35,6 +35,7 @@ import { OpenShiftDialog } from './open-shift-dialog';
 import { PosIcon } from './pos-icon';
 import { PosSelectionProvider, usePosSelection } from './pos-selection';
 import { ScannerCalibrationDialog } from './scanner-calibration';
+import { SellingToolbar } from './toolbar/selling-toolbar';
 import { UserMenu } from './user-menu';
 
 // Counter pages other than selling, by their path.
@@ -369,6 +370,14 @@ function ShellFrame() {
             {pickerOpen ? <ContextPickerForm onClose={closePicker} /> : null}
           </div>
         </details>
+        {isSale && context.data ? (
+          <SellingToolbar
+            data={context.data}
+            branchId={selection.branchId}
+            registerId={selection.registerId}
+            onCalibrate={() => setCalibrating(true)}
+          />
+        ) : null}
         <div className="pos-context-status">
           <ConnectionBadge offline={offline} loading={context.isPending} />
           {isSale ? <ShiftBadge open={Boolean(context.data?.shift)} /> : null}

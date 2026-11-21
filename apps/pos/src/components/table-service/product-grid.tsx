@@ -1,6 +1,7 @@
 import { formatMoney } from '@parkviet/pos-shared/money';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { usePreferencesChanged } from '../../lib/device-preferences';
 import {
   MENU_DENSITIES,
   type MenuDensity,
@@ -52,6 +53,11 @@ export function ProductGrid({
   const [query, setQuery] = useState('');
   const [density, setDensity] = useState<MenuDensity>(savedMenuDensity);
   const [images, setImages] = useState(() => savedMenuImages(imagesByDefault));
+  // The toolbar's quick settings change the same two choices.
+  usePreferencesChanged(() => {
+    setDensity(savedMenuDensity());
+    setImages(savedMenuImages(imagesByDefault));
+  });
   const searchRef = useRef<HTMLInputElement>(null);
   const items = visibleItems(menu, query.trim() ? null : categoryId, query);
 

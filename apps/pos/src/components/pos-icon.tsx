@@ -117,6 +117,19 @@ const paths = {
       <path d="M6 14h12v7H6Z" />
     </>
   ),
+  help: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1.9-1.1 1.8 M12 17h.01" />
+    </>
+  ),
+  monitor: (
+    <>
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M8 20h8 M12 16v4" />
+    </>
+  ),
+  collapse: <path d="m11 6-6 6 6 6 M18 6l-6 6 6 6" />,
   settings: (
     <>
       <path d="M4 6h16 M4 12h16 M4 18h16" />

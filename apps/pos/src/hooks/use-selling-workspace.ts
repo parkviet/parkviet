@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import type { ScanNotice } from '../components/catalog-search';
 import { usePosSelection } from '../components/pos-selection';
 import { useScannerCalibration } from '../components/scanner-calibration';
+import { usePreferencesChanged } from '../lib/device-preferences';
 import { canCollectKioskOrders } from '../lib/kiosk-orders';
 import { MEAL_ACCOUNTS_MODULE } from '../lib/meal-accounts';
 import { resolveScan, type ScanOutcome } from '../lib/measured-label';
@@ -212,6 +213,7 @@ export function useSellingWorkspace(options: { view?: SellingView } = {}) {
     data?.modules?.['fnb.kiosk'] === true && canCollectKioskOrders(data?.capabilities);
   // Table service: the floor (tiles or plan, chosen per device) beside selling.
   const [savedSurface, setSavedSurface] = useState(() => savedTableSurface());
+  usePreferencesChanged(() => setSavedSurface(savedTableSurface()));
   const tableSurface = tableSurfaceOf(data, savedSurface);
   const postpay = data?.modules?.['fnb.postpay'] === true;
   // Canteen: the scan field records meals; the eater and the split come back per order.

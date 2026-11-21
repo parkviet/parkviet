@@ -31,10 +31,13 @@ fieldset { border: 1px solid #d8e3dc; border-radius: 8px; display: grid; gap: 8p
 /* Register: preserve the approved blue/white wireframe, with one spacing scale. */
 .pos-layout {
   --pos-blue: #07569a; --pos-blue-hover: #064a85; --pos-ink: #172d40;
-  --pos-muted: #526b7e; --pos-border: #d5e0e8; --pos-bg: #edf2f6;
+  --pos-muted: #526b7e; --pos-border: #dce4ec; --pos-bg: #f3f5f8;
   --pos-surface: #fff; --pos-tint: #f4f8fb; --pos-selected: #e7f2fb;
   --pos-danger: #a12d20; --pos-success: #26704c; --pos-warning: #835300;
-  --pos-radius: 6px; --pos-s1: 4px; --pos-s2: 8px; --pos-s3: 12px;
+  /* Soft fills for badges: each one pairs with its strong colour above. */
+  --pos-blue-soft: #eaf3fb; --pos-success-soft: #e7f6ee; --pos-warning-soft: #fff4dc; --pos-danger-soft: #fdecea;
+  --pos-radius: 12px; --pos-radius-sm: 8px; --pos-radius-lg: 16px;
+  --pos-shadow-card: 0 1px 2px #0f22360d, 0 4px 14px #0f22360f; --pos-s1: 4px; --pos-s2: 8px; --pos-s3: 12px;
   --pos-s4: 16px; --pos-s5: 20px; --pos-s6: 24px;
   --pos-small: .75rem; --pos-body: .875rem; --pos-heading: 1rem;
   --pos-target: 44px; --pos-overlay: 20; --pos-shadow: 0 12px 32px #102c4233;
@@ -1489,3 +1492,106 @@ kbd { padding: var(--pos-s1); border: 1px solid var(--pos-border); border-radius
   .pos-layout .quick-pay-methods button { min-height: 52px; }
 }
 .table-service .menu-item-schedule { display: block; font-size: .6875rem; font-weight: 700; color: var(--pos-warning); }
+
+/* Refreshed look of the selling screens: light header, soft panels, rounder
+   controls. Layout and behaviour stay as defined above; this block only
+   re-skins them, so it comes last. */
+.pos-layout :is(input, select, textarea) { border-radius: var(--pos-radius-sm); }
+.pos-layout button { border-radius: var(--pos-radius-sm); }
+.pos-layout :is(.card, .selling-panel, .checkout-panel) { box-shadow: var(--pos-shadow-card); border-radius: var(--pos-radius-lg); }
+
+/* Header: white, 56px, the blue lives in the logo tile and the accents. */
+.pos-layout .header { min-height: 56px; padding: var(--pos-s1) var(--pos-s3); color: var(--pos-ink); background: var(--pos-surface); border-bottom: 1px solid var(--pos-border); gap: var(--pos-s1) var(--pos-s2); }
+.pos-layout .header > strong, .pos-layout .header strong span { color: var(--pos-ink); }
+.pos-layout .header-brand .header-logo { box-sizing: content-box; height: 26px; padding: 5px 6px; border-radius: var(--pos-radius-sm); background: var(--pos-blue); }
+.pos-layout .header-title { border-left-color: var(--pos-border); padding-left: var(--pos-s3); color: var(--pos-muted); }
+.pos-layout .pos-context-details > summary { border-color: transparent; background: transparent; border-radius: var(--pos-radius-sm); }
+.pos-layout .pos-context-details > summary:hover, .pos-layout .pos-context-details[open] > summary { background: var(--pos-bg); border-color: var(--pos-border); }
+.pos-layout .pos-context-details > summary > .pos-icon { color: var(--pos-blue); }
+.context-chip-store { color: var(--pos-muted); }
+.context-chip-sep { color: var(--pos-muted); }
+.pos-layout .header-user { border-radius: 999px; }
+.pos-layout .header-user:hover, .pos-layout .user-menu[open] > .header-user { border-color: var(--pos-border); background: var(--pos-bg); }
+.pos-layout .header-badge { color: var(--pos-ink); background: var(--pos-bg); }
+.pos-layout .header-badge-dot { background: #1f8a5b; }
+.pos-layout .header-badge[data-health='live'] .header-badge-dot { box-shadow: 0 0 0 3px #1f8a5b33; }
+.pos-layout .header-badge[data-health='connecting'] .header-badge-dot { background: var(--pos-muted); }
+.pos-layout .header-badge[data-health='polling'] .header-badge-dot { background: #b26b00; }
+.pos-layout .header-badge[data-health='offline'] { color: var(--pos-danger); background: var(--pos-danger-soft); }
+.pos-layout .shift-badge[data-open='true'] { color: var(--pos-success); background: var(--pos-success-soft); }
+.pos-layout .shift-badge[data-open='false'] { color: var(--pos-warning); background: var(--pos-warning-soft); }
+.pos-layout .user-menu-popover, .pos-layout .context-popover { border-radius: var(--pos-radius-lg); }
+
+/* Selling toolbar: a pill of round tools that folds to its collapse button. */
+.selling-toolbar { display: flex; align-items: center; gap: 2px; margin-left: auto; padding: 3px; border: 1px solid var(--pos-border); border-radius: 999px; background: var(--pos-surface); }
+.selling-toolbar + .pos-context-status { margin-left: 0; }
+.toolbar-item { position: relative; display: flex; }
+.pos-layout :is(.toolbar-button, .toolbar-fold) { display: inline-flex; align-items: center; justify-content: center; gap: var(--pos-s2); min-height: var(--pos-target); padding: 0 var(--pos-s3); border: 0; border-radius: 999px; background: transparent; color: var(--pos-muted); font-size: var(--pos-small); font-weight: 600; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.pos-layout .toolbar-fold { width: var(--pos-target); padding: 0; }
+.pos-layout .toolbar-fold .pos-icon { transition: transform .2s; }
+.selling-toolbar[data-collapsed='true'] .toolbar-fold .pos-icon { transform: rotate(180deg); }
+.pos-layout :is(.toolbar-button, .toolbar-fold):not(:disabled):hover, .pos-layout .toolbar-button[aria-expanded='true'] { background: var(--pos-blue-soft); color: var(--pos-blue); border-color: transparent; }
+.toolbar-button .pos-icon { width: 18px; height: 18px; }
+@media (max-width: 1100px) { .toolbar-button-label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } .pos-layout .toolbar-button { width: var(--pos-target); padding: 0; } }
+.toolbar-popover { position: absolute; z-index: var(--pos-overlay); top: calc(100% + var(--pos-s2)); right: 0; display: grid; gap: var(--pos-s3); width: min(340px, calc(100vw - 24px)); max-height: calc(100dvh - 80px); overflow: auto; padding: var(--pos-s4); border: 1px solid var(--pos-border); border-radius: var(--pos-radius-lg); background: var(--pos-surface); color: var(--pos-ink); box-shadow: 0 12px 40px #0f22362e; }
+.pos-layout .toolbar-popover-title { margin: 0; font-size: var(--pos-heading); }
+.pos-layout .toolbar-section-title { margin: 0 0 var(--pos-s2); font-size: var(--pos-small); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--pos-muted); }
+.toolbar-section { display: grid; gap: var(--pos-s2); padding-top: var(--pos-s3); border-top: 1px solid var(--pos-border); }
+.toolbar-field { display: grid; gap: var(--pos-s1); }
+.pos-layout .toolbar-switch { display: flex; align-items: flex-start; gap: var(--pos-s3); min-height: var(--pos-target); font-weight: 500; }
+.toolbar-switch > span { display: grid; gap: 2px; }
+.pos-layout .toolbar-segment { display: flex; flex-wrap: wrap; gap: var(--pos-s1); margin: 0; padding: 0; border: 0; min-width: 0; }
+.toolbar-segment > legend { width: 100%; margin-bottom: var(--pos-s1); padding: 0; font-weight: 600; }
+.pos-layout .toolbar-segment button { flex: 1 1 0; min-width: max-content; border-radius: 999px; }
+.pos-layout .toolbar-link { display: flex; align-items: center; justify-content: flex-start; min-height: var(--pos-target); padding: 0 var(--pos-s3); border: 0; border-radius: var(--pos-radius-sm); background: transparent; color: var(--pos-blue); font-weight: 600; text-decoration: none; }
+.pos-layout .toolbar-link:hover { background: var(--pos-blue-soft); }
+.toolbar-note { margin: 0; font-size: var(--pos-small); }
+.toolbar-shortcuts { display: grid; gap: var(--pos-s2); margin: 0; padding: 0; list-style: none; }
+.toolbar-shortcuts li { display: flex; align-items: center; gap: var(--pos-s3); }
+.toolbar-shortcuts kbd { min-width: 40px; padding: 2px var(--pos-s2); text-align: center; background: var(--pos-bg); }
+@media (max-width: 1100px) { .pos-layout .pos-context-details { flex: 0 1 auto; min-width: 150px; } }
+@media (max-width: 700px) { .selling-toolbar { position: static; margin-left: 0; order: 5; } .toolbar-item { position: static; } .toolbar-popover { top: 100%; left: var(--pos-s2); right: var(--pos-s2); width: auto; } }
+
+/* Order tabs and chips. */
+.draft-toolbar { background: var(--pos-surface); border: 1px solid var(--pos-border); border-radius: var(--pos-radius); }
+.pos-layout .tablist button { border-radius: var(--pos-radius-sm); }
+.pos-layout .tablist button[aria-selected='true'] { background: var(--pos-blue-soft); border-color: transparent; border-bottom: 3px solid var(--pos-blue); }
+.pos-layout button[aria-pressed='true'] { border-color: transparent; }
+
+/* Category rail: soft chips. */
+.pos-layout .table-service .category-rail { gap: var(--pos-s2); padding: var(--pos-s3) var(--pos-s2); }
+.pos-layout .table-service .category-rail button { min-height: 52px; border: 0; border-radius: var(--pos-radius-sm); background: var(--pos-bg); color: var(--pos-muted); }
+.pos-layout .table-service .category-rail button[aria-pressed='true'] { background: var(--pos-ink); color: var(--pos-surface); }
+
+/* Menu tiles: soft card, price in blue, quantity badge on the corner. */
+.table-service .menu-item { border-radius: var(--pos-radius); border-top-width: 1px; border-top-color: var(--pos-border); box-shadow: var(--pos-shadow-card); }
+.table-service .menu-item:has(.menu-item-pick:not(:disabled):hover) { border-color: var(--pos-blue); }
+.pos-layout .table-service .menu-item-pick { border-radius: var(--pos-radius); }
+.table-service .menu-item-image { border-radius: var(--pos-radius) var(--pos-radius) 0 0; }
+.table-service .menu-item-quantity { top: var(--pos-s2); right: var(--pos-s2); border-width: 0; box-shadow: 0 1px 3px #0f223633; }
+
+/* Ticket: stepper, quantity pills and the primary actions. */
+.pos-layout .quantity-control { border: 1px solid var(--pos-border); border-radius: 999px; background: var(--pos-surface); overflow: hidden; }
+.pos-layout .quantity-control :is(button, input) { border: 0; }
+.quantity-control button:first-child, .quantity-control button:last-child { border-radius: 0; }
+.ticket-line-qty { border-radius: 999px; background: var(--pos-blue-soft); color: var(--pos-blue); }
+.ticket-line-new .ticket-line-qty { background: var(--pos-warning-soft); color: var(--pos-warning); }
+.ticket-line-selected { background: var(--pos-blue-soft); }
+.pos-layout .ticket-view button, .pos-layout .board-chip { border-radius: 999px; }
+.checkout-total strong { font-size: 1.625rem; }
+.pos-layout .quick-pay-methods button { border-radius: var(--pos-radius); }
+
+/* Table board: state cards with a soft fill. */
+.pos-layout .board-tile { border-radius: var(--pos-radius-lg); }
+.pos-layout .board-tile:not(:disabled):hover { box-shadow: 0 6px 18px #07569a1a; }
+.pos-layout .table-tile { border-radius: var(--pos-radius-lg); }
+.board-swatch { border-radius: 4px; }
+.board-tile-unsent, .board-tile-serving { --tile-fill: var(--pos-blue-soft); }
+.board-tile-prebilled { --tile-fill: var(--pos-warning-soft); }
+.board-tile-payment { --tile-fill: var(--pos-success-soft); }
+
+/* Payment: the amount due stands out, methods are round-cornered buttons. */
+.payment-summary { padding: var(--pos-s3) var(--pos-s4); border: 1px solid var(--pos-border); border-radius: var(--pos-radius); background: var(--pos-blue-soft); }
+.payment-summary .remaining-row { font-size: var(--pos-heading); font-weight: 700; color: var(--pos-blue); }
+.pos-layout .payment-methods button { border-radius: var(--pos-radius); min-height: 44px; }
+.payment-method-row, .payment-qr-box { border-radius: var(--pos-radius); }

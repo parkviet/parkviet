@@ -1,5 +1,6 @@
 import { isTableSurface, type PosTableSurface } from '@parkviet/pos-shared/pos-modules';
 import type { BoardTable } from '@parkviet/pos-shared/tables';
+import { notifyPreferencesChanged } from './device-preferences';
 import type { PosContext, PosWorkspace } from './pos-context';
 import { conflictReason, describeFailure } from './request-failure';
 
@@ -164,6 +165,7 @@ export function savedTableSurface(): PosTableSurface | null {
 export function saveTableSurface(surface: PosTableSurface) {
   try {
     window.localStorage.setItem(TABLE_SURFACE_KEY, surface);
+    notifyPreferencesChanged();
   } catch {
     // A preference only: the profile's surface shows next time.
   }

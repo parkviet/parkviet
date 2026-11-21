@@ -1,6 +1,7 @@
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { resolveMealAccount } from '../hooks/use-meal-accounts';
+import { usePreferencesChanged } from '../lib/device-preferences';
 import { type MealAccount, mealReasonKey } from '../lib/meal-accounts';
 import type { PosWorkspace } from '../lib/pos-context';
 import { conflictReason, describeFailure, failureStatus } from '../lib/request-failure';
@@ -100,6 +101,7 @@ export function ScanInput({
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [busy, setBusy] = useState(false);
   const [sounds, setSounds] = useState(() => scanSoundsEnabled());
+  usePreferencesChanged(() => setSounds(scanSoundsEnabled()));
   // Codes typed while the previous one is still answering wait their turn.
   const queue = useRef<Promise<void>>(Promise.resolve());
   const latest = useRef<SwipeTarget>({ branchId, workspace, disabled, onSwipe, onBarcode });

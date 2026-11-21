@@ -1,3 +1,5 @@
+import { notifyPreferencesChanged } from './device-preferences';
+
 // How tightly the menu tiles of the table-service order screen are packed:
 // a choice of this device, like the floor surface.
 export const MENU_DENSITIES = ['airy', 'regular', 'dense'] as const;
@@ -25,6 +27,7 @@ export function savedMenuDensity(): MenuDensity {
 export function saveMenuDensity(density: MenuDensity) {
   try {
     window.localStorage.setItem(MENU_DENSITY_KEY, density);
+    notifyPreferencesChanged();
   } catch {
     // Not remembered on this device; the choice still applies until reload.
   }
@@ -47,6 +50,7 @@ export function savedMenuImages(fallback: boolean): boolean {
 export function saveMenuImages(shown: boolean) {
   try {
     window.localStorage.setItem(MENU_IMAGES_KEY, shown ? 'on' : 'off');
+    notifyPreferencesChanged();
   } catch {
     // Not remembered on this device; the choice still applies until reload.
   }

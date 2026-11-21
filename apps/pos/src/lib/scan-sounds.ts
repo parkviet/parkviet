@@ -1,3 +1,5 @@
+import { notifyPreferencesChanged } from './device-preferences';
+
 // Short tones that tell the cashier what a scan did without looking up:
 // one short beep when a meal is recorded, two beeps for a meal already
 // recorded a moment ago, one long low tone for every other refusal. The tones
@@ -53,6 +55,7 @@ export function setScanSounds(on: boolean) {
   try {
     if (on) storage()?.removeItem(SCAN_SOUNDS_KEY);
     else storage()?.setItem(SCAN_SOUNDS_KEY, 'off');
+    notifyPreferencesChanged();
   } catch {
     // A preference only: the screen still shows every outcome in text.
   }
