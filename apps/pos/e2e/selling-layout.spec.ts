@@ -92,6 +92,8 @@ test('a device that chose nothing follows the branch default, and can come back 
 
   await dialog.getByRole('button', { name: 'Dùng mặc định chi nhánh' }).click();
   expect(await stored(page)).toBeNull();
+  // The tile size follows the branch default again: no density of its own.
+  expect(await page.evaluate(() => localStorage.getItem('parkviet-pos:menu-density'))).toBeNull();
   await expect(page.getByRole('complementary', { name: 'Thông tin thanh toán' })).toBeVisible();
 });
 
@@ -184,4 +186,41 @@ test('the payment that replaces the cart has a way back', async ({ page }) => {
   await expect(page.getByRole('complementary', { name: 'Phiếu quầy' })).toHaveCount(0);
   await page.getByRole('button', { name: /Về|Đơn/ }).first().click();
   await expect(page.getByRole('complementary', { name: 'Phiếu quầy' })).toBeVisible();
+});
+
+test('pressing the divider without dragging does not store a share', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'drag needs the wide layout');
+  await openCounter(page, cafeWorld());
+  const divider = page.getByRole('separator').first();
+  const box = await divider.boundingBox();
+  if (!box) throw new Error('divider has no box');
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  expect(await stored(page)).toBeNull();
+});
+
+test('the payment keys wait while the payment dialog is open', async ({ page }) => {
+  await openCounter(page, cafeWorld());
+  await page.getByRole('list', { name: 'Thực đơn' }).getByRole('button', { name: 'Bánh flan', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Phiếu quầy' }).locator('.ticket-line')).toHaveCount(1);
+  await page.keyboard.press('F9');
+  const pay = page.getByRole('dialog', { name: 'Thanh toán' });
+  await expect(pay).toBeVisible();
+  await page.keyboard.press('F1');
+  // Cash was not taken behind the dialog: the order is still on the ticket.
+  await expect(pay).toBeVisible();
+  await expect(page.locator('.quick-ticket .ticket-line')).toHaveCount(1);
+});
+
+test('F9 opens the payment from an empty search box but not from a typed one', async ({ page }) => {
+  await openCounter(page, cafeWorld());
+  await page.getByRole('list', { name: 'Thực đơn' }).getByRole('button', { name: 'Bánh flan', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Phiếu quầy' }).locator('.ticket-line')).toHaveCount(1);
+  const search = page.getByRole('searchbox').first();
+  await search.focus();
+  await search.fill('flan');
+  await page.keyboard.press('F9');
+  await expect(page.getByRole('dialog', { name: 'Thanh toán' })).toHaveCount(0);
+  await search.fill('');
+  await page.keyboard.press('F9');
+  await expect(page.getByRole('dialog', { name: 'Thanh toán' })).toBeVisible();
 });

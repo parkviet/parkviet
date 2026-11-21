@@ -3,7 +3,7 @@ import type { Platform } from '@parkviet/pos-shared/platform-orders';
 import { contextFeature } from '@parkviet/pos-shared/pos-features';
 import { rateLabel } from '@parkviet/pos-shared/receipt-template/data';
 import { normalizeSalesSettings } from '@parkviet/pos-shared/sales-settings';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SellingLayoutControl } from '../hooks/use-selling-layout';
 import { useSellingWorkspace } from '../hooks/use-selling-workspace';
@@ -203,6 +203,13 @@ export function WorkspaceTabsView({
   // a dialog or in place of the order).
   const [payingFor, setPayingFor] = useState<string | null>(null);
   const sheetPay = control.layout.pay === 'popup' || control.layout.pay === 'slide';
+  // The payment closes once its order is paid or canceled, or another order
+  // is on the ticket: it must not open again over the next one.
+  const payingSettled = active ? workspaceIsSettled(active) : false;
+  const payingActiveId = active?.id ?? null;
+  useEffect(() => {
+    if (payingFor && (payingSettled || payingActiveId !== payingFor)) setPayingFor(null);
+  }, [payingFor, payingSettled, payingActiveId]);
   const deliveryDetailsRef = useRef<HTMLDetailsElement>(null);
   const showFloor = selling.showFloor;
 

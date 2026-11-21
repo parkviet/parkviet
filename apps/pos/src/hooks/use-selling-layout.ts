@@ -9,10 +9,15 @@ import {
   type SellingPreset,
   type SellingTiles,
 } from '@parkviet/pos-shared/selling-layout';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { usePosSelection } from '../components/pos-selection';
 import { usePreferencesChanged } from '../lib/device-preferences';
-import { chosenMenuDensity, saveMenuDensity } from '../lib/menu-density';
+import {
+  chosenMenuDensity,
+  clearMenuDensity,
+  type MenuDensity,
+  saveMenuDensity,
+} from '../lib/menu-density';
 import {
   densityOfTiles,
   savedSellingLayout,
@@ -51,7 +56,12 @@ export function useSellingLayout(): SellingLayoutControl {
   const [, setVersion] = useState(0);
   usePreferencesChanged(() => setVersion((version) => version + 1));
 
-  const data = context.data;
+  // A reload of the context (another register) has no data for a moment: the
+  // layout already shown stays until the new context says otherwise, so the
+  // screens do not flip to the layout the modules alone would point at.
+  const lastData = useRef(context.data);
+  if (context.data) lastData.current = context.data;
+  const data = context.data ?? lastData.current;
   const saved = savedSellingLayout(branchId);
   const resolved = resolveSellingLayout(data, saved);
   const density = chosenMenuDensity();
@@ -114,10 +124,16 @@ export function useSellingLayout(): SellingLayoutControl {
     },
     useBranchDefault() {
       saveSellingLayout(branchId, null);
-      setTiles(presetLayout(defaultPreset(data)).tiles);
+      clearMenuDensity();
     },
     resetShare(key) {
       saveSellingLayout(branchId, { ...stored(), [key]: presetLayout(layout.preset)[key] });
     },
   };
+}
+
+// The tile density the grids draw: the layout tile size, which is the
+// device menu density, else the one of the sample in use.
+export function useMenuDensity(): MenuDensity {
+  return densityOfTiles(useSellingLayout().layout.tiles);
 }

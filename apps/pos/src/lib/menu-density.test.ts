@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  chosenMenuDensity,
+  clearMenuDensity,
   DEFAULT_MENU_DENSITY,
   MENU_DENSITY_KEY,
   MENU_IMAGES_KEY,
@@ -17,6 +19,7 @@ describe('menu density of this device', () => {
       localStorage: {
         getItem: (key: string) => store.get(key) ?? null,
         setItem: (key: string, value: string) => store.set(key, value),
+        removeItem: (key: string) => store.delete(key),
       },
     });
   });
@@ -40,7 +43,17 @@ describe('menu density of this device', () => {
     expect(savedMenuDensity()).toBe('regular');
   });
 
-  it('falls back to the default when storage is blocked', () => {
+  it('forgets the chosen density so the layout decides again', () => {
+    expect(chosenMenuDensity()).toBeNull();
+    saveMenuDensity('dense');
+    expect(chosenMenuDensity()).toBe('dense');
+    clearMenuDensity();
+    expect(store.has(MENU_DENSITY_KEY)).toBe(false);
+    expect(chosenMenuDensity()).toBeNull();
+    expect(savedMenuDensity()).toBe('regular');
+  });
+
+  it('keeps the density for the session when storage is blocked', () => {
     vi.stubGlobal('window', {
       localStorage: {
         getItem: () => {
@@ -49,12 +62,26 @@ describe('menu density of this device', () => {
         setItem: () => {
           throw new Error('blocked');
         },
+        removeItem: () => {
+          throw new Error('blocked');
+        },
       },
     });
-    expect(() => saveMenuDensity('dense')).not.toThrow();
     expect(savedMenuDensity()).toBe('regular');
+    expect(() => saveMenuDensity('dense')).not.toThrow();
+    expect(savedMenuDensity()).toBe('dense');
     expect(() => saveMenuImages(false)).not.toThrow();
     expect(savedMenuImages(true)).toBe(true);
+    // Storage back: a write replaces what was only held for the session.
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => store.set(key, value),
+        removeItem: (key: string) => store.delete(key),
+      },
+    });
+    clearMenuDensity();
+    expect(chosenMenuDensity()).toBeNull();
   });
 
   it('shows pictures as the layout prefers until the device chooses', () => {

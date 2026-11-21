@@ -11,6 +11,9 @@ import { useTranslation } from 'react-i18next';
 // A step of the keyboard: 5% of the box.
 const KEY_STEP = 0.05;
 
+// A press must travel this far (px) before it drags the handle.
+const DRAG_THRESHOLD = 4;
+
 // The handle between two panels of a split. Dragging follows the pointer
 // (held between a third and two thirds, pulled onto the marks) and changes
 // the grid of the box it sits in right there; the share is kept when the
@@ -55,10 +58,18 @@ export function SplitDivider({
     handle.setPointerCapture(event.pointerId);
     let latest = share;
     const rect = box.getBoundingClientRect();
+    const grip = handle.getBoundingClientRect();
+    // The tracks share what the handle leaves: the box less the handle.
+    const handleSize = vertical ? grip.height : grip.width;
+    const span = (vertical ? rect.height : rect.width) - handleSize;
+    const start = vertical ? event.clientY : event.clientX;
+    let moving = false;
     const move = (moveEvent: globalThis.PointerEvent) => {
-      let raw = vertical
-        ? (moveEvent.clientY - rect.top) / rect.height
-        : (moveEvent.clientX - rect.left) / rect.width;
+      const at = vertical ? moveEvent.clientY : moveEvent.clientX;
+      // A press that barely moves is a click, not a drag.
+      if (!moving && Math.abs(at - start) < DRAG_THRESHOLD) return;
+      moving = true;
+      let raw = (at - (vertical ? rect.top : rect.left) - handleSize / 2) / span;
       if (mirrored) raw = 1 - raw;
       if (!Number.isFinite(raw)) return;
       latest = clampSplit(raw);
@@ -79,7 +90,6 @@ export function SplitDivider({
     handle.addEventListener('pointermove', move);
     handle.addEventListener('pointerup', finish);
     handle.addEventListener('pointercancel', finish);
-    move(event.nativeEvent);
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {

@@ -4,11 +4,20 @@ import { useTranslation } from 'react-i18next';
 import type { SellingLayoutControl } from '../../hooks/use-selling-layout';
 import { popupOpen, typingTarget } from '../menu-grid';
 import { PosIcon } from '../pos-icon';
+import { idleScanField } from '../scan-input';
 import { SplitDivider } from './split-divider';
 
 // Where a modal is open the payment key waits, like the counter's own keys.
 function modalOpen() {
   return document.querySelector('dialog[open], .modifier-panel') !== null;
+}
+
+// A key typed into a text field is the field's, unless the field is waiting
+// for input: an empty search box or a scan field with nothing typed in it.
+function typingIn(target: EventTarget | null) {
+  if (!typingTarget(target)) return false;
+  if (idleScanField(target)) return false;
+  return !(target instanceof HTMLInputElement && target.type === 'search' && target.value === '');
 }
 
 // F9 asks to pay the order on the ticket, in whatever way this layout pays.
@@ -18,7 +27,9 @@ function usePayKey(onPayKey: (() => void) | undefined) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'F9' || event.defaultPrevented || !handler.current) return;
-      if (typingTarget(event.target) || popupOpen() || modalOpen()) return;
+      // A key held with a modifier is the browser's or the system's.
+      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      if (typingIn(event.target) || popupOpen() || modalOpen()) return;
       event.preventDefault();
       handler.current();
     };

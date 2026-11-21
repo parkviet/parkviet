@@ -14,7 +14,7 @@ import {
   SPLIT_SNAPS,
   shareLabel,
 } from '@parkviet/pos-shared/selling-layout';
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type SellingLayoutControl, useSellingLayout } from '../../hooks/use-selling-layout';
 import { usePosSelection } from '../pos-selection';
@@ -145,19 +145,40 @@ function Segmented<T extends string>({
   );
 }
 
+// While the slider moves, the share is shown from `draft` (and the preview
+// follows it); it is stored once the slider is let go: the browser's own
+// `change` event, which a drag fires on release and a key press fires per step.
 function ShareRow({
   label,
   names,
   share,
   onChange,
+  onPreview,
 }: {
   label: string;
   names: readonly [string, string];
   share: number;
   onChange: (share: number) => void;
+  onPreview: (share: number | null) => void;
 }) {
   const { t } = useTranslation();
   const id = useId();
+  const slider = useRef<HTMLInputElement>(null);
+  const [draft, setDraft] = useState<number | null>(null);
+  const shown = draft ?? share;
+  const commit = useRef<(value: number) => void>(onChange);
+  commit.current = (value) => {
+    setDraft(null);
+    onPreview(null);
+    if (value !== share) onChange(value);
+  };
+  useEffect(() => {
+    const element = slider.current;
+    if (!element) return;
+    const onSettled = () => commit.current(clampSplit(Number(element.value) / 100));
+    element.addEventListener('change', onSettled);
+    return () => element.removeEventListener('change', onSettled);
+  }, []);
   return (
     <div className="sl-row">
       <label className="sl-row-label" htmlFor={id}>
@@ -167,27 +188,32 @@ function ShareRow({
           {t('sellingLayoutShareOf', {
             first: names[0],
             second: names[1],
-            value: `${shareLabel(share)} : ${shareLabel(1 - share)}`,
+            value: `${shareLabel(shown)} : ${shareLabel(1 - shown)}`,
           })}
         </small>
       </label>
       <span className="sl-share">
         <input
+          ref={slider}
           id={id}
           type="range"
           min={MIN_SPLIT * 100 + 0.01}
           max={MAX_SPLIT * 100 - 0.01}
           step={0.5}
-          value={share * 100}
-          aria-valuetext={`${names[0]} ${shareLabel(share)} · ${names[1]} ${shareLabel(1 - share)}`}
-          onChange={(event) => onChange(clampSplit(Number(event.target.value) / 100))}
+          value={shown * 100}
+          aria-valuetext={`${names[0]} ${shareLabel(shown)} · ${names[1]} ${shareLabel(1 - shown)}`}
+          onChange={(event) => {
+            const next = clampSplit(Number(event.target.value) / 100);
+            setDraft(next);
+            onPreview(next);
+          }}
         />
         <span className="sl-seg sl-snaps">
           {SPLIT_SNAPS.map((snap) => (
             <button
               key={snap}
               type="button"
-              aria-pressed={share === snap}
+              aria-pressed={shown === snap}
               onClick={() => onChange(snap)}
             >
               {shareLabel(snap)}
@@ -218,6 +244,13 @@ export function SellingLayoutDialog({ onClose }: { onClose: () => void }) {
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
     };
   }, []);
+  // The slider being moved: the preview follows before the share is stored.
+  const [preview, setPreview] = useState<{ split?: number; paySplit?: number }>({});
+  const shownLayout: SellingLayout = {
+    ...layout,
+    split: preview.split ?? layout.split,
+    paySplit: preview.paySplit ?? layout.paySplit,
+  };
   const custom = layoutIsCustom(layout);
   const top = layout.side === 'top';
   const names = {
@@ -317,6 +350,9 @@ export function SellingLayoutDialog({ onClose }: { onClose: () => void }) {
             names={[names.catalog, names.order]}
             share={layout.split}
             onChange={(split) => control.change({ split })}
+            onPreview={(split) =>
+              setPreview((current) => ({ ...current, split: split ?? undefined }))
+            }
           />
           {paymentBesideOrder(layout) ? (
             <ShareRow
@@ -324,13 +360,16 @@ export function SellingLayoutDialog({ onClose }: { onClose: () => void }) {
               names={[names.order, names.payment]}
               share={layout.paySplit}
               onChange={(paySplit) => control.change({ paySplit })}
+              onPreview={(paySplit) =>
+                setPreview((current) => ({ ...current, paySplit: paySplit ?? undefined }))
+              }
             />
           ) : null}
           <p className="muted">{t('sellingLayoutDragHint')}</p>
         </div>
         <div className="sl-preview-box">
           <small>{t('sellingLayoutPreview')}</small>
-          <Preview layout={layout} />
+          <Preview layout={shownLayout} />
           <small className="muted">{t(`sellingLayoutPreviewNote_${layout.pay}`)}</small>
         </div>
       </div>

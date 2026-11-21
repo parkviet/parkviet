@@ -39,7 +39,8 @@ function typingIn(target: EventTarget | null) {
 function quickKeysPaused() {
   return (
     popupOpen() ||
-    document.querySelector('[role="dialog"][aria-modal="true"], .modifier-panel') !== null
+    document.querySelector('[role="dialog"][aria-modal="true"], dialog[open], .modifier-panel') !==
+      null
   );
 }
 

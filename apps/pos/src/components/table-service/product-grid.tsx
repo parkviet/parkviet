@@ -1,11 +1,11 @@
 import { formatMoney } from '@parkviet/pos-shared/money';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMenuDensity } from '../../hooks/use-selling-layout';
 import { usePreferencesChanged } from '../../lib/device-preferences';
 import {
   MENU_DENSITIES,
   type MenuDensity,
-  savedMenuDensity,
   savedMenuImages,
   saveMenuDensity,
   saveMenuImages,
@@ -51,11 +51,10 @@ export function ProductGrid({
 }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
-  const [density, setDensity] = useState<MenuDensity>(savedMenuDensity);
+  const density = useMenuDensity();
   const [images, setImages] = useState(() => savedMenuImages(imagesByDefault));
   // The toolbar's quick settings change the same two choices.
   usePreferencesChanged(() => {
-    setDensity(savedMenuDensity());
     setImages(savedMenuImages(imagesByDefault));
   });
   const searchRef = useRef<HTMLInputElement>(null);
@@ -107,7 +106,6 @@ export function ProductGrid({
               type="button"
               aria-pressed={density === value}
               onClick={() => {
-                setDensity(value);
                 saveMenuDensity(value);
               }}
             >

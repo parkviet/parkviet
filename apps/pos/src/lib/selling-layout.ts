@@ -15,9 +15,16 @@ export function sellingLayoutKey(branchId: string | null): string {
   return `${SELLING_LAYOUT_KEY_PREFIX}${branchId ?? 'none'}`;
 }
 
+// Where storage refuses a write (blocked, full), the choice is held here so
+// the dialog and the screens still follow it until the page is reloaded.
+// `null` is a remembered "no device choice".
+const unsaved = new Map<string, SavedSellingLayout | null>();
+
 export function savedSellingLayout(branchId: string | null): SavedSellingLayout | null {
+  const key = sellingLayoutKey(branchId);
+  if (unsaved.has(key)) return unsaved.get(key) ?? null;
   try {
-    const raw = window.localStorage.getItem(sellingLayoutKey(branchId));
+    const raw = window.localStorage.getItem(key);
     return raw ? parseSavedLayout(JSON.parse(raw)) : null;
   } catch {
     // Storage blocked, or a value that is not JSON: no device choice.
@@ -27,16 +34,16 @@ export function savedSellingLayout(branchId: string | null): SavedSellingLayout 
 
 // `null` forgets the choice, so the branch default applies again.
 export function saveSellingLayout(branchId: string | null, layout: SavedSellingLayout | null) {
+  const key = sellingLayoutKey(branchId);
   try {
-    if (layout) {
-      window.localStorage.setItem(sellingLayoutKey(branchId), JSON.stringify(layout));
-    } else {
-      window.localStorage.removeItem(sellingLayoutKey(branchId));
-    }
-    notifyPreferencesChanged();
+    if (layout) window.localStorage.setItem(key, JSON.stringify(layout));
+    else window.localStorage.removeItem(key);
+    unsaved.delete(key);
   } catch {
-    // Not remembered on this device; the choice still applies until reload.
+    // Not remembered on this device; it applies until reload.
+    unsaved.set(key, layout);
   }
+  notifyPreferencesChanged();
 }
 
 const DENSITY_OF_TILES: Record<SellingTiles, MenuDensity> = {

@@ -72,8 +72,17 @@ export function TableServiceScreen({ control }: { control: SellingLayoutControl 
   // the order frame; a bar's tabs keep the frames they have.
   const alwaysOpenPay =
     !tabMode && (control.layout.pay === 'below' || control.layout.pay === 'column');
-  const rawView: SellingView = chosen ?? (tabMode ? 'order' : 'board');
+  // Only the tables-first sample opens with the board; the other samples
+  // open with the order and payment panels, the board one tap away ("Sơ đồ
+  // bàn" on the ticket). A bar's tabs are its own home.
+  const orderHome = !tabMode && control.layout.preset !== 'tables_first';
+  const rawView: SellingView = chosen ?? (tabMode || orderHome ? 'order' : 'board');
   const view: SellingView = rawView === 'pay' && alwaysOpenPay ? 'order' : rawView;
+  // A payment frame kept from a layout that pays on demand must not open
+  // again (as a dialog) once the layout pays in place and then back.
+  useEffect(() => {
+    if (alwaysOpenPay && chosen === 'pay') setView('order');
+  }, [alwaysOpenPay, chosen]);
   // A frame the URL changes to by itself (a link, history) is followed. The
   // screen writes every frame it shows into the URL, and a write can land
   // after the home frame changed (the profile came in), so a frame shown
@@ -95,17 +104,18 @@ export function TableServiceScreen({ control }: { control: SellingLayoutControl 
   const handOver = useHandOver(selling);
   // An order or payment frame without its order (closed, gone, not found)
   // goes back to the board; it never shows another order instead. A bar's
-  // order frame stays, its ticket waiting for a tab to be picked.
+  // order frame (and the home frame of the samples without the board first)
+  // stays, its ticket waiting for an order to be picked.
   // biome-ignore lint/correctness/useExhaustiveDependencies: leaveOrder is recreated every render
   useEffect(() => {
     if (view === 'board' || active || activeLoading) return;
-    if (tabMode) {
+    if (tabMode || orderHome) {
       if (view === 'pay') setView('order');
       return;
     }
     leaveOrder();
     setView('board');
-  }, [view, active, activeLoading, tabMode]);
+  }, [view, active, activeLoading, tabMode, orderHome]);
   const [notice, setNotice] = useState<{ text: string; seq: number } | null>(null);
   useEffect(() => {
     if (!notice) return;
@@ -140,7 +150,7 @@ export function TableServiceScreen({ control }: { control: SellingLayoutControl 
   // Where a closed or canceled order leaves the screen: the board, or a
   // bar's open tabs with no tab picked.
   function goHome() {
-    if (!tabMode) {
+    if (!tabMode && !orderHome) {
       setView('board');
       return;
     }

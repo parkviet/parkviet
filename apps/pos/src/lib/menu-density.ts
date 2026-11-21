@@ -14,34 +14,46 @@ export function isMenuDensity(value: unknown): value is MenuDensity {
   return MENU_DENSITIES.includes(value as MenuDensity);
 }
 
+// Where storage refuses a write, the choice is held here until reload.
+// `null` is a remembered "no choice".
+let unsavedDensity: MenuDensity | null | undefined;
+
 export function savedMenuDensity(): MenuDensity {
-  try {
-    const saved = window.localStorage.getItem(MENU_DENSITY_KEY);
-    return isMenuDensity(saved) ? saved : DEFAULT_MENU_DENSITY;
-  } catch {
-    // Storage blocked (private mode, policy): the default still works.
-    return DEFAULT_MENU_DENSITY;
-  }
+  return chosenMenuDensity() ?? DEFAULT_MENU_DENSITY;
 }
 
 // The density this device chose, or null while it has chosen none (the
-// selling layout's sample then decides the tile size).
+// selling layout sample then decides the tile size).
 export function chosenMenuDensity(): MenuDensity | null {
+  if (unsavedDensity !== undefined) return unsavedDensity;
   try {
     const saved = window.localStorage.getItem(MENU_DENSITY_KEY);
     return isMenuDensity(saved) ? saved : null;
   } catch {
+    // Storage blocked (private mode, policy): no choice, the default works.
     return null;
   }
 }
 
-export function saveMenuDensity(density: MenuDensity) {
+function writeMenuDensity(density: MenuDensity | null) {
   try {
-    window.localStorage.setItem(MENU_DENSITY_KEY, density);
-    notifyPreferencesChanged();
+    if (density) window.localStorage.setItem(MENU_DENSITY_KEY, density);
+    else window.localStorage.removeItem(MENU_DENSITY_KEY);
+    unsavedDensity = undefined;
   } catch {
-    // Not remembered on this device; the choice still applies until reload.
+    // Not remembered on this device; it applies until reload.
+    unsavedDensity = density;
   }
+  notifyPreferencesChanged();
+}
+
+export function saveMenuDensity(density: MenuDensity) {
+  writeMenuDensity(density);
+}
+
+// Forgets the device density: the selling layout sample decides again.
+export function clearMenuDensity() {
+  writeMenuDensity(null);
 }
 
 // Whether the menu tiles show the dishes' pictures: a choice of this device,

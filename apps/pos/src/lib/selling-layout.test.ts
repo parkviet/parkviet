@@ -58,6 +58,34 @@ describe('device selling layout', () => {
     expect(savedSellingLayout('b1')?.split).toBe(2 / 3);
   });
 
+  it('keeps the choice for the session when storage refuses the write', () => {
+    const layout = {
+      preset: 'quick',
+      side: 'top',
+      pay: 'below',
+      split: 0.4,
+      paySplit: 0.5,
+    } as const;
+    const storage = (window as unknown as { localStorage: Storage }).localStorage;
+    const { setItem, removeItem } = storage;
+    storage.setItem = () => {
+      throw new Error('quota');
+    };
+    storage.removeItem = () => {
+      throw new Error('blocked');
+    };
+    saveSellingLayout('b9', layout);
+    expect(savedSellingLayout('b9')).toEqual(layout);
+    saveSellingLayout('b9', null);
+    expect(savedSellingLayout('b9')).toBeNull();
+    storage.setItem = setItem;
+    storage.removeItem = removeItem;
+    // Storage works again: what it holds wins over the session's memory.
+    saveSellingLayout('b9', layout);
+    expect(stored.has(sellingLayoutKey('b9'))).toBe(true);
+    expect(savedSellingLayout('b9')).toEqual(layout);
+  });
+
   it('maps the tile size to the menu density and back', () => {
     for (const tiles of ['s', 'm', 'l'] as const) {
       expect(tilesOfDensity(densityOfTiles(tiles))).toBe(tiles);

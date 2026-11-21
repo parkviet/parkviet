@@ -110,6 +110,23 @@ const attempts = (world: World, kind: string, status: string) =>
   world.sheets.get('ws_t1')?.attempts.filter((item) => item.kind === kind && item.status === status) ?? [];
 const prepares = (world: World) => world.writes.filter((write) => write.family === 'tender.prepare');
 
+test('a table branch opens on the order panels unless its sample is tables first; the board stays one tap away', async ({
+  context,
+}) => {
+  const world = tableWorld();
+  world.sellingPreset = 'one_step';
+  addSheet(world, 'ws_t1', { table: { id: 'posres_1', name: 'Bàn 1', label: null, guests: 2 } });
+  await installRetailApi(context, world);
+  await routeBoard(context);
+  const page = await context.newPage();
+  await login(page);
+  await expect(ticket(page)).toBeVisible();
+  await expect(tile(page)).toHaveCount(0);
+  await ticket(page).getByRole('button', { name: 'Về bảng bàn' }).click();
+  await expect(tile(page)).toBeVisible();
+  await expect(page).toHaveURL(/view=board/);
+});
+
 test('a table goes from the board to the kitchen and back, then pays by VietQR shown at once', async ({
   context,
 }) => {

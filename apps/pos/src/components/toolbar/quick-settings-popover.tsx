@@ -6,11 +6,11 @@ import {
 } from '@parkviet/pos-shared/pos-modules';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMenuDensity } from '../../hooks/use-selling-layout';
 import { usePreferencesChanged } from '../../lib/device-preferences';
 import {
   MENU_DENSITIES,
   type MenuDensity,
-  savedMenuDensity,
   savedMenuImages,
   saveMenuDensity,
   saveMenuImages,
@@ -50,12 +50,11 @@ export function QuickSettingsPopover({
   const menuTiles = data?.modules?.['fnb.menu'] === true;
   // The quick counter shows pictures until this device says otherwise.
   const imagesByDefault = data ? sellingLayoutOf(data) === 'quick_counter' : false;
-  const [density, setDensity] = useState<MenuDensity>(savedMenuDensity);
+  const density = useMenuDensity();
   const [images, setImages] = useState(() => savedMenuImages(imagesByDefault));
   const [sounds, setSounds] = useState(() => scanSoundsEnabled());
   const [savedSurface, setSavedSurface] = useState(() => savedTableSurface());
   usePreferencesChanged(() => {
-    setDensity(savedMenuDensity());
     setImages(savedMenuImages(imagesByDefault));
     setSounds(scanSoundsEnabled());
     setSavedSurface(savedTableSurface());
@@ -83,7 +82,6 @@ export function QuickSettingsPopover({
                 type="button"
                 aria-pressed={density === value}
                 onClick={() => {
-                  setDensity(value);
                   saveMenuDensity(value);
                 }}
               >

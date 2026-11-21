@@ -70,6 +70,11 @@ export function QuickCounterScreen({ control }: { control: SellingLayoutControl 
     search.view === 'pay' ? 'pay' : 'order',
   );
   const view: QuickView = alwaysOpenPay ? 'order' : chosenView;
+  // A payment frame kept from a layout that pays on demand must not open
+  // again once the layout pays in place.
+  useEffect(() => {
+    if (alwaysOpenPay && chosenView === 'pay') setView('order');
+  }, [alwaysOpenPay, chosenView]);
   const [tender, setTender] = useState<'vietqr' | 'cash'>('vietqr');
   // A frame the URL changes to by itself (history) is followed.
   const lastSearchView = useRef(search.view);
@@ -105,6 +110,8 @@ export function QuickCounterScreen({ control }: { control: SellingLayoutControl 
   // The order being handed over after its payment: it stays on the ticket
   // until that is done.
   const finishing = useRef<string | null>(null);
+  // Orders already handed over from this screen.
+  const handedOver = useRef(new Set<string>());
   // A next order is on its way (picked or being created); asked once until
   // an order is on the ticket again, so a refused creation does not repeat
   // by itself: the cashier tries again.
@@ -225,13 +232,21 @@ export function QuickCounterScreen({ control }: { control: SellingLayoutControl 
     if (autoPrintEnabled()) setPrinting(workspace.id);
   }
 
-  // Paid in cash on the ticket: handed over, then the next ticket.
+  // Paid on the ticket: handed over, then the next ticket. The payment that
+  // stays open and the ticket's own foot can both report the same payment, so
+  // an order is handed over once.
   async function paidHere(workspace: PosWorkspace) {
+    if (handedOver.current.has(workspace.id)) return;
+    handedOver.current.add(workspace.id);
     finishing.current = workspace.id;
     try {
       const { latest, failure } = await handOver(workspace);
       finished(latest, parseVndAmount(latest.financial?.change_due ?? '') ?? '0');
       if (failure) notify(failure);
+    } catch (error) {
+      // Not handed over: a later payment report may try again.
+      handedOver.current.delete(workspace.id);
+      throw error;
     } finally {
       finishing.current = null;
       // The cashier may have opened another order meanwhile: it stays.
