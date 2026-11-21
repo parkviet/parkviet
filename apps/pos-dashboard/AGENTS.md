@@ -41,7 +41,10 @@ pnpm test:e2e        # API fixtures, desktop/tablet/mobile; 4 workers
   `pos-access.ts`, `useBranchScope()`); the selection follows that URL. The
   Features tab groups industry modules, risky feature flags and per-branch
   `sales_settings` (stock display, oversell, notes, coupons, cart order,
-  payment sound, receipt auto-print). Seeing cost needs `pos.cost.view`.
+  payment sound, receipt auto-print) and the branch's default selling screen
+  (`selling_preset`, `components/branch-selling-preset.tsx`, written with
+  `PATCH /pos/branches/:id`; the Tables sample stays locked without `fnb.tables`).
+  Seeing cost needs `pos.cost.view`.
   Store
   master data (print templates, payment methods, units, staff roles, scale label
   formats) are store-level pages; old store-level setting URLs redirect to tabs.
