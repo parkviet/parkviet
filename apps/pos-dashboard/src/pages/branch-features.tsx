@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next'
 import { SalesDraftProvider, SalesFields, SalesSaveBar } from '../components/branch-auto-print'
 import { useBranchScope } from '../components/branch-detail'
 import { BranchLabelFormats } from '../components/branch-label-formats'
+import { BranchSellingPreset } from '../components/branch-selling-preset'
 import {
   type FeatureChange,
   FeatureSwitchRow,
@@ -65,6 +66,7 @@ export function BranchFeaturesTab() {
     ['features-utilities', 'utilities'],
     ['features-orders', 'orders'],
   ].map(([id, key]) => ({ id, label: t(`featuresSections.${key}`) }))
+  sections.push({ id: 'features-selling', label: t('branchSellingPreset.title') })
   const measured = branchSettingVisible({ ...context.data, modules }, 'label-formats')
   const printingAllowed = routeAllowed('branch-printing', { permissionKeys, context: context.data })
   return (
@@ -144,6 +146,7 @@ export function BranchFeaturesTab() {
             <QrModeField />
             <KioskKitchenField />
           </ModelCard>
+          <BranchSellingPreset />
           <SalesSaveBar />
         </div>
         <SectionNav sections={sections} />

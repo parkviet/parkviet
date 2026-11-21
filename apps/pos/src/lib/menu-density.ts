@@ -24,6 +24,17 @@ export function savedMenuDensity(): MenuDensity {
   }
 }
 
+// The density this device chose, or null while it has chosen none (the
+// selling layout's sample then decides the tile size).
+export function chosenMenuDensity(): MenuDensity | null {
+  try {
+    const saved = window.localStorage.getItem(MENU_DENSITY_KEY);
+    return isMenuDensity(saved) ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
 export function saveMenuDensity(density: MenuDensity) {
   try {
     window.localStorage.setItem(MENU_DENSITY_KEY, density);

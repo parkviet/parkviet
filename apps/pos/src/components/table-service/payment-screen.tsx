@@ -69,8 +69,12 @@ export function PaymentScreen({
   onOrder,
   onBoard,
   onCompleted,
+  embedded = false,
 }: {
   selling: SellingWorkspace;
+  // Shown inside the selling frame (a dialog or in place of the order)
+  // rather than over the whole screen: the bill stacks over the payment.
+  embedded?: boolean;
   // The method shown first: VietQR shows its QR at once, cash its keypad.
   tender?: 'vietqr' | 'cash';
   // Where the screen goes once the order is done; the table board by default.
@@ -84,6 +88,7 @@ export function PaymentScreen({
   const { active, data, command, run, workspaces, kitchenOn, locked, busy } = selling;
   const handOver = useHandOver(selling);
   const backLabel = doneLabel ?? t('boardOpen');
+  const payClass = `draft-workspace table-service table-service-pay${embedded ? ' pay-embedded' : ''}`;
   const search = useSearch({ from: '/authed/' });
   const [done, setDone] = useState<Done | null>(null);
   const [sending, setSending] = useState(false);
@@ -117,10 +122,7 @@ export function PaymentScreen({
 
   if (!active)
     return (
-      <section
-        className="draft-workspace table-service table-service-pay"
-        aria-label={t('payTitle')}
-      >
+      <section className={payClass} aria-label={t('payTitle')}>
         <SellingNotices selling={selling} />
         <div className="pay-empty">
           <button type="button" className="ticket-back" onClick={onBoard}>
@@ -134,7 +136,7 @@ export function PaymentScreen({
     );
 
   return (
-    <section className="draft-workspace table-service table-service-pay" aria-label={t('payTitle')}>
+    <section className={payClass} aria-label={t('payTitle')}>
       <SellingNotices selling={selling} />
       {done?.workspaceId === active.id ? (
         <div className="attention-box pay-change-due" role="alert">

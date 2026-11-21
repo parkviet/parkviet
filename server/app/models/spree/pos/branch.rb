@@ -11,6 +11,9 @@ module Spree
       LOT_SELECTIONS = %w[fefo cashier_pick].freeze
       RETURN_WINDOW_DAYS = (0..3650)
       PROFILE_KEY_FORMAT = /\A[a-z_]{2,40}\z/
+      # The sample selling screens of the POS; nil derives one from the modules.
+      SELLING_PRESETS = %w[tables_first quick one_step big_menu].freeze
+      TABLES_MODULE = 'fnb.tables'
 
       belongs_to :store, class_name: 'Spree::Store'
       belongs_to :stock_location, class_name: 'Spree::StockLocation'
@@ -41,6 +44,7 @@ module Spree
                                                      less_than_or_equal_to: RETURN_WINDOW_DAYS.max },
                                      allow_nil: true
       validates :lot_selection, inclusion: { in: LOT_SELECTIONS }
+      validates :selling_preset, inclusion: { in: SELLING_PRESETS }, allow_nil: true
       validates :adjustment_approval_threshold, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
       # The industry profile the branch was set up with. Code never checks
       # it (modules decide behaviour), and a key the catalog no longer lists
@@ -79,6 +83,7 @@ module Spree
       validate :table_settings_of_store
       validate :stock_location_fixed_for_open_drafts, on: :update
       validate :default_is_active
+      validate :tables_preset_needs_tables, if: :will_save_change_to_selling_preset?
 
       scope :for_store, ->(store) { where(store_id: store.id) }
 
@@ -132,6 +137,7 @@ module Spree
           business_day_cutoff: cutoff_clock, business_day_cutoff_inherited: business_day_cutoff.nil?,
           staff_session_idle_minutes: staff_session_idle_minutes,
           kitchen_send_trigger: kitchen_send_trigger,
+          selling_preset: selling_preset,
           sales_settings: SalesSettings.for(self),
           seated_alert_minutes: seated_alert_minutes,
           void_reasons: void_reasons
@@ -139,6 +145,16 @@ module Spree
       end
 
       private
+
+      # Tables first is a screen of the table module: it cannot be chosen
+      # while the branch has the module off (a later switch-off leaves a stored
+      # choice alone; the POS falls back to the modules).
+      def tables_preset_needs_tables
+        return unless selling_preset == 'tables_first'
+        return if persisted? && ModulePolicy.enabled?(self, TABLES_MODULE)
+
+        errors.add(:selling_preset, :invalid)
+      end
 
       def default_is_active
         errors.add(:is_default, :invalid) if is_default && disabled?

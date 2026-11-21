@@ -39,6 +39,8 @@ export type PosBranch = {
   receiving_note: string | null;
   // The branch a page opens when the URL names none; one per store.
   is_default?: boolean;
+  // The sample selling screen the branch opens with; null derives it from the modules.
+  selling_preset?: 'tables_first' | 'quick' | 'one_step' | 'big_menu' | null;
   return_window_days?: number | null;
   // How lot-tracked lines pick their lot; FEFO unless the cashier may choose.
   lot_selection?: LotSelection;

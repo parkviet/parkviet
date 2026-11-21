@@ -4,6 +4,7 @@ import { groupTicketLines } from '@parkviet/pos-shared/ticket-groups';
 import { useSearch } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { SellingLayoutControl } from '../../hooks/use-selling-layout';
 import { useSellingWorkspace } from '../../hooks/use-selling-workspace';
 import { commandQueue } from '../../lib/command-queue';
 import { describeMenuFailure } from '../../lib/menu-selection';
@@ -18,6 +19,8 @@ import { autoPrintEnabled } from '../../lib/receipt-preferences';
 import { workspaceIsSettled } from '../../lib/workspace-content';
 import { MealBanner } from '../meal-banner';
 import { ReceiptPrintDialog } from '../receipt-print-dialog';
+import { EmbeddedPayment, focusPayment } from '../selling-layout/embedded-payment';
+import { SellingFrame } from '../selling-layout/selling-frame';
 import { PaymentScreen, useHandOver } from '../table-service/payment-screen';
 import { OrderMenu } from '../table-service/table-service-screen';
 import { TicketLines } from '../table-service/ticket-lines';
@@ -57,10 +60,16 @@ type Fresh =
 // meal codes at the head of the ticket, its eater shown under it with the
 // one-touch payment from the wallet; a rest stop puts orders on the coaches
 // in the strip above the menu.
-export function QuickCounterScreen() {
+export function QuickCounterScreen({ control }: { control: SellingLayoutControl }) {
   const { t, i18n } = useTranslation();
   const search = useSearch({ from: '/authed/' });
-  const [view, setView] = useState<QuickView>(() => (search.view === 'pay' ? 'pay' : 'order'));
+  // Payment that stays open (under the ticket or in a column) has no frame of
+  // its own to switch to: the ticket is the only frame then.
+  const alwaysOpenPay = control.layout.pay === 'below' || control.layout.pay === 'column';
+  const [chosenView, setView] = useState<QuickView>(() =>
+    search.view === 'pay' ? 'pay' : 'order',
+  );
+  const view: QuickView = alwaysOpenPay ? 'order' : chosenView;
   const [tender, setTender] = useState<'vietqr' | 'cash'>('vietqr');
   // A frame the URL changes to by itself (history) is followed.
   const lastSearchView = useRef(search.view);
@@ -239,28 +248,6 @@ export function QuickCounterScreen() {
     <ReceiptPrintDialog sourceId={printing} autoPrint onClose={() => setPrinting(null)} />
   ) : null;
 
-  if (view === 'pay')
-    return (
-      <>
-        {printDialog}
-        <PaymentScreen
-          selling={selling}
-          tender={tender}
-          doneLabel={t('quickNextOrder')}
-          onOrder={() => setView('order')}
-          onBoard={() => setView('order')}
-          onCompleted={(workspaceId, { print, failure }) => {
-            // The change was shown on the payment screen already.
-            const paid = active?.id === workspaceId ? active : null;
-            if (paid) finished(paid, '0');
-            if (print && !autoPrintEnabled()) setPrinting(workspaceId);
-            if (failure) notify(failure);
-            setView('order');
-          }}
-        />
-      </>
-    );
-
   // The quick counter sells from the menu only; until it is here the cashier
   // is told so (no product search with keys of its own in its place).
   const catalog =
@@ -292,6 +279,36 @@ export function QuickCounterScreen() {
         </button>
       </p>
     ) : null;
+  // The payment of the order on the ticket, shown over it or in its place:
+  // VietQR and the rarer methods take the full payment screen.
+  const paySheet = (
+    <PaymentScreen
+      selling={selling}
+      tender={tender}
+      doneLabel={t('quickNextOrder')}
+      embedded={control.layout.pay === 'slide'}
+      onOrder={() => setView('order')}
+      onBoard={() => setView('order')}
+      onCompleted={(workspaceId, { print, failure }) => {
+        // The change was shown on the payment screen already.
+        const paid = active?.id === workspaceId ? active : null;
+        if (paid) finished(paid, '0');
+        if (print && !autoPrintEnabled()) setPrinting(workspaceId);
+        if (failure) notify(failure);
+        setView('order');
+      }}
+    />
+  );
+  // Opens the payment the way this layout pays; one that stays open is
+  // brought into view instead.
+  function openPayment(next: 'vietqr' | 'cash') {
+    if (alwaysOpenPay) {
+      focusPayment();
+      return;
+    }
+    setTender(next);
+    setView('pay');
+  }
   const now = Date.now();
   const timeZone = active ? orderTimeZone(selling, active) : undefined;
   const { data, meal, staffId, storeId, locked, busy, isEditor, command } = selling;
@@ -303,141 +320,160 @@ export function QuickCounterScreen() {
     >
       {toast}
       {printDialog}
-      <SellingNotices selling={selling} />
-      <div className="order-frame">
-        <section className="order-frame-menu" aria-label={t('catalogTitle')}>
-          {selling.vehicleCommission ? (
-            <VehicleVisitStrip
-              key={`vehicle-strip:${selling.storeId}:${selling.selection.branchId}`}
+      {/* The payment sheet carries the notices itself. */}
+      {view === 'pay' ? null : <SellingNotices selling={selling} />}
+      <SellingFrame
+        control={control}
+        payLabel={t('payTitle')}
+        paying={view === 'pay'}
+        onPayClose={() => setView('order')}
+        onPayKey={() => {
+          if (active && (active.line_items?.length ?? 0) > 0) openPayment('cash');
+        }}
+        paySheet={paySheet}
+        payment={
+          alwaysOpenPay ? (
+            <EmbeddedPayment
               selling={selling}
+              onSettled={(workspace) => void paidHere(workspace)}
             />
-          ) : null}
-          <HeldOrdersStrip
-            selling={selling}
-            ownDrafts={ownDrafts}
-            enterPlatform={platform}
-            onPlatformClosed={() => setPlatform(null)}
-          />
-          {catalog}
-        </section>
-        <aside className="ticket quick-ticket" aria-label={t('quickTicketTitle')}>
-          <QuickTicketHeader
-            selling={selling}
-            active={active}
-            done={done}
-            // Back to the meal code field once an order is paid and no
-            // receipt is in front of it.
-            refocus={printing ? null : paidCount}
-            onMealPending={setMealPending}
-            onPrint={setPrinting}
-            onPlatform={setPlatform}
-            onMore={() => setMore('menu')}
-          />
-          {active && meal ? (
-            <MealBanner
-              key={`meal:${active.id}`}
-              workspace={active}
-              meal={meal}
-              staffId={staffId}
-              storeId={storeId}
-              canCollect={Boolean(data?.capabilities.includes('pos.payment.collect'))}
-              drawerOpen={Boolean(
-                data?.shift &&
-                  data.shift.id === active.shift_id &&
-                  data.shift.owner_id === data.staff.id,
-              )}
-              disabled={locked || busy || !isEditor}
-              command={async (action) => {
-                const latest = await command(active, action);
-                // Paid in one touch: handed over like a cash payment here.
-                if (latest.operational_status === 'completed') void paidHere(latest);
-                return latest;
-              }}
+          ) : undefined
+        }
+        catalog={
+          <section className="order-frame-menu" aria-label={t('catalogTitle')}>
+            {selling.vehicleCommission ? (
+              <VehicleVisitStrip
+                key={`vehicle-strip:${selling.storeId}:${selling.selection.branchId}`}
+                selling={selling}
+              />
+            ) : null}
+            <HeldOrdersStrip
+              selling={selling}
+              ownDrafts={ownDrafts}
+              enterPlatform={platform}
+              onPlatformClosed={() => setPlatform(null)}
             />
-          ) : null}
-          {active ? (
-            <TicketLines
-              key={`lines:${active.id}`}
+            {catalog}
+          </section>
+        }
+        order={
+          <aside className="ticket quick-ticket" aria-label={t('quickTicketTitle')}>
+            <QuickTicketHeader
               selling={selling}
               active={active}
-              groups={groupTicketLines(active, 'round')}
-              mode="round"
-              plain
-              cupTools
-              clock={{
-                now,
-                time: (value) =>
-                  new Date(value).toLocaleTimeString(i18n.language, {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone,
-                  }),
-              }}
+              done={done}
+              // Back to the meal code field once an order is paid and no
+              // receipt is in front of it.
+              refocus={printing ? null : paidCount}
+              onMealPending={setMealPending}
+              onPrint={setPrinting}
+              onPlatform={setPlatform}
+              onMore={() => setMore('menu')}
             />
-          ) : (
-            <div className="ticket-lines">
-              <p className="ticket-empty" role="status">
-                {activeLoading || fresh.state === 'starting'
-                  ? t('contextWaiting')
-                  : t('quickNoOrder')}
-              </p>
-              {!activeLoading && fresh.state === 'idle' && canCreate ? (
-                <p className="ticket-empty">
-                  <button type="button" onClick={() => void startFresh(null)}>
-                    {t('quickNextOrder')}
-                  </button>
+            {active && meal ? (
+              <MealBanner
+                key={`meal:${active.id}`}
+                workspace={active}
+                meal={meal}
+                staffId={staffId}
+                storeId={storeId}
+                canCollect={Boolean(data?.capabilities.includes('pos.payment.collect'))}
+                drawerOpen={Boolean(
+                  data?.shift &&
+                    data.shift.id === active.shift_id &&
+                    data.shift.owner_id === data.staff.id,
+                )}
+                disabled={locked || busy || !isEditor}
+                command={async (action) => {
+                  const latest = await command(active, action);
+                  // Paid in one touch: handed over like a cash payment here.
+                  if (latest.operational_status === 'completed') void paidHere(latest);
+                  return latest;
+                }}
+              />
+            ) : null}
+            {active ? (
+              <TicketLines
+                key={`lines:${active.id}`}
+                selling={selling}
+                active={active}
+                groups={groupTicketLines(active, 'round')}
+                mode="round"
+                plain
+                cupTools
+                clock={{
+                  now,
+                  time: (value) =>
+                    new Date(value).toLocaleTimeString(i18n.language, {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZone,
+                    }),
+                }}
+              />
+            ) : (
+              <div className="ticket-lines">
+                <p className="ticket-empty" role="status">
+                  {activeLoading || fresh.state === 'starting'
+                    ? t('contextWaiting')
+                    : t('quickNoOrder')}
                 </p>
-              ) : null}
-            </div>
-          )}
-          {startFailed}
-          {active && selling.lockReason && selling.isEditor ? (
-            <p className="workspace-hint ticket-hint" role="status">
-              {selling.lockReason}
-            </p>
-          ) : null}
-          {active && (selling.busy || commandQueue.hasPending(active.id)) ? (
-            <p className="muted ticket-hint" role="status">
-              {t('waiting')}
-            </p>
-          ) : null}
-          {active ? (
-            <QuickPayBar
-              key={`pay:${active.id}`}
-              selling={selling}
-              active={active}
-              mealPending={mealPending}
-              onOpen={(next) => {
-                setTender(next);
-                setView('pay');
-              }}
-              onPaid={(workspace) => void paidHere(workspace)}
-              onHold={() => void startFresh(active.id)}
-            />
-          ) : null}
-          {active && more ? (
-            <TicketMoreMenu
-              selling={selling}
-              active={active}
-              panel={more}
-              onPanel={setMore}
-              onClose={() => setMore(null)}
-              onCanceled={() => setMore(null)}
-            />
-          ) : null}
-          {active && selling.prebillOpen && active.operational_status === 'editing' ? (
-            <ActivePrebillDialog selling={selling} active={active} />
-          ) : null}
-          {active && selling.voiding?.sale_line_id ? (
-            <ActiveVoidDialog
-              key={selling.voiding.id}
-              selling={selling}
-              active={active}
-              line={selling.voiding}
-            />
-          ) : null}
-        </aside>
-      </div>
+                {!activeLoading && fresh.state === 'idle' && canCreate ? (
+                  <p className="ticket-empty">
+                    <button type="button" onClick={() => void startFresh(null)}>
+                      {t('quickNextOrder')}
+                    </button>
+                  </p>
+                ) : null}
+              </div>
+            )}
+            {startFailed}
+            {active && selling.lockReason && selling.isEditor ? (
+              <p className="workspace-hint ticket-hint" role="status">
+                {selling.lockReason}
+              </p>
+            ) : null}
+            {active && (selling.busy || commandQueue.hasPending(active.id)) ? (
+              <p className="muted ticket-hint" role="status">
+                {t('waiting')}
+              </p>
+            ) : null}
+            {active ? (
+              <QuickPayBar
+                key={`pay:${active.id}`}
+                selling={selling}
+                active={active}
+                mealPending={mealPending}
+                compact={alwaysOpenPay}
+                onOpen={openPayment}
+                onPaid={(workspace) => void paidHere(workspace)}
+                onHold={() => void startFresh(active.id)}
+              />
+            ) : null}
+            {active && more ? (
+              <TicketMoreMenu
+                selling={selling}
+                active={active}
+                panel={more}
+                onPanel={setMore}
+                onClose={() => setMore(null)}
+                onCanceled={() => setMore(null)}
+              />
+            ) : null}
+            {active && selling.prebillOpen && active.operational_status === 'editing' ? (
+              <ActivePrebillDialog selling={selling} active={active} />
+            ) : null}
+            {active && selling.voiding?.sale_line_id ? (
+              <ActiveVoidDialog
+                key={selling.voiding.id}
+                selling={selling}
+                active={active}
+                line={selling.voiding}
+              />
+            ) : null}
+          </aside>
+        }
+      />
     </section>
   );
 }

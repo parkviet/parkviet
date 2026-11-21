@@ -118,11 +118,19 @@ test('cashier layout keeps the basket reachable, formats VND and safely edits qu
     const catalogBox = (await page.locator('.catalog-panel').boundingBox())!;
     const basketBox = (await page.locator('.basket-panel').boundingBox())!;
     const checkoutBox = (await page.locator('.checkout-panel').boundingBox())!;
-    expect(basketBox.x).toBe(catalogBox.x);
-    expect(basketBox.y).toBeGreaterThanOrEqual(catalogBox.y + catalogBox.height);
-    expect(checkoutBox.x).toBeGreaterThanOrEqual(catalogBox.x + catalogBox.width);
-    expect(checkoutBox.y).toBe(catalogBox.y);
-    expect(checkoutBox.y + checkoutBox.height).toBeCloseTo(basketBox.y + basketBox.height, 0);
+    // A counter opens with the one-step sample: the catalogue, the basket and
+    // the payment side by side, as tall as one another. A tablet is too narrow
+    // for three, so the basket and the payment stack beside the catalogue.
+    expect(basketBox.x).toBeGreaterThanOrEqual(catalogBox.x + catalogBox.width);
+    expect(basketBox.y).toBeCloseTo(catalogBox.y, 0);
+    if (testInfo.project.name === 'desktop') {
+      expect(checkoutBox.x).toBeGreaterThanOrEqual(basketBox.x + basketBox.width);
+      expect(checkoutBox.y).toBeCloseTo(catalogBox.y, 0);
+      expect(checkoutBox.height).toBeCloseTo(basketBox.height, 0);
+    } else {
+      expect(checkoutBox.x).toBeCloseTo(basketBox.x, 0);
+      expect(checkoutBox.y).toBeGreaterThanOrEqual(basketBox.y + basketBox.height);
+    }
   }
   await expect(page.locator('.selling-search > .search-title')).toHaveCount(0);
   await expect(page.locator('#pos-product-search')).toHaveAttribute('placeholder', 'Tìm hàng hoặc quét mã (F2)');
@@ -323,11 +331,11 @@ test('cashier layout keeps the basket reachable, formats VND and safely edits qu
     await page.locator(selector).evaluate((el) => el.scrollIntoView({ block: 'nearest', inline: 'start' }));
     const positions = await page.evaluate((selector) => {
       const pane = document.querySelector(selector)!;
-      document.querySelectorAll('.sale-layout > *').forEach((el) => { el.scrollTop = 0; });
+      document.querySelectorAll('.selling-region > *').forEach((el) => { el.scrollTop = 0; });
       const header = pane.querySelector('.catalog-heading, .basket-heading');
       const headerTop = header?.getBoundingClientRect().top;
       pane.scrollTop = 100;
-      return { headerTop, scrolledHeaderTop: header?.getBoundingClientRect().top, top: pane.scrollTop, other: Array.from(document.querySelectorAll('.sale-layout > *')).filter((el) => el !== pane).map((el) => el.scrollTop), doc: document.documentElement.scrollHeight, height: innerHeight, boxes: Array.from(document.querySelectorAll('body, #root, main, .shell, .draft-workspace, .sale-layout, .sale-layout > *')).map(el => ({tag: el.tagName, cls: el.className, height: el.getBoundingClientRect().height, scroll: el.scrollHeight, overflow: getComputedStyle(el).overflow, min: getComputedStyle(el).minHeight})) };
+      return { headerTop, scrolledHeaderTop: header?.getBoundingClientRect().top, top: pane.scrollTop, other: Array.from(document.querySelectorAll('.selling-region > *')).filter((el) => el !== pane).map((el) => el.scrollTop), doc: document.documentElement.scrollHeight, height: innerHeight, boxes: Array.from(document.querySelectorAll('body, #root, main, .shell, .draft-workspace, .sale-layout, .selling-region > *')).map(el => ({tag: el.tagName, cls: el.className, height: el.getBoundingClientRect().height, scroll: el.scrollHeight, overflow: getComputedStyle(el).overflow, min: getComputedStyle(el).minHeight})) };
     }, selector);
     expect(positions.top).toBeGreaterThan(0);
     expect(positions.other).toEqual([0, 0]);
@@ -341,16 +349,24 @@ test('cashier layout keeps the basket reachable, formats VND and safely edits qu
   if (testInfo.project.name === 'desktop') {
     // No width cap even on an ultra-wide cashier screen.
     await page.setViewportSize({ width: 2560, height: 1080 });
-    const bounds = await page.locator('.sale-layout').boundingBox();
+    const bounds = await page.locator('.selling-frame').boundingBox();
     expect(bounds!.width).toBeGreaterThan(2500);
     const catalogBox = (await page.locator('.catalog-panel').boundingBox())!;
     const basketBox = (await page.locator('.basket-panel').boundingBox())!;
     const checkoutBox = (await page.locator('.checkout-panel').boundingBox())!;
-    expect(basketBox.x).toBe(catalogBox.x);
-    expect(basketBox.y).toBeGreaterThanOrEqual(catalogBox.y + catalogBox.height);
-    expect(checkoutBox.x).toBeGreaterThanOrEqual(catalogBox.x + catalogBox.width);
-    expect(checkoutBox.y).toBe(catalogBox.y);
-    expect(checkoutBox.y + checkoutBox.height).toBeCloseTo(basketBox.y + basketBox.height, 0);
+    // A counter opens with the one-step sample: the catalogue, the basket and
+    // the payment side by side, as tall as one another. A tablet is too narrow
+    // for three, so the basket and the payment stack beside the catalogue.
+    expect(basketBox.x).toBeGreaterThanOrEqual(catalogBox.x + catalogBox.width);
+    expect(basketBox.y).toBeCloseTo(catalogBox.y, 0);
+    if (testInfo.project.name === 'desktop') {
+      expect(checkoutBox.x).toBeGreaterThanOrEqual(basketBox.x + basketBox.width);
+      expect(checkoutBox.y).toBeCloseTo(catalogBox.y, 0);
+      expect(checkoutBox.height).toBeCloseTo(basketBox.height, 0);
+    } else {
+      expect(checkoutBox.x).toBeCloseTo(basketBox.x, 0);
+      expect(checkoutBox.y).toBeGreaterThanOrEqual(basketBox.y + basketBox.height);
+    }
     await page.screenshot({ path: testInfo.outputPath('full-width-stacked-selling.png') });
   }
   expect(errors).toEqual([]);

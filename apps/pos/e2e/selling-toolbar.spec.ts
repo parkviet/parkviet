@@ -19,14 +19,14 @@ async function openCounter(page: Page) {
 
 const toolbar = (page: Page) => page.getByRole('region', { name: 'Công cụ bán hàng' });
 
-test('the toolbar lists the tools that exist and no layout chooser yet', async ({ page }) => {
+test('the toolbar lists the tools that exist, with the selling screen chooser', async ({ page }) => {
   await openCounter(page);
   const bar = toolbar(page);
   await expect(bar.getByRole('button', { name: 'Trợ giúp' })).toBeVisible();
   await expect(bar.getByRole('link', { name: 'Màn hình khách' })).toHaveAttribute('target', '_blank');
   await expect(bar.getByRole('button', { name: 'Máy in' })).toBeVisible();
   await expect(bar.getByRole('button', { name: 'Cài đặt nhanh' })).toBeVisible();
-  await expect(bar.getByRole('button', { name: /Chọn màn bán hàng/ })).toHaveCount(0);
+  await expect(bar.getByRole('button', { name: 'Chọn màn bán hàng' })).toBeVisible();
 });
 
 test('a popover closes on Esc and gives the focus back to its button', async ({ page }) => {

@@ -59,6 +59,13 @@ module Spree
 
             attrs[:adjustment_approval_threshold] = value.empty? ? nil : Integer(value, 10)
           end
+          # Blank turns the choice off: the POS derives the screen from the modules.
+          if params.key?(:selling_preset)
+            value = params[:selling_preset].to_s.strip
+            raise Conflict, 'Selling preset is invalid.' unless value.empty? || Branch::SELLING_PRESETS.include?(value)
+
+            attrs[:selling_preset] = value.presence
+          end
           attrs[:is_default] = default_flag!(params[:is_default], record) if params.key?(:is_default)
           attrs
         end

@@ -7,6 +7,7 @@ import { savedToolbarCollapsed, saveToolbarCollapsed } from '../../lib/selling-t
 import { PosIcon } from '../pos-icon';
 import { PrinterPopover } from './printer-popover';
 import { QuickSettingsPopover } from './quick-settings-popover';
+import { SellingLayoutDialog } from './selling-layout-dialog';
 import { ToolbarPopover } from './toolbar-popover';
 
 type PopoverId = 'help' | 'printer' | 'quick';
@@ -18,6 +19,7 @@ const SHORTCUTS: readonly { keys: string; label: string }[] = [
   { keys: 'F1', label: 'toolbarHelpPayCash' },
   { keys: 'F2', label: 'toolbarHelpPayQr' },
   { keys: 'F3', label: 'toolbarHelpPayOther' },
+  { keys: 'F9', label: 'toolbarHelpPayOpen' },
   { keys: 'Esc', label: 'toolbarHelpClose' },
 ];
 
@@ -38,6 +40,7 @@ export function SellingToolbar({
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(savedToolbarCollapsed);
   const [openId, setOpenId] = useState<PopoverId | null>(null);
+  const [layoutOpen, setLayoutOpen] = useState(false);
   const toggle = (id: PopoverId) => (open: boolean) => setOpenId(open ? id : null);
 
   // The branch settings open in a new tab, listed only for staff who may open them.
@@ -93,6 +96,18 @@ export function SellingToolbar({
             <PosIcon name="monitor" />
             <span className="toolbar-button-label">{t('toolbarCustomerDisplay')}</span>
           </a>
+          <button
+            type="button"
+            className="toolbar-button"
+            aria-haspopup="dialog"
+            onClick={() => {
+              setOpenId(null);
+              setLayoutOpen(true);
+            }}
+          >
+            <PosIcon name="grid" />
+            <span className="toolbar-button-label">{t('toolbarSellingLayout')}</span>
+          </button>
           <PrinterPopover
             data={data}
             branchId={branchId}
@@ -110,6 +125,7 @@ export function SellingToolbar({
           />
         </>
       )}
+      {layoutOpen ? <SellingLayoutDialog onClose={() => setLayoutOpen(false)} /> : null}
     </section>
   );
 }

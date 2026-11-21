@@ -1,7 +1,9 @@
+import { formatMoney, parseVndAmount } from '@parkviet/pos-shared/money';
 import { useSearch } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSoldOutToggle } from '../../hooks/use-menu';
+import type { SellingLayoutControl } from '../../hooks/use-selling-layout';
 import { type SellingView, useSellingWorkspace } from '../../hooks/use-selling-workspace';
 import { addsInOneTap, describeMenuFailure } from '../../lib/menu-selection';
 import type { PosMenu, PosMenuProduct, PosWorkspace } from '../../lib/pos-context';
@@ -10,10 +12,12 @@ import { CourseSeatPicker } from '../course-seat-picker';
 import type { MenuAdd } from '../menu-grid';
 import { usePosSelection } from '../pos-selection';
 import { ReceiptPrintDialog } from '../receipt-print-dialog';
+import { EmbeddedPayment, focusPayment } from '../selling-layout/embedded-payment';
+import { SellingFrame } from '../selling-layout/selling-frame';
 import { SellingCatalog, SellingNotices, type SellingWorkspace } from '../workspace-tabs';
 import { CategoryRail } from './category-rail';
 import { ModifierPanel } from './modifier-panel';
-import { PaymentScreen } from './payment-screen';
+import { PaymentScreen, useHandOver } from './payment-screen';
 import { ProductGrid } from './product-grid';
 import { runningClockOf, type StopAndPay, StopAndPayDialog } from './stop-and-pay-dialog';
 import { TabColumn } from './tab-column';
@@ -34,7 +38,7 @@ const NOTICE_MS = 4_000;
 // beside the menu instead: the order frame is its home, a send stays on the
 // tab, a closed tab comes back to the tabs and the board of its tables is
 // one tap away.
-export function TableServiceScreen() {
+export function TableServiceScreen({ control }: { control: SellingLayoutControl }) {
   const { t } = useTranslation();
   const search = useSearch({ from: '/authed/' });
   // Known once the branch's own context is; a reload of the context (another
@@ -64,7 +68,12 @@ export function TableServiceScreen() {
     setFrameBranch(branchId);
     setView(null);
   }
-  const view: SellingView = chosen ?? (tabMode ? 'order' : 'board');
+  // A payment that stays open (under the ticket or in a column) is part of
+  // the order frame; a bar's tabs keep the frames they have.
+  const alwaysOpenPay =
+    !tabMode && (control.layout.pay === 'below' || control.layout.pay === 'column');
+  const rawView: SellingView = chosen ?? (tabMode ? 'order' : 'board');
+  const view: SellingView = rawView === 'pay' && alwaysOpenPay ? 'order' : rawView;
   // A frame the URL changes to by itself (a link, history) is followed. The
   // screen writes every frame it shows into the URL, and a write can land
   // after the home frame changed (the profile came in), so a frame shown
@@ -83,6 +92,7 @@ export function TableServiceScreen() {
   }, [search.view]);
   const selling = useSellingWorkspace({ view });
   const { menuSurface, menu, selectOrder, active, activeLoading, leaveOrder } = selling;
+  const handOver = useHandOver(selling);
   // An order or payment frame without its order (closed, gone, not found)
   // goes back to the board; it never shows another order instead. A bar's
   // order frame stays, its ticket waiting for a tab to be picked.
@@ -143,10 +153,25 @@ export function TableServiceScreen() {
     setView('pay');
   }
 
-  // The ticket's "Thanh toán".
+  // The ticket's "Thanh toán" (and F9): the clock is stopped first; then the
+  // payment opens the way this layout pays, or is brought into view when it
+  // stays open.
   function payActive() {
     if (activeClock) setStopping(activeClock);
+    else if (alwaysOpenPay) focusPayment();
     else setView('pay');
+  }
+
+  // The order was completed on the payment that stays open: handed over like
+  // the payment screen does, then back to the board (or the bar's tabs).
+  async function settledHere(workspace: PosWorkspace) {
+    const { latest, failure } = await handOver(workspace);
+    const change = parseVndAmount(latest.financial?.change_due ?? '') ?? '0';
+    if (autoPrintEnabled()) setPrinting(workspace.id);
+    if (failure) notify(failure);
+    else if (change !== '0')
+      notify(`${t('payChange')}: ${formatMoney(change, latest.totals?.currency ?? 'VND')}`);
+    goHome();
   }
 
   const toast = notice ? (
@@ -193,20 +218,43 @@ export function TableServiceScreen() {
         />
       </section>
     );
-  if (view === 'pay' && !activeClock)
-    return (
-      <PaymentScreen
-        selling={selling}
-        doneLabel={tabMode ? t('tabListTitle') : undefined}
-        onOrder={() => setView('order')}
-        onBoard={goHome}
-        onCompleted={(workspaceId, { print, failure }) => {
-          if (print || autoPrintEnabled()) setPrinting(workspaceId);
-          if (failure) notify(failure);
-          goHome();
-        }}
-      />
-    );
+  const paySheet = (
+    <PaymentScreen
+      selling={selling}
+      doneLabel={tabMode ? t('tabListTitle') : undefined}
+      embedded={control.layout.pay === 'slide'}
+      onOrder={() => setView('order')}
+      onBoard={goHome}
+      onCompleted={(workspaceId, { print, failure }) => {
+        if (print || autoPrintEnabled()) setPrinting(workspaceId);
+        if (failure) notify(failure);
+        goHome();
+      }}
+    />
+  );
+  // A bar pays over the whole screen as it always did.
+  if (view === 'pay' && !activeClock && tabMode) return paySheet;
+  const catalogPanel = (
+    <section className="order-frame-menu" aria-label={t('catalogTitle')}>
+      {catalog ?? (
+        <SellingCatalog
+          key={`${selling.storeId}:${selling.selection.branchId}`}
+          selling={selling}
+        />
+      )}
+    </section>
+  );
+  const ticket = (
+    <Ticket
+      selling={selling}
+      onBoard={() => setView('board')}
+      onClosed={goHome}
+      tabMode={tabMode}
+      room={room}
+      onPay={payActive}
+      onNotice={notify}
+    />
+  );
   return (
     <section
       className="draft-workspace table-service table-service-order"
@@ -216,34 +264,52 @@ export function TableServiceScreen() {
       {/* A closed tab prints over the open tabs. */}
       {tabMode ? printDialog : null}
       {stopDialog}
-      <SellingNotices selling={selling} />
-      <div className={tabMode ? 'order-frame order-frame-tabs' : 'order-frame'}>
-        {tabMode ? (
+      {/* The payment sheet carries the notices itself. */}
+      {view === 'pay' && !activeClock && !tabMode ? null : <SellingNotices selling={selling} />}
+      {tabMode ? (
+        <div className="order-frame order-frame-tabs">
           <TabColumn
             key={`${selling.storeId}:${selling.selection.branchId}`}
             selling={selling}
             onSelect={openOrder}
             onBoard={() => setView('board')}
           />
-        ) : null}
-        <section className="order-frame-menu" aria-label={t('catalogTitle')}>
-          {catalog ?? (
-            <SellingCatalog
-              key={`${selling.storeId}:${selling.selection.branchId}`}
-              selling={selling}
-            />
-          )}
-        </section>
-        <Ticket
-          selling={selling}
-          onBoard={() => setView('board')}
-          onClosed={goHome}
-          tabMode={tabMode}
-          room={room}
-          onPay={payActive}
-          onNotice={notify}
+          {catalogPanel}
+          {ticket}
+        </div>
+      ) : (
+        <SellingFrame
+          control={control}
+          payLabel={t('payTitle')}
+          paying={view === 'pay' && !activeClock}
+          onPayClose={() => setView('order')}
+          onPayKey={() => {
+            if (active && (active.line_items?.length ?? 0) > 0) payActive();
+          }}
+          paySheet={paySheet}
+          payment={
+            alwaysOpenPay ? (
+              activeClock ? (
+                <div className="selling-pay-panel">
+                  <p className="attention-box" role="status">
+                    {t('sellingLayoutStopFirst')}
+                  </p>
+                  <button type="button" onClick={() => setStopping(activeClock)}>
+                    {t('sellingLayoutStopAndPay')}
+                  </button>
+                </div>
+              ) : (
+                <EmbeddedPayment
+                  selling={selling}
+                  onSettled={(workspace) => void settledHere(workspace)}
+                />
+              )
+            ) : undefined
+          }
+          catalog={catalogPanel}
+          order={ticket}
         />
-      </div>
+      )}
     </section>
   );
 }

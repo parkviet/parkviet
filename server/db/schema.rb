@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_20_160100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_21_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -2548,6 +2548,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_160100) do
     t.integer "reservation_min_lead_minutes", default: 0, null: false
     t.jsonb "emenu_settings", default: {}, null: false
     t.boolean "is_default", default: false, null: false
+    t.string "selling_preset", limit: 24
     t.index ["cup_label_printer_id"], name: "index_spree_pos_branches_on_cup_label_printer_id"
     t.index ["service_charge_tax_category_id"], name: "index_spree_pos_branches_on_service_charge_tax_category_id"
     t.index ["stock_location_id"], name: "index_spree_pos_branches_on_stock_location_id"

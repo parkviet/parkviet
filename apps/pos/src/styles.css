@@ -1595,3 +1595,131 @@ kbd { padding: var(--pos-s1); border: 1px solid var(--pos-border); border-radius
 .payment-summary .remaining-row { font-size: var(--pos-heading); font-weight: 700; color: var(--pos-blue); }
 .pos-layout .payment-methods button { border-radius: var(--pos-radius); min-height: 44px; }
 .payment-method-row, .payment-qr-box { border-radius: var(--pos-radius); }
+
+/* Selling layout frame: the catalogue, the order and the payment, placed by
+   the device's layout. Wide screens use grid tracks held in --selling-tracks
+   (set from the shares, and live while a divider is dragged); under 768px the
+   panels stack and the dividers are hidden. */
+.selling-frame { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: var(--pos-s2); overflow-y: auto; }
+.pos-sale .draft-workspace > .selling-frame { flex: 1 1 0; min-height: 0; }
+.selling-region { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.selling-region > * { flex: 1 1 0; min-height: 0; }
+.selling-region > .selling-pay-open { flex: none; }
+.selling-group { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: var(--pos-s2); }
+.selling-frame[data-card] .selling-region { background: var(--pos-surface); border: 1px solid var(--pos-border); border-radius: var(--pos-radius-lg); box-shadow: var(--pos-shadow-card); overflow: hidden; }
+.selling-frame[data-card] .selling-region > .ticket { border-left: 0; border-top: 0; }
+.selling-order { container-type: inline-size; container-name: selling-order; }
+.selling-payment { overflow: auto; }
+.selling-payment > * { flex: 1 1 auto; }
+.selling-pay-panel { min-width: 0; display: flex; flex-direction: column; gap: var(--pos-s3); padding: var(--pos-s3); overflow-y: auto; overscroll-behavior: contain; }
+.selling-pay-panel:focus-visible { outline: 2px solid var(--pos-blue); outline-offset: -2px; }
+.pos-layout .selling-pay-open { margin: var(--pos-s2) 0 0; min-height: 56px; border-radius: var(--pos-radius); font-size: 1.0625rem; font-weight: 800; }
+.selling-pay-open kbd { margin-left: var(--pos-s2); opacity: .8; font-size: var(--pos-small); }
+.selling-pay-head { display: flex; align-items: center; gap: var(--pos-s2); padding: 10px var(--pos-s3); border-bottom: 1px solid var(--pos-border); }
+.selling-pay-head h2 { margin: 0; font-size: 1.125rem; }
+/* An order panel under 340px tightens its head and foot: smaller type and padding, and the grouping switch loses its caption. Nothing is hidden. */
+@container selling-order (max-width: 339px) {
+  .ticket-header { padding: var(--pos-s2); }
+  .pos-layout .ticket .ticket-name { font-size: 1.125rem; }
+  .ticket-chips li { padding: 0 var(--pos-s2); }
+  .ticket-view legend { display: none; }
+  .pos-layout .ticket-view { padding: var(--pos-s1) var(--pos-s2); flex-wrap: wrap; }
+  .pos-layout .ticket-main button { min-height: 52px; font-size: 1rem; }
+  .quick-ticket-header { padding: var(--pos-s2); }
+}
+.split-divider { display: none; }
+.selling-pay-dialog { width: min(1180px, 96vw); max-width: none; height: min(92dvh, 860px); padding: 0; border: 1px solid var(--pos-border); border-radius: var(--pos-radius-lg); background: var(--pos-bg); color: var(--pos-ink); box-shadow: var(--pos-shadow); overflow: hidden; }
+.selling-pay-dialog[open] { display: flex; flex-direction: column; }
+.selling-pay-dialog::backdrop { background: #172d4070; }
+.selling-pay-dialog > * { flex: 1 1 0; min-height: 0; }
+.selling-pay-dialog:has(> .checkout-panel) { width: min(560px, 96vw); height: auto; max-height: 92dvh; }
+.selling-pay-dialog > .checkout-panel { overflow-y: auto; }
+/* The payment screen inside the frame (in place of the order): the bill stacks over the payment. */
+.pay-embedded .pay-screen { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,.8fr) minmax(0,1.2fr); }
+.pay-embedded .pay-bill { border-right: 0; border-bottom: 1px solid var(--pos-border); }
+.pay-embedded :is(.pay-cards, .pay-cash-body) { grid-template-columns: minmax(0,1fr); }
+.pay-embedded .pay-due dd { font-size: 1.25rem; }
+.pay-embedded .pay-foot { flex-wrap: wrap; }
+.pos-layout .pay-embedded .pay-finish { min-width: 0; flex: 1 1 100%; }
+@media (max-width: 767px) {
+  .selling-region { flex: none; min-height: 360px; }
+  .selling-catalog { min-height: 60dvh; }
+  .selling-order { min-height: 420px; }
+  .selling-payment { max-height: none; }
+  .selling-pay-dialog { width: 100vw; height: 100dvh; border-radius: 0; }
+}
+@media (min-width: 768px) {
+  .selling-frame { display: grid; gap: 0; overflow: hidden; }
+  .selling-frame[data-side="left"], .selling-frame[data-side="right"] { grid-template-columns: var(--selling-tracks); grid-template-rows: minmax(0,1fr); }
+  .selling-frame[data-side="top"] { grid-template-columns: minmax(0,1fr); grid-template-rows: var(--selling-tracks); }
+  .selling-group { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr); gap: 0; }
+  .selling-group[data-beside] { grid-template-columns: var(--selling-tracks); }
+  .selling-group[data-stack] { grid-template-rows: minmax(0,1fr) auto; gap: var(--pos-s2); }
+  .selling-group[data-stack] > .selling-payment { max-height: 55dvh; }
+  .split-divider { position: relative; display: block; z-index: 3; touch-action: none; cursor: col-resize; border-radius: 6px; }
+  .split-divider[data-vertical] { cursor: row-resize; }
+  .split-divider::before { content: ""; position: absolute; top: 50%; left: 50%; width: 4px; height: 48px; border-radius: 2px; background: var(--pos-border); transform: translate(-50%, -50%); transition: background-color .12s; }
+  .split-divider[data-vertical]::before { width: 48px; height: 4px; }
+  .split-divider:hover::before, .split-divider:focus-visible::before, .split-divider[data-dragging]::before { background: var(--pos-blue); }
+  .split-divider:focus-visible { outline: 2px solid var(--pos-blue); outline-offset: -2px; }
+  .split-divider[data-limit]::before { background: var(--pos-danger); }
+  .split-divider-label { position: absolute; top: var(--pos-s3); left: 50%; z-index: 5; transform: translateX(-50%); padding: 4px 10px; border-radius: 999px; background: var(--pos-ink); color: var(--pos-surface); font-size: var(--pos-small); font-weight: 700; white-space: nowrap; pointer-events: none; }
+  .split-divider[data-vertical] .split-divider-label { top: 50%; transform: translate(-50%, -50%); }
+  .split-divider[data-limit] .split-divider-label { background: var(--pos-danger); }
+}
+/* A tablet is too narrow for the order and the payment side by side: they stack, and their divider goes. */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .selling-group[data-beside] { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) minmax(0,1fr); gap: var(--pos-s2); }
+  .selling-group[data-beside] > .split-divider { display: none; }
+}
+/* Panels that draw their own box (the counter's catalogue, basket and checkout) keep swiping between them on a phone. */
+@media (max-width: 700px) {
+  .selling-frame:not([data-card]) { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; grid-template-columns: none; grid-template-rows: minmax(0,1fr); gap: var(--pos-s2); overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; }
+  .selling-frame:not([data-card]) .selling-group { display: contents; }
+  .selling-frame:not([data-card]) .selling-region { min-height: 0; scroll-snap-align: start; }
+}
+/* "Chọn màn bán hàng" dialog. */
+.selling-layout-dialog { width: min(1000px, calc(100vw - var(--pos-s6))); display: block; }
+.selling-layout-dialog:not([open]) { display: none; }
+.selling-layout-head { display: flex; align-items: center; justify-content: space-between; gap: var(--pos-s3); }
+.selling-layout-head h2 { margin: 0; }
+.pos-layout .selling-layout-x { width: var(--pos-target); padding: 0; border-radius: 999px; font-size: 1.5rem; line-height: 1; }
+.selling-layout-dialog h3 { margin: var(--pos-s4) 0 var(--pos-s2); font-size: 1rem; }
+.sl-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: var(--pos-s3); margin: var(--pos-s3) 0 0; padding: 0; list-style: none; }
+.pos-layout .sl-card { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: var(--pos-s2); padding: var(--pos-s3); border: 1px solid var(--pos-border); border-radius: var(--pos-radius); background: var(--pos-surface); text-align: left; font-weight: 400; }
+.pos-layout .sl-card[aria-pressed="true"] { border-color: var(--pos-blue); box-shadow: 0 0 0 2px var(--pos-selected); background: var(--pos-tint); }
+.pos-layout .sl-card:disabled { opacity: .6; cursor: not-allowed; }
+.sl-card strong { font-size: 1rem; }
+.sl-card-text { font-size: var(--pos-small); color: var(--pos-muted); }
+.sl-card small { color: var(--pos-muted); }
+.sl-locked { color: var(--pos-warning) !important; font-weight: 700; }
+.sl-tag { align-self: flex-end; padding: 1px 8px; border-radius: 999px; background: var(--pos-bg); color: var(--pos-muted); font-size: .6875rem; font-weight: 700; }
+.sl-tag-on { background: var(--pos-blue); color: var(--pos-surface); }
+.sl-thumb { align-self: stretch; height: 72px; display: grid; gap: 5px; padding: 6px; border-radius: var(--pos-radius-sm); background: var(--pos-bg); }
+.sl-cell { display: block; border-radius: 3px; background: #c5d3df; }
+.sl-accent { background: var(--pos-blue); opacity: .75; }
+.sl-pay { background: var(--pos-success); }
+.sl-thumb-tables { grid-template-columns: repeat(4, 1fr); }
+.sl-thumb-quick { grid-template-columns: 2fr 1fr; }
+.sl-thumb-one { grid-template-columns: 1.2fr 1fr 1fr; }
+.sl-thumb-big { grid-template-columns: 3fr 1fr; }
+.sl-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.sl-cart { display: grid; grid-template-rows: 1fr 14px; gap: 4px; }
+.sl-customize { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(220px, 1fr); gap: var(--pos-s4); align-items: start; }
+.sl-options { display: grid; gap: var(--pos-s3); }
+.sl-row { display: grid; gap: var(--pos-s1); min-width: 0; margin: 0; padding: 0; border: 0; }
+.sl-row-label { font-weight: 700; }
+.sl-row-label small { font-weight: 400; color: var(--pos-muted); }
+.sl-seg { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.pos-layout .sl-seg button { min-height: 36px; padding: 0 var(--pos-s3); border-radius: 999px; font-size: .8125rem; }
+.pos-layout .sl-seg button[aria-pressed="true"] { background: var(--pos-selected); border-color: var(--pos-blue); color: var(--pos-blue); font-weight: 700; }
+.sl-share { display: flex; flex-wrap: wrap; align-items: center; gap: var(--pos-s3); }
+.sl-share input[type="range"] { flex: 1 1 160px; min-width: 120px; accent-color: var(--pos-blue); }
+.sl-preview-box { display: grid; gap: var(--pos-s2); }
+.sl-preview { display: grid; gap: 6px; height: 150px; padding: 8px; border: 1px solid var(--pos-border); border-radius: var(--pos-radius); background: var(--pos-bg); }
+.sl-group { display: grid; gap: 6px; min-width: 0; min-height: 0; }
+.sl-stack { grid-template-rows: 1fr 34%; }
+.sl-box { position: relative; display: grid; place-items: center; min-width: 0; padding: 4px; border-radius: var(--pos-radius-sm); background: var(--pos-surface); border: 1px solid var(--pos-border); font-size: .6875rem; color: var(--pos-muted); text-align: center; }
+.sl-payment { background: var(--pos-selected); color: var(--pos-blue); border-color: var(--pos-blue); }
+.sl-pay-tag { position: absolute; right: 6px; bottom: 6px; width: 28px; height: 10px; border-radius: 3px; background: var(--pos-success); }
+@media (max-width: 767px) { .sl-customize { grid-template-columns: minmax(0, 1fr); } }

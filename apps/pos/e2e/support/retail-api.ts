@@ -234,6 +234,8 @@ export type World = {
   administration?: { read: boolean; write: boolean };
   // The store's e-invoice (`einvoice_type` in the context); absent on older servers.
   einvoiceType?: 'none' | 'cash_register' | 'coded';
+  // The sample selling screen the branch opens with (`selling_preset`); absent: derived from the modules.
+  sellingPreset?: 'tables_first' | 'quick' | 'one_step' | 'big_menu';
   // The branch menu (`GET /pos/menu`) when the branch runs `fnb.menu`.
   menu?: MenuWorld;
   products: Product[];
@@ -986,7 +988,7 @@ async function handle(world: World, route: Route) {
         ...(world.profile ? { profile: branch ? world.profile : null } : {}),
         ...(world.administration ? { administration: world.administration } : {}),
         ...(world.einvoiceType ? { einvoice_type: world.einvoiceType } : {}),
-        branches: [{ id: 'br_1', name: 'Chi nhánh 1', status: 'active', timezone: 'Asia/Ho_Chi_Minh' }],
+        branches: [{ id: 'br_1', name: 'Chi nhánh 1', status: 'active', timezone: 'Asia/Ho_Chi_Minh', selling_preset: world.sellingPreset ?? null }],
         registers: branch ? [{ id: 'reg_1', branch_id: 'br_1', name: 'Quầy 1', status: 'active' }] : [],
         shift:
           register && world.shift.open

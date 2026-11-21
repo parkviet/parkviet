@@ -62,6 +62,7 @@ export function QuickPayBar({
   onPaid,
   onHold,
   mealPending = false,
+  compact = false,
 }: {
   selling: SellingWorkspace;
   active: PosWorkspace;
@@ -72,6 +73,9 @@ export function QuickPayBar({
   // The order was paid in cash here and completed.
   onPaid: (workspace: PosWorkspace) => void;
   onHold: () => void;
+  // The payment panel stays open beside the ticket: the foot keeps only what
+  // that panel does not have (hold, send, the display) and the keys.
+  compact?: boolean;
 }) {
   const { t } = useTranslation();
   const {
@@ -237,21 +241,23 @@ export function QuickPayBar({
 
   return (
     <footer className="ticket-footer quick-pay">
-      <p className="quick-pay-total">
-        <span>
-          {t('payTotal')} · {t('ticketSummary', { count })}
-        </span>
-        <strong data-testid="quick-total">
-          {formatMoney(active.payments ? String(due) : (active.totals?.total ?? '0'), currency)}
-        </strong>
-      </p>
-      {sponsorDue > 0n ? (
+      {compact ? null : (
+        <p className="quick-pay-total">
+          <span>
+            {t('payTotal')} · {t('ticketSummary', { count })}
+          </span>
+          <strong data-testid="quick-total">
+            {formatMoney(active.payments ? String(due) : (active.totals?.total ?? '0'), currency)}
+          </strong>
+        </p>
+      )}
+      {!compact && sponsorDue > 0n ? (
         <p className="quick-pay-total quick-pay-eater" data-testid="quick-eater-due">
           <span>{t('mealEaterPart')}</span>
           <strong>{formatMoney(String(eaterDue), currency)}</strong>
         </p>
       ) : null}
-      {cashPayable ? (
+      {!compact && cashPayable ? (
         <fieldset className="quick-pay-notes">
           <legend className="visually-hidden">{t('quickPayNotes')}</legend>
           {cashSuggestions(eaterDue, 3).map((value) => (
@@ -266,7 +272,7 @@ export function QuickPayBar({
           ))}
         </fieldset>
       ) : null}
-      <div className="quick-pay-methods">
+      <div className="quick-pay-methods" hidden={compact}>
         <button
           type="button"
           className="quick-pay-cash"

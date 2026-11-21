@@ -1292,6 +1292,21 @@
   "featureHint_customer_display": "Connecting and showing orders on the customer display. Clear and disconnect always stay open.",
   "featureHint_cash_moves": "Cash in/out and safe drops during a shift. Confirming sent requests and closing the shift stay open.",
   "featureHint_exports": "Making new CSV files. Files already made stay downloadable.",
+  "branchSellingPreset": {
+    "title": "Default selling screen",
+    "hint": "The selling screen this branch's devices open first. Each device can still change it from the toolbar on the selling screen, and a device that has not chosen follows this default.",
+    "preset_auto": "Automatic, from the branch's features",
+    "hint_auto": "A branch with tables opens the table screen, a quick counter opens quick pick, and the rest open one-step sale and payment.",
+    "preset_tables_first": "Tables first, order later",
+    "hint_tables_first": "The table board is the main screen. Tap a table to open an order, add dishes, send to the kitchen and pay when guests leave.",
+    "preset_quick": "Quick pick, pay later",
+    "hint_quick": "The menu grid on the left and the cart on the right. Payment opens only when you press Pay.",
+    "preset_one_step": "Sell and pay on one screen",
+    "hint_one_step": "The cart and the payment panel stay open side by side. Suits retail shops.",
+    "preset_big_menu": "Big menu, easy to tap",
+    "hint_big_menu": "Large dish tiles for touch screens, with payment taking the cart's place.",
+    "lockedNeedsTables": "Turn on the Tables feature for this branch to use this screen."
+  },
   "branchFeaturesTitle": "Branch features",
   "featuresSections": {
     "flow": "Selling flow",

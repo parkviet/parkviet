@@ -1280,6 +1280,21 @@
   "featureHint_customer_display": "Kết nối và hiện đơn lên màn hình khách. Xóa, ngắt luôn mở.",
   "featureHint_cash_moves": "Thu/chi, nộp két giữa ca. Xác nhận yêu cầu đã gửi và đóng ca luôn mở.",
   "featureHint_exports": "Tạo tệp CSV mới. Tệp đã tạo vẫn tải được.",
+  "branchSellingPreset": {
+    "title": "Màn bán hàng mặc định",
+    "hint": "Màn bán hàng mà các máy của chi nhánh mở lần đầu. Mỗi máy vẫn tự đổi được ở thanh công cụ trên màn bán hàng, và máy nào chưa chọn sẽ theo mặc định này.",
+    "preset_auto": "Tự động theo chức năng",
+    "hint_auto": "Chi nhánh bán theo bàn mở màn bàn, quầy gọi nhanh mở màn chọn nhanh, còn lại mở màn bán và thanh toán một màn.",
+    "preset_tables_first": "Bàn trước, gọi món sau",
+    "hint_tables_first": "Sơ đồ bàn là màn chính. Chạm bàn để mở đơn, gọi món, gửi bếp rồi thanh toán khi khách về.",
+    "preset_quick": "Chọn nhanh, tính tiền sau",
+    "hint_quick": "Lưới món bên trái, giỏ hàng bên phải. Bấm Thanh toán mới mở bước trả tiền.",
+    "preset_one_step": "Bán & thanh toán một màn",
+    "hint_one_step": "Giỏ hàng và khung thanh toán luôn mở cạnh nhau. Hợp với cửa hàng bán lẻ.",
+    "preset_big_menu": "Menu lớn, chạm dễ",
+    "hint_big_menu": "Ô món to cho màn cảm ứng, thanh toán thay chỗ giỏ hàng.",
+    "lockedNeedsTables": "Cần bật chức năng Bàn cho chi nhánh này."
+  },
   "branchFeaturesTitle": "Chức năng chi nhánh",
   "featuresSections": {
     "flow": "Quy trình bán hàng",

@@ -184,6 +184,7 @@ export function PaymentPanel({
   bill,
   tools,
   onCompleted,
+  onSettled,
 }: {
   // `panel`: the column of the counter's checkout. `fullscreen`: the table
   // payment screen, with what is due in three big boxes, the QR and the
@@ -204,6 +205,9 @@ export function PaymentPanel({
   // Full screen: the order was completed here; `print` when the cashier asked
   // for the invoice with it.
   onCompleted?: (workspace: PosWorkspace, options: { print: boolean }) => void;
+  // The column layout: the order was completed here. The screen that holds
+  // the panel hands the order over and prints, so the panel does not print.
+  onSettled?: (workspace: PosWorkspace) => void;
   // The branch bills play time, so prepaid money cards may pay the order.
   storedValueCards?: boolean;
   // A canteen order's sponsor part (decimal string): the cashier takes only
@@ -300,6 +304,8 @@ export function PaymentPanel({
   const printOnComplete = useRef(false);
   const completedHandler = useRef(onCompleted);
   completedHandler.current = onCompleted;
+  const settledHandler = useRef(onSettled);
+  settledHandler.current = onSettled;
   const completedWorkspace = useRef(workspace);
   completedWorkspace.current = workspace;
   useEffect(() => {
@@ -308,6 +314,7 @@ export function PaymentPanel({
       // to prints, so nothing prints from here.
       if (fullscreen)
         completedHandler.current?.(completedWorkspace.current, { print: printOnComplete.current });
+      else if (settledHandler.current) settledHandler.current(completedWorkspace.current);
       else if (autoPrintEnabled(autoPrintDefault)) setAutoPrint(true);
     }
     wasCompleted.current = completed;
