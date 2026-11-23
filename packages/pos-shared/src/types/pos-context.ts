@@ -404,10 +404,10 @@ export type PosLineItem = {
   kitchen_send_sequence?: number | null;
   // Bumped on every change; an unsent table line is edited by its version.
   row_version?: number;
-  // A table dish's course (1 starter, 2 main…) and whether it waits for its fire.
-  course?: number | null;
   // Marked urgent by staff: the kitchen board puts the dish first.
   priority?: boolean;
+  // A table dish's course (1 starter, 2 main…) and whether it waits for its fire.
+  course?: number | null;
   course_status?: 'none' | 'held' | 'fired';
   // The seat that ordered it; a bill can be split by seat.
   seat?: number | null;
