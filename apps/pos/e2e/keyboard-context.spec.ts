@@ -136,19 +136,21 @@ test('login, choose branch and register, and open a shift with the keyboard only
   await page.keyboard.press('Enter');
   await expect(setup).toBeHidden();
 
-  const float = page.getByLabel('Tiền đầu ca');
-  await tabUntilFocused(page, float);
+  await page.getByRole('button', { name: 'Vào ca', exact: true }).click();
+  const shiftDialog = page.getByRole('dialog', { name: 'Mở ca bán hàng' });
+  const float = shiftDialog.getByLabel('Tiền đầu ca');
+  await expect(float).toBeFocused();
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.type('-1');
   await page.keyboard.press('Enter');
   await expect(page.getByRole('alert').filter({ hasText: 'Dữ liệu gửi lên không hợp lệ.' })).toBeVisible();
   await expect(float).toBeFocused();
-  await expect(page.getByRole('button', { name: 'Mở ca' })).toBeVisible();
+  await expect(shiftDialog.getByRole('button', { name: 'Mở ca', exact: true })).toBeVisible();
 
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.type('50000');
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('button', { name: 'Mở ca' })).toHaveCount(0);
+  await expect(shiftDialog).toHaveCount(0);
   await expect(page.getByText('Ca đang mở', { exact: true })).toBeAttached();
   expect(world.shiftPosts).toEqual([
     { register_id: register.id, opening_float: '-1' },
@@ -186,10 +188,10 @@ test('switching register never shows the previous register shift while the new c
   expect(world.lateServedAt).toBeUndefined();
   await expect(page.getByText('Ca đang mở', { exact: true })).toHaveCount(0);
   if (!(await picker.evaluate((element) => (element as HTMLDetailsElement).open))) await summary.click();
-  await expect(picker.getByLabel('Quầy')).toBeDisabled();
+  await expect(picker.getByRole('combobox', { name: 'Quầy', exact: true })).toBeDisabled();
 
   await expect.poll(() => world.lateServedAt ?? 0, { timeout: 5000 }).toBeGreaterThan(0);
   await expect(summary).toContainText('Quay 2');
   await expect(page.getByText('Ca đang mở', { exact: true })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Mở ca' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Vào ca', exact: true })).toBeVisible();
 });

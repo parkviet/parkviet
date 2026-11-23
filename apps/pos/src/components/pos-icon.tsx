@@ -138,6 +138,21 @@ const paths = {
       <circle cx="10" cy="18" r="2" fill="currentColor" />
     </>
   ),
+  layers: (
+    <>
+      <path d="m12 3 9 4.5-9 4.5-9-4.5Z" />
+      <path d="m3 12 9 4.5 9-4.5" />
+      <path d="m3 16.5 9 4.5 9-4.5" />
+    </>
+  ),
+  wifi: (
+    <>
+      <path d="M5 12.5a10 10 0 0 1 14 0" />
+      <path d="M2 9a15 15 0 0 1 20 0" />
+      <path d="M8.5 16a5 5 0 0 1 7 0" />
+      <path d="M12 19.5h.01" />
+    </>
+  ),
 } as const;
 
 export function PosIcon({ name, style }: { name: keyof typeof paths; style?: CSSProperties }) {

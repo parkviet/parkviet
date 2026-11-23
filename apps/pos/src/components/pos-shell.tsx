@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from '@tanstack/react-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import posMark from '../assets/brand/parkviet-pos-mark-dark.svg';
 import { useBranchEvents } from '../hooks/use-branch-events';
@@ -29,9 +29,10 @@ import {
 import { AppUpdatePrompt } from './app-update-prompt';
 import { ContextPickerForm } from './context-selector';
 import { ContextSetupDialog } from './context-setup-dialog';
-import { ConnectionBadge, ShiftBadge } from './header-status';
+import { ConnectionBadge, ShiftStatus } from './header-status';
+import { HoverTip } from './hover-tip';
 import { OfflineBanner } from './offline-banner';
-import { OpenShiftDialog } from './open-shift-dialog';
+import { OpenShiftDialog, useCanOpenShift } from './open-shift-dialog';
 import { PosIcon } from './pos-icon';
 import { PosSelectionProvider, usePosSelection } from './pos-selection';
 import { ScannerCalibrationDialog } from './scanner-calibration';
@@ -92,6 +93,13 @@ function ShellFrame() {
   );
   const setupUrl = setupNeeded ? posDashboardUrl(context.data?.store.id, 'setup') : null;
   const contextPicker = useRef<HTMLDetailsElement>(null);
+  const contextTipId = useId();
+  // The open-shift form is a dialog opened from the header or the banner.
+  const canOpenShift = useCanOpenShift();
+  const [shiftDialogOpen, setShiftDialogOpen] = useState(false);
+  useEffect(() => {
+    if (!canOpenShift) setShiftDialogOpen(false);
+  }, [canOpenShift]);
   // The picker's draft lives only while it is open, so reopening starts from
   // the current branch and register.
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -317,38 +325,34 @@ function ShellFrame() {
             {t('sellingArea')}
           </h1>
         ) : null}
-        <strong className="header-brand">
-          <img className="header-logo" src={posMark} alt="" />
-          ParkViet <span>POS</span>
-        </strong>
+        <span className="header-brand">
+          <img className="header-logo" src={posMark} alt="ParkViet POS" />
+        </span>
         <span className="header-title">{pageTitle}</span>
         <details
           className="pos-context-details"
           ref={contextPicker}
           onToggle={(event) => setPickerOpen(event.currentTarget.open)}
         >
-          <summary title={t('changeContext')}>
-            <PosIcon name="store" />
-            <span className="context-chip">
-              <span className="context-chip-store">{storeName}</span>
-              <span className="context-chip-place">
-                <span className="visually-hidden">{t('branch')}: </span>
-                {branch?.name ?? t('chooseBranch')}
-                {registerMode === 'required' || selection.registerId ? (
-                  <>
-                    <span className="context-chip-sep" aria-hidden>
-                      {' · '}
-                    </span>
-                    <span className="visually-hidden">{t('register')}: </span>
-                    {register?.name ?? t('chooseRegister')}
-                  </>
-                ) : null}
+          <summary
+            className="header-status has-tip"
+            aria-label={t('changeContext')}
+            aria-describedby={contextTipId}
+          >
+            <PosIcon name="layers" />
+            <HoverTip id={contextTipId}>
+              <span>
+                {t('storeHeading')}: {storeName}
               </span>
-            </span>
-            <span className="context-change">
-              <span className="visually-hidden">{t('changeContext')}</span>
-              <PosIcon name="chevron" />
-            </span>
+              <span>
+                {t('branch')}: {branch?.name ?? t('chooseBranch')}
+              </span>
+              {registerMode === 'required' || selection.registerId ? (
+                <span>
+                  {t('register')}: {register?.name ?? t('chooseRegister')}
+                </span>
+              ) : null}
+            </HoverTip>
           </summary>
           <div className="context-popover">
             <div className="context-store">
@@ -380,7 +384,13 @@ function ShellFrame() {
         ) : null}
         <div className="pos-context-status">
           <ConnectionBadge offline={offline} loading={context.isPending} />
-          {isSale ? <ShiftBadge open={Boolean(context.data?.shift)} /> : null}
+          {isSale ? (
+            <ShiftStatus
+              open={Boolean(context.data?.shift)}
+              canOpen={canOpenShift}
+              onEnter={() => setShiftDialogOpen(true)}
+            />
+          ) : null}
         </div>
         <UserMenu
           name={snapshot.name}
@@ -400,6 +410,9 @@ function ShellFrame() {
         />
       ) : null}
       <ContextSetupDialog enabled={isSale && !setupNeeded} />
+      {shiftDialogOpen && canOpenShift ? (
+        <OpenShiftDialog onClose={() => setShiftDialogOpen(false)} />
+      ) : null}
       <section className="shell" aria-labelledby={isSale ? 'title' : 'pos-page-title'}>
         <div className="pos-context-card pos-alerts">
           {context.data?.sales_channel && context.data.sales_channel.status !== 'active' ? (
@@ -512,7 +525,14 @@ function ShellFrame() {
           {isSale && context.data && context.data.capabilities.length === 0 ? (
             <p>{t('capabilitiesEmpty')}</p>
           ) : null}
-          {isSale ? <OpenShiftDialog /> : null}
+          {isSale && canOpenShift ? (
+            <div className="shift-banner" role="status">
+              <span>{t('shiftBanner')}</span>
+              <button type="button" onClick={() => setShiftDialogOpen(true)}>
+                {t('enterShift')}
+              </button>
+            </div>
+          ) : null}
         </div>
         <Outlet />
       </section>

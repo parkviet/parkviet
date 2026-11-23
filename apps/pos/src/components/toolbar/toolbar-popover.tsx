@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useId, useRef } from 'react';
+import { HoverTip } from '../hover-tip';
 import { PosIcon } from '../pos-icon';
 
 // One toolbar button with a popover under it. The popover closes on a press
@@ -12,7 +13,7 @@ export function ToolbarPopover({
   children,
 }: {
   icon: Parameters<typeof PosIcon>[0]['name'];
-  // The visible button text and its accessible name.
+  // The accessible name of the icon button, shown as its tooltip.
   label: string;
   // The popover's own heading.
   title: string;
@@ -52,14 +53,15 @@ export function ToolbarPopover({
       <button
         ref={button}
         type="button"
-        className="toolbar-button"
+        className="toolbar-button has-tip"
+        aria-label={label}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         onClick={() => onOpenChange(!open)}
       >
         <PosIcon name={icon} />
-        <span className="toolbar-button-label">{label}</span>
+        <HoverTip>{label}</HoverTip>
       </button>
       {open ? (
         <div className="toolbar-popover" id={panelId} role="dialog" aria-label={title}>

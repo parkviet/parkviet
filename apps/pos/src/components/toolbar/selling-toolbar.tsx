@@ -4,6 +4,7 @@ import { dashboardPages } from '../../lib/dashboard-pages';
 import type { PosContext } from '../../lib/pos-context';
 import { posDashboardUrl } from '../../lib/pos-dashboard-url';
 import { savedToolbarCollapsed, saveToolbarCollapsed } from '../../lib/selling-toolbar';
+import { HoverTip } from '../hover-tip';
 import { PosIcon } from '../pos-icon';
 import { PrinterPopover } from './printer-popover';
 import { QuickSettingsPopover } from './quick-settings-popover';
@@ -24,7 +25,8 @@ const SHORTCUTS: readonly { keys: string; label: string }[] = [
 ];
 
 // The tools of the selling screen, kept at the right of the header: help, the
-// customer display, the printer and the quick settings of this device. The
+// customer display, the printer and the quick settings of this device. Its
+// buttons are icons only, named by a tooltip on hover and keyboard focus. The
 // toolbar folds to its « button, and stays folded on this device.
 export function SellingToolbar({
   data,
@@ -55,10 +57,9 @@ export function SellingToolbar({
     <section className="selling-toolbar" data-collapsed={collapsed} aria-label={t('toolbarLabel')}>
       <button
         type="button"
-        className="toolbar-fold"
+        className="toolbar-fold has-tip"
         aria-expanded={!collapsed}
         aria-label={t(collapsed ? 'toolbarExpand' : 'toolbarCollapse')}
-        title={t(collapsed ? 'toolbarExpand' : 'toolbarCollapse')}
         onClick={() => {
           const next = !collapsed;
           setCollapsed(next);
@@ -67,6 +68,7 @@ export function SellingToolbar({
         }}
       >
         <PosIcon name="collapse" />
+        <HoverTip>{t(collapsed ? 'toolbarExpand' : 'toolbarCollapse')}</HoverTip>
       </button>
       {collapsed ? null : (
         <>
@@ -88,17 +90,19 @@ export function SellingToolbar({
           </ToolbarPopover>
           {/* The customer display pairs with a code from the order screen, so it opens in its own tab. */}
           <a
-            className="toolbar-button"
+            className="toolbar-button has-tip"
             href={`${import.meta.env.BASE_URL}display`}
             target="_blank"
             rel="noopener"
+            aria-label={t('toolbarCustomerDisplay')}
           >
             <PosIcon name="monitor" />
-            <span className="toolbar-button-label">{t('toolbarCustomerDisplay')}</span>
+            <HoverTip>{t('toolbarCustomerDisplay')}</HoverTip>
           </a>
           <button
             type="button"
-            className="toolbar-button"
+            className="toolbar-button has-tip"
+            aria-label={t('toolbarSellingLayout')}
             aria-haspopup="dialog"
             onClick={() => {
               setOpenId(null);
@@ -106,7 +110,7 @@ export function SellingToolbar({
             }}
           >
             <PosIcon name="grid" />
-            <span className="toolbar-button-label">{t('toolbarSellingLayout')}</span>
+            <HoverTip>{t('toolbarSellingLayout')}</HoverTip>
           </button>
           <PrinterPopover
             data={data}

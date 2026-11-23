@@ -16,7 +16,8 @@ const DRAG_THRESHOLD = 4;
 
 // The handle between two panels of a split. Dragging follows the pointer
 // (held between a third and two thirds, pulled onto the marks) and changes
-// the grid of the box it sits in right there; the share is kept when the
+// the grid of the box it sits in right there, with no label: only the colour
+// of the handle tells when it hits a limit. The share is kept when the
 // pointer is released. A double press puts the sample's share back. The
 // arrow keys move it by 5% and Home/End jump to a third and two thirds.
 // Under 768px the stylesheet hides it and the panels stack.
@@ -40,14 +41,10 @@ export function SplitDivider({
   onReset: () => void;
 }) {
   const { t } = useTranslation();
-  const [drag, setDrag] = useState<{ text: string; limit: boolean } | null>(null);
+  const [drag, setDrag] = useState<{ limit: boolean } | null>(null);
 
-  function describeShare(value: number, limit = false) {
-    return {
-      text: `${names[0]} ${shareLabel(value)} · ${names[1]} ${shareLabel(1 - value)}`,
-      limit,
-    };
-  }
+  const shareText = (value: number) =>
+    `${names[0]} ${shareLabel(value)} · ${names[1]} ${shareLabel(1 - value)}`;
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
     if (event.button !== 0 || !event.isPrimary) return;
@@ -74,7 +71,7 @@ export function SplitDivider({
       if (!Number.isFinite(raw)) return;
       latest = clampSplit(raw);
       box.style.setProperty('--selling-tracks', splitTracks(latest, mirrored));
-      setDrag(describeShare(latest, raw < MIN_SPLIT || raw > MAX_SPLIT));
+      setDrag({ limit: raw < MIN_SPLIT || raw > MAX_SPLIT });
     };
     const finish = (endEvent: globalThis.PointerEvent) => {
       handle.removeEventListener('pointermove', move);
@@ -119,21 +116,13 @@ export function SplitDivider({
       aria-valuemin={Math.round(MIN_SPLIT * 100)}
       aria-valuemax={Math.round(MAX_SPLIT * 100)}
       aria-valuenow={Math.round(share * 100)}
-      aria-valuetext={describeShare(share).text}
-      title={t('sellingLayoutDividerHint')}
+      aria-valuetext={shareText(share)}
       data-vertical={vertical || undefined}
       data-dragging={drag ? 'true' : undefined}
       data-limit={drag?.limit ? 'true' : undefined}
       onPointerDown={onPointerDown}
       onDoubleClick={onReset}
       onKeyDown={onKeyDown}
-    >
-      {drag ? (
-        <span className="split-divider-label" role="status">
-          {drag.text}
-          {drag.limit ? ` · ${t('sellingLayoutLimit')}` : ''}
-        </span>
-      ) : null}
-    </div>
+    />
   );
 }

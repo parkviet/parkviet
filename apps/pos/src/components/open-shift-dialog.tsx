@@ -1,24 +1,38 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useOpenShift } from '../hooks/use-shift';
 import { writesLocked } from '../lib/pos-context';
 import { posFailureKey } from '../lib/request-failure';
 import { usePosSelection } from './pos-selection';
 
-export function OpenShiftDialog() {
-  const { t } = useTranslation();
+// Whether this cashier may open a shift here now: a complete selection, the
+// right to open one, no shift yet and writes not locked.
+export function useCanOpenShift() {
   const { selection, context, selectionComplete } = usePosSelection();
-  const openShift = useOpenShift();
-  const [amount, setAmount] = useState('0');
-  const [error, setError] = useState('');
   const data = context.data;
-  const canOpen = Boolean(
+  return Boolean(
     selectionComplete &&
+      selection.branchId &&
       data?.capabilities.includes('pos.shift.open') &&
       !data.shift &&
       !writesLocked(data, selection),
   );
-  if (!canOpen || !selection.branchId) return null;
+}
+
+// The open-shift form as a modal, opened on demand from the header shift
+// button or the banner that tells selling waits for a shift.
+export function OpenShiftDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
+  const { selection } = usePosSelection();
+  const openShift = useOpenShift();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [amount, setAmount] = useState('0');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const element = dialog.current;
+    if (element && !element.open) element.showModal();
+  }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -31,30 +45,44 @@ export function OpenShiftDialog() {
           : { branch_id: selection.branchId }),
         opening_float: amount.trim(),
       });
-      setAmount('0');
+      onClose();
     } catch (caught) {
       setError(t(posFailureKey(caught)));
     }
   }
 
   return (
-    <form className="dialog" onSubmit={submit}>
-      <label>
-        {t('openingFloat')}
-        <input
-          inputMode="decimal"
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-        />
-      </label>
-      {error ? (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <button type="submit" disabled={openShift.isPending}>
-        {openShift.isPending ? t('waiting') : t('openShift')}
-      </button>
-    </form>
+    <dialog
+      className="open-shift-dialog"
+      ref={dialog}
+      aria-labelledby="open-shift-title"
+      onClose={onClose}
+    >
+      <h2 id="open-shift-title">{t('openShiftTitle')}</h2>
+      <form className="open-shift-form" onSubmit={submit}>
+        <label>
+          {t('openingFloat')}
+          <input
+            autoFocus
+            inputMode="decimal"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+          />
+        </label>
+        {error ? (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <div className="dialog-actions">
+          <button type="button" onClick={() => dialog.current?.close()}>
+            {t('contextCancel')}
+          </button>
+          <button type="submit" className="primary-button" disabled={openShift.isPending}>
+            {openShift.isPending ? t('waiting') : t('openShift')}
+          </button>
+        </div>
+      </form>
+    </dialog>
   );
 }

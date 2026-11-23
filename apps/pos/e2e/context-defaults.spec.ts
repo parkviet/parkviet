@@ -50,13 +50,19 @@ async function install(page: Page, branchCount: number, registerCounts: number[]
   return state;
 }
 
+// The shift form is a dialog opened by the "Vào ca" button.
+async function openShift(page: Page) {
+  await page.getByRole('button', { name: 'Vào ca', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Mở ca bán hàng' }).getByRole('button', { name: 'Mở ca', exact: true }).click();
+}
+
 for (const status of ['missing', 'inactive'] as const) {
   test(`POS channel ${status} blocks new drafts without blocking shift and receipt access`, async ({ page }) => {
     const state = await install(page, 1, [0], false, status);
     const guidance = page.getByRole('status').filter({ hasText: status === 'missing' ? 'Chưa có kênh POS' : 'Kênh POS đã ngừng hoạt động' });
     await expect(guidance).toContainText('Kênh bán hàng');
     await expect(guidance).toContainText('mã pos');
-    await page.getByRole('button', { name: 'Mở ca', exact: true }).click();
+    await openShift(page);
     await expect(page.getByRole('button', { name: 'Đơn nháp mới' })).toBeDisabled();
     expect(state.writes.filter((write) => write.path.endsWith('/workspaces'))).toEqual([]);
     await page.goto('/receipts');
@@ -136,12 +142,12 @@ test('sole branch and multiple registers prompt only for the remaining choice', 
 
 test('no-register branch hides the control and supports a real-shaped branch shift and invoice commands', async ({ page }, testInfo) => {
   const state = await install(page, 1, [0]);
-  await expect(page.getByRole('button', { name: 'Mở ca', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Vào ca', exact: true })).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.locator('.pos-context-details > summary').click();
   await expect(page.getByRole('combobox', { name: 'Quầy', exact: true })).toHaveCount(0);
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Mở ca', exact: true }).click();
+  await openShift(page);
   await expect(page.getByRole('button', { name: 'Đơn nháp mới' })).toBeEnabled();
   for (let i = 1; i <= 3; i++) {
     await page.getByRole('button', { name: 'Đơn nháp mới' }).click();
@@ -201,14 +207,14 @@ test('failed option requests cannot become a branch-only selling session', async
   const state = await install(page, 1, [0], true);
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByRole('dialog').getByRole('alert')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Mở ca', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Vào ca', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Đơn nháp mới' })).toBeDisabled();
   expect(state.writes).toEqual([]);
 });
 
 test('recovery check explains missing, denied and failed lookups, retaining evidence until confirmed', async ({ page }) => {
   const state = await install(page, 1, [0]);
-  await expect(page.getByRole('button', { name: 'Mở ca', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Vào ca', exact: true })).toBeVisible();
   let status = 404;
   const lookups: string[] = [];
   await page.route('**/pos/command_receipts?*', (route) => {
@@ -241,7 +247,7 @@ test('recovery check explains missing, denied and failed lookups, retaining evid
 
 test('reload lease conflict waits without repeated reloads, then claims and keeps editing', async ({ page }) => {
   const state = await install(page, 1, [0]);
-  await page.getByRole('button', { name: 'Mở ca', exact: true }).click();
+  await openShift(page);
   await page.getByRole('button', { name: 'Đơn nháp mới' }).click();
   await expect(page.getByRole('tab', { name: 'Hóa đơn 1', exact: true })).toBeVisible();
   await page.reload();
@@ -279,7 +285,7 @@ test('reload lease conflict waits without repeated reloads, then claims and keep
 
 test('a lost command response still warns and survives reload with the original idempotency key', async ({ page }) => {
   const state = await install(page, 1, [0]);
-  await page.getByRole('button', { name: 'Mở ca', exact: true }).click();
+  await openShift(page);
   await expect(page.getByRole('button', { name: 'Đơn nháp mới' })).toBeEnabled();
   const keys: string[] = [];
   let loseResponse = true;

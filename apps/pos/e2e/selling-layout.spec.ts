@@ -153,7 +153,6 @@ test('dragging the divider changes the panels at once and keeps the share on rel
   // Far past the left limit: held at a third, and flagged as the limit.
   await page.mouse.move(frameBox.x + 10, y, { steps: 5 });
   await expect(divider).toHaveAttribute('data-limit', 'true');
-  await expect(divider.getByRole('status')).toContainText('giới hạn');
   await page.mouse.up();
   await expect(divider).toHaveAttribute('aria-valuenow', '33');
   expect((await stored(page)).split).toBeCloseTo(1 / 3, 5);

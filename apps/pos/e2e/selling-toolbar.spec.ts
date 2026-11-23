@@ -39,7 +39,7 @@ test('a popover closes on Esc and gives the focus back to its button', async ({ 
   await expect(button).toBeFocused();
 
   await button.click();
-  await page.locator('.pos-context-status').click();
+  await page.mouse.click(4, 4);
   await expect(page.getByRole('dialog', { name: 'Cài đặt nhanh của máy này' })).toHaveCount(0);
 });
 
@@ -78,4 +78,27 @@ test('the toolbar folds to its button and stays folded after a reload', async ({
   await expect(toolbar(page).getByRole('button', { name: 'Máy in' })).toHaveCount(0);
   await toolbar(page).getByRole('button', { name: 'Mở thanh công cụ' }).click();
   await expect(toolbar(page).getByRole('button', { name: 'Máy in' })).toBeVisible();
+});
+
+test('toolbar buttons are icons only and show their name as a tooltip on keyboard focus', async ({ page }) => {
+  await openCounter(page);
+  const printer = toolbar(page).getByRole('button', { name: 'Máy in' });
+  await expect(printer).toHaveText('Máy in');
+  await expect(printer.locator('.tip')).toHaveCSS('opacity', '0');
+  await printer.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expect(printer.locator('.tip')).toHaveCSS('opacity', '1');
+  await expect(toolbar(page).locator('.toolbar-button-label')).toHaveCount(0);
+});
+
+test('the header keeps the logo, one context icon and compact status icons', async ({ page }, info) => {
+  await openCounter(page);
+  const header = page.locator('header.header');
+  // A phone's header drops the logo to leave room for the icons.
+  if (info.project.name !== 'mobile') await expect(header.getByRole('img', { name: 'ParkViet POS' })).toBeVisible();
+  await expect(header.locator('.header-brand')).toHaveText('');
+  await expect(header.locator('.pos-context-details > summary')).toHaveAccessibleName('Đổi chi nhánh / quầy');
+  await expect(header.locator('.realtime-status .header-status-text')).toHaveCount(0);
+  await expect(header.locator('.shift-status')).toHaveCount(1);
 });
