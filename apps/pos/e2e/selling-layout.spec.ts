@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { teaMenu } from './support/menu-api';
-import { installRetailApi, login, newWorld, type World } from './support/retail-api';
+import { addLine, addSheet, installRetailApi, login, newWorld, openTab, type World } from './support/retail-api';
 
 // The selling screen of a cafe counter lays its panels out by the layout of
 // this device: a sample screen from the toolbar's chooser, a few options on
@@ -240,4 +240,36 @@ test('the payment column shows what is owed and the change of a note the guest h
   // The note carries into the cash evidence of the payment.
   await column.getByRole('button', { name: 'Thanh toán', exact: true }).click();
   await expect(page.locator('input[name="handed_amount"]')).toHaveValue('20000');
+});
+
+test('the compact foot of a grocery counter holds the order and opens a new one with "Lưu đơn"', async ({
+  page,
+}) => {
+  const world = newWorld();
+  const sheet = addSheet(world, 'ws_cash');
+  addLine(world, sheet, 'v_rice', 3);
+  await page.addInitScript(
+    ([key, value]) => {
+      if (!localStorage.getItem(key)) localStorage.setItem(key, value);
+    },
+    [
+      KEY,
+      JSON.stringify({
+        preset: 'quick',
+        side: 'left',
+        pay: 'popup',
+        split: 0.62,
+        paySplit: 0.5,
+        foot: 'compact',
+      }),
+    ],
+  );
+  await installRetailApi(page, world);
+  await login(page);
+  await openTab(page, 'ws_cash');
+  const foot = page.locator('.order-foot');
+  await expect(foot).toContainText('300.000');
+  await foot.getByRole('button', { name: 'Lưu đơn' }).click();
+  await expect.poll(() => sheet.status).toBe('parked');
+  await expect(page.getByRole('tab', { name: 'Hóa đơn 2' })).toHaveAttribute('aria-selected', 'true');
 });

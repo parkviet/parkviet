@@ -2708,6 +2708,8 @@
   "orderFootShowTotals": "Xem chi tiết tổng tiền",
   "orderFootFold": "Thu gọn thông tin thêm",
   "orderFootUnfold": "Mở rộng thông tin thêm",
+  "orderFootSave": "Lưu đơn",
+  "orderFootSaveHint": "Tạm giữ đơn này và mở một đơn mới",
   "orderFootMore": "Thao tác khác",
   "orderFootPaid": "Đã trả",
   "orderFootChip_discount": "Giảm giá",

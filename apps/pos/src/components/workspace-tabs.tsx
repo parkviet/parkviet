@@ -852,6 +852,23 @@ export function WorkspaceTabsView({
                           ]
                         : []
                     }
+                    secondary={
+                      active.operational_status === 'editing'
+                        ? {
+                            // "Lưu đơn": the order is held as it is and a new one opens.
+                            label: t('orderFootSave'),
+                            title: t('orderFootSaveHint'),
+                            disabled:
+                              busy || locked || !isEditor || (active.line_items?.length ?? 0) === 0,
+                            onClick: () =>
+                              void run(() =>
+                                command(active, (current) => workspaces.change(current, 'park')),
+                              ).then((parked) => {
+                                if (parked) void createDraft();
+                              }),
+                          }
+                        : undefined
+                    }
                     payLabel={t('sellingLayoutPay')}
                     payDisabled={(active.line_items?.length ?? 0) === 0}
                     onPay={() => setPayingFor(active.id)}

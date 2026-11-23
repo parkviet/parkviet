@@ -2708,6 +2708,8 @@
   "orderFootShowTotals": "Show the total in detail",
   "orderFootFold": "Fold the extra details",
   "orderFootUnfold": "Show the extra details",
+  "orderFootSave": "Save order",
+  "orderFootSaveHint": "Hold this order and open a new one",
   "orderFootMore": "More actions",
   "orderFootPaid": "Paid",
   "orderFootChip_discount": "Discount",
