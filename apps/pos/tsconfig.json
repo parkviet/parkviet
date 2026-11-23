@@ -3,13 +3,20 @@
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "strict": true,
-    "jsx": "react-jsx",
-    "resolveJsonModule": true,
-    "noEmit": true,
+    "types": ["vite/client", "node"],
     "skipLibCheck": true,
-    "types": ["vite/client", "node"]
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@shared/*": ["./src/shared/*"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }

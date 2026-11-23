@@ -646,14 +646,14 @@ Rails.application.routes.draw do
     post 'orders/:id/cancel', action: :cancel
   end
 
-  # The counter app and POS administration built into the production image,
-  # same origin as the API. Declared before the Spree engine mount so no
-  # engine route takes their deep links; `format: false` keeps asset
-  # extensions inside the splat.
+  # The unified POS app (administration + counter) built into the production
+  # image, same origin as the API. Declared before the Spree engine mount so no
+  # engine route takes its deep links; `format: false` keeps asset extensions
+  # inside the splat. Old /pos-admin bookmarks redirect to /pos.
   get '/pos', to: 'spree/pos/selling_app#show', as: :pos_selling_app
   get '/pos/*path', to: 'spree/pos/selling_app#show', format: false
-  get '/pos-admin', to: 'spree/pos/admin_app#show', as: :pos_admin_app
-  get '/pos-admin/*path', to: 'spree/pos/admin_app#show', format: false
+  get '/pos-admin', to: redirect('/pos', status: 301)
+  get '/pos-admin/*path', to: redirect('/pos/%{path}', status: 301), format: false
   # The guests' QR order page (apps/table-order), opened from a table's sticker.
   get '/table', to: 'spree/pos/table_order_app#show', as: :pos_table_order_app
   get '/table/*path', to: 'spree/pos/table_order_app#show', format: false

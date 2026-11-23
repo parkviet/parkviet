@@ -1,205 +1,168 @@
-import type { PrintDocument } from '@parkviet/pos-shared/receipt-template/types';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { session } from '../lib/app-session';
-import { runFinancialCommand } from '../lib/financial-command';
-import {
-  type MealAccount,
-  type MealPlan,
-  type MealStatus,
-  normalizeMealAccount,
-  normalizeMealAccounts,
-  normalizeMealEntries,
-  normalizeMealPlan,
-  normalizeMealStatus,
-} from '../lib/meal-accounts';
-import type { PosWorkspace } from '../lib/pos-context';
-import { useSession } from './use-session';
-import { abandonIfNeeded, financialRequest } from './use-tenders';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type {
+  MealAccount,
+  MealAccountStatus,
+  MealEntry,
+  MealPayMode,
+  MealSponsor,
+  MealWindow,
+  SubsidyMode,
+} from '../lib/meal-accounts'
+import { posRequest as request } from '../lib/pos-request'
+import { posKey } from '../lib/query-keys'
+import { type Page, pageParams } from '../lib/table-params'
+import { localList } from '../tables/local-list'
+import { useSession } from './use-session'
 
-export type MealLookup = { match: MealAccount | null; suggestions: MealAccount[] };
+// Canteen accounts and sponsors belong to the store; every call names the
+// branch the work is done at, where the module must be on.
 
-async function read<T>(path: string, params: Record<string, string | undefined>) {
-  try {
-    return await session.request<T>('GET', path, { params });
-  } catch (error) {
-    abandonIfNeeded(error);
-    throw error;
-  }
+async function write<T>(method: 'POST' | 'PATCH', path: string, body: Record<string, unknown>) {
+  const key = crypto.randomUUID()
+  const result = await request<{ data: T }>(method, path, {
+    body: { ...body, idempotency_key: key },
+    idempotencyKey: key,
+  })
+  return result.data
 }
 
-// Finds the eater typed at the counter: an exact employee code, or names
-// holding the text. Rate limited per staff member on the server.
-export async function resolveMealAccount(branchId: string, q: string): Promise<MealLookup> {
-  const result = await read<{ data: { match?: unknown; suggestions?: unknown } }>(
-    '/pos/meal_accounts/resolve',
-    { branch_id: branchId, q },
-  );
-  return {
-    match: normalizeMealAccount(result.data?.match),
-    suggestions: normalizeMealAccounts(result.data?.suggestions),
-  };
-}
+export type MealAccountFilters = { status?: MealAccountStatus; sponsorId?: string }
 
-const mealKey = (generation: number) => ['pos', 'meal-accounts', generation] as const;
-
-// The accounts of a store with their balances, found by code, name or group.
-export function useMealAccounts(
-  branchId: string | null,
-  query: string,
-  status: 'active' | 'locked' | 'all',
-  enabled: boolean,
+// The server searches by code, name or group and pages the list.
+export function fetchMealAccounts(
+  branchId: string,
+  filters: MealAccountFilters,
+  params: Record<string, unknown>,
 ) {
-  const snapshot = useSession();
-  const q = query.trim();
-  return useQuery({
-    queryKey: [...mealKey(snapshot.generation), 'list', branchId, status, q] as const,
-    enabled: enabled && snapshot.status === 'authenticated' && Boolean(branchId),
-    placeholderData: (previous) => previous,
-    queryFn: async () => {
-      const result = await read<{ data: unknown }>('/pos/meal_accounts', {
-        branch_id: branchId ?? undefined,
-        ...(status === 'all' ? {} : { status }),
-        ...(q ? { q } : {}),
-      });
-      return normalizeMealAccounts(result.data);
+  const term = String(params.search ?? '').trim()
+  return request<Page<MealAccount>>('GET', '/pos/meal_accounts', {
+    params: {
+      branch_id: branchId,
+      q: term || undefined,
+      status: filters.status,
+      meal_sponsor_id: filters.sponsorId,
+      ...pageParams(params),
     },
-  });
+  })
 }
 
-export function useMealAccount(branchId: string | null, id: string | null) {
-  const snapshot = useSession();
+// The wallet history of one account, newest first.
+export function useMealEntries(branchId: string, accountId: string | null, page: number) {
+  const { storeId, status } = useSession()
   return useQuery({
-    queryKey: [...mealKey(snapshot.generation), 'one', branchId, id] as const,
-    enabled: snapshot.status === 'authenticated' && Boolean(branchId && id),
-    queryFn: async () => {
-      const result = await read<{ data: unknown }>(`/pos/meal_accounts/${id}`, {
-        branch_id: branchId ?? undefined,
-      });
-      return normalizeMealAccount(result.data);
-    },
-  });
+    queryKey: posKey(storeId, 'meal-accounts', branchId, 'entries', accountId, page),
+    enabled: status === 'authenticated' && Boolean(accountId),
+    queryFn: () =>
+      request<Page<MealEntry>>('GET', `/pos/meal_accounts/${accountId}/entries`, {
+        params: { branch_id: branchId, page: String(page), limit: '25' },
+      }),
+  })
 }
 
-// The wallet's history, newest first.
-export function useMealEntries(branchId: string | null, id: string | null) {
-  const snapshot = useSession();
+// Sponsors are few; one page of up to 100 serves the pickers and the list.
+export const mealSponsorsQuery = (storeId: string, branchId: string) => ({
+  queryKey: posKey(storeId, 'meal-sponsors', branchId),
+  queryFn: () =>
+    request<Page<MealSponsor>>('GET', '/pos/meal_sponsors', {
+      params: { branch_id: branchId, limit: '100' },
+    }),
+  staleTime: 5_000,
+})
+
+export function useMealSponsors(branchId: string, enabled = true) {
+  const { storeId, status } = useSession()
   return useQuery({
-    queryKey: [...mealKey(snapshot.generation), 'entries', branchId, id] as const,
-    enabled: snapshot.status === 'authenticated' && Boolean(branchId && id),
-    queryFn: async () => {
-      const result = await read<{ data: unknown }>(`/pos/meal_accounts/${id}/entries`, {
-        branch_id: branchId ?? undefined,
-      });
-      return normalizeMealEntries(result.data);
-    },
-  });
+    ...mealSponsorsQuery(storeId, branchId),
+    enabled: enabled && status === 'authenticated',
+  })
 }
 
-// The eater on an order and who pays what, read again with every revision
-// (a new line changes the split).
-export function useWorkspaceMeal(workspace: PosWorkspace | null, enabled: boolean) {
-  const snapshot = useSession();
-  return useQuery({
-    queryKey: ['pos', 'workspace-meal', snapshot.generation, workspace?.id, workspace?.revision],
-    enabled: enabled && snapshot.status === 'authenticated' && Boolean(workspace),
-    // The previous revision of the same order stays on screen while the new
-    // one loads; another order's eater never does.
-    placeholderData: (previous, previousQuery) =>
-      previousQuery?.queryKey[3] === workspace?.id ? previous : undefined,
-    queryFn: async (): Promise<{ meal: MealStatus | null; plan: MealPlan | null }> => {
-      const result = await read<{ data: { meal?: unknown; plan?: unknown } }>(
-        `/pos/workspaces/${workspace?.id}/meal`,
-        {},
-      );
-      return {
-        meal: normalizeMealStatus(result.data?.meal),
-        plan: normalizeMealPlan(result.data?.plan),
-      };
-    },
-  });
+export function sponsorList(rows: MealSponsor[], params: Record<string, unknown>) {
+  return localList(rows, params, {
+    searchParam: 'search',
+    text: (row) => [row.name, row.customer_name, row.customer_phone].join(' '),
+  })
 }
 
-export type MealTopUpInput = {
-  kind: 'cash' | 'bank_manual';
-  amount: string;
-  handedAmount?: string;
-  reference?: string;
-  receivingAccount?: string;
-};
+export type MealAccountInput = {
+  employee_code: string
+  name: string
+  phone: string | null
+  email?: string | null
+  group_label: string | null
+  meal_sponsor_id: string | null
+  pay_mode: MealPayMode
+  daily_meal_limit: number | null
+  meal_windows: MealWindow[]
+  low_balance_threshold: string | null
+}
 
-export type MealTopUpResult = { account: MealAccount | null; document: PrintDocument | null };
+function useInvalidate(...resources: string[]) {
+  const { storeId } = useSession()
+  const client = useQueryClient()
+  return () =>
+    Promise.all(
+      resources.map((resource) =>
+        client.invalidateQueries({ queryKey: ['pos', storeId, resource] }),
+      ),
+    )
+}
 
-// Topping up, paying back and correcting a wallet. Each is a money command:
-// a lost answer is checked against its receipt before anything is resent.
-export function useMealAccountCommands(
-  branchId: string | null,
-  staffId: string | null,
-  storeId: string | null,
-) {
-  const snapshot = useSession();
-  const queryClient = useQueryClient();
-  const refresh = () => queryClient.invalidateQueries({ queryKey: mealKey(snapshot.generation) });
-  async function run<T>(account: MealAccount, action: string, verb: string, body: object) {
-    try {
-      const result = await runFinancialCommand<T>(financialRequest, {
-        staffId,
-        storeId,
-        scopeId: account.id,
-        action,
-        path: `/pos/meal_accounts/${account.id}/${verb}`,
-        body: { branch_id: branchId, ...body },
-      });
-      return result.data;
-    } catch (error) {
-      abandonIfNeeded(error);
-      throw error;
-    } finally {
-      void refresh();
-    }
-  }
-  return {
-    async topUp(account: MealAccount, input: MealTopUpInput): Promise<MealTopUpResult> {
-      const data = await run<{ account?: unknown; document?: PrintDocument }>(
-        account,
-        'meal_wallet.top_up',
-        'top_ups',
-        {
-          kind: input.kind,
-          amount: input.amount,
-          ...(input.kind === 'cash' && input.handedAmount
-            ? { handed_amount: input.handedAmount }
-            : {}),
-          ...(input.kind === 'bank_manual'
-            ? { reference: input.reference, receiving_account: input.receivingAccount }
-            : {}),
-        },
-      );
-      return { account: normalizeMealAccount(data?.account), document: data?.document ?? null };
+type MealAccountChange = Partial<MealAccountInput> & { status?: MealAccountStatus }
+export type MealAccountSave =
+  | { accountId?: undefined; values: MealAccountInput }
+  | { accountId: string; values: MealAccountChange }
+
+// Adds an account, changes it, or locks and unlocks it (`status` alone).
+export function useSaveMealAccount(branchId: string) {
+  const invalidate = useInvalidate('meal-accounts', 'meal-sponsors')
+  return useMutation({
+    mutationFn: (input: MealAccountSave) => {
+      const body = { branch_id: branchId, ...input.values }
+      return input.accountId
+        ? write<MealAccount>('PATCH', `/pos/meal_accounts/${input.accountId}`, body)
+        : write<MealAccount>('POST', '/pos/meal_accounts', body)
     },
-    // The whole balance unless an amount is given.
-    async refund(
-      account: MealAccount,
-      input: { amount?: string; beneficiaryName?: string; reason?: string; approvalId?: string },
-    ) {
-      const data = await run<{ account?: unknown }>(account, 'meal_wallet.refund', 'refund', {
-        ...(input.amount ? { amount: input.amount } : {}),
-        ...(input.beneficiaryName ? { beneficiary_name: input.beneficiaryName } : {}),
-        ...(input.reason ? { reason: input.reason } : {}),
-        ...(input.approvalId ? { approval_id: input.approvalId } : {}),
-      });
-      return normalizeMealAccount(data?.account);
+    onSettled: invalidate,
+  })
+}
+
+// All or nothing: the whole file is imported or nothing is.
+export function useImportMealAccounts(branchId: string) {
+  const invalidate = useInvalidate('meal-accounts', 'meal-sponsors')
+  return useMutation({
+    mutationFn: (csv: string) =>
+      write<{ created: number; updated: number }>('POST', '/pos/meal_accounts/import', {
+        branch_id: branchId,
+        csv,
+      }),
+    onSettled: invalidate,
+  })
+}
+
+export type MealSponsorInput = {
+  name?: string
+  phone?: string | null
+  email?: string | null
+  statement_day?: number
+  subsidy_mode?: SubsidyMode
+  subsidy_value?: string
+  subsidy_daily_cap?: string | null
+  status?: 'active' | 'suspended'
+  // Credit terms go through the credit configuration and need credit management.
+  credit_limit?: string
+  due_days?: number
+}
+
+export function useSaveMealSponsor(branchId: string) {
+  const invalidate = useInvalidate('meal-sponsors', 'meal-accounts', 'credit-accounts')
+  return useMutation({
+    mutationFn: (input: { sponsorId?: string; values: MealSponsorInput }) => {
+      const body = { branch_id: branchId, ...input.values }
+      return input.sponsorId
+        ? write<MealSponsor>('PATCH', `/pos/meal_sponsors/${input.sponsorId}`, body)
+        : write<MealSponsor>('POST', '/pos/meal_sponsors', body)
     },
-    // `amount` is signed: "-10000" takes money off the wallet.
-    async adjust(
-      account: MealAccount,
-      input: { amount: string; note: string; approvalId?: string },
-    ) {
-      const data = await run<{ account?: unknown }>(account, 'meal_wallet.adjust', 'adjust', {
-        amount: input.amount,
-        note: input.note,
-        ...(input.approvalId ? { approval_id: input.approvalId } : {}),
-      });
-      return normalizeMealAccount(data?.account);
-    },
-  };
+    onSettled: invalidate,
+  })
 }

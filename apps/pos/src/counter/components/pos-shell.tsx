@@ -1,0 +1,535 @@
+import { Outlet, useLocation, useNavigate } from '@tanstack/react-router';
+import { useEffect, useId, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import posMark from '../assets/brand/parkviet-pos-mark-dark.svg';
+import { useBranchEvents } from '../hooks/use-branch-events';
+import { useConnectivity } from '../hooks/use-offline';
+import { useReceiptTemplates } from '../hooks/use-receipt-templates';
+import { useSession } from '../hooks/use-session';
+import { session } from '../lib/app-session';
+import { commandQueue } from '../lib/command-queue';
+import {
+  FINANCIAL_RECOVERY_CHANGED,
+  type FinancialRecoveryState,
+  financialRecoveryState,
+  forgetFinancialRecord,
+  scopedFinancialRecords,
+} from '../lib/financial-recovery';
+import { writesLocked } from '../lib/pos-context';
+import { posDashboardUrl } from '../lib/pos-dashboard-url';
+import { queryClient } from '../lib/query-client';
+import { failureStatus, posFailureKey } from '../lib/request-failure';
+import {
+  forgetIntent,
+  hasPendingIntents,
+  hasUncertainIntents,
+  INTENTS_CHANGED,
+  scopedIntents,
+} from '../lib/uncertain-intents';
+import { AppUpdatePrompt } from './app-update-prompt';
+import { ContextPickerForm } from './context-selector';
+import { ContextSetupDialog } from './context-setup-dialog';
+import { HeaderSlotProvider } from './header-slot';
+import { ConnectionBadge, ShiftStatus } from './header-status';
+import { HoverTip } from './hover-tip';
+import { OfflineBanner } from './offline-banner';
+import { OpenShiftDialog, useCanOpenShift } from './open-shift-dialog';
+import { PosIcon } from './pos-icon';
+import { PosSelectionProvider, usePosSelection } from './pos-selection';
+import { ScannerCalibrationDialog } from './scanner-calibration';
+import { SellingToolbar } from './toolbar/selling-toolbar';
+import { UserMenu } from './user-menu';
+
+// Counter pages other than selling, by their path.
+const COUNTER_PAGES =
+  /\/(returns|shifts|collect|receipts|reservations|bottle-keeps|meal-accounts|stored-value|vehicle-visits|tips|offline-review)(\/|$)/;
+
+export function PosShell() {
+  return (
+    <PosSelectionProvider>
+      <ShellFrame />
+    </PosSelectionProvider>
+  );
+}
+
+function ShellFrame() {
+  const { t } = useTranslation();
+  const navigate = useNavigate({ from: '/$storeId/sell' });
+  const snapshot = useSession();
+  const { context, selection, registerMode } = usePosSelection();
+  // Print templates load with the POS, so the first print never waits for them.
+  useReceiptTemplates(true, selection.branchId);
+  useBranchEvents(selection.branchId, context.data?.store.id ?? null);
+  const pathname = useLocation({ select: (location) => location.pathname.replace(/\/+$/, '') });
+  const pageTitle = pathname.endsWith('/returns')
+    ? t('returnsNav')
+    : pathname.endsWith('/shifts')
+      ? t('myShiftNav')
+      : pathname.endsWith('/collect')
+        ? t('collectNav')
+        : pathname.endsWith('/receipts')
+          ? t('receiptsTitle')
+          : pathname.endsWith('/reservations')
+            ? t('reservationsNav')
+            : pathname.endsWith('/bottle-keeps')
+              ? t('bottleKeepsNav')
+              : pathname.endsWith('/meal-accounts')
+                ? t('mealAccountsNav')
+                : pathname.endsWith('/stored-value')
+                  ? t('storedValueNav')
+                  : pathname.endsWith('/vehicle-visits')
+                    ? t('vehicleVisitsNav')
+                    : pathname.endsWith('/tips')
+                      ? t('tipsNav')
+                      : pathname.endsWith('/offline-review')
+                        ? t('offlineReviewTitle')
+                        : t('sellingArea');
+  const isSale = !COUNTER_PAGES.test(pathname);
+  // A store not set up yet, seen by someone who may set it up, is pointed at
+  // the setup wizard of the POS dashboard instead of the branch picker dialog.
+  // Without that permission the picker asks for an administrator
+  // (context-selector.tsx).
+  const setupNeeded = Boolean(
+    context.data?.onboarding?.required && context.data.onboarding.can_setup,
+  );
+  const setupUrl = setupNeeded ? posDashboardUrl(context.data?.store.id, 'setup') : null;
+  const contextPicker = useRef<HTMLDetailsElement>(null);
+  const contextTipId = useId();
+  // The open-shift form is a dialog opened from the header or the banner.
+  const canOpenShift = useCanOpenShift();
+  const [shiftDialogOpen, setShiftDialogOpen] = useState(false);
+  useEffect(() => {
+    if (!canOpenShift) setShiftDialogOpen(false);
+  }, [canOpenShift]);
+  // The picker's draft lives only while it is open, so reopening starts from
+  // the current branch and register.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const closePicker = () => {
+    if (contextPicker.current) contextPicker.current.open = false;
+  };
+  // A header navigation must not leave the picker covering the destination page.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the route change is the dismissal trigger
+  useEffect(() => {
+    if (contextPicker.current) contextPicker.current.open = false;
+  }, [pathname]);
+  useEffect(() => {
+    const dismiss = (event: Event) => {
+      if (event.target instanceof Node && !contextPicker.current?.contains(event.target)) {
+        if (contextPicker.current) contextPicker.current.open = false;
+      }
+    };
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && contextPicker.current?.open) {
+        contextPicker.current.open = false;
+        contextPicker.current.querySelector('summary')?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', dismiss);
+    document.addEventListener('focusin', dismiss);
+    document.addEventListener('keydown', onEscape);
+    return () => {
+      document.removeEventListener('pointerdown', dismiss);
+      document.removeEventListener('focusin', dismiss);
+      document.removeEventListener('keydown', onEscape);
+    };
+  }, []);
+  const [online, setOnline] = useState(() => globalThis.navigator?.onLine !== false);
+  const server = useConnectivity();
+  const [busy, setBusy] = useState(false);
+  const [calibrating, setCalibrating] = useState(false);
+  // Where the selling screen puts its order tabs, in the header.
+  const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
+  const [logoutError, setLogoutError] = useState('');
+  const [intentsVersion, setIntentsVersion] = useState(0);
+  const [financialVersion, setFinancialVersion] = useState(0);
+  const [financialState, setFinancialState] = useState<FinancialRecoveryState>({
+    pending: 0,
+    storageUnavailable: false,
+  });
+  const [checkingIntents, setCheckingIntents] = useState(false);
+  const [recoveryCheck, setRecoveryCheck] = useState<{
+    staffId: string;
+    storeId: string;
+    confirmed: number;
+    notCommitted: number;
+    missing: number;
+    blocked: number;
+    failed: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const onOnline = () => setOnline(true);
+    const onOffline = () => setOnline(false);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void session.resume();
+    };
+    const onLeave = (event: BeforeUnloadEvent) => {
+      if (!commandQueue.hasPending() && !hasPendingIntents() && !hasUncertainIntents()) return;
+      event.preventDefault();
+    };
+    const onIntentsChanged = () => setIntentsVersion((version) => version + 1);
+    const onFinancialChanged = () => setFinancialVersion((version) => version + 1);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('beforeunload', onLeave);
+    window.addEventListener(INTENTS_CHANGED, onIntentsChanged);
+    window.addEventListener(FINANCIAL_RECOVERY_CHANGED, onFinancialChanged);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('beforeunload', onLeave);
+      window.removeEventListener(INTENTS_CHANGED, onIntentsChanged);
+      window.removeEventListener(FINANCIAL_RECOVERY_CHANGED, onFinancialChanged);
+    };
+  }, []);
+
+  useEffect(() => {
+    void financialVersion;
+    let active = true;
+    const staffId = context.data?.staff.id;
+    const storeId = context.data?.store.id;
+    if (!staffId || !storeId) {
+      setFinancialState({ pending: 0, storageUnavailable: false });
+      return;
+    }
+    void financialRecoveryState(staffId, storeId).then((value) => {
+      if (active) setFinancialState(value);
+    });
+    return () => {
+      active = false;
+    };
+  }, [context.data?.staff.id, context.data?.store.id, financialVersion]);
+
+  async function logout() {
+    if (
+      (commandQueue.hasPending() ||
+        hasPendingIntents() ||
+        hasUncertainIntents() ||
+        financialUncertain) &&
+      !window.confirm(t('unsent'))
+    )
+      return;
+    setBusy(true);
+    setLogoutError('');
+    try {
+      await session.logout();
+    } catch {
+      setLogoutError(t('logoutFailure'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Pending work keeps its store-scoped recovery keys and is checked again
+  // when the cashier comes back to that store.
+  function changeStore() {
+    if (
+      (commandQueue.hasPending() ||
+        hasPendingIntents() ||
+        hasUncertainIntents() ||
+        financialUncertain) &&
+      !window.confirm(t('storeSwitchUnsent'))
+    )
+      return;
+    void navigate({ to: '/$storeId/settings/stores' });
+  }
+
+  async function checkIntents(staffId: string, storeId: string) {
+    setCheckingIntents(true);
+    setRecoveryCheck(null);
+    const result = {
+      staffId,
+      storeId,
+      confirmed: 0,
+      notCommitted: 0,
+      missing: 0,
+      blocked: 0,
+      failed: 0,
+    };
+    function recordFailure(error: unknown) {
+      const failure = posFailureKey(error);
+      if (failure === 'missing') result.missing++;
+      else if (failure === 'forbidden' || failure === 'unauthorized') result.blocked++;
+      else result.failed++;
+    }
+    try {
+      for (const intent of scopedIntents(staffId, storeId)) {
+        try {
+          await session.request('GET', '/pos/command_receipts', {
+            params: { idempotency_key: intent.key },
+          });
+          forgetIntent(intent.scope);
+          result.confirmed++;
+        } catch (error) {
+          recordFailure(error);
+          // A missing or inaccessible receipt does not prove the command cannot commit.
+        }
+      }
+      for (const record of await scopedFinancialRecords(staffId, storeId)) {
+        try {
+          await session.request('GET', '/pos/command_receipts', {
+            params: { idempotency_key: record.idempotencyKey },
+          });
+          await forgetFinancialRecord(record.scope);
+          result.confirmed++;
+        } catch (error) {
+          // The receipt is written in the command's own transaction: no receipt
+          // for this user means the money command never committed.
+          if (failureStatus(error) === 404) {
+            await forgetFinancialRecord(record.scope);
+            result.notCommitted++;
+            continue;
+          }
+          recordFailure(error);
+          // Keep financial evidence for manual reconciliation; never mint a new tender.
+        }
+      }
+      await queryClient.invalidateQueries({ queryKey: ['pos', 'workspaces'] });
+      await queryClient.invalidateQueries({ queryKey: ['pos', 'received-funds'] });
+    } catch (error) {
+      recordFailure(error);
+    } finally {
+      setRecoveryCheck(result);
+      setCheckingIntents(false);
+    }
+  }
+
+  const failure = context.error ? posFailureKey(context.error) : null;
+  const financialUncertain = financialState.pending > 0;
+  const store = context.data?.store;
+  void intentsVersion;
+  const uncertain =
+    context.data && hasUncertainIntents(context.data.staff.id, context.data.store.id);
+  // Payment attention lives in the POS dashboard (new tab, see UserMenu).
+  const attentionUrl = posDashboardUrl(store?.id, 'funds/attention', selection.branchId);
+  const offline = !online || !server.online || failure === 'offline';
+  // Known from the session before the context loads, so the header never blanks.
+  const storeName =
+    store?.name ||
+    snapshot.stores.find((item) => item.id === snapshot.storeId)?.name ||
+    t('storeHeading');
+  const branch = context.data?.branches.find((item) => item.id === selection.branchId);
+  const register = context.data?.registers.find((item) => item.id === selection.registerId);
+
+  return (
+    <main className={`layout pos-layout${isSale ? ' pos-sale' : ''}`}>
+      <a className="skip-link" href={isSale ? '#pos-product-search' : '#pos-page-title'}>
+        {t(isSale ? 'skipToSale' : 'skipToContent')}
+      </a>
+      <header className="header">
+        {isSale ? (
+          <h1 id="title" className="visually-hidden">
+            {t('sellingArea')}
+          </h1>
+        ) : null}
+        <span className="header-brand">
+          <img className="header-logo" src={posMark} alt="ParkViet POS" />
+        </span>
+        <span className="header-title">{pageTitle}</span>
+        <details
+          className="pos-context-details"
+          ref={contextPicker}
+          onToggle={(event) => setPickerOpen(event.currentTarget.open)}
+        >
+          <summary
+            className="header-status has-tip"
+            aria-label={t('changeContext')}
+            aria-describedby={contextTipId}
+          >
+            <PosIcon name="layers" />
+            <HoverTip id={contextTipId}>
+              <span>
+                {t('storeHeading')}: {storeName}
+              </span>
+              <span>
+                {t('branch')}: {branch?.name ?? t('chooseBranch')}
+              </span>
+              {registerMode === 'required' || selection.registerId ? (
+                <span>
+                  {t('register')}: {register?.name ?? t('chooseRegister')}
+                </span>
+              ) : null}
+            </HoverTip>
+          </summary>
+          <div className="context-popover">
+            <div className="context-store">
+              <span className="context-store-icon">
+                <PosIcon name="store" />
+              </span>
+              <div className="context-store-text">
+                <small>{t('storeHeading')}</small>
+                <strong>{storeName}</strong>
+                {store?.currency ? <span>{store.currency}</span> : null}
+              </div>
+              {snapshot.stores.length > 1 ? (
+                <button type="button" disabled={busy} onClick={changeStore}>
+                  {t('changeStore')}
+                </button>
+              ) : null}
+            </div>
+            <h2 className="context-popover-title">{t('contextPickerTitle')}</h2>
+            {pickerOpen ? <ContextPickerForm onClose={closePicker} /> : null}
+          </div>
+        </details>
+        {isSale ? <div className="header-slot" ref={setHeaderSlot} /> : null}
+        {isSale && context.data ? (
+          <SellingToolbar
+            data={context.data}
+            branchId={selection.branchId}
+            registerId={selection.registerId}
+            onCalibrate={() => setCalibrating(true)}
+          />
+        ) : null}
+        <div className="pos-context-status">
+          <ConnectionBadge offline={offline} loading={context.isPending} />
+          {isSale ? (
+            <ShiftStatus
+              open={Boolean(context.data?.shift)}
+              canOpen={canOpenShift}
+              onEnter={() => setShiftDialogOpen(true)}
+            />
+          ) : null}
+        </div>
+        <UserMenu
+          name={snapshot.name}
+          data={context.data}
+          branchId={selection.branchId}
+          registerId={selection.registerId}
+          isSale={isSale}
+          busy={busy}
+          onCalibrate={() => setCalibrating(true)}
+          onLogout={() => void logout()}
+        />
+      </header>
+      {calibrating && selection.registerId ? (
+        <ScannerCalibrationDialog
+          registerId={selection.registerId}
+          onClose={() => setCalibrating(false)}
+        />
+      ) : null}
+      <ContextSetupDialog enabled={isSale && !setupNeeded} />
+      {shiftDialogOpen && canOpenShift ? (
+        <OpenShiftDialog onClose={() => setShiftDialogOpen(false)} />
+      ) : null}
+      <section className="shell" aria-labelledby={isSale ? 'title' : 'pos-page-title'}>
+        <div className="pos-context-card pos-alerts">
+          {context.data?.sales_channel && context.data.sales_channel.status !== 'active' ? (
+            <p className="error" role="status">
+              {t(
+                context.data.sales_channel.status === 'missing'
+                  ? 'pos_channel_missing'
+                  : 'pos_channel_inactive',
+              )}
+            </p>
+          ) : null}
+          {setupNeeded ? (
+            <p role="status">
+              {t('setup.requiredInDashboard')}{' '}
+              {setupUrl ? (
+                <a href={setupUrl} target="_blank" rel="noopener">
+                  {t('setup.openDashboard')}
+                </a>
+              ) : null}
+            </p>
+          ) : null}
+          <OfflineBanner
+            staffId={context.data?.staff.id ?? null}
+            storeId={context.data?.store.id ?? null}
+            branchId={selection.branchId}
+            registerId={selection.registerId}
+            shiftId={context.data?.shift?.id ?? null}
+            menuOn={context.data?.modules?.['fnb.menu'] === true}
+            offline={offline}
+          />
+          {isSale && context.data && writesLocked(context.data, selection) ? (
+            <p className="error" role="status">
+              {t('writesLocked')}
+            </p>
+          ) : null}
+        </div>
+        {/* Recovery notices float over the page: they come and go with the
+            outcome of a request, must not push the sale screen around, and
+            must not block the controls beneath them (only their own links and
+            buttons take clicks). */}
+        <div className="pos-floating-alerts" aria-live="polite">
+          <AppUpdatePrompt />
+          {uncertain ? (
+            <p className="error" role="status">
+              {t('uncertainWarning')}
+            </p>
+          ) : null}
+          {financialState.storageUnavailable ? (
+            <p className="error" role="status">
+              {t('financialStorageWarning')}{' '}
+              {attentionUrl ? (
+                <a href={attentionUrl} target="_blank" rel="noopener">
+                  {t('fundsAttentionTitle')}
+                </a>
+              ) : null}
+            </p>
+          ) : null}
+          {financialUncertain ? (
+            <p className="error" role="status">
+              {t('financialUncertainWarning')}{' '}
+              {attentionUrl ? (
+                <a href={attentionUrl} target="_blank" rel="noopener">
+                  {t('fundsAttentionTitle')}
+                </a>
+              ) : null}
+            </p>
+          ) : null}
+          {(uncertain || financialUncertain) && context.data ? (
+            <button
+              type="button"
+              disabled={checkingIntents}
+              onClick={() => void checkIntents(context.data.staff.id, context.data.store.id)}
+            >
+              {checkingIntents
+                ? t('waiting')
+                : t(financialUncertain ? 'checkFinancialRecovery' : 'checkUncertain')}
+            </button>
+          ) : null}
+          {recoveryCheck &&
+          recoveryCheck.staffId === context.data?.staff.id &&
+          recoveryCheck?.storeId === context.data?.store.id ? (
+            <div className="recovery-check-result" role="status" aria-live="polite">
+              <p>{t('recoveryChecked', { count: recoveryCheck.confirmed })}</p>
+              {recoveryCheck.notCommitted > 0 ? (
+                <p>{t('recoveryNotCommitted', { count: recoveryCheck.notCommitted })}</p>
+              ) : null}
+              {recoveryCheck.missing > 0 ? (
+                <p>{t('recoveryMissing', { count: recoveryCheck.missing })}</p>
+              ) : null}
+              {recoveryCheck.blocked > 0 ? (
+                <p>{t('recoveryBlocked', { count: recoveryCheck.blocked })}</p>
+              ) : null}
+              {recoveryCheck.failed > 0 ? (
+                <p>{t('recoveryFailed', { count: recoveryCheck.failed })}</p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+        <div className="pos-context-card pos-alerts">
+          {logoutError && (
+            <p className="error" role="alert">
+              {logoutError}
+            </p>
+          )}
+          {failure && failure !== 'offline' && (
+            <p className="error" role="alert">
+              {t(failure)}
+            </p>
+          )}
+          {isSale && context.data && context.data.capabilities.length === 0 ? (
+            <p>{t('capabilitiesEmpty')}</p>
+          ) : null}
+        </div>
+        <HeaderSlotProvider value={isSale ? headerSlot : null}>
+          <Outlet />
+        </HeaderSlotProvider>
+      </section>
+    </main>
+  );
+}

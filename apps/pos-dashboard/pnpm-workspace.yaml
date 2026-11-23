@@ -1,5 +1,0 @@
-packages:
-  - '.'
-trustLockfile: true
-minimumReleaseAgeExclude:
-  - '@spree/*'

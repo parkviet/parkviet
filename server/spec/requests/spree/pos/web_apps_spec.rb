@@ -2,14 +2,14 @@
 
 require 'tmpdir'
 
-# The production image builds apps/pos into POS_WEB_DIST_PATH and
-# apps/pos-dashboard into POS_ADMIN_DIST_PATH. Rails serves both same-origin,
-# with deep links falling back to index.html.
+# The production image builds the unified POS app (apps/pos) into
+# POS_WEB_DIST_PATH and the guest QR page into TABLE_ORDER_DIST_PATH. Rails
+# serves both same-origin, with deep links falling back to index.html.
 RSpec.describe 'POS web apps', type: :request do
   around do |example|
     Dir.mktmpdir do |dir|
       @dist = {}
-      { 'POS_WEB_DIST_PATH' => 'pos', 'POS_ADMIN_DIST_PATH' => 'pos-admin', 'TABLE_ORDER_DIST_PATH' => 'table' }.each do |variable, name|
+      { 'POS_WEB_DIST_PATH' => 'pos', 'TABLE_ORDER_DIST_PATH' => 'table' }.each do |variable, name|
         root = File.join(dir, name)
         FileUtils.mkdir_p(File.join(root, 'assets'))
         File.write(File.join(root, 'index.html'), "<html>#{name}</html>")
@@ -45,12 +45,12 @@ RSpec.describe 'POS web apps', type: :request do
     expect(response.headers['Cache-Control']).to include('immutable')
   end
 
-  it 'serves POS administration at /pos-admin, separately from /pos' do
-    get '/pos-admin/store_1/settings/system'
-    expect(response.body).to eq('<html>pos-admin</html>')
+  it 'redirects legacy /pos-admin paths to /pos' do
+    get '/pos-admin'
+    expect(response).to redirect_to('/pos')
 
-    get '/pos-admin/assets/app-abc123.js'
-    expect(response.body).to eq("console.log('pos-admin')")
+    get '/pos-admin/store_1/settings/system'
+    expect(response).to redirect_to('/pos/store_1/settings/system')
   end
 
   it "serves the guests' QR order page at /table without sending its address on" do

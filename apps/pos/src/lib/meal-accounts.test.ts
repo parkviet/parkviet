@@ -1,106 +1,113 @@
-import { parseVndInput } from '@parkviet/pos-shared/money';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest'
 import {
-  mealDue,
-  mealReasonKey,
-  normalizeMealAccount,
-  normalizeMealEntries,
-  normalizeMealStatus,
-  parseSignedVnd,
-} from './meal-accounts';
+  describeMealFailure,
+  importProblems,
+  parseMealWindows,
+  refusedField,
+  statementPeriod,
+  validEmployeeCode,
+  wholeNumber,
+  windowDraft,
+} from './meal-accounts'
 
-const account = {
-  id: 'posmeal_1',
-  employee_code: 'NV001',
-  name: 'Nguyễn An',
-  phone: null,
-  customer_id: 'poscustomer_1',
-  group_label: 'Kho',
-  sponsor: { id: 'possponsor_1', name: 'Công ty A' },
-  pay_mode: 'sponsor_subsidy',
-  daily_meal_limit: 2,
-  meal_windows: [{ key: 'lunch', from: '10:30', to: '13:30', limit: 1 }, { from: 'x' }],
-  low_balance_threshold: '50000.0',
-  balance: '120000.0',
-  currency: 'VND',
-  status: 'active',
-  revision: 3,
-  updated_at: '2026-11-12T03:00:00Z',
-};
+const conflict = (details: Record<string, unknown>, message = 'Refused.') => ({
+  status: 409,
+  message,
+  details,
+})
 
-describe('meal accounts', () => {
-  it('reads an account and drops rows the server would never send', () => {
-    expect(normalizeMealAccount(account)).toMatchObject({
-      id: 'posmeal_1',
-      employee_code: 'NV001',
-      sponsor: { id: 'possponsor_1', name: 'Công ty A' },
-      pay_mode: 'sponsor_subsidy',
-      meal_windows: [{ key: 'lunch', from: '10:30', to: '13:30', limit: 1 }],
-      balance: '120000.0',
-    });
-    expect(normalizeMealAccount({ ...account, status: 'gone' })).toBeNull();
-    expect(normalizeMealAccount({ ...account, employee_code: '' })).toBeNull();
-    expect(normalizeMealAccount(null)).toBeNull();
-    expect(normalizeMealAccount({ ...account, sponsor: null })?.sponsor).toBeNull();
-  });
+describe('meal account form checks', () => {
+  it('reads blank as no value and refuses numbers out of range', () => {
+    expect(wholeNumber('', 0, 20)).toBeNull()
+    expect(wholeNumber(' 3 ', 0, 20)).toBe(3)
+    expect(wholeNumber('21', 0, 20)).toBeUndefined()
+    expect(wholeNumber('2.5', 0, 20)).toBeUndefined()
+    expect(wholeNumber('-1', 0, 20)).toBeUndefined()
+  })
 
-  it('reads the meal status with its split plan', () => {
-    const status = normalizeMealStatus({
-      ...account,
-      meals_today: 1,
-      meals_left: null,
-      low_balance: true,
-      wallet_covers: false,
-      plan: { sponsor_amount: '25000.0', employee_amount: '10000.0', sponsor_unavailable: true },
-    });
-    expect(status).toMatchObject({ meals_today: 1, meals_left: null, low_balance: true });
-    expect(status?.plan).toMatchObject({
-      sponsor_amount: '25000.0',
-      employee_amount: '10000.0',
-      sponsor_unavailable: true,
-    });
-    expect(normalizeMealStatus({ ...account, plan: null })?.plan).toBeNull();
-  });
+  it('accepts employee codes the server can store', () => {
+    expect(validEmployeeCode('nv-001')).toBe(true)
+    expect(validEmployeeCode('A.B_C')).toBe(true)
+    expect(validEmployeeCode('')).toBe(false)
+    expect(validEmployeeCode('-001')).toBe(false)
+    expect(validEmployeeCode('NV 001')).toBe(false)
+  })
 
-  it('reads wallet history entries with signed amounts', () => {
+  it('sends meal times with a limit only when one is given, past midnight allowed', () => {
     expect(
-      normalizeMealEntries([
-        { id: 'e1', kind: 'top_up', amount: '100000.0', actor: { id: 's', name: 'Lan' } },
-        { id: 'e2', kind: 'spend', amount: '-35000.0', order_number: 'R100' },
-        { id: 'e3', kind: 'bogus', amount: '1.0' },
-        { id: 'e4', kind: 'adjust', amount: 'abc' },
+      parseMealWindows([
+        { key: 'lunch', from: '11:00', to: '13:30', limit: '1' },
+        { key: 'night', from: '22:00', to: '02:00', limit: '' },
       ]),
-    ).toMatchObject([
-      { id: 'e1', kind: 'top_up', actor: 'Lan' },
-      { id: 'e2', kind: 'spend', amount: '-35000.0', order_number: 'R100' },
-    ]);
-    expect(normalizeMealEntries('nope')).toEqual([]);
-  });
+    ).toEqual([
+      { key: 'lunch', from: '11:00', to: '13:30', limit: 1 },
+      { key: 'night', from: '22:00', to: '02:00' },
+    ])
+    expect(parseMealWindows([])).toEqual([])
+    expect(windowDraft({ key: 'lunch', from: '11:00', to: '13:00', limit: 2 })).toEqual({
+      key: 'lunch',
+      from: '11:00',
+      to: '13:00',
+      limit: '2',
+    })
+  })
 
-  it('splits what is still due between the sponsor and the eater', () => {
-    const plan = normalizeMealStatus({
-      ...account,
-      plan: { sponsor_amount: '25000.0', employee_amount: '10000.0' },
-    })?.plan;
-    expect(mealDue('35000.0', plan)).toEqual({ sponsor: 25000n, eater: 10000n });
-    expect(mealDue('25000.0', plan)).toEqual({ sponsor: 25000n, eater: 0n });
-    expect(mealDue('0.0', plan)).toEqual({ sponsor: 25000n, eater: 0n });
-    expect(mealDue('35000.0', null)).toEqual({ sponsor: 0n, eater: 35000n });
-    expect(mealDue(undefined, null)).toEqual({ sponsor: 0n, eater: 0n });
-  });
+  it('refuses invalid, repeated or too many meal times', () => {
+    const row = { key: 'lunch', from: '11:00', to: '13:00', limit: '' }
+    expect(parseMealWindows([{ ...row, key: 'Lunch' }])).toBeNull()
+    expect(parseMealWindows([{ ...row, to: '11:00' }])).toBeNull()
+    expect(parseMealWindows([{ ...row, from: '25:00' }])).toBeNull()
+    expect(parseMealWindows([{ ...row, limit: '21' }])).toBeNull()
+    expect(parseMealWindows([row, row])).toBeNull()
+    expect(
+      parseMealWindows(Array.from({ length: 7 }, (_, index) => ({ ...row, key: `m${index}` }))),
+    ).toBeNull()
+  })
+})
 
-  it('names the refusal reasons that have their own text', () => {
-    expect(mealReasonKey('meal_duplicate_swipe')).toBe('mealReason_meal_duplicate_swipe');
-    expect(mealReasonKey('sponsor_limit')).toBe('mealReason_sponsor_limit');
-    expect(mealReasonKey('lease_stale')).toBeNull();
-    expect(mealReasonKey(null)).toBeNull();
-  });
+describe('sponsor statement period', () => {
+  it('is the last closed cycle, still open on the statement day itself', () => {
+    expect(statementPeriod(25, '2026-11-12')).toEqual({ from: '2026-09-26', to: '2026-10-25' })
+    expect(statementPeriod(25, '2026-11-25')).toEqual({ from: '2026-09-26', to: '2026-10-25' })
+    expect(statementPeriod(25, '2026-11-26')).toEqual({ from: '2026-10-26', to: '2026-11-25' })
+  })
 
-  it('reads a signed correction amount', () => {
-    expect(parseSignedVnd('-10.000', parseVndInput)).toBe('-10000');
-    expect(parseSignedVnd('+5000', parseVndInput)).toBe('5000');
-    expect(parseSignedVnd('20000', parseVndInput)).toBe('20000');
-    expect(parseSignedVnd('0', parseVndInput)).toBeNull();
-    expect(parseSignedVnd('-1,5', parseVndInput)).toBeNull();
-  });
-});
+  it('rolls over the year and keeps February whole', () => {
+    expect(statementPeriod(5, '2026-01-03')).toEqual({ from: '2025-11-06', to: '2025-12-05' })
+    expect(statementPeriod(28, '2026-03-01')).toEqual({ from: '2026-01-29', to: '2026-02-28' })
+  })
+})
+
+describe('meal command refusals', () => {
+  const t = (key: string, options?: Record<string, unknown>) =>
+    options ? `${key}:${JSON.stringify(options)}` : key
+
+  it('names the refused field of an account or sponsor', () => {
+    const account = conflict({ reason: 'meal_account_invalid', field: 'phone' })
+    const sponsor = conflict({ reason: 'meal_sponsor_invalid', field: 'statement_day' })
+    expect(refusedField(account)).toBe('phone')
+    expect(refusedField(sponsor)).toBe('statement_day')
+    expect(refusedField(conflict({ reason: 'module_disabled', field: 'phone' }))).toBeNull()
+    expect(refusedField({ status: 422, details: { reason: 'meal_account_invalid' } })).toBeNull()
+    expect(describeMealFailure(account, t)).toContain('mealAccounts.fieldProblem')
+    expect(describeMealFailure(account, t)).toContain('Refused.')
+  })
+
+  it('lists the refused rows of an import', () => {
+    const failure = conflict({
+      reason: 'meal_import_invalid',
+      errors: [
+        { line: 3, field: 'sponsor', message: 'No sponsor has this name.' },
+        { line: 4, message: 'Bad row.' },
+        { line: 5 },
+        'junk',
+      ],
+    })
+    expect(importProblems(failure)).toEqual([
+      { line: 3, field: 'sponsor', message: 'No sponsor has this name.' },
+      { line: 4, field: null, message: 'Bad row.' },
+    ])
+    expect(importProblems(conflict({ reason: 'meal_import_invalid' }))).toEqual([])
+    expect(importProblems(conflict({ reason: 'meal_account_invalid', errors: [] }))).toEqual([])
+  })
+})

@@ -1,111 +1,95 @@
 import type {
   Platform,
   PlatformOrder,
+  PlatformSetting,
   PlatformSettings,
-} from '@parkviet/pos-shared/platform-orders';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { session } from '../lib/app-session';
-import type { PlatformEntryLine } from '../lib/platform-order-draft';
-import { useSession } from './use-session';
-import { workspaceEditorId } from './use-workspaces';
+} from '@shared/platform-orders'
+import { useResourceMutation } from '@spree/dashboard-core'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { posRequest } from '../lib/pos-request'
+import { posKey } from '../lib/query-keys'
+import { useSession } from './use-session'
 
-export function platformOrdersKey(generation: number, branchId: string | null) {
-  return ['pos', 'platform-orders', generation, branchId] as const;
+export type PlatformOrderPage = {
+  data: PlatformOrder[]
+  meta: { page: number; pages: number; count: number; limit: number }
 }
 
-export function platformSettingsKey(generation: number, branchId: string | null) {
-  return ['pos', 'platform-settings', generation, branchId] as const;
-}
+export type UnsettledFilters = { platform?: Platform; from?: string; to?: string; page: number }
 
-export type PlatformEntry = {
-  platform: Platform;
-  platformOrderRef: string;
-  pickupCode: string;
-  note: string;
-  lines: PlatformEntryLine[];
-};
-
-function command<T>(path: string, body: Record<string, unknown> = {}) {
-  const idempotencyKey = crypto.randomUUID();
-  return session
-    .request<{ data: T }>('POST', path, {
-      body: { ...body, idempotency_key: idempotencyKey },
-      idempotencyKey,
-    })
-    .then((result) => result.data);
-}
-
-// Which platforms the branch takes orders from, and at what rate.
-export function usePlatformSettings(branchId: string | null, enabled: boolean) {
-  const snapshot = useSession();
+// The delivery platforms of one branch, configured or not.
+export function usePlatformSettings(branchId: string) {
+  const { storeId } = useSession()
   return useQuery({
-    queryKey: platformSettingsKey(snapshot.generation, branchId),
-    enabled: enabled && snapshot.status === 'authenticated' && Boolean(branchId),
-    staleTime: 60_000,
+    queryKey: posKey(storeId, 'platforms', 'settings', branchId),
     queryFn: async () =>
       (
-        await session.request<{ data: PlatformSettings }>('GET', '/pos/platform_settings', {
-          params: { branch_id: branchId ?? undefined },
+        await posRequest<{ data: PlatformSettings }>('GET', '/pos/platform_settings', {
+          params: { branch_id: branchId },
         })
       ).data,
-  });
+  })
 }
 
-// The counter's platform tray: orders entered and not handed to the driver
-// yet, oldest first. The kitchen marks them ready, so it is read again every
-// few seconds while open; every command reads it again too.
-export function usePlatformOrders(
-  branchId: string | null,
-  registerId: string | null,
-  enabled: boolean,
-) {
-  const snapshot = useSession();
-  const client = useQueryClient();
-  const key = platformOrdersKey(snapshot.generation, branchId);
-  const query = useQuery({
-    queryKey: key,
-    enabled: enabled && snapshot.status === 'authenticated' && Boolean(branchId),
-    refetchInterval: 10_000,
-    queryFn: async () =>
-      (
-        await session.request<{ data: PlatformOrder[] }>('GET', '/pos/platform_orders', {
-          params: { branch_id: branchId ?? undefined, status: 'open', limit: '50' },
-        })
-      ).data,
-  });
-  const refresh = () => void client.invalidateQueries({ queryKey: key });
-  const enter = useMutation({
-    mutationFn: (entry: PlatformEntry) =>
-      command<PlatformOrder>('/pos/platform_orders', {
-        editor_id: workspaceEditorId,
-        register_id: registerId ?? undefined,
-        branch_id: registerId ? undefined : (branchId ?? undefined),
-        platform: entry.platform,
-        platform_order_ref: entry.platformOrderRef.trim(),
-        pickup_code: entry.pickupCode.trim() || undefined,
-        note: entry.note.trim() || undefined,
-        lines: entry.lines,
+export function usePlatformSettingWrite(branchId: string) {
+  const client = useQueryClient()
+  const { storeId } = useSession()
+  return useResourceMutation({
+    mutationFn: (body: Pick<PlatformSetting, 'platform' | 'status' | 'commission_rate'>) =>
+      posRequest<{ data: PlatformSetting }>('PUT', '/pos/platform_settings', {
+        body: { ...body, branch_id: branchId },
+        idempotencyKey: crypto.randomUUID(),
       }),
-    onSettled: refresh,
-  });
-  const ready = useMutation({
-    mutationFn: (id: string) => command<PlatformOrder>(`/pos/platform_orders/${id}/ready`),
-    onSettled: refresh,
-  });
-  const complete = useMutation({
-    mutationFn: (id: string) =>
-      command<PlatformOrder>(`/pos/platform_orders/${id}/complete`, {
-        editor_id: workspaceEditorId,
+    successMessage: false,
+    errorMessage: false,
+    onSuccess: () => client.invalidateQueries({ queryKey: posKey(storeId, 'platforms') }),
+  })
+}
+
+// Completed orders the platforms have not paid for yet, newest first.
+export function useUnsettledPlatformOrders(branchId: string, filters: UnsettledFilters) {
+  const { storeId } = useSession()
+  return useQuery({
+    queryKey: posKey(storeId, 'platforms', 'unsettled', branchId, filters),
+    queryFn: () =>
+      posRequest<PlatformOrderPage>('GET', '/pos/platform_orders', {
+        params: {
+          branch_id: branchId,
+          status: 'unsettled',
+          platform: filters.platform,
+          from: filters.from,
+          to: filters.to,
+          page: String(filters.page),
+          limit: '50',
+        },
       }),
-    onSettled: refresh,
-  });
-  const cancel = useMutation({
-    mutationFn: (input: { id: string; reason: string }) =>
-      command<PlatformOrder>(`/pos/platform_orders/${input.id}/cancel`, {
-        editor_id: workspaceEditorId,
-        reason: input.reason.trim() || undefined,
+  })
+}
+
+export type SettleInput = {
+  reference: string
+  orders: { id: string; commission_amount?: string }[]
+}
+
+// Records that the platform paid for the orders, at the commission it kept.
+export function useSettlePlatformOrders(branchId: string) {
+  const client = useQueryClient()
+  const { storeId } = useSession()
+  return useResourceMutation({
+    mutationFn: (input: SettleInput) =>
+      posRequest<{ data: PlatformOrder[] }>('POST', '/pos/platform_orders/settle', {
+        body: {
+          branch_id: branchId,
+          reference: input.reference.trim() || undefined,
+          orders: input.orders,
+        },
+        idempotencyKey: crypto.randomUUID(),
       }),
-    onSettled: refresh,
-  });
-  return { query, enter, ready, complete, cancel };
+    successMessage: false,
+    errorMessage: false,
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: posKey(storeId, 'platforms') })
+      void client.invalidateQueries({ queryKey: posKey(storeId, 'reports') })
+    },
+  })
 }

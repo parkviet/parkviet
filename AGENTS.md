@@ -10,9 +10,8 @@ Instructions for coding agents. `CLAUDE.md` only imports this file — edit this
 | `apps/dashboard/` | Admin Dashboard — React SPA | `apps/dashboard/AGENTS.md` |
 | `apps/seller-dashboard/` | Seller Panel — marketplace seller SPA | `apps/seller-dashboard/AGENTS.md` |
 | `apps/storefront/` | Next.js storefront | `apps/storefront/CLAUDE.md` |
-| `apps/pos-dashboard/` | POS administration — standalone React SPA | `apps/pos-dashboard/AGENTS.md` |
+| `apps/pos/` | Unified POS app (administration + selling counter) | `apps/pos/AGENTS.md` |
 | `apps/table-order/` | Guest QR ordering page served at `/table/` | `apps/table-order/AGENTS.md` |
-| `packages/pos-shared/` | Pure TypeScript POS logic shared by selling and administration | No React, browser printing, session state or API calls |
 
 Read the instructions for the directory you are working in before changing anything there.
 
@@ -68,14 +67,13 @@ Several sessions often share this checkout, the `spree_test` database and the fi
 ports, so a full suite blocks every other session. The full rspec suite takes about 9 minutes.
 
 Run only the specs for the files you changed, also before committing. Never run a full suite
-locally: GitHub Actions runs rspec and both e2e suites on every push
-(`.github/workflows/backend-ci.yml`, `pos-e2e.yml`, `pos-dashboard-e2e.yml`), and the developer
+locally: GitHub Actions runs rspec and the POS e2e suite on every push
+(`.github/workflows/backend-ci.yml`, `pos-e2e.yml`), and the developer
 runs a full suite themself when a feature is released.
 
 ```bash
 pnpm spree rspec spec/path/to/changed_spec.rb
 pnpm --dir apps/pos exec playwright test e2e/changed.spec.ts --project desktop
-pnpm --dir apps/pos-dashboard exec playwright test e2e/changed.spec.ts --project desktop
 ```
 
 - Add `--project tablet` and `--project mobile` for the affected spec files only when the change

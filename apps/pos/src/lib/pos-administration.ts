@@ -1,6 +1,5 @@
-import type { PosContext } from './pos-context';
+import type { PosContext } from '@shared/types/pos-context'
 
 export function administrationAccess(context?: PosContext) {
-  // Branch capabilities alone never authorize store-level administration.
-  return context?.administration ?? { read: false, write: false };
+  return context?.administration ?? { read: false, write: false }
 }

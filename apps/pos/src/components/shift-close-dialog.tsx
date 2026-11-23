@@ -1,51 +1,102 @@
-import { formatMoney, parseVndInput } from '@parkviet/pos-shared/money';
-import { Link, useNavigate } from '@tanstack/react-router';
-import { type ReactNode, useId, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  useCloseShift,
-  useCountShift,
-  usePendingShiftCommands,
-  useShiftCloseState,
-} from '../hooks/use-shift-close';
-import { useModalFocus } from '../lib/dialog-focus';
-import { posDashboardUrl, withSearch } from '../lib/pos-dashboard-url';
-import { definitiveRejection } from '../lib/request-failure';
+import { formatMoney, parseVndInput } from '@shared/money'
+import { definitiveRejection } from '@shared/request-failure'
 import {
   absoluteAmount,
-  activateWorkspaceTab,
   blockedChecklist,
   type ChecklistItem,
-  checklistTableName,
-  checklistTarget,
   describeShiftFailure,
-  formatInZone,
   type ShiftChecklist,
   type ShiftClosure,
-  type ShiftCount,
   varianceKind,
-} from '../lib/shifts';
-import { PosIcon } from './pos-icon';
-import { usePosSelection } from './pos-selection';
+} from '@shared/shifts'
+import {
+  Badge,
+  Button,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+} from '@spree/dashboard-ui'
+import { Link } from '@tanstack/react-router'
+import { type ReactNode, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useSession } from '../hooks/use-session'
+import { useCloseShift, useCountShift, useShiftCloseState } from '../hooks/use-shifts'
+import { formatInstant } from '../lib/format-time'
 
-type Actor = { staffId: string | null; storeId: string | null };
-
+// Variance direction in words, so status is never conveyed by colour alone.
 export function VarianceText({
   variance,
   currency,
 }: {
-  variance: string | null;
-  currency: string;
+  variance: string | null
+  currency: string
 }) {
-  const { t } = useTranslation();
-  const kind = varianceKind(variance);
-  if (!kind || variance == null) return <span>—</span>;
+  const { t } = useTranslation()
+  const kind = varianceKind(variance)
+  if (!kind || variance == null) return <span>—</span>
   return (
-    <span className="variance" data-variance={kind}>
-      <span className="variance-word">{t(`shiftVariance_${kind}`)}</span>{' '}
-      {kind === 'even' ? null : formatMoney(absoluteAmount(variance), currency)}
+    <span data-variance={kind} className={kind === 'short' ? 'text-destructive' : undefined}>
+      {t(`shiftVariance_${kind}`)}
+      {kind === 'even' ? null : ` ${formatMoney(absoluteAmount(variance), currency)}`}
     </span>
-  );
+  )
+}
+
+export function Summary({ rows }: { rows: [string, ReactNode][] }) {
+  return (
+    <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-sm">
+      {rows.map(([label, value]) => (
+        <div key={label} className="contents">
+          <dt className="text-muted-foreground">{label}</dt>
+          <dd className="text-right tabular-nums">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+export function ClosureSnapshot({
+  closure,
+  timeZone,
+}: {
+  closure: ShiftClosure
+  timeZone: string
+}) {
+  const { t, i18n } = useTranslation()
+  const money = (value: string) => formatMoney(value, closure.currency)
+  return (
+    <div className="space-y-3" role="status" aria-live="polite">
+      <p>
+        <strong>{t('shiftClosedTitle')}</strong> ·{' '}
+        {formatInstant(closure.closed_at, i18n.language, timeZone)}
+      </p>
+      <Summary
+        rows={[
+          [t('shiftClosedBy'), closure.closer_name],
+          [t('shiftOpeningFloat'), money(closure.opening_float)],
+          [t('shiftInflow'), money(closure.inflow_total)],
+          [t('shiftOutflow'), money(closure.outflow_total)],
+          [t('shiftExpected'), money(closure.expected)],
+          [t('shiftCounted'), money(closure.counted)],
+          [
+            t('shiftVarianceLabel'),
+            <VarianceText key="variance" variance={closure.variance} currency={closure.currency} />,
+          ],
+          ...(closure.reason ? ([[t('shiftReason'), closure.reason]] as [string, string][]) : []),
+          ...(closure.approver_name
+            ? ([[t('shiftApprovedBy'), closure.approver_name]] as [string, string][])
+            : []),
+        ]}
+      />
+      <p className="text-sm text-muted-foreground">{t('shiftClosedImmutable')}</p>
+    </div>
+  )
 }
 
 function ChecklistList({
@@ -53,503 +104,419 @@ function ChecklistList({
   label,
   currency,
 }: {
-  items: ChecklistItem[];
-  label: string;
-  currency: string;
+  items: ChecklistItem[]
+  label: string
+  currency: string
 }) {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { context, selection } = usePosSelection();
-  if (items.length === 0) return null;
+  const { t } = useTranslation()
+  const { storeId } = useSession()
+  if (items.length === 0) return null
   return (
-    <ul className="record-list shift-checklist" aria-label={label}>
-      {items.map((item) => {
-        const target = checklistTarget(item);
-        const table = checklistTableName(item);
-        return (
-          <li key={`${item.type}-${item.id ?? item.workspace_id}`}>
-            <div className="record-copy">
-              <strong>
-                {t(`shiftCheck_${item.type}`)}
-                {item.order_number ? ` · ${item.order_number}` : ''}
-                {table ? ` · ${t('shiftCheckTable', { table })}` : ''}
-              </strong>
-              <small>
-                {t(`shiftCheckStatus_${item.status}`, { defaultValue: item.status })}
-                {item.amount ? ` · ${formatMoney(item.amount, currency)}` : ''}
-              </small>
-            </div>
-            {target?.to === '/' ? (
-              <button
-                type="button"
-                className="button-link"
-                onClick={() => {
-                  const staffId = context.data?.staff.id;
-                  const storeId = context.data?.store.id;
-                  if (staffId && storeId && selection.branchId) {
-                    activateWorkspaceTab(
-                      {
-                        staffId,
-                        storeId,
-                        branchId: selection.branchId,
-                        registerId: selection.registerId,
-                      },
-                      target.workspaceId,
-                    );
-                  }
-                  void navigate({ to: '/' });
-                }}
-              >
-                {t(`shiftCheckAction_${item.type}`)}
-              </button>
-            ) : target?.to === 'dashboard' ? (
-              <DashboardLink path={target.path} search={target.search}>
-                {t(`shiftCheckAction_${item.type}`)}
-              </DashboardLink>
-            ) : target?.to === '/returns' ? (
-              <Link className="button-link" to="/returns" search={target.search}>
+    <ul className="divide-y rounded-md border text-sm" aria-label={label}>
+      {items.map((item) => (
+        <li
+          key={`${item.type}-${item.id ?? item.workspace_id}`}
+          className="flex items-center justify-between gap-3 p-3"
+        >
+          <span className="flex flex-col">
+            <span className="font-medium">
+              {t(`shiftCheck_${item.type}`)}
+              {item.order_number ? ` · ${item.order_number}` : ''}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {t(`shiftCheckStatus_${item.status}`, { defaultValue: item.status })}
+              {item.amount ? ` · ${formatMoney(item.amount, currency)}` : ''}
+            </span>
+          </span>
+          {/* Drafts, tenders and refunds are settled at the counter; a payout is settled here. */}
+          {item.type === 'liability_payout' && item.funds_id ? (
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/${storeId}/funds?fundsId=${encodeURIComponent(item.funds_id)}` as string}>
                 {t(`shiftCheckAction_${item.type}`)}
               </Link>
-            ) : null}
-          </li>
-        );
-      })}
+            </Button>
+          ) : null}
+        </li>
+      ))}
     </ul>
-  );
+  )
 }
 
-// A checklist item handled in the POS dashboard opens there in a new tab, so
-// this close stays where it is.
-function DashboardLink({
-  path,
-  search,
-  children,
-}: {
-  path: string;
-  search: Record<string, string>;
-  children: ReactNode;
-}) {
-  const { context, selection } = usePosSelection();
-  const url = withSearch(posDashboardUrl(context.data?.store.id, path, selection.branchId), search);
-  if (!url) return null;
-  return (
-    <a className="button-link" href={url} target="_blank" rel="noopener">
-      {children}
-    </a>
-  );
-}
+type Step = 'checklist' | 'count'
 
-function ClosedSnapshot({ closure, timeZone }: { closure: ShiftClosure; timeZone: string }) {
-  const { t, i18n } = useTranslation();
-  return (
-    <div className="shift-snapshot" role="status" aria-live="polite">
-      <p>
-        <strong>{t('shiftClosedTitle')}</strong> ·{' '}
-        {formatInZone(closure.closed_at, i18n.language, timeZone)}
-      </p>
-      <dl className="summary-grid">
-        <dt>{t('shiftOpeningFloat')}</dt>
-        <dd>{formatMoney(closure.opening_float, closure.currency)}</dd>
-        <dt>{t('shiftInflow')}</dt>
-        <dd>{formatMoney(closure.inflow_total, closure.currency)}</dd>
-        <dt>{t('shiftOutflow')}</dt>
-        <dd>{formatMoney(closure.outflow_total, closure.currency)}</dd>
-        <dt>{t('shiftExpected')}</dt>
-        <dd>{formatMoney(closure.expected, closure.currency)}</dd>
-        <dt>{t('shiftCounted')}</dt>
-        <dd>{formatMoney(closure.counted, closure.currency)}</dd>
-        <dt>{t('shiftVarianceLabel')}</dt>
-        <dd>
-          <VarianceText variance={closure.variance} currency={closure.currency} />
-        </dd>
-        {closure.reason ? (
-          <>
-            <dt>{t('shiftReason')}</dt>
-            <dd>{closure.reason}</dd>
-          </>
-        ) : null}
-        {closure.approver_name ? (
-          <>
-            <dt>{t('shiftApprovedBy')}</dt>
-            <dd>{closure.approver_name}</dd>
-          </>
-        ) : null}
-      </dl>
-      <p className="muted">{t('shiftClosedImmutable')}</p>
-    </div>
-  );
-}
-
-// Close wizard: checklist -> blind count -> expected and variance -> reason
-// and approval when the variance exceeds the branch threshold -> immutable
-// snapshot. Expected cash is shown only after the count is recorded. Count
-// and close keys follow the shift revision; a lost response is rechecked
-// under the same key, and a recovered earlier count is shown as such.
+// Closing another person's shift: checklist, blind count, expected and
+// variance, a reason (and approval) when the variance exceeds the branch
+// threshold, then the immutable snapshot. Expected cash shows only after the
+// count is recorded. Count and close keys follow the shift revision, so a
+// retry after a lost response reuses the same key.
 export function ShiftCloseDialog({
   shiftId,
-  actor,
+  ownerName,
   timeZone,
   onClose,
 }: {
-  shiftId: string;
-  actor: Actor;
-  timeZone: string;
-  onClose: () => void;
+  shiftId: string
+  ownerName: string
+  timeZone: string
+  onClose: () => void
 }) {
-  const { t } = useTranslation();
-  const titleId = useId();
-  const card = useRef<HTMLDivElement>(null);
-  const [step, setStep] = useState<'checklist' | 'count'>('checklist');
-  const [counted, setCounted] = useState('');
-  const [reason, setReason] = useState('');
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const [uncertain, setUncertain] = useState<null | (() => void)>(null);
-  const [blocked, setBlocked] = useState<ShiftChecklist | null>(null);
-  const [recounting, setRecounting] = useState(false);
-  const countShift = useCountShift(actor);
-  const closeShift = useCloseShift(actor);
-  const pending = usePendingShiftCommands(actor, [shiftId]);
-  const [rechecking, setRechecking] = useState(false);
-  const peek = useShiftCloseState(shiftId);
-  const peekCount = peek.data?.count;
-  // Keep checking while a reasoned count waits for its approval (also after reopening).
+  const { t } = useTranslation()
+  const [step, setStep] = useState<Step>('checklist')
+  const [counted, setCounted] = useState('')
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [uncertain, setUncertain] = useState<null | (() => void)>(null)
+  const [blocked, setBlocked] = useState<ShiftChecklist | null>(null)
+  const [recounting, setRecounting] = useState(false)
+  const countShift = useCountShift()
+  const closeShift = useCloseShift()
+  const peek = useShiftCloseState(shiftId)
+  const peekCount = peek.data?.count
+  // Keep checking while a reasoned count waits for its approval.
   const waiting = Boolean(
     peekCount?.requires_approval && peekCount.reason && !peekCount.approval && !peekCount.stale,
-  );
-  const state = useShiftCloseState(shiftId, waiting);
-  const busy = countShift.isPending || closeShift.isPending || rechecking;
-
-  useModalFocus(card, () => {
-    if (!busy) onClose();
-  });
-
-  const data = state.data;
-  const currency = data?.shift.currency ?? 'VND';
-  const revision = data?.shift.revision ?? 0;
-  const count: ShiftCount | undefined = data?.count;
-  const checklist = blocked ?? data?.checklist;
-  const reviewing = Boolean(count?.counted && !count.stale && !data?.closure && !recounting);
+  )
+  const state = useShiftCloseState(shiftId, waiting)
+  const busy = countShift.isPending || closeShift.isPending
+  const data = state.data
+  const currency = data?.shift.currency ?? 'VND'
+  const revision = data?.shift.revision ?? 0
+  const count = data?.count
+  const checklist = blocked ?? data?.checklist
+  const reviewing = Boolean(count?.counted && !count.stale && !data?.closure && !recounting)
 
   function fail(failure: unknown, retry: () => void) {
-    const items = blockedChecklist(failure);
+    const items = blockedChecklist(failure)
     if (items) {
-      setBlocked(items);
-      setStep('checklist');
+      setBlocked(items)
+      setStep('checklist')
     }
-    setUncertain(definitiveRejection(failure) ? null : () => retry);
-    setError(describeShiftFailure(failure, t));
+    setUncertain(definitiveRejection(failure) ? null : () => retry)
+    setError(describeShiftFailure(failure, t))
   }
 
   // A retry keeps the revision (and so the key) of the attempt whose outcome
   // is unknown, even if the shift already moved on because it committed.
   function submitCount(withReason?: string, atRevision = revision, typed?: string) {
-    const amount = typed ?? parseVndInput(counted || count?.counted?.replace(/\.0+$/, '') || '');
+    const amount = typed ?? parseVndInput(counted || count?.counted?.replace(/\.0+$/, '') || '')
     if (amount === null) {
-      setError(t('shiftCountedInvalid'));
-      return;
+      setError(t('shiftCountedInvalid'))
+      return
     }
-    setError('');
-    setNotice('');
-    const retry = () => submitCount(withReason, atRevision, amount);
+    setError('')
+    setNotice('')
     countShift.mutate(
       { shiftId, revision: atRevision, counted: amount, reason: withReason },
       {
         onSuccess: (result) => {
-          setBlocked(null);
-          setRecounting(false);
-          setUncertain(null);
-          // A recovered result can be an earlier count of this revision.
+          setBlocked(null)
+          setRecounting(false)
+          setUncertain(null)
           if (result.recovered && result.data.counted?.replace(/\.0+$/, '') !== amount) {
             setNotice(
               t('shiftCountRecovered', { amount: formatMoney(result.data.counted, currency) }),
-            );
+            )
           }
         },
-        onError: (failure) => fail(failure, retry),
+        onError: (failure) => fail(failure, () => submitCount(withReason, atRevision, amount)),
       },
-    );
+    )
   }
 
   function close(atRevision = revision) {
-    setError('');
-    const retry = () => close(atRevision);
+    setError('')
     closeShift.mutate(
       { shiftId, revision: atRevision, reason: reason.trim() || undefined },
       {
         onSuccess: () => setUncertain(null),
-        onError: (failure) => fail(failure, retry),
+        onError: (failure) => fail(failure, () => close(atRevision)),
       },
-    );
+    )
   }
 
-  return (
-    <div className="pos-popup-backdrop">
-      <div
-        ref={card}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-busy={busy}
-        tabIndex={-1}
-        className="pos-popup-card shift-close-dialog"
-      >
-        <div className="pos-popup-header">
-          <h4 id={titleId}>{t('shiftCloseTitle')}</h4>
-          <button
+  const steps = (current: 0 | 1 | 2) => (
+    <ol className="flex flex-wrap gap-2 text-xs" aria-label={t('shiftCloseSteps')}>
+      {['shiftStepChecklist', 'shiftStepCount', 'shiftStepReview'].map((key, index) => (
+        <li key={key} aria-current={index === current ? 'step' : undefined}>
+          <Badge variant={index === current ? 'default' : 'outline'}>{t(key)}</Badge>
+        </li>
+      ))}
+    </ol>
+  )
+
+  const status = (
+    <>
+      {uncertain && (
+        <div role="status" className="flex flex-wrap items-center gap-2">
+          <Badge variant="warning">{t('shiftCommandChecking')}</Badge>
+          <Button
             type="button"
-            className="cell-edit-button"
-            onClick={onClose}
+            variant="outline"
+            size="sm"
             disabled={busy}
-            aria-label={t('creditClose')}
-            title={t('creditClose')}
+            onClick={() => {
+              setError('')
+              uncertain()
+            }}
           >
-            <PosIcon name="close" />
-          </button>
+            {t('shiftCommandRecheck')}
+          </Button>
         </div>
-        {(pending.records.length > 0 && !countShift.isPending && !closeShift.isPending) ||
-        uncertain ? (
-          <div className="row" role="status">
-            <span className="status-tag" data-warning="true">
-              {t('shiftCommandChecking')}
-            </span>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                setError('');
-                if (uncertain) {
-                  uncertain();
-                  return;
-                }
-                setRechecking(true);
-                void pending
-                  .recheck()
-                  .catch((failure) => setError(describeShiftFailure(failure, t)))
-                  .finally(() => setRechecking(false));
-              }}
-            >
-              {t('shiftCommandRecheck')}
-            </button>
-          </div>
-        ) : null}
-        {error ? (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {notice ? (
-          <p className="muted" role="status">
-            {notice}
-          </p>
-        ) : null}
-        {state.isLoading ? <p role="status">{t('waiting')}</p> : null}
+      )}
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {notice}
+        </p>
+      )}
+      {state.isLoading && <p role="status">{t('waiting')}</p>}
+      {state.isError && <p role="alert">{describeShiftFailure(state.error, t)}</p>}
+    </>
+  )
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !busy) onClose()
+      }}
+    >
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl" aria-busy={busy}>
+        <DialogHeader>
+          <DialogTitle>{t('shiftCloseFor', { name: ownerName })}</DialogTitle>
+          <DialogDescription>{t('shiftOthersHint')}</DialogDescription>
+        </DialogHeader>
         {data?.closure ? (
           <>
-            <ClosedSnapshot closure={data.closure} timeZone={timeZone} />
-            <div className="row">
-              <button type="button" onClick={onClose}>
-                {t('shiftCloseDone')}
-              </button>
-            </div>
+            <DialogBody className="space-y-4">
+              {status}
+              <ClosureSnapshot closure={data.closure} timeZone={timeZone} />
+            </DialogBody>
+            <DialogFooter>
+              <Button onClick={onClose}>{t('shiftCloseDone')}</Button>
+            </DialogFooter>
           </>
         ) : data && !data.can_close ? (
-          <p>{t('shiftCloseNotAllowed')}</p>
+          <DialogBody className="space-y-4">
+            {status}
+            <p>{t('shiftCloseNotAllowed')}</p>
+          </DialogBody>
         ) : data && reviewing && count ? (
-          <div className="shift-review">
-            <ol className="wizard-steps" aria-label={t('shiftCloseSteps')}>
-              <li>{t('shiftStepChecklist')}</li>
-              <li>{t('shiftStepCount')}</li>
-              <li aria-current="step">{t('shiftStepReview')}</li>
-            </ol>
-            <dl className="summary-grid">
-              <dt>{t('shiftCounted')}</dt>
-              <dd>{formatMoney(count.counted, currency)}</dd>
-              <dt>{t('shiftExpected')}</dt>
-              <dd>{formatMoney(count.expected, currency)}</dd>
-              <dt>{t('shiftVarianceLabel')}</dt>
-              <dd>
-                <VarianceText variance={count.variance} currency={currency} />
-              </dd>
-            </dl>
-            <p className="muted">{t('shiftExpectedExplained')}</p>
-            {count.requires_approval ? (
-              <>
-                <p className="status-tag" data-warning="true">
-                  {count.variance_threshold
-                    ? t('shiftNeedsApprovalThreshold', {
-                        threshold: formatMoney(count.variance_threshold, currency),
-                      })
-                    : t('shiftNeedsApproval')}
-                </p>
-                {count.approval ? (
-                  <p role="status">
-                    {t('shiftApprovedBy')}: {count.approval.approver_name}
-                  </p>
-                ) : count.reason ? (
-                  <p role="status" aria-live="polite">
-                    {t('shiftWaitingApproval', { reason: count.reason })}
-                  </p>
-                ) : (
-                  <label>
-                    {t('shiftReason')}
-                    <input
+          <>
+            <DialogBody className="space-y-4">
+              {status}
+              {steps(2)}
+              <Summary
+                rows={[
+                  [t('shiftCounted'), formatMoney(count.counted, currency)],
+                  [t('shiftExpected'), formatMoney(count.expected, currency)],
+                  [
+                    t('shiftVarianceLabel'),
+                    <VarianceText key="variance" variance={count.variance} currency={currency} />,
+                  ],
+                ]}
+              />
+              <p className="text-sm text-muted-foreground">{t('shiftExpectedExplained')}</p>
+              {count.requires_approval ? (
+                <>
+                  <Badge variant="warning">
+                    {count.variance_threshold
+                      ? t('shiftNeedsApprovalThreshold', {
+                          threshold: formatMoney(count.variance_threshold, currency),
+                        })
+                      : t('shiftNeedsApproval')}
+                  </Badge>
+                  {count.approval ? (
+                    <p role="status">
+                      {t('shiftApprovedBy')}: {count.approval.approver_name}
+                    </p>
+                  ) : count.reason ? (
+                    <p role="status" aria-live="polite">
+                      {t('shiftWaitingApproval', { reason: count.reason })}
+                    </p>
+                  ) : (
+                    <ReasonField
+                      label={t('shiftReason')}
                       value={reason}
-                      maxLength={200}
                       required
                       disabled={busy}
-                      onChange={(event) => setReason(event.target.value)}
+                      onChange={setReason}
                     />
-                  </label>
-                )}
-              </>
-            ) : count.variance && varianceKind(count.variance) !== 'even' ? (
-              <label>
-                {t('shiftReasonOptional')}
-                <input
+                  )}
+                </>
+              ) : count.variance && varianceKind(count.variance) !== 'even' ? (
+                <ReasonField
+                  label={t('shiftReasonOptional')}
                   value={reason}
-                  maxLength={200}
                   disabled={busy}
-                  onChange={(event) => setReason(event.target.value)}
+                  onChange={setReason}
                 />
-              </label>
-            ) : null}
-            <div className="row">
-              <button
-                type="button"
+              ) : null}
+            </DialogBody>
+            <DialogFooter>
+              <Button
+                variant="outline"
                 disabled={busy}
                 onClick={() => {
-                  setCounted('');
-                  setReason('');
-                  setNotice('');
-                  setRecounting(true);
-                  setStep('count');
+                  setCounted('')
+                  setReason('')
+                  setNotice('')
+                  setRecounting(true)
+                  setStep('count')
                 }}
               >
                 {t('shiftRecount')}
-              </button>
+              </Button>
               {count.requires_approval && !count.approval && !count.reason ? (
-                <button
-                  type="button"
-                  className="checkout-submit"
+                <Button
                   disabled={busy || !reason.trim()}
                   onClick={() => submitCount(reason.trim())}
                 >
                   {t('shiftSendForApproval')}
-                </button>
+                </Button>
               ) : count.requires_approval && !count.approval ? (
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
                   disabled={busy || state.isFetching}
                   onClick={() => void state.refetch()}
                 >
                   {t('shiftCheckApproval')}
-                </button>
+                </Button>
               ) : (
-                <button
-                  type="button"
-                  className="checkout-submit"
-                  disabled={busy}
-                  onClick={() => close()}
-                >
+                <Button disabled={busy} onClick={() => close()}>
                   {busy ? t('waiting') : t('shiftCloseConfirm')}
-                </button>
+                </Button>
               )}
-            </div>
-          </div>
+            </DialogFooter>
+          </>
         ) : data && step === 'count' ? (
           <form
-            className="shift-count"
+            className="flex min-h-0 flex-col"
             onSubmit={(event) => {
-              event.preventDefault();
-              if (!busy) submitCount();
+              event.preventDefault()
+              if (!busy) submitCount()
             }}
           >
-            <ol className="wizard-steps" aria-label={t('shiftCloseSteps')}>
-              <li>{t('shiftStepChecklist')}</li>
-              <li aria-current="step">{t('shiftStepCount')}</li>
-              <li>{t('shiftStepReview')}</li>
-            </ol>
-            <p>{t('shiftBlindCountHint')}</p>
-            {count?.stale ? (
-              <p className="status-tag" data-warning="true">
-                {t('shiftCountStale')}
-              </p>
-            ) : null}
-            <label>
-              {t('shiftCountedInput')}
-              <input
-                inputMode="numeric"
-                autoComplete="off"
-                value={counted}
+            <DialogBody className="space-y-4">
+              {status}
+              {steps(1)}
+              <p className="text-sm">{t('shiftBlindCountHint')}</p>
+              {count?.stale && <Badge variant="warning">{t('shiftCountStale')}</Badge>}
+              <div className="grid gap-1">
+                <Label htmlFor="shift-counted">{t('shiftCountedInput')}</Label>
+                <Input
+                  id="shift-counted"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={counted}
+                  disabled={busy}
+                  onChange={(event) => setCounted(event.target.value)}
+                />
+              </div>
+            </DialogBody>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
                 disabled={busy}
-                onChange={(event) => setCounted(event.target.value)}
-              />
-            </label>
-            <div className="row">
-              <button type="button" disabled={busy} onClick={() => setStep('checklist')}>
+                onClick={() => setStep('checklist')}
+              >
                 {t('back')}
-              </button>
-              <button type="submit" className="checkout-submit" disabled={busy || !counted.trim()}>
+              </Button>
+              <Button type="submit" disabled={busy || !counted.trim()}>
                 {busy ? t('waiting') : t('shiftRecordCount')}
-              </button>
-            </div>
+              </Button>
+            </DialogFooter>
           </form>
         ) : data && checklist ? (
-          <div className="shift-checklist-step">
-            <ol className="wizard-steps" aria-label={t('shiftCloseSteps')}>
-              <li aria-current="step">{t('shiftStepChecklist')}</li>
-              <li>{t('shiftStepCount')}</li>
-              <li>{t('shiftStepReview')}</li>
-            </ol>
-            {checklist.blocking.length === 0 ? (
-              <p role="status">{t('shiftChecklistClear')}</p>
-            ) : (
-              <p className="status-tag" data-warning="true" role="status">
-                {t('shiftChecklistBlocked', { count: checklist.blocking.length })}
-              </p>
-            )}
-            <ChecklistList
-              items={checklist.blocking}
-              label={t('shiftChecklistBlocking')}
-              currency={currency}
-            />
-            {checklist.warnings.length > 0 ? (
-              <>
-                <p className="muted">{t('shiftChecklistWarnings')}</p>
-                <ChecklistList
-                  items={checklist.warnings}
-                  label={t('shiftChecklistWarningList')}
-                  currency={currency}
-                />
-              </>
-            ) : null}
-            <div className="row">
-              <button
-                type="button"
+          <>
+            <DialogBody className="space-y-4">
+              {status}
+              {steps(0)}
+              {checklist.blocking.length === 0 ? (
+                <p role="status">{t('shiftChecklistClear')}</p>
+              ) : (
+                <p role="status">
+                  <Badge variant="warning">
+                    {t('shiftChecklistBlocked', { count: checklist.blocking.length })}
+                  </Badge>
+                </p>
+              )}
+              <ChecklistList
+                items={checklist.blocking}
+                label={t('shiftChecklistBlocking')}
+                currency={currency}
+              />
+              {checklist.warnings.length > 0 && (
+                <>
+                  <p className="text-sm text-muted-foreground">{t('shiftChecklistWarnings')}</p>
+                  <ChecklistList
+                    items={checklist.warnings}
+                    label={t('shiftChecklistWarningList')}
+                    currency={currency}
+                  />
+                </>
+              )}
+            </DialogBody>
+            <DialogFooter>
+              <Button
+                variant="outline"
                 disabled={state.isFetching}
                 onClick={() => {
-                  setBlocked(null);
-                  void state.refetch();
+                  setBlocked(null)
+                  void state.refetch()
                 }}
               >
                 {t('shiftChecklistRefresh')}
-              </button>
-              <button
-                type="button"
-                className="checkout-submit"
+              </Button>
+              <Button
                 disabled={checklist.blocking.length > 0}
                 onClick={() => {
-                  setError('');
-                  setStep('count');
+                  setError('')
+                  setStep('count')
                 }}
               >
                 {t('shiftStartCount')}
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </div>
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <DialogBody className="space-y-4">{status}</DialogBody>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function ReasonField({
+  label,
+  value,
+  required,
+  disabled,
+  onChange,
+}: {
+  label: string
+  value: string
+  required?: boolean
+  disabled: boolean
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="grid gap-1">
+      <Label htmlFor="shift-reason">{label}</Label>
+      <Input
+        id="shift-reason"
+        value={value}
+        maxLength={200}
+        required={required}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </div>
-  );
+  )
 }

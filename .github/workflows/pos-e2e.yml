@@ -1,12 +1,11 @@
 name: POS e2e
 
-# Every branch, whenever the selling app or the shared POS logic changes. The
-# suite mocks the API, so no backend runs here.
+# Every branch, whenever the unified POS app changes. The suite mocks the API,
+# so no backend runs here.
 on:
   push:
     paths:
       - apps/pos/**
-      - packages/pos-shared/**
       - .github/workflows/pos-e2e.yml
   workflow_dispatch:
 
@@ -38,15 +37,7 @@ jobs:
         with:
           node-version: '22'
           cache: pnpm
-          cache-dependency-path: |
-            packages/pos-shared/pnpm-lock.yaml
-            apps/pos/pnpm-lock.yaml
-
-      # The app links pos-shared from source, and its imports resolve from
-      # pos-shared's own node_modules.
-      - name: Install pos-shared
-        working-directory: packages/pos-shared
-        run: pnpm install --frozen-lockfile
+          cache-dependency-path: apps/pos/pnpm-lock.yaml
 
       - name: Install the app
         working-directory: apps/pos

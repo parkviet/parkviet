@@ -1,154 +1,100 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { session } from '../lib/app-session';
-import type { PosWorkspace } from '../lib/pos-context';
-import { useSession } from './use-session';
+import { useResourceMutation } from '@spree/dashboard-core'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { posRequest } from '../lib/pos-request'
+import { posKey } from '../lib/query-keys'
+import { useSession } from './use-session'
 
-export type PosKitchenTicketItem = {
-  id: string;
-  sale_line_id: string;
-  name: string;
-  modifiers: { name: string; group_name?: string | null; quantity: number }[];
-  components: { name: string; quantity: string }[];
-  note: string | null;
-  quantity: string;
-  status: 'new' | 'preparing' | 'ready' | 'served' | 'voided';
-  priority?: boolean;
-  priority_at?: string | null;
-};
+export type KitchenStationKind = 'prep' | 'bar' | 'expo'
+export type KitchenSendTrigger = 'on_complete' | 'on_save' | 'manual'
 
-// What one send told one station; written once, only item statuses move.
-export type PosKitchenTicket = {
-  id: string;
-  workspace_id: string;
-  kitchen_station_id: string;
-  station_name: string;
-  sequence: number;
-  service_mode: string;
-  sent_at: string;
-  done: boolean;
-  // An item still to make is marked urgent.
-  priority?: boolean;
-  items: PosKitchenTicketItem[];
-};
-
-export function kitchenTicketsKey(generation: number, workspaceId: string) {
-  return ['pos', 'kitchen-tickets', generation, workspaceId] as const;
+export type KitchenStation = {
+  id: string
+  branch_id: string
+  name: string
+  kind: KitchenStationKind
+  printer_id: string | null
+  printer_name: string | null
+  kds_enabled: boolean
+  is_default: boolean
+  warn_after_minutes: number
+  late_after_minutes: number
+  position: number
+  active: boolean
+  expo_station_id: string | null
 }
 
-// The order's kitchen history. A send (the workspace revision moves) and
-// `kitchen_ticket.updated` read it again.
-export function useKitchenTickets(workspace: PosWorkspace, enabled: boolean) {
-  const snapshot = useSession();
+export type StationRoute = {
+  id: string
+  branch_id: string
+  kitchen_station_id: string
+  product_id: string | null
+  product_name: string | null
+  kitchen_category: string | null
+  service_mode: string | null
+}
+
+export type KitchenSettings = {
+  branch_id: string
+  kitchen_send_trigger: KitchenSendTrigger
+  module_enabled: boolean
+  // Codes a waiter picks when voiding a sent dish; `khac` (other) is always offered.
+  void_reasons: string[]
+}
+
+export type CupLabelSize = '40x30' | '50x30' | '58x40'
+export type CupLabelField =
+  | 'call_number'
+  | 'options'
+  | 'note'
+  | 'guest_name'
+  | 'time'
+  | 'store_name'
+
+// The branch's cup label printer and label, and how long a ready call
+// number stays on the call board.
+export type CupLabelSettings = {
+  branch_id: string
+  printer_id: string | null
+  size: CupLabelSize
+  fields: CupLabelField[]
+  pickup_minutes: number
+  auto_print: boolean
+  module_enabled: boolean
+  sizes: CupLabelSize[]
+  available_fields: CupLabelField[]
+}
+
+function useBranchList<T>(resource: string, path: string, branchId: string, enabled = true) {
+  const { storeId } = useSession()
   return useQuery({
-    queryKey: [...kitchenTicketsKey(snapshot.generation, workspace.id), workspace.revision],
-    enabled: enabled && snapshot.status === 'authenticated',
+    queryKey: posKey(storeId, 'kitchen', resource, branchId),
+    enabled: enabled && Boolean(branchId),
     queryFn: async () =>
-      (
-        await session.request<{ data: PosKitchenTicket[] }>(
-          'GET',
-          `/pos/workspaces/${workspace.id}/kitchen_tickets`,
-        )
-      ).data,
-  });
+      (await posRequest<{ data: T }>('GET', path, { params: { branch_id: branchId } })).data,
+  })
 }
 
-export type KitchenHistoryEntry = {
-  kind: 'send' | 'void';
-  // Null for a send made before sends were recorded.
-  id: string | null;
-  sequence: number | null;
-  at: string;
-  staff_name: string | null;
-  reason_code?: string;
-  note?: string | null;
-  wasted?: boolean;
-  approver_name?: string | null;
-  items: { name: string; quantity: string; station_name: string | null; status?: string }[];
-};
+export const useKitchenStations = (branchId: string, enabled = true) =>
+  useBranchList<KitchenStation[]>('stations', '/pos/kitchen_stations', branchId, enabled)
+export const useStationRoutes = (branchId: string, enabled = true) =>
+  useBranchList<StationRoute[]>('routes', '/pos/station_routes', branchId, enabled)
+export const useKitchenSettings = (branchId: string, enabled = true) =>
+  useBranchList<KitchenSettings>('settings', '/pos/kitchen_settings', branchId, enabled)
+export const useCupLabelSettings = (branchId: string, enabled = true) =>
+  useBranchList<CupLabelSettings>('cup-labels', '/pos/cup_label_settings', branchId, enabled)
 
-// A table order's kitchen history: every send, who made it and what went to
-// which station, and every void with its reason, oldest first.
-export function useKitchenHistory(workspace: PosWorkspace, enabled: boolean) {
-  const snapshot = useSession();
-  return useQuery({
-    queryKey: [
-      ...kitchenTicketsKey(snapshot.generation, workspace.id),
-      'history',
-      workspace.revision,
-    ],
-    enabled: enabled && snapshot.status === 'authenticated',
-    queryFn: async () =>
-      (
-        await session.request<{ data: { entries: KitchenHistoryEntry[] } }>(
-          'GET',
-          `/pos/workspaces/${workspace.id}/kitchen_history`,
-        )
-      ).data.entries,
-  });
-}
-// The branch's call numbers today: preparing while the kitchen works, ready
-// once every item is done and not handed over yet.
-export type PickupQueue = {
-  preparing: { number: number; workspace_id: string }[];
-  ready: { number: number; workspace_id: string; guest_name: string | null; ready_at: string }[];
-};
-
-export function kitchenOrdersKey(generation: number, branchId: string | null) {
-  return ['pos', 'kitchen-orders', generation, branchId] as const;
-}
-
-// The counter's pickup queue, read again on `kitchen_ticket.updated` and,
-// while the socket is down, every few seconds.
-export function usePickupQueue(branchId: string | null, enabled: boolean) {
-  const snapshot = useSession();
-  const client = useQueryClient();
-  const key = kitchenOrdersKey(snapshot.generation, branchId);
-  const query = useQuery({
-    queryKey: key,
-    enabled: enabled && snapshot.status === 'authenticated' && Boolean(branchId),
-    refetchInterval: 10_000,
-    queryFn: async () =>
-      (
-        await session.request<{ data: PickupQueue }>('GET', '/pos/kitchen/orders', {
-          params: { branch_id: branchId ?? undefined },
-        })
-      ).data,
-  });
-  // "Đã giao": every ready item of the order is served; it leaves the board.
-  const serve = useMutation({
-    mutationFn: async (workspaceId: string) => {
-      const idempotencyKey = crypto.randomUUID();
-      return session.request('POST', `/pos/kitchen/orders/${workspaceId}/serve`, {
-        body: { idempotency_key: idempotencyKey },
-        idempotencyKey,
-      });
-    },
-    onSuccess: (_result, workspaceId) =>
-      client.setQueryData<PickupQueue>(key, (current) =>
-        current
-          ? { ...current, ready: current.ready.filter((row) => row.workspace_id !== workspaceId) }
-          : current,
-      ),
-    onSettled: () => void client.invalidateQueries({ queryKey: key }),
-  });
-  return { query, serve };
-}
-
-// Prints the cup labels of one line, or of the whole order, again.
-export function useCupLabelReprint() {
-  return useMutation({
-    mutationFn: async (input: { workspaceId: string; saleLineId?: string }) => {
-      const idempotencyKey = crypto.randomUUID();
-      return (
-        await session.request<{ data: { jobs: { id: string }[] } }>(
-          'POST',
-          `/pos/workspaces/${input.workspaceId}/cup_labels`,
-          {
-            body: { sale_line_id: input.saleLineId, idempotency_key: idempotencyKey },
-            idempotencyKey,
-          },
-        )
-      ).data;
-    },
-  });
+// Every kitchen setup write is a command with its own idempotency key.
+export function useKitchenWrite() {
+  const client = useQueryClient()
+  const { storeId } = useSession()
+  return useResourceMutation({
+    mutationFn: ({ method, path, body }: { method: string; path: string; body?: unknown }) =>
+      posRequest<{ data: unknown }>(method, path, {
+        body: body ?? {},
+        idempotencyKey: crypto.randomUUID(),
+      }),
+    successMessage: false,
+    errorMessage: false,
+    onSuccess: () => client.invalidateQueries({ queryKey: posKey(storeId, 'kitchen') }),
+  })
 }

@@ -1,0 +1,236 @@
+import { defaultTemplate } from '@shared/receipt-template/defaults';
+import {
+  DEFAULT_PAPER,
+  initialChoice,
+  type PrintChoice,
+  type PrintLayout,
+  printChoices,
+} from '@shared/receipt-template/selection';
+import {
+  isReceiptDocumentType,
+  type PaperSize,
+  type ReceiptDocumentType,
+  type TemplateConfig,
+} from '@shared/receipt-template/types';
+import { normalizeSalesSettings } from '@shared/sales-settings';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { usePosSelection } from '../components/pos-selection';
+import { session } from '../lib/app-session';
+import { queryClient } from '../lib/query-client';
+import { rememberedTemplate } from '../lib/receipt-preferences';
+import { posFailureKey } from '../lib/request-failure';
+import { SessionSuperseded } from '../lib/session-coordinator';
+import { useSession } from './use-session';
+
+// The store's print templates (`/pos/receipt_templates`), read to print at
+// the counter. Every save on the server adds an immutable version; editing
+// happens in the POS dashboard.
+
+export type ReceiptTemplate = {
+  id: string;
+  document_type: ReceiptDocumentType;
+  name: string;
+  paper: PaperSize;
+  status: 'active' | 'disabled';
+  is_default: boolean;
+  // Read for a branch: the template that branch prints the document type with.
+  branch_default?: boolean;
+  branch_override?: boolean;
+  current_version: number;
+  // The version `config` belongs to.
+  version: number;
+  config: TemplateConfig;
+  updated_by: { id: string; name: string } | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const RECEIPT_TEMPLATES_KEY = ['pos', 'receipt-templates'] as const;
+
+async function request<T>(
+  method: string,
+  path: string,
+  options?: { body?: unknown; params?: Record<string, string | undefined> },
+): Promise<T> {
+  try {
+    return await session.request<T>(method, path, options);
+  } catch (error) {
+    if (!(error instanceof SessionSuperseded) && posFailureKey(error) === 'unauthorized')
+      session.abandon();
+    throw error;
+  }
+}
+
+// Template reads that print waits on give up after this long: a hung
+// request must fall back to the built-in template, never stall a print.
+const PRINT_READ_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Receipt template request timed out.')), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
+// One saved version of a template; versions never change, so it is cached
+// for good once read.
+const versionKey = (generation: number, id: string | null, version: number | null) =>
+  [...RECEIPT_TEMPLATES_KEY, 'version', generation, id, version] as const;
+
+const readVersion = async (id: string, version: number) =>
+  (
+    await withTimeout(
+      request<{ data: ReceiptTemplate }>('GET', `/pos/receipt_templates/${id}`, {
+        params: { version: String(version) },
+      }),
+      PRINT_READ_TIMEOUT_MS,
+    )
+  ).data;
+
+// The store keeps product label templates in the same list; they are printed
+// from the POS dashboard, never at the counter, so they are dropped here.
+type StoredTemplate = Omit<ReceiptTemplate, 'document_type'> & { document_type: string };
+const receiptTemplatesOnly = (templates: StoredTemplate[]): ReceiptTemplate[] =>
+  templates.filter((template): template is ReceiptTemplate =>
+    isReceiptDocumentType(template.document_type),
+  );
+
+// Every template of the store; disabled ones only for administrators. The
+// active list is what the counter prints with: loaded when the POS opens,
+// kept for a while and refreshed when the window regains focus. Read for
+// the selected branch, it marks the branch's default of each document type.
+// Each entry also fills the cache of its current version.
+export function useReceiptTemplates(
+  enabled: boolean,
+  branchId: string | null,
+  includeDisabled = false,
+) {
+  const snapshot = useSession();
+  const generation = snapshot.generation;
+  return useQuery({
+    queryKey: [...RECEIPT_TEMPLATES_KEY, 'list', generation, branchId, includeDisabled],
+    enabled: enabled && snapshot.status === 'authenticated',
+    staleTime: includeDisabled ? 0 : 5 * 60_000,
+    refetchOnWindowFocus: !includeDisabled,
+    queryFn: async () => {
+      const read = request<{ data: StoredTemplate[] }>('GET', '/pos/receipt_templates', {
+        params: {
+          include_disabled: includeDisabled ? '1' : undefined,
+          branch_id: branchId ?? undefined,
+        },
+      });
+      const templates = receiptTemplatesOnly(
+        (includeDisabled ? await read : await withTimeout(read, PRINT_READ_TIMEOUT_MS)).data,
+      );
+      for (const template of templates)
+        queryClient.setQueryData(versionKey(generation, template.id, template.version), template);
+      return templates;
+    },
+  });
+}
+
+// The template as saved in `version`, disabled templates included.
+export function useReceiptTemplateVersion(id: string | null, version: number | null) {
+  const snapshot = useSession();
+  return useQuery({
+    queryKey: versionKey(snapshot.generation, id, version),
+    enabled: snapshot.status === 'authenticated' && Boolean(id) && version !== null,
+    staleTime: Number.POSITIVE_INFINITY,
+    queryFn: () => readVersion(id ?? '', version ?? 0),
+  });
+}
+
+// The same read outside a component, for the layout the server recorded.
+export function loadReceiptTemplateVersion(id: string, version: number) {
+  return queryClient.fetchQuery({
+    queryKey: versionKey(session.getSnapshot().generation, id, version),
+    staleTime: Number.POSITIVE_INFINITY,
+    queryFn: () => readVersion(id, version),
+  });
+}
+
+export type PrintTemplate = {
+  // Every template the print may use; empty when none could be loaded.
+  choices: PrintChoice[];
+  choice: PrintChoice | null;
+  pick: (key: string) => void;
+  // Back to the starting choice (the original's template on a reprint).
+  reset: () => void;
+  // The chosen template's config, or the built-in one while it loads or
+  // when it cannot be loaded.
+  config: TemplateConfig;
+  paper: PaperSize;
+  loading: boolean;
+  // The built-in template is in use because the chosen one failed to load.
+  fallback: boolean;
+};
+
+// The template a document prints with at the counter (see selection.ts).
+// Loading or failing never blocks a print: the built-in template of the
+// document type stands in.
+export function usePrintTemplate(
+  documentType: ReceiptDocumentType,
+  options: { original?: PrintLayout | null; remember?: boolean; branchId?: string | null } = {},
+): PrintTemplate {
+  const { original = null, remember = false } = options;
+  const { selection, context } = usePosSelection();
+  const branchId = options.branchId ?? selection.branchId;
+  const branchSettings =
+    branchId && branchId !== context.data?.selection.branch_id
+      ? context.data?.branches.find((row) => row.id === branchId)?.sales_settings
+      : (context.data?.sales_settings ??
+        context.data?.branches.find((row) => row.id === branchId)?.sales_settings);
+  const allowSheetReceipts = normalizeSalesSettings(branchSettings).allow_sheet_receipts;
+  const list = useReceiptTemplates(true, branchId);
+  const [picked, setPicked] = useState<string | null>(null);
+  const remembered = useMemo(
+    () => (remember ? rememberedTemplate(documentType) : null),
+    [remember, documentType],
+  );
+  const templates = list.data ?? [];
+  const listed = useMemo(
+    () => printChoices(list.data ?? [], documentType, original, { allowSheetReceipts }),
+    [list.data, documentType, original, allowSheetReceipts],
+  );
+  const key =
+    picked && listed.some((choice) => choice.key === picked)
+      ? picked
+      : initialChoice(listed, templates, remembered, { allowSheetReceipts });
+  const selected = listed.find((choice) => choice.key === key) ?? null;
+  const version = useReceiptTemplateVersion(
+    selected?.templateId ?? null,
+    selected?.version ?? null,
+  );
+  // A disabled original is not listed: its name comes with its version.
+  const choices = listed.map((choice) =>
+    choice.key === key && choice.name === null && version.data
+      ? { ...choice, name: version.data.name }
+      : choice,
+  );
+  const choice = choices.find((item) => item.key === key) ?? null;
+  const config = choice && version.data ? version.data.config : null;
+  const loading = choice ? version.isPending : list.isPending;
+  return {
+    choices,
+    choice,
+    pick: setPicked,
+    reset: () => setPicked(null),
+    config: config ?? defaultTemplate(documentType),
+    paper: choice?.paper ?? DEFAULT_PAPER,
+    loading,
+    fallback: !loading && config === null,
+  };
+}
+
+export const refreshReceiptTemplates = () =>
+  queryClient.invalidateQueries({ queryKey: RECEIPT_TEMPLATES_KEY });

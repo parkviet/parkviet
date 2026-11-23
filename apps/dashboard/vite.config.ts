@@ -24,10 +24,8 @@ function parkvietAuthShell(): Plugin {
 }
 
 // `spree dev` only starts this app's dev server, so this server starts the POS
-// selling app (apps/pos, http://localhost:5175) and the POS admin app
-// (apps/pos-dashboard, http://localhost:5176) next to it and stops them on
-// exit. Each stays its own app with its own origin. Set SPREE_POS_DEV=0 to
-// skip both.
+// app (apps/pos, http://localhost:5175) next to it and stops it on exit.
+// Set SPREE_POS_DEV=0 to skip it.
 function posDevServers(): Plugin {
   const apps = [
     {
@@ -37,14 +35,6 @@ function posDevServers(): Plugin {
       label: 'POS',
       missing:
         'apps/pos has no node_modules — run `pnpm install` there to start it with the dashboard.',
-    },
-    {
-      dir: resolve(import.meta.dirname, '../pos-dashboard'),
-      folder: 'apps/pos-dashboard',
-      prefix: 'pos-admin',
-      label: 'POS admin',
-      missing:
-        'apps/pos-dashboard has no node_modules — run `pnpm install` there to start it with the dashboard.',
     },
   ]
   const children = new Set<ChildProcess>()

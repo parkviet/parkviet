@@ -1,0 +1,395 @@
+import { formatMoney } from '@shared/money';
+import { categoriesWithProducts } from '@shared/pos-menu';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useMenu, useSoldOutToggle } from '../hooks/use-menu';
+import type { SelectedQuantity } from '../lib/catalog-quantities';
+import {
+  addsInOneTap,
+  describeMenuFailure,
+  favoriteItems,
+  drinksFirst as leadWithDrinks,
+  onlyMenuLines,
+  visibleItems,
+} from '../lib/menu-selection';
+import type { PosMenu, PosMenuProduct, PosModifierSelection } from '../lib/pos-context';
+import { ModifierSheet } from './modifier-sheet';
+import { PosIcon } from './pos-icon';
+
+export type MenuAdd = (
+  variantId: string,
+  extra: { modifiers?: PosModifierSelection[]; note?: string; merge: boolean },
+) => Promise<unknown>;
+
+// Favourites answer the number keys 1-9 while no field has focus.
+const FAVORITE_KEYS = 9;
+// How long a favourite key waits for a following key that would make it part of a scan.
+const SCAN_GAP_MS = 150;
+
+export function typingTarget(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+  );
+}
+
+// Line editors keep their popup inside a closed <details>, so only a popup
+// outside a closed <details> counts as open.
+export function popupOpen() {
+  return Array.from(document.querySelectorAll('.pos-popup-backdrop')).some(
+    (node) => !node.closest('details:not([open])'),
+  );
+}
+
+// The selling surface of a branch running the menu: an "All" tab and one tab
+// per category holding a product, picture tiles with the current price and a
+// sold-out mark, a favourites row and a quick search. A tile with sizes or
+// options opens the modifier sheet.
+export function MenuGrid({
+  branchId,
+  addDisabled,
+  addDisabledReason,
+  canSetSoldOut,
+  drinksFirst = false,
+  menuLinesOnly = false,
+  menuData,
+  selectedQuantities,
+  onAdd,
+  onDecrement,
+}: {
+  branchId: string | null;
+  addDisabled: boolean;
+  addDisabledReason?: string;
+  canSetSoldOut: boolean;
+  // A bar tab: drinks and shots come first.
+  drinksFirst?: boolean;
+  // Only the products that sell as menu lines (platform orders take no other).
+  menuLinesOnly?: boolean;
+  // A menu already at hand (the offline snapshot) instead of reading it.
+  menuData?: PosMenu;
+  // Quantities already in the active order, keyed by product id.
+  selectedQuantities?: ReadonlyMap<string, SelectedQuantity>;
+  onAdd?: MenuAdd;
+  onDecrement?: (variantId: string) => void;
+}) {
+  const { t } = useTranslation();
+  const menu = useMenu(branchId, !menuData);
+  const setSoldOut = useSoldOutToggle(branchId);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [sheetItem, setSheetItem] = useState<PosMenuProduct | null>(null);
+  const [notice, setNotice] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
+  const loaded = menuData ?? menu.data;
+  const source = loaded && menuLinesOnly ? onlyMenuLines(loaded) : loaded;
+  const data = source && drinksFirst ? leadWithDrinks(source) : source;
+
+  async function pick(item: PosMenuProduct) {
+    if (!data || !onAdd || addDisabled) return;
+    setNotice('');
+    if (item.sold_out) {
+      setNotice(t('menuFailure_product_sold_out'));
+      return;
+    }
+    const variant = item.variants[0];
+    if (!addsInOneTap(data, item) || !variant) {
+      setSheetItem(item);
+      return;
+    }
+    try {
+      await onAdd(variant.id, { merge: true });
+    } catch (failure) {
+      setNotice(describeMenuFailure(failure, t));
+    }
+  }
+
+  const pickRef = useRef(pick);
+  pickRef.current = pick;
+  const favorites = data ? favoriteItems(data) : [];
+  const favoritesRef = useRef(favorites);
+  favoritesRef.current = favorites;
+
+  useEffect(() => {
+    let pending: ReturnType<typeof setTimeout> | undefined;
+    const cancel = () => {
+      clearTimeout(pending);
+      pending = undefined;
+    };
+    const onKey = (event: KeyboardEvent) => {
+      // A scanner types digits faster than a hand: any key soon after a
+      // digit means the digits were a scan, so no favourite is added.
+      if (pending) {
+        cancel();
+        return;
+      }
+      if (event.key === 'F2') {
+        event.preventDefault();
+        searchRef.current?.focus();
+        return;
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey || typingTarget(event.target)) return;
+      if (popupOpen()) return;
+      const index = Number(event.key) - 1;
+      if (!Number.isInteger(index) || index < 0 || index >= FAVORITE_KEYS) return;
+      const item = favoritesRef.current[index];
+      if (!item) return;
+      pending = setTimeout(() => {
+        pending = undefined;
+        void pickRef.current(item);
+      }, SCAN_GAP_MS);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      cancel();
+      window.removeEventListener('keydown', onKey);
+    };
+  }, []);
+
+  async function toggleSoldOut(item: PosMenuProduct) {
+    setNotice('');
+    try {
+      await setSoldOut(item.product_id, !item.sold_out);
+    } catch (failure) {
+      setNotice(describeMenuFailure(failure, t));
+    }
+  }
+
+  const items = data ? visibleItems(data, categoryId, query) : [];
+
+  return (
+    <div className="selling-search menu-grid">
+      <div className="catalog-heading">
+        <h3>
+          {t('menuTitle')}{' '}
+          {data ? <span className="catalog-count">{data.items.length}</span> : null}
+        </h3>
+        <div className="search-input-wrap">
+          <PosIcon name="search" />
+          <input
+            ref={searchRef}
+            type="search"
+            value={query}
+            aria-label={t('menuSearch')}
+            placeholder={t('menuSearch')}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter') return;
+              event.preventDefault();
+              const only = items.length === 1 ? items[0] : undefined;
+              if (only) void pick(only);
+            }}
+          />
+        </div>
+      </div>
+      {!menuData && menu.isPending ? <p className="muted">{t('menuLoading')}</p> : null}
+      {!menuData && menu.isError ? (
+        <p className="error" role="alert">
+          {describeMenuFailure(menu.error, t)}{' '}
+          <button type="button" onClick={() => void menu.refetch()}>
+            {t('menuRetry')}
+          </button>
+        </p>
+      ) : null}
+      {notice ? (
+        <p className="workspace-hint" role="alert">
+          {notice}
+        </p>
+      ) : null}
+      {addDisabled && addDisabledReason ? (
+        <p className="muted" role="status">
+          {addDisabledReason}
+        </p>
+      ) : null}
+      {data && favorites.length > 0 ? (
+        <section className="menu-favorites" aria-label={t('menuFavorites')}>
+          {favorites.map((item, index) => (
+            <button
+              key={item.product_id}
+              type="button"
+              className="menu-favorite"
+              data-sold-out={item.sold_out}
+              disabled={addDisabled || !onAdd}
+              title={addDisabledReason}
+              onClick={() => void pick(item)}
+            >
+              {index < FAVORITE_KEYS ? <kbd>{index + 1}</kbd> : null}
+              <span>{item.name}</span>
+            </button>
+          ))}
+        </section>
+      ) : null}
+      {data ? (
+        <div className="menu-tabs" role="tablist" aria-label={t('menuTabs')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={categoryId === null}
+            onClick={() => setCategoryId(null)}
+          >
+            {t('menuAll')}
+          </button>
+          {categoriesWithProducts(data.categories, data.items).map((category) => (
+            <button
+              key={category.id}
+              type="button"
+              role="tab"
+              aria-selected={categoryId === category.id}
+              onClick={() => setCategoryId(category.id)}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {data && items.length === 0 ? <p className="muted">{t('menuEmpty')}</p> : null}
+      {data ? (
+        <ul className="menu-tiles" aria-label={t('menuTitle')}>
+          {items.map((item) => {
+            const oneTapVariant = addsInOneTap(data, item) ? item.variants[0] : undefined;
+            const selected = selectedQuantities?.get(item.product_id);
+            return (
+              <MenuTile
+                key={item.product_id}
+                item={item}
+                menu={data}
+                disabled={addDisabled || !onAdd}
+                disabledReason={addDisabledReason}
+                canSetSoldOut={canSetSoldOut}
+                selectedQuantity={selected?.quantity ?? 0}
+                canDecrement={Boolean(
+                  oneTapVariant && onDecrement && !addDisabled && selected?.canDecrement,
+                )}
+                onPick={() => void pick(item)}
+                onDecrement={
+                  oneTapVariant && onDecrement ? () => onDecrement(oneTapVariant.id) : undefined
+                }
+                onToggleSoldOut={() => void toggleSoldOut(item)}
+              />
+            );
+          })}
+        </ul>
+      ) : null}
+      {data && sheetItem && onAdd ? (
+        <ModifierSheet
+          menu={data}
+          item={sheetItem}
+          onSubmit={(result) =>
+            onAdd(result.variantId, {
+              modifiers: result.modifiers,
+              note: result.note || undefined,
+              merge: true,
+            })
+          }
+          onClose={() => setSheetItem(null)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function MenuTile({
+  item,
+  menu,
+  disabled,
+  disabledReason,
+  canSetSoldOut,
+  selectedQuantity,
+  canDecrement,
+  onPick,
+  onDecrement,
+  onToggleSoldOut,
+}: {
+  item: PosMenuProduct;
+  menu: PosMenu;
+  disabled: boolean;
+  disabledReason?: string;
+  canSetSoldOut: boolean;
+  selectedQuantity: number;
+  canDecrement: boolean;
+  onPick: () => void;
+  onDecrement?: () => void;
+  onToggleSoldOut: () => void;
+}) {
+  const { t } = useTranslation();
+  const prices = item.variants.map((variant) => variant.price).filter((price) => price !== null);
+  const scheduledVariant = item.variants.find(
+    (variant) => variant.schedule_id && variant.price !== variant.list_price,
+  );
+  const scheduled = Boolean(scheduledVariant);
+  const canAdd = !disabled && !item.sold_out;
+  return (
+    <li
+      className="menu-tile"
+      data-sold-out={item.sold_out}
+      data-selected={selectedQuantity > 0 ? 'true' : undefined}
+    >
+      <div className="menu-tile-card">
+        <button
+          type="button"
+          className="menu-tile-pick"
+          disabled={!canAdd}
+          title={item.sold_out ? t('menuSoldOut') : disabledReason}
+          aria-label={item.sold_out ? `${item.name} · ${t('menuSoldOut')}` : item.name}
+          onClick={onPick}
+        >
+          {item.image_url ? (
+            <img src={item.image_url} alt="" loading="lazy" />
+          ) : (
+            <span className="menu-tile-placeholder" aria-hidden="true">
+              {item.name.slice(0, 1)}
+            </span>
+          )}
+          <strong>{item.name}</strong>
+          <span className="menu-tile-price">
+            {prices[0] ? formatMoney(prices[0], menu.currency) : '—'}
+            {prices.length > 1 ? '+' : ''}
+            {scheduled ? (
+              <small className="menu-tile-schedule">
+                {scheduledVariant?.price_label || t('menuScheduledPrice')}
+              </small>
+            ) : null}
+          </span>
+          {item.sold_out ? (
+            <span className="menu-tile-sold-out">{t('menuSoldOutShort')}</span>
+          ) : null}
+        </button>
+        {selectedQuantity > 0 ? (
+          <div className="catalog-qty-stepper" data-testid="catalog-qty-stepper">
+            {onDecrement ? (
+              <button
+                type="button"
+                className="catalog-qty-btn catalog-qty-btn--minus"
+                aria-label={t('catalogDecreaseQuantity', { name: item.name })}
+                disabled={!canDecrement}
+                onClick={onDecrement}
+              >
+                <PosIcon name="minus" />
+              </button>
+            ) : null}
+            <span className="catalog-qty-value" data-testid="catalog-qty-value">
+              {selectedQuantity}
+            </span>
+            <button
+              type="button"
+              className="catalog-qty-btn catalog-qty-btn--plus"
+              aria-label={t('catalogIncreaseQuantity', { name: item.name })}
+              disabled={!canAdd}
+              onClick={onPick}
+            >
+              <PosIcon name="plus" />
+            </button>
+          </div>
+        ) : canAdd ? (
+          <span className="catalog-qty-add" aria-hidden="true">
+            <PosIcon name="plus" />
+          </span>
+        ) : null}
+      </div>
+      {canSetSoldOut ? (
+        <button type="button" className="menu-tile-sold-out-toggle" onClick={onToggleSoldOut}>
+          {t(item.sold_out ? 'menuBackOnSale' : 'menuMarkSoldOut')}
+        </button>
+      ) : null}
+    </li>
+  );
+}

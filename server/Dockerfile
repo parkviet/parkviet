@@ -51,17 +51,12 @@ RUN mkdir -p /rails-src /dashboard-src /seller-dashboard-src && \
     touch /seller-dashboard-src/.spree-custom-app; \
   fi
 
-# ParkViet POS web apps: the counter (apps/pos), POS administration
-# (apps/pos-dashboard) and the guests' QR order page (apps/table-order),
-# with the shared package the first two link to. The relative
-# layout is kept because both link `../../packages/pos-shared`.
-RUN mkdir -p /pos-web-src/apps /pos-web-src/packages && \
-  for app in pos pos-dashboard table-order; do \
+# ParkViet POS web apps: the unified POS app (apps/pos) and the guests' QR
+# order page (apps/table-order).
+RUN mkdir -p /pos-web-src/apps && \
+  for app in pos table-order; do \
     if [ -f "/ctx/apps/$app/package.json" ]; then cp -R "/ctx/apps/$app" "/pos-web-src/apps/$app"; fi; \
   done && \
-  if [ -f /ctx/packages/pos-shared/package.json ]; then \
-    cp -R /ctx/packages/pos-shared /pos-web-src/packages/pos-shared; \
-  fi && \
   rm -rf /pos-web-src/*/*/node_modules /pos-web-src/*/*/dist /pos-web-src/*/*/.tanstack /pos-web-src/*/*/test-results
 
 # Builds the React Dashboard served by Rails at /dashboard (single-node
@@ -118,27 +113,20 @@ RUN corepack enable pnpm && \
   fi && \
   VITE_BASE_PATH=/sellers/ pnpm build
 
-# Builds the POS web apps served by Rails: the counter at /pos and POS
-# administration at /pos-admin, same origin as the API (no CORS, Lax refresh
-# cookie over plain HTTP on a shop network). The bundles are origin-relative,
-# so one image works on any LAN address or domain. Each project installs its
-# committed lockfile verbatim. A context without them yields empty folders,
-# and the routes answer 404.
+# Builds the POS web apps served by Rails: the unified POS app (administration
+# and counter) at /pos and the guest QR page at /table, same origin as the API
+# (no CORS, Lax refresh cookie over plain HTTP on a shop network). The bundles
+# are origin-relative, so one image works on any LAN address or domain. Each
+# project installs its committed lockfile verbatim. A context without them
+# yields empty folders, and the routes answer 404.
 FROM docker.io/library/node:$NODE_VERSION-slim AS pos-web
 
 WORKDIR /pos-web
 COPY --from=ctx /pos-web-src /pos-web
-RUN corepack enable pnpm && mkdir -p /out/pos /out/pos-admin /out/table && \
-  if [ -f packages/pos-shared/package.json ]; then \
-    (cd packages/pos-shared && pnpm install --frozen-lockfile); \
-  fi && \
+RUN corepack enable pnpm && mkdir -p /out/pos /out/table && \
   if [ -f apps/pos/package.json ]; then \
     (cd apps/pos && pnpm install --frozen-lockfile && \
-      VITE_BASE_PATH=/pos/ VITE_POS_DASHBOARD_URL=/pos-admin/ pnpm build && cp -R dist/. /out/pos/); \
-  fi && \
-  if [ -f apps/pos-dashboard/package.json ]; then \
-    (cd apps/pos-dashboard && pnpm install --frozen-lockfile && \
-      VITE_BASE_PATH=/pos-admin/ VITE_POS_URL=/pos/ pnpm build && cp -R dist/. /out/pos-admin/); \
+      VITE_BASE_PATH=/pos/ pnpm build && cp -R dist/. /out/pos/); \
   fi && \
   if [ -f apps/table-order/package.json ]; then \
     (cd apps/table-order && pnpm install --frozen-lockfile && \
@@ -238,13 +226,10 @@ COPY --chown=rails:rails --from=seller-dashboard /seller-dashboard/dist /rails/s
 ENV SPREE_SELLER_PANEL_DIST_PATH="/rails/seller-dashboard"
 
 # ParkViet POS web apps (see the pos-web stage above), served by
-# Spree::Pos::SellingAppController at /pos, AdminAppController at /pos-admin and
-# TableOrderAppController at /table.
+# Spree::Pos::SellingAppController at /pos and TableOrderAppController at /table.
 COPY --chown=rails:rails --from=pos-web /out/pos /rails/pos-web
-COPY --chown=rails:rails --from=pos-web /out/pos-admin /rails/pos-admin
 COPY --chown=rails:rails --from=pos-web /out/table /rails/table-order
 ENV POS_WEB_DIST_PATH="/rails/pos-web" \
-  POS_ADMIN_DIST_PATH="/rails/pos-admin" \
   TABLE_ORDER_DIST_PATH="/rails/table-order"
 
 # Release label shown on the POS system status page; set with

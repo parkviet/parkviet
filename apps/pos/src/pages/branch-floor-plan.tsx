@@ -1,0 +1,1207 @@
+import {
+  conflictReason,
+  describeFailure,
+  posFailureKey,
+} from '@shared/request-failure'
+import {
+  type AreaRecord,
+  MANUAL_STATUSES,
+  normalizeArea,
+  normalizeResource,
+  type Placement,
+  RESOURCE_KINDS,
+  RESOURCE_SHAPES,
+  type ResourceRecord,
+} from '@shared/tables'
+import { SERVICE_MODES, type ServiceMode } from '@shared/types/pos-context'
+import { usePermissions } from '@spree/dashboard-core'
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  useConfirm,
+} from '@spree/dashboard-ui'
+import { SettingsIcon, TableIcon } from '@spree/dashboard-ui/icons'
+import { Link } from '@tanstack/react-router'
+import { type FormEvent, useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useBranchScope } from '../components/branch-detail'
+import { type CanvasTable, FloorPlanCanvas } from '../components/floor-plan-canvas'
+import { ReservationSettingsCard } from '../components/reservation-settings-card'
+import {
+  ModelCard,
+  ModelCheck,
+  ModelNotice,
+  ModelSelect,
+  ModelState,
+} from '../components/setup/model-ui'
+import { TableCodesCard } from '../components/table-codes-card'
+import {
+  type TableSettings,
+  TIP_SPLIT_MODES,
+  type TipSplit,
+  useAreas,
+  useFloorPlanWrite,
+  useResources,
+  useTableSettings,
+} from '../hooks/use-floor-plan'
+import { useStaffRoles } from '../hooks/use-master-data'
+import { usePosSession } from '../hooks/use-pos-session'
+import {
+  BOTTLE_KEEP_DAYS_MAX,
+  CAPACITY_MAX,
+  changedFields,
+  FLOOR_MAX,
+  freeSpot,
+  placementDraft,
+  readFloorSize,
+  readKeepDays,
+  readSeatedAlertMinutes,
+  readServiceChargeRate,
+  readTableDraft,
+  SEATED_ALERT_DEFAULT,
+  SEATED_ALERT_MAX,
+  SEATED_ALERT_MIN,
+  SERVICE_CHARGE_MAX,
+  TABLE_SIZE_MAX,
+  type TableDraft,
+  tableDraftOf,
+} from '../lib/floor-plan'
+import { canManageBranch, canManageResources } from '../lib/pos-access'
+
+const REFUSALS = [
+  'resource_outside_area',
+  'area_in_use',
+  'table_in_use',
+  'area_archived',
+  'table_archived',
+  'manual_status_invalid',
+  'service_charge_rate_invalid',
+  'seated_alert_minutes_invalid',
+  'bottle_keep_days_invalid',
+  'tip_split_invalid',
+  'minimum_spend_invalid',
+] as const
+const NEW = 'new'
+const DEFAULT_FLOOR = { width: 24, height: 16 }
+
+type Notice = { text: string; failed: boolean } | null
+type T = (key: string, options?: Record<string, unknown>) => string
+
+function floorFailure(error: unknown, t: T) {
+  const reason = conflictReason(error)
+  return reason && (REFUSALS as readonly string[]).includes(reason)
+    ? t(`floorPlan.failure_${reason}`)
+    : describeFailure(error, t)
+}
+
+type Attempt = (work: () => Promise<string | null>) => Promise<void>
+
+// Runs one write and reports it in the card's notice.
+function useAttempt(t: T) {
+  const [notice, setNotice] = useState<Notice>(null)
+  const attempt: Attempt = async (work) => {
+    setNotice(null)
+    try {
+      const text = await work()
+      if (text) setNotice({ text, failed: false })
+    } catch (failure) {
+      setNotice({ text: floorFailure(failure, t), failed: true })
+    }
+  }
+  return { notice, attempt }
+}
+
+// The floor plan of one branch: its areas, the tables drawn on each area's
+// grid, and the table service settings (table register, service charge).
+export function BranchFloorPlanTab() {
+  const { branch, modules } = useBranchScope()
+  const { permissionKeys } = usePermissions()
+  const { context } = usePosSession()
+  const access = { permissionKeys, context: context.data }
+  return (
+    <div className="space-y-6">
+      <FloorCard write={canManageResources(access)} />
+      <TableSettingsCard write={canManageBranch(access, branch.id)} />
+      {modules?.['fnb.reservations'] === true ? (
+        <ReservationSettingsCard write={canManageBranch(access, branch.id)} />
+      ) : null}
+      {modules?.['fnb.qr_order'] === true ? (
+        <TableCodesCard write={canManageResources(access)} />
+      ) : null}
+    </div>
+  )
+}
+
+function NumberField({
+  label,
+  value,
+  min,
+  max,
+  disabled,
+  onChange,
+}: {
+  label: string
+  value: string
+  min: number
+  max?: number
+  disabled?: boolean
+  onChange: (value: string) => void
+}) {
+  const id = useId()
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        type="number"
+        inputMode="numeric"
+        min={min}
+        max={max}
+        step={1}
+        required
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  )
+}
+
+function TextField({
+  label,
+  value,
+  maxLength,
+  disabled,
+  onChange,
+}: {
+  label: string
+  value: string
+  maxLength: number
+  disabled?: boolean
+  onChange: (value: string) => void
+}) {
+  const id = useId()
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        required
+        maxLength={maxLength}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  )
+}
+
+type AreaDraft = { id?: string; name: string; width: string; height: string }
+
+const areaDraftOf = (area: AreaRecord): AreaDraft => ({
+  id: area.id,
+  name: area.name,
+  width: String(area.floor_width),
+  height: String(area.floor_height),
+})
+
+const blankTable = (spot: Placement): TableDraft => ({
+  name: '',
+  kind: 'table',
+  capacity: '4',
+  shape: 'rect',
+  ...placementDraft(spot),
+  minimumSpend: '',
+})
+
+// The placement the canvas draws for a draft: what was typed when it is a
+// whole number, the saved value otherwise.
+function draftPlacement(draft: TableDraft, fallback: Placement): Placement {
+  const read = (value: string, saved: number) =>
+    /^\d+$/.test(value.trim()) ? Number(value) : saved
+  return {
+    x: read(draft.x, fallback.x),
+    y: read(draft.y, fallback.y),
+    w: Math.max(1, read(draft.w, fallback.w)),
+    h: Math.max(1, read(draft.h, fallback.h)),
+    rotation: read(draft.rotation, fallback.rotation),
+  }
+}
+
+const sameDraft = (left: TableDraft, right: TableDraft) =>
+  JSON.stringify(left) === JSON.stringify(right)
+
+function FloorCard({ write }: { write: boolean }) {
+  const { t } = useTranslation()
+  const { branch } = useBranchScope()
+  const areas = useAreas(branch.id)
+  const resources = useResources(branch.id)
+  const mutation = useFloorPlanWrite()
+  const confirm = useConfirm()
+  const { notice, attempt } = useAttempt(t)
+  const [areaId, setAreaId] = useState<string | null>(null)
+  const [areaDraft, setAreaDraft] = useState<AreaDraft | null>(null)
+  const [draft, setDraft] = useState<TableDraft | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [zoom, setZoom] = useState(1)
+  const [adding, setAdding] = useState(false)
+
+  const area = areas.data?.find((row) => row.id === areaId) ?? areas.data?.[0] ?? null
+  const tables = (resources.data ?? []).filter((row) => row.area_id === area?.id)
+  const saved = draft?.id ? tables.find((row) => row.id === draft.id) : undefined
+  const dirty = Boolean(draft && (!saved || !sameDraft(draft, tableDraftOf(saved))))
+
+  // Leaving a table with unsaved changes asks first.
+  const leaveDraft = async () =>
+    !dirty ||
+    (await confirm({
+      message: t('floorPlan.discardConfirm'),
+      variant: 'destructive',
+      confirmLabel: t('floorPlan.discard'),
+      cancelLabel: t('adminCancel'),
+    }))
+
+  const pickArea = async (id: string) => {
+    if (id === area?.id || !(await leaveDraft())) return
+    setDraft(null)
+    setAreaDraft(null)
+    setAdding(false)
+    setAreaId(id)
+  }
+
+  const select = async (key: string) => {
+    if (key === (draft ? (draft.id ?? NEW) : null) || !(await leaveDraft())) return
+    const row = tables.find((table) => table.id === key)
+    setDraft(row ? tableDraftOf(row) : null)
+  }
+
+  const addTable = async () => {
+    if (!area || !(await leaveDraft())) return
+    setDraft(blankTable(freeSpot(tables, area, 2, 2)))
+  }
+
+  const drawTable = async (placement: Placement) => {
+    if (!area || !(await leaveDraft())) return
+    setDraft(blankTable(placement))
+  }
+
+  const closeEditor = async () => {
+    if (!(await leaveDraft())) return
+    setDraft(null)
+    setEditing(false)
+    setAdding(false)
+    setZoom(1)
+  }
+
+  const setPlanZoom = (value: number) => setZoom(Math.min(3, Math.max(0.5, value)))
+
+  const growFloor = (floor: { floor_width: number; floor_height: number }) => {
+    if (!area) return
+    if (floor.floor_width === area.floor_width && floor.floor_height === area.floor_height) return
+    void mutation.mutateAsync({
+      method: 'PATCH',
+      path: `/pos/areas/${area.id}`,
+      body: { name: area.name, floor_width: floor.floor_width, floor_height: floor.floor_height },
+    })
+  }
+
+  const startArea = () =>
+    setAreaDraft({
+      name: '',
+      width: String(DEFAULT_FLOOR.width),
+      height: String(DEFAULT_FLOOR.height),
+    })
+
+  const saveArea = (event: FormEvent) => {
+    event.preventDefault()
+    if (!areaDraft || mutation.isPending) return
+    const width = readFloorSize(areaDraft.width)
+    const height = readFloorSize(areaDraft.height)
+    if (width === null || height === null || !areaDraft.name.trim()) return
+    const body = { name: areaDraft.name.trim(), floor_width: width, floor_height: height }
+    void attempt(async () => {
+      const result = areaDraft.id
+        ? await mutation.mutateAsync({ method: 'PATCH', path: `/pos/areas/${areaDraft.id}`, body })
+        : await mutation.mutateAsync({
+            method: 'POST',
+            path: '/pos/areas',
+            body: { branch_id: branch.id, position: areas.data?.length ?? 0, ...body },
+          })
+      const written = normalizeArea(result.data)
+      if (written) setAreaId(written.id)
+      setAreaDraft(null)
+      return t('saved')
+    })
+  }
+
+  const archiveArea = async (row: AreaRecord) => {
+    const accepted = await confirm({
+      message: t('floorPlan.archiveAreaConfirm', { name: row.name }),
+      variant: 'destructive',
+      confirmLabel: t('floorPlan.archive'),
+      cancelLabel: t('adminCancel'),
+    })
+    if (!accepted) return
+    await attempt(async () => {
+      await mutation.mutateAsync({ method: 'POST', path: `/pos/areas/${row.id}/archive` })
+      setAreaId(null)
+      setAreaDraft(null)
+      setDraft(null)
+      return t('floorPlan.archived')
+    })
+  }
+
+  const canvasTables: CanvasTable[] = tables.map((row) =>
+    draft && row.id === draft.id
+      ? { ...row, ...draftPlacement(draft, row), name: draft.name, shape: draft.shape, key: row.id }
+      : { ...row, key: row.id },
+  )
+  if (draft && !draft.id && area) {
+    const spot = draftPlacement(draft, { x: 0, y: 0, w: 2, h: 2, rotation: 0 })
+    canvasTables.push({
+      ...spot,
+      key: NEW,
+      name: draft.name,
+      capacity: Number(draft.capacity) || 0,
+      shape: draft.shape,
+      manual_status: 'available',
+    })
+  }
+
+  const loading = areas.isPending || resources.isPending
+  const failed = areas.error ?? resources.error
+
+  return (
+    <ModelCard title={t('floorPlan.title')} id="branch-floor-plan" icon={<TableIcon />}>
+      <p className="text-sm text-muted-foreground">{t('floorPlan.intro')}</p>
+      <ModelNotice notice={notice} />
+      {loading ? (
+        <ModelState title={t('waiting')} />
+      ) : failed || !areas.data ? (
+        <ModelState
+          error
+          title={t(posFailureKey(failed))}
+          retry={() => {
+            void areas.refetch()
+            void resources.refetch()
+          }}
+        />
+      ) : (
+        <>
+          <div className="flex flex-wrap items-end gap-3">
+            {area ? (
+              <div className="min-w-48">
+                <ModelSelect
+                  label={t('floorPlan.area')}
+                  value={area.id}
+                  options={areas.data.map((row) => ({ value: row.id, label: row.name }))}
+                  onChange={(value) => void pickArea(value)}
+                />
+              </div>
+            ) : (
+              <p className="flex-1">{t('floorPlan.noAreas')}</p>
+            )}
+            {write && !areaDraft ? (
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={startArea}>
+                  {t('floorPlan.addArea')}
+                </Button>
+                {area ? (
+                  <>
+                    <Button
+                      onClick={() => {
+                        setZoom(1)
+                        setEditing(true)
+                      }}
+                    >
+                      {t('floorPlan.editLayout')}
+                    </Button>
+                    <Button variant="outline" onClick={() => setAreaDraft(areaDraftOf(area))}>
+                      {t('floorPlan.editArea')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={mutation.isPending}
+                      onClick={() => void archiveArea(area)}
+                    >
+                      {t('floorPlan.archiveArea')}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          {areaDraft && !editing ? (
+            <AreaForm
+              draft={areaDraft}
+              busy={mutation.isPending}
+              onChange={setAreaDraft}
+              onSubmit={saveArea}
+              onCancel={() => setAreaDraft(null)}
+            />
+          ) : null}
+          {area ? (
+            <div className="space-y-2">
+              <div className="h-72">
+                <FloorPlanCanvas
+                  area={area}
+                  tables={tables.map((row) => ({ ...row, key: row.id }))}
+                  selected={null}
+                  write={false}
+                  onSelect={() => undefined}
+                  onPlace={() => undefined}
+                />
+              </div>
+              {tables.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t('floorPlan.noTables')}</p>
+              ) : null}
+            </div>
+          ) : null}
+          {area && editing ? (
+            <Dialog
+              open
+              onOpenChange={(open, details) => {
+                if (open) return
+                // Escape steps back out of the open table or area name; only
+                // the close button leaves the editor.
+                if (details.reason === 'escape-key') {
+                  details.cancel()
+                  if (adding) setAdding(false)
+                  else if (areaDraft) setAreaDraft(null)
+                  else if (draft) void leaveDraft().then((leave) => leave && setDraft(null))
+                  return
+                }
+                void closeEditor()
+              }}
+            >
+              <DialogContent fullScreen>
+                <DialogHeader className="flex-row items-center gap-3 p-2 pr-14">
+                  <DialogTitle className="shrink-0 text-base">
+                    {t('floorPlan.editLayout')}
+                  </DialogTitle>
+                  <div className="flex min-w-0 flex-1 items-center justify-center gap-2 overflow-x-auto">
+                    {areaDraft ? (
+                      <form className="flex items-center gap-2" onSubmit={saveArea}>
+                        <Input
+                          autoFocus
+                          required
+                          maxLength={80}
+                          value={areaDraft.name}
+                          aria-label={t('floorPlan.areaName')}
+                          onChange={(event) =>
+                            setAreaDraft({ ...areaDraft, name: event.target.value })
+                          }
+                          className="h-8 w-48"
+                        />
+                        <Button
+                          type="submit"
+                          size="sm"
+                          disabled={mutation.isPending || !areaDraft.name.trim()}
+                        >
+                          {t('save')}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setAreaDraft(null)}
+                        >
+                          {t('adminCancel')}
+                        </Button>
+                      </form>
+                    ) : (
+                      <>
+                        <Tabs
+                          value={area.id}
+                          onValueChange={(value) => void pickArea(String(value))}
+                        >
+                          <TabsList>
+                            {areas.data.map((row) => (
+                              <TabsTrigger key={row.id} value={row.id}>
+                                {row.name}
+                              </TabsTrigger>
+                            ))}
+                          </TabsList>
+                        </Tabs>
+                        {write ? (
+                          <Button type="button" size="sm" variant="outline" onClick={startArea}>
+                            {t('floorPlan.addArea')}
+                          </Button>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                  <DialogDescription className="sr-only">{area.name}</DialogDescription>
+                </DialogHeader>
+                <div
+                  className={`grid min-h-0 flex-1 overflow-hidden gap-4 p-3 ${draft ? 'lg:grid-cols-[minmax(0,1fr)_20rem]' : ''}`}
+                >
+                  <FloorPlanCanvas
+                    key={area.id}
+                    area={area}
+                    tables={canvasTables}
+                    selected={draft ? (draft.id ?? NEW) : null}
+                    write={write}
+                    zoom={zoom}
+                    onZoom={setPlanZoom}
+                    onSelect={(key) => void select(key)}
+                    onPlace={(placement) =>
+                      setDraft((current) =>
+                        current ? { ...current, ...placementDraft(placement) } : current,
+                      )
+                    }
+                    onDraw={(placement) => void drawTable(placement)}
+                    onExtend={growFloor}
+                    adding={adding}
+                    onAdding={write ? setAdding : undefined}
+                    onAddTable={() => void addTable()}
+                  />
+                  {draft ? (
+                    <div className="min-h-0 overflow-y-auto">
+                      <TableForm
+                        key={draft.id ?? NEW}
+                        area={area}
+                        draft={draft}
+                        saved={saved}
+                        dirty={dirty}
+                        position={resources.data?.length ?? 0}
+                        write={write}
+                        attempt={attempt}
+                        onChange={setDraft}
+                        onClose={() => setDraft(null)}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </DialogContent>
+            </Dialog>
+          ) : null}
+        </>
+      )}
+    </ModelCard>
+  )
+}
+
+function AreaForm({
+  draft,
+  busy,
+  onChange,
+  onSubmit,
+  onCancel,
+}: {
+  draft: AreaDraft
+  busy: boolean
+  onChange: (draft: AreaDraft) => void
+  onSubmit: (event: FormEvent) => void
+  onCancel: () => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <form
+      className="flex flex-wrap items-end gap-4 rounded-lg border p-4"
+      aria-label={draft.id ? t('floorPlan.editArea') : t('floorPlan.addArea')}
+      onSubmit={onSubmit}
+    >
+      <div className="min-w-48 flex-1">
+        <TextField
+          label={t('floorPlan.areaName')}
+          value={draft.name}
+          maxLength={80}
+          onChange={(name) => onChange({ ...draft, name })}
+        />
+      </div>
+      <div className="flex gap-2">
+        <Button type="submit" disabled={busy || !draft.name.trim()}>
+          {t('save')}
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          {t('adminCancel')}
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function TableForm({
+  area,
+  draft,
+  saved,
+  dirty,
+  position,
+  write,
+  attempt,
+  onChange,
+  onClose,
+}: {
+  area: AreaRecord
+  draft: TableDraft
+  saved: ResourceRecord | undefined
+  dirty: boolean
+  position: number
+  write: boolean
+  attempt: Attempt
+  onChange: (draft: TableDraft) => void
+  onClose: () => void
+}) {
+  const { t } = useTranslation()
+  const { branch } = useBranchScope()
+  const mutation = useFloorPlanWrite()
+  const confirm = useConfirm()
+  const read = readTableDraft(draft, { floor_width: FLOOR_MAX, floor_height: FLOOR_MAX })
+  const problem =
+    'problem' in read
+      ? t(`floorPlan.problem_${read.problem}`, {
+          width: area.floor_width,
+          height: area.floor_height,
+          max: TABLE_SIZE_MAX,
+        })
+      : null
+  const edit = (patch: Partial<TableDraft>) => onChange({ ...draft, ...patch })
+  const locked = !write || mutation.isPending
+  const minimumId = useId()
+
+  const save = (event: FormEvent) => {
+    event.preventDefault()
+    if (!('values' in read) || mutation.isPending) return
+    const values = read.values
+    void attempt(async () => {
+      const floorWidth = Math.min(FLOOR_MAX, Math.max(area.floor_width, values.x + values.w))
+      const floorHeight = Math.min(FLOOR_MAX, Math.max(area.floor_height, values.y + values.h))
+      if (floorWidth !== area.floor_width || floorHeight !== area.floor_height) {
+        await mutation.mutateAsync({
+          method: 'PATCH',
+          path: `/pos/areas/${area.id}`,
+          body: { name: area.name, floor_width: floorWidth, floor_height: floorHeight },
+        })
+      }
+      if (saved) {
+        const body = changedFields(saved, values)
+        if (Object.keys(body).length === 0) return t('saved')
+        const result = await mutation.mutateAsync({
+          method: 'PATCH',
+          path: `/pos/resources/${saved.id}`,
+          body,
+        })
+        const row = normalizeResource(result.data)
+        if (row) onChange(tableDraftOf(row))
+        return t('saved')
+      }
+      const result = await mutation.mutateAsync({
+        method: 'POST',
+        path: '/pos/resources',
+        body: { branch_id: branch.id, area_id: area.id, position, ...values },
+      })
+      const row = normalizeResource(result.data)
+      if (row) onChange(tableDraftOf(row))
+      else onClose()
+      return t('saved')
+    })
+  }
+
+  const archive = async () => {
+    if (!saved) return
+    const accepted = await confirm({
+      message: t('floorPlan.archiveTableConfirm', { name: saved.name }),
+      variant: 'destructive',
+      confirmLabel: t('floorPlan.archive'),
+      cancelLabel: t('adminCancel'),
+    })
+    if (!accepted) return
+    await attempt(async () => {
+      await mutation.mutateAsync({ method: 'POST', path: `/pos/resources/${saved.id}/archive` })
+      onClose()
+      return null
+    })
+  }
+
+  const setStatus = (value: string) =>
+    void attempt(async () => {
+      if (!saved) return null
+      await mutation.mutateAsync({
+        method: 'POST',
+        path: `/pos/resources/${saved.id}/manual_status`,
+        body: { manual_status: value },
+      })
+      return t('saved')
+    })
+
+  return (
+    <div className="space-y-4 rounded-lg border p-4">
+      <form
+        className="space-y-4"
+        aria-label={saved ? t('floorPlan.editTable') : t('floorPlan.addTable')}
+        onSubmit={save}
+      >
+        <h3 className="font-semibold">
+          {saved ? t('floorPlan.editTable') : t('floorPlan.addTable')}
+          {dirty ? (
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              {t('floorPlan.unsaved')}
+            </span>
+          ) : null}
+        </h3>
+        <TextField
+          label={t('floorPlan.tableName')}
+          value={draft.name}
+          maxLength={40}
+          disabled={locked}
+          onChange={(name) => edit({ name })}
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <ModelSelect
+            label={t('floorPlan.kind')}
+            value={draft.kind}
+            disabled={locked}
+            options={RESOURCE_KINDS.map((kind) => ({
+              value: kind,
+              label: t(`floorPlan.kind_${kind}`),
+            }))}
+            onChange={(value) => edit({ kind: value as TableDraft['kind'] })}
+          />
+          <ModelSelect
+            label={t('floorPlan.shape')}
+            value={draft.shape}
+            disabled={locked}
+            options={RESOURCE_SHAPES.map((shape) => ({
+              value: shape,
+              label: t(`floorPlan.shape_${shape}`),
+            }))}
+            onChange={(value) => edit({ shape: value as TableDraft['shape'] })}
+          />
+          <NumberField
+            label={t('floorPlan.capacity')}
+            value={draft.capacity}
+            min={0}
+            max={CAPACITY_MAX}
+            disabled={locked}
+            onChange={(capacity) => edit({ capacity })}
+          />
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={minimumId}>{t('floorPlan.minimumSpend')}</Label>
+            <Input
+              id={minimumId}
+              inputMode="numeric"
+              value={draft.minimumSpend}
+              disabled={locked}
+              aria-describedby={`${minimumId}-hint`}
+              onChange={(event) => edit({ minimumSpend: event.target.value })}
+            />
+            <small id={`${minimumId}-hint`} className="text-muted-foreground">
+              {t('floorPlan.minimumSpendHint')}
+            </small>
+          </div>
+          <NumberField
+            label={t('floorPlan.rotation')}
+            value={draft.rotation}
+            min={0}
+            max={359}
+            disabled={locked}
+            onChange={(rotation) => edit({ rotation })}
+          />
+        </div>
+        {problem && write ? (
+          <p role="alert" className="text-sm text-destructive">
+            {problem}
+          </p>
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          {write ? (
+            <Button type="submit" disabled={mutation.isPending || Boolean(problem) || !dirty}>
+              {t('save')}
+            </Button>
+          ) : null}
+          <Button type="button" variant="outline" onClick={onClose}>
+            {write && dirty ? t('adminCancel') : t('floorPlan.close')}
+          </Button>
+          {write && saved ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={mutation.isPending}
+              onClick={() => void archive()}
+            >
+              {t('floorPlan.archiveTable')}
+            </Button>
+          ) : null}
+        </div>
+      </form>
+      {saved ? (
+        <ModelSelect
+          label={t('floorPlan.manualStatus')}
+          value={saved.manual_status}
+          disabled={locked}
+          hint={t('floorPlan.manualStatusHint')}
+          options={MANUAL_STATUSES.map((status) => ({
+            value: status,
+            label: t(`tableState_${status}`),
+          }))}
+          onChange={setStatus}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+type SettingsDraft = {
+  register: string
+  rate: string
+  modes: ServiceMode[]
+  tax: string
+  keepDays: string
+  tipsAsRevenue: boolean
+  tipSplit: TipSplit
+  seatedAlertOn: boolean
+  seatedAlert: string
+}
+
+const settingsDraftOf = (settings: TableSettings): SettingsDraft => ({
+  seatedAlertOn: settings.seated_alert_minutes !== null,
+  seatedAlert: String(settings.seated_alert_minutes ?? SEATED_ALERT_DEFAULT),
+  register: settings.table_register_id ?? '',
+  rate: settings.service_charge_rate ?? '',
+  modes: settings.service_charge_applies_to,
+  tax: settings.service_charge_tax_category_id ?? '',
+  keepDays: settings.bottle_keep_days === null ? '' : String(settings.bottle_keep_days),
+  tipsAsRevenue: settings.tips_as_revenue,
+  tipSplit: settings.tip_split,
+})
+
+// A bar's settings: how long kept bottles stay (with `fnb.bottle_keep`), and
+// with `fnb.postpay` whether tips count as revenue and how they are split
+// among which roles (none chosen: every staff member of the branch).
+function BarSettings({
+  draft,
+  write,
+  bottleKeep,
+  tips,
+  keepDaysInvalid,
+  roles,
+  onChange,
+}: {
+  draft: SettingsDraft
+  write: boolean
+  bottleKeep: boolean
+  tips: boolean
+  keepDaysInvalid: boolean
+  roles: { id: string; name: string }[]
+  onChange: (patch: Partial<SettingsDraft>) => void
+}) {
+  const { t } = useTranslation()
+  const keepId = useId()
+  const split = (patch: Partial<TipSplit>) =>
+    onChange({ tipSplit: { ...draft.tipSplit, ...patch } })
+  return (
+    <fieldset className="space-y-4">
+      <legend className="text-sm font-medium">{t('floorPlan.barSettings')}</legend>
+      {bottleKeep ? (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={keepId}>{t('floorPlan.bottleKeepDays')}</Label>
+          <Input
+            id={keepId}
+            inputMode="numeric"
+            value={draft.keepDays}
+            disabled={!write}
+            aria-invalid={keepDaysInvalid}
+            aria-describedby={`${keepId}-hint`}
+            onChange={(event) => onChange({ keepDays: event.target.value })}
+          />
+          <small
+            id={`${keepId}-hint`}
+            className={keepDaysInvalid ? 'text-destructive' : 'text-muted-foreground'}
+          >
+            {t('floorPlan.bottleKeepDaysHint', { max: BOTTLE_KEEP_DAYS_MAX })}
+          </small>
+        </div>
+      ) : null}
+      {tips ? (
+        <>
+          <ModelCheck
+            checked={draft.tipsAsRevenue}
+            disabled={!write}
+            onChange={(tipsAsRevenue) => onChange({ tipsAsRevenue })}
+          >
+            {t('floorPlan.tipsAsRevenue')}
+          </ModelCheck>
+          <small className="block text-muted-foreground">{t('floorPlan.tipsAsRevenueHint')}</small>
+          <ModelSelect
+            label={t('floorPlan.tipSplitMode')}
+            value={draft.tipSplit.mode}
+            disabled={!write}
+            options={TIP_SPLIT_MODES.map((mode) => ({
+              value: mode,
+              label: t(`floorPlan.tipSplit_${mode}`),
+            }))}
+            onChange={(mode) => split({ mode: mode as TipSplit['mode'] })}
+          />
+          {roles.length > 0 ? (
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">{t('floorPlan.tipSplitRoles')}</legend>
+              {roles.map((role) => (
+                <ModelCheck
+                  key={role.id}
+                  checked={draft.tipSplit.role_codes.includes(role.id)}
+                  disabled={!write}
+                  onChange={(checked) =>
+                    split({
+                      role_codes: checked
+                        ? [...draft.tipSplit.role_codes, role.id]
+                        : draft.tipSplit.role_codes.filter((code) => code !== role.id),
+                    })
+                  }
+                >
+                  {role.name}
+                </ModelCheck>
+              ))}
+            </fieldset>
+          ) : null}
+        </>
+      ) : null}
+    </fieldset>
+  )
+}
+
+// The register whose open shift table orders are booked on and, while the
+// branch runs the service charge, its rate, service modes and tax category.
+function TableSettingsCard({ write }: { write: boolean }) {
+  const { t } = useTranslation()
+  const { branch, modules, storeId } = useBranchScope()
+  const { context } = usePosSession()
+  const settings = useTableSettings(branch.id)
+  const serviceCharge = modules?.['fnb.service_charge'] === true
+  const bottleKeep = modules?.['fnb.bottle_keep'] === true
+  const tips = modules?.['fnb.postpay'] === true
+  const qrOrder = modules?.['fnb.qr_order'] === true
+  const roles = useStaffRoles(write && tips)
+  const mutation = useFloorPlanWrite()
+  const { notice, attempt } = useAttempt(t)
+  const [draft, setDraft] = useState<SettingsDraft | null>(null)
+  const loaded = settings.data
+  const current = draft ?? (loaded ? settingsDraftOf(loaded) : null)
+  const rate = current ? readServiceChargeRate(current.rate) : null
+  // Off sends null; on needs whole minutes in range (blank is invalid then).
+  const seatedAlert = current?.seatedAlertOn
+    ? (readSeatedAlertMinutes(current.seatedAlert) ?? undefined)
+    : null
+  const keepDays = current ? readKeepDays(current.keepDays) : null
+
+  const edit = (patch: Partial<SettingsDraft>) =>
+    setDraft((value) => {
+      const base = value ?? current
+      return base ? { ...base, ...patch } : value
+    })
+
+  const save = (event: FormEvent) => {
+    event.preventDefault()
+    if (!current || !draft || mutation.isPending || (serviceCharge && rate === undefined)) return
+    if (seatedAlert === undefined) return
+    if (bottleKeep && keepDays === undefined) return
+    void attempt(async () => {
+      await mutation.mutateAsync({
+        method: 'PUT',
+        path: '/pos/table_settings',
+        body: {
+          branch_id: branch.id,
+          table_register_id: current.register || null,
+          seated_alert_minutes: seatedAlert,
+          ...(serviceCharge
+            ? {
+                service_charge_rate: rate ?? null,
+                service_charge_applies_to: current.modes,
+                service_charge_tax_category_id: current.tax || null,
+              }
+            : {}),
+          ...(bottleKeep && keepDays ? { bottle_keep_days: keepDays } : {}),
+          ...(tips ? { tips_as_revenue: current.tipsAsRevenue, tip_split: current.tipSplit } : {}),
+        },
+      })
+      setDraft(null)
+      return t('saved')
+    })
+  }
+
+  const registerOptions = [
+    { value: '', label: t('floorPlan.noRegister') },
+    ...(context.data?.registers ?? [])
+      .filter(
+        (row) =>
+          row.branch_id === branch.id && (row.status === 'active' || row.id === current?.register),
+      )
+      .map((row) => ({ value: row.id, label: row.name })),
+  ]
+  if (current?.register && !registerOptions.some((row) => row.value === current.register))
+    registerOptions.push({ value: current.register, label: t('floorPlan.registerOther') })
+  const taxOptions = [
+    { value: '', label: t('floorPlan.taxUnset') },
+    ...(loaded?.tax_categories ?? []).map((row) => ({ value: row.id, label: row.name })),
+  ]
+  if (current?.tax && !taxOptions.some((row) => row.value === current.tax))
+    taxOptions.push({ value: current.tax, label: t('floorPlan.taxCurrent') })
+
+  return (
+    <ModelCard
+      title={t('floorPlan.settingsTitle')}
+      id="branch-table-settings"
+      icon={<SettingsIcon />}
+    >
+      <p className="text-sm text-muted-foreground">{t('floorPlan.settingsIntro')}</p>
+      <ModelNotice notice={notice} />
+      {settings.isPending ? (
+        <ModelState title={t('waiting')} />
+      ) : settings.error || !current ? (
+        <ModelState
+          error
+          title={t(posFailureKey(settings.error))}
+          retry={() => void settings.refetch()}
+        />
+      ) : (
+        <form className="space-y-4" onSubmit={save}>
+          <ModelSelect
+            label={t('floorPlan.tableRegister')}
+            value={current.register}
+            disabled={!write}
+            hint={t('floorPlan.tableRegisterHint')}
+            options={registerOptions}
+            onChange={(register) => edit({ register })}
+          />
+          <div className="flex flex-col gap-2">
+            <ModelCheck
+              checked={current.seatedAlertOn}
+              disabled={!write}
+              onChange={(seatedAlertOn) => edit({ seatedAlertOn })}
+            >
+              {t('floorPlan.seatedAlert')}
+            </ModelCheck>
+            {current.seatedAlertOn ? (
+              <div className="flex flex-col gap-2 sm:max-w-xs">
+                <Label htmlFor="seated-alert-minutes">{t('floorPlan.seatedAlertMinutes')}</Label>
+                <Input
+                  id="seated-alert-minutes"
+                  inputMode="numeric"
+                  value={current.seatedAlert}
+                  disabled={!write}
+                  aria-invalid={seatedAlert === undefined}
+                  aria-describedby="seated-alert-minutes-hint"
+                  onChange={(event) => edit({ seatedAlert: event.target.value })}
+                />
+              </div>
+            ) : null}
+            <small
+              id="seated-alert-minutes-hint"
+              className={seatedAlert === undefined ? 'text-destructive' : 'text-muted-foreground'}
+            >
+              {t(
+                seatedAlert === undefined
+                  ? 'floorPlan.seatedAlertInvalid'
+                  : 'floorPlan.seatedAlertHint',
+                {
+                  min: SEATED_ALERT_MIN,
+                  max: SEATED_ALERT_MAX,
+                },
+              )}
+            </small>
+          </div>
+          {serviceCharge ? (
+            <fieldset className="space-y-4">
+              <legend className="text-sm font-medium">{t('floorPlan.serviceCharge')}</legend>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="service-charge-rate">{t('floorPlan.serviceChargeRate')}</Label>
+                  <Input
+                    id="service-charge-rate"
+                    inputMode="decimal"
+                    value={current.rate}
+                    disabled={!write}
+                    aria-invalid={rate === undefined}
+                    aria-describedby="service-charge-rate-hint"
+                    onChange={(event) => edit({ rate: event.target.value })}
+                  />
+                  <small
+                    id="service-charge-rate-hint"
+                    className={rate === undefined ? 'text-destructive' : 'text-muted-foreground'}
+                  >
+                    {t(
+                      rate === undefined
+                        ? 'floorPlan.serviceChargeRateInvalid'
+                        : 'floorPlan.serviceChargeRateHint',
+                      { max: SERVICE_CHARGE_MAX },
+                    )}
+                  </small>
+                </div>
+                <ModelSelect
+                  label={t('floorPlan.serviceChargeTax')}
+                  value={current.tax}
+                  disabled={!write}
+                  hint={t('floorPlan.serviceChargeTaxHint')}
+                  options={taxOptions}
+                  onChange={(tax) => edit({ tax })}
+                />
+              </div>
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">{t('floorPlan.serviceChargeModes')}</legend>
+                {SERVICE_MODES.map((mode) => (
+                  <ModelCheck
+                    key={mode}
+                    checked={current.modes.includes(mode)}
+                    disabled={!write}
+                    onChange={(checked) =>
+                      edit({
+                        modes: checked
+                          ? SERVICE_MODES.filter(
+                              (name) => name === mode || current.modes.includes(name),
+                            )
+                          : current.modes.filter((name) => name !== mode),
+                      })
+                    }
+                  >
+                    {t(`floorPlan.mode_${mode}`)}
+                  </ModelCheck>
+                ))}
+              </fieldset>
+            </fieldset>
+          ) : null}
+          {bottleKeep || tips ? (
+            <BarSettings
+              draft={current}
+              write={write}
+              bottleKeep={bottleKeep}
+              tips={tips}
+              keepDaysInvalid={keepDays === undefined}
+              roles={(roles.data ?? []).map((role) => ({ id: role.id, name: role.name }))}
+              onChange={edit}
+            />
+          ) : null}
+          {qrOrder ? (
+            <p className="text-sm">
+              <Link to={`/${storeId}/branches/${branch.id}/emenu` as string}>
+                {t('emenu.moved')}
+              </Link>
+            </p>
+          ) : null}
+          {write ? (
+            <Button
+              type="submit"
+              disabled={
+                mutation.isPending ||
+                !draft ||
+                (serviceCharge && rate === undefined) ||
+                seatedAlert === undefined ||
+                (bottleKeep && keepDays === undefined)
+              }
+            >
+              {t('floorPlan.saveSettings')}
+            </Button>
+          ) : null}
+        </form>
+      )}
+    </ModelCard>
+  )
+}

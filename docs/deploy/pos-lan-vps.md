@@ -4,14 +4,14 @@ Hướng dẫn cho người lắp đặt. Mỗi quán chạy ParkViet trên **m�
 
 | File | Vai trò |
 |---|---|
-| [`docker-compose.prod.yml`](../../deploy/docker-compose.prod.yml) | Stack: `web` (API, `/dashboard`, `/pos`, `/pos-admin`, việc chạy nền), `postgres`, `caddy`, `backup`; tùy chọn `cloudflared` (profile `tunnel`) và `offsite` (profile `offsite`) |
+| [`docker-compose.prod.yml`](../../deploy/docker-compose.prod.yml) | Stack: `web` (API, `/dashboard`, `/pos`, việc chạy nền), `postgres`, `caddy`, `backup`; tùy chọn `cloudflared` (profile `tunnel`) và `offsite` (profile `offsite`) |
 | [`Caddyfile`](../../deploy/Caddyfile) | Reverse proxy và TLS |
 | [`.env.prod.example`](../../deploy/.env.prod.example) | Danh sách biến. Bản thật là `deploy/.env.prod`, không commit |
 | [`cloudflared/config.example.yml`](../../deploy/cloudflared/config.example.yml) | Tunnel chỉ cho webhook VietQR |
 | [`scripts/install-lan.sh`](../../deploy/scripts/install-lan.sh) | Cài lần đầu và cập nhật |
 | [`scripts/backup.sh`](../../deploy/scripts/backup.sh), [`scripts/restore.sh`](../../deploy/scripts/restore.sh) | Sao lưu hằng đêm, thử khôi phục, khôi phục |
 
-Image build từ [`server/Dockerfile`](../../server/Dockerfile), gồm API, Spree Dashboard, quầy thu ngân (`apps/pos`, ở `/pos/`) quản trị POS (`apps/pos-dashboard`, ở `/pos-admin/`) và trang khách gọi món qua QR (`apps/table-order`, ở `/table/`; image tự đặt `TABLE_ORDER_DIST_PATH`). Trên server LAN, khách phải vào Wi‑Fi của quán mới mở được QR trên bàn. Mọi thứ cùng một origin nên không cần CORS. `spree build --production` của Spree CLI build cùng image này; CLI không có lệnh triển khai, nên stack chạy bằng `docker compose` trên máy đích.
+Image build từ [`server/Dockerfile`](../../server/Dockerfile), gồm API, Spree Dashboard, ứng dụng POS gộp quản trị & quầy bán hàng (`apps/pos`, ở `/pos/`) và trang khách gọi món qua QR (`apps/table-order`, ở `/table/`; image tự đặt `TABLE_ORDER_DIST_PATH`). Trên server LAN, khách phải vào Wi‑Fi của quán mới mở được QR trên bàn. Mọi thứ cùng một origin nên không cần CORS. `spree build --production` của Spree CLI build cùng image này; CLI không có lệnh triển khai, nên stack chạy bằng `docker compose` trên máy đích.
 
 Các lệnh dưới đây chạy trong thư mục `deploy/` của bản checkout, với:
 
@@ -64,10 +64,10 @@ Script:
 Sau khi chạy:
 
 1. Lấy link tạo tài khoản quản trị đầu tiên: `dc exec web bin/rails spree:setup:token`, mở link trên trình duyệt.
-2. Mở `http://192.168.1.10/pos-admin/`, đăng nhập, chạy thiết lập cửa hàng.
-3. Vào **Cài đặt → Thông tin server** (`/pos-admin/<store>/settings/system`): địa chỉ trong QR phải là `http://192.168.1.10`, các dòng tình trạng là "Ổn" (sao lưu sẽ "Cần xem" tới sau đêm đầu).
+2. Mở `http://192.168.1.10/pos/`, đăng nhập, chạy thiết lập cửa hàng.
+3. Vào **Cài đặt → Thông tin server** (`/pos/<store>/settings/system`): địa chỉ trong QR phải là `http://192.168.1.10`, các dòng tình trạng là "Ổn" (sao lưu sẽ "Cần xem" tới sau đêm đầu).
 4. Vào **Thiết bị**, tạo mã ghép và quét QR bằng app ParkViet Nhân viên.
-5. Quầy thu ngân mở `http://192.168.1.10/pos/`.
+5. Quầy thu ngân bấm nút **POS** trên thanh bên hoặc mở `http://192.168.1.10/pos/sell`.
 
 `POS_PUBLIC_BASE_URL` sai (http tới host công khai, có path, có mật khẩu) thì app không khởi động; xem `dc logs web`. Quy tắc giống app: `http://` chỉ cho IP private (10/8, 172.16/12, 192.168/16) hoặc tên `.local`.
 
