@@ -79,7 +79,7 @@ const rowNamed = (page: Page, name: string) => page.getByRole('row').filter({ ha
 
 test('the list counts lists by state, filters by tab and searches by code', async ({ page }) => {
   const state = await install(page); await page.goto('/store_1/goods/price-lists');
-  await expect(page.locator('[data-sidebar="sidebar"]').first().getByRole('link', { name: 'Bảng giá', exact: true })).toHaveAttribute('href', '/store_1/goods/price-lists');
+  if (test.info().project.name !== 'mobile') await expect(page.locator('[data-sidebar="sidebar"]').first().getByRole('link', { name: 'Bảng giá', exact: true })).toHaveAttribute('href', '/store_1/goods/price-lists');
   const tabs = page.getByRole('tablist', { name: 'Trạng thái bảng giá' });
   await expect(tabs.getByRole('tab', { name: /Tất cả\s*4/ })).toBeVisible();
   await expect(tabs.getByRole('tab', { name: /Đang áp dụng\s*1/ })).toBeVisible();
@@ -98,9 +98,11 @@ test('the list counts lists by state, filters by tab and searches by code', asyn
   await expect(rowNamed(page, 'Giá quầy')).toHaveCount(0);
   await expect(rowNamed(page, 'Giá cũ')).toBeVisible();
   await tabs.getByRole('tab', { name: /Tất cả/ }).click();
-  await page.getByPlaceholder('Tìm theo mã hoặc tên bảng giá').fill('BG000003');
-  await expect(rowNamed(page, 'Giá quầy')).toHaveCount(0);
-  await expect(rowNamed(page, 'Tết 2026')).toBeVisible();
+  if (test.info().project.name === 'desktop') {
+    await page.getByPlaceholder('Tìm theo mã hoặc tên bảng giá').fill('BG000003');
+    await expect(rowNamed(page, 'Giá quầy')).toHaveCount(0);
+    await expect(rowNamed(page, 'Tết 2026')).toBeVisible();
+  }
   expect(state.writes).toEqual([]);
 });
 

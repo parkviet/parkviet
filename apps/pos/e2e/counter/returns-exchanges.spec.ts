@@ -476,10 +476,11 @@ async function mockPos(
 const CASHIER = ['pos.shift.open', 'pos.payment.collect', 'pos.return.process'];
 
 async function login(page: Page) {
-  await page.goto('/login');
-  await page.getByLabel('Email nhân viên').fill('staff@example.test');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('password');
-  await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+  await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  await page.locator('input[type="email"]').fill('staff@example.test');
+  await page.locator('input[type="password"]').fill('password');
+  await page.locator('button[type="submit"]').click();
   await expect(page.getByRole('tab').first()).toBeVisible();
 }
 
@@ -586,7 +587,7 @@ test('returns stay hidden without the return capability', async ({ page }) => {
 });
 
 async function preparedReturn(page: Page, api: Awaited<ReturnType<typeof mockPos>>) {
-  await page.goto('/returns?orderId=or_100');
+  await page.goto('/store_1/sell/returns?orderId=or_100');
   await expect(page.getByRole('heading', { name: 'Trả hàng đơn R100' })).toBeVisible();
   await page.getByLabel('Gạo ST25', { exact: true }).fill('1');
   await page.getByRole('button', { name: 'Xem trước' }).click();

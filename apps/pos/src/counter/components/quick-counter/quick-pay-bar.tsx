@@ -1,37 +1,37 @@
-import { formatMoney, parseVndAmount } from '@shared/money';
-import { contextFeature } from '@shared/pos-features';
-import { pendingKitchenUnits } from '@shared/ticket-groups';
-import { describeTraceFailure, paymentBlock } from '@shared/traceability';
-import { useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useWorkspaceMeal } from '../../hooks/use-meal-accounts';
-import { usePaymentMethods, useTenders } from '../../hooks/use-tenders';
-import { cashSuggestions, groupVndDigits } from '../../lib/cash-suggestions';
-import { mealDue, mealReasonKey } from '../../lib/meal-accounts';
-import type { PosWorkspace } from '../../lib/pos-context';
+import { formatMoney, parseVndAmount } from '@shared/money'
+import { contextFeature } from '@shared/pos-features'
+import { pendingKitchenUnits } from '@shared/ticket-groups'
+import { describeTraceFailure, paymentBlock } from '@shared/traceability'
+import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useWorkspaceMeal } from '../../hooks/use-meal-accounts'
+import { usePaymentMethods, useTenders } from '../../hooks/use-tenders'
+import { cashSuggestions, groupVndDigits } from '../../lib/cash-suggestions'
+import { mealDue, mealReasonKey } from '../../lib/meal-accounts'
+import type { PosWorkspace } from '../../lib/pos-context'
 import {
   blankOrder,
   type QuickPayKind,
   quickCashAmount,
   quickPayKey,
-} from '../../lib/quick-counter';
-import { conflictReason, describeFailure } from '../../lib/request-failure';
-import { DisplayPinControl } from '../display-pin-control';
-import { popupOpen, typingTarget } from '../menu-grid';
-import { paidInFull } from '../payment-panel';
-import { idleScanField } from '../scan-input';
-import { activePaymentProps, type SellingWorkspace } from '../workspace-tabs';
+} from '../../lib/quick-counter'
+import { conflictReason, describeFailure } from '../../lib/request-failure'
+import { DisplayPinControl } from '../display-pin-control'
+import { popupOpen, typingTarget } from '../menu-grid'
+import { paidInFull } from '../payment-panel'
+import { idleScanField } from '../scan-input'
+import { activePaymentProps, type SellingWorkspace } from '../workspace-tabs'
 
 // What the order still owes, in whole VND.
 function dueOf(workspace: PosWorkspace): bigint {
-  const value = parseVndAmount(workspace.financial?.remaining ?? workspace.totals?.total ?? '');
-  return BigInt(value ?? '0');
+  const value = parseVndAmount(workspace.financial?.remaining ?? workspace.totals?.total ?? '')
+  return BigInt(value ?? '0')
 }
 
 // A key typed into a text field is the field's. The canteen's meal code
 // field holds the focus between orders: empty, it is not being typed in.
 function typingIn(target: EventTarget | null) {
-  return typingTarget(target) && !idleScanField(target);
+  return typingTarget(target) && !idleScanField(target)
 }
 
 // The counter's payment keys wait while the cashier is busy elsewhere: a
@@ -41,7 +41,7 @@ function quickKeysPaused() {
     popupOpen() ||
     document.querySelector('[role="dialog"][aria-modal="true"], dialog[open], .modifier-panel') !==
       null
-  );
+  )
 }
 
 // The foot of the quick counter's ticket: what the order comes to (items,
@@ -68,21 +68,21 @@ export function QuickPayBar({
   mealPending = false,
   compact = false,
 }: {
-  selling: SellingWorkspace;
-  active: PosWorkspace;
+  selling: SellingWorkspace
+  active: PosWorkspace
   // A meal code typed at the head of the ticket is still being answered.
-  mealPending?: boolean;
+  mealPending?: boolean
   // The full payment screen, starting on VietQR or on cash and the rest.
-  onOpen: (tender: 'vietqr' | 'cash') => void;
+  onOpen: (tender: 'vietqr' | 'cash') => void
   // The order was paid in cash here and completed.
-  onPaid: (workspace: PosWorkspace) => void;
-  onHold: () => void;
+  onPaid: (workspace: PosWorkspace) => void
+  onHold: () => void
   // The payment panel stays open beside the ticket: the foot keeps the
   // totals and what that panel does not have (pre-bill, hold, send, the
   // display) and the keys.
-  compact?: boolean;
+  compact?: boolean
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation()
   const {
     data,
     staffId,
@@ -97,19 +97,19 @@ export function QuickPayBar({
     callNumbers,
     mealAccounts,
     setPrebillOpen,
-  } = selling;
-  const payment = activePaymentProps(selling, active);
+  } = selling
+  const payment = activePaymentProps(selling, active)
   // The same query as the selling screen's: one request, read here for
   // whether it answers the order's latest change.
-  const mealQuery = useWorkspaceMeal(active, mealAccounts);
+  const mealQuery = useWorkspaceMeal(active, mealAccounts)
   // A code was answered: until the meal of the order as it is now is read,
   // the earlier "no meal" may be out of date.
-  const [mealSettling, setMealSettling] = useState(false);
-  const mealFresh = mealQuery.isSuccess && !mealQuery.isPlaceholderData;
+  const [mealSettling, setMealSettling] = useState(false)
+  const mealFresh = mealQuery.isSuccess && !mealQuery.isPlaceholderData
   useEffect(() => {
-    if (mealPending) setMealSettling(true);
-    else if (mealFresh) setMealSettling(false);
-  }, [mealPending, mealFresh]);
+    if (mealPending) setMealSettling(true)
+    else if (mealFresh) setMealSettling(false)
+  }, [mealPending, mealFresh])
   // Cash knows the sponsor's part: no code is being answered, and the meal
   // read is the order's latest, or an earlier one saying there is no meal
   // (only a code typed here puts one on the order, and then it is read again).
@@ -118,29 +118,26 @@ export function QuickPayBar({
     (!mealPending &&
       !mealSettling &&
       mealQuery.isSuccess &&
-      (!mealQuery.isPlaceholderData || mealQuery.data?.meal == null));
-  const plan = mealAccounts ? (mealQuery.data?.meal?.plan ?? null) : null;
-  const tenders = useTenders(staffId, storeId);
-  const methodsQuery = usePaymentMethods(active, payment.canCollect && !payment.disabled);
-  const methods = methodsQuery.data ?? [];
-  const cashMethod = methods.find((method) => method.kind === 'cash');
-  const vietqrOffered = methods.some((method) => method.kind === 'vietqr');
-  const [paying, setPaying] = useState(false);
+      (!mealQuery.isPlaceholderData || mealQuery.data?.meal == null))
+  const plan = mealAccounts ? (mealQuery.data?.meal?.plan ?? null) : null
+  const tenders = useTenders(staffId, storeId)
+  const methodsQuery = usePaymentMethods(active, payment.canCollect && !payment.disabled)
+  const methods = methodsQuery.data ?? []
+  const cashMethod = methods.find((method) => method.kind === 'cash')
+  const vietqrOffered = methods.some((method) => method.kind === 'vietqr')
+  const [paying, setPaying] = useState(false)
   // A second press before the first one re-renders the bar starts nothing.
-  const payingNow = useRef(false);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
-  const currency = active.totals?.currency ?? 'VND';
-  const count = (active.line_items ?? []).reduce(
-    (sum, line) => sum + Math.max(0, line.quantity),
-    0,
-  );
-  const due = dueOf(active);
-  const { sponsor: sponsorDue, eater: eaterDue } = mealDue(String(due), plan);
-  const sponsorBlocked = sponsorDue > 0n && plan?.sponsor_unavailable === true;
+  const payingNow = useRef(false)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+  const currency = active.totals?.currency ?? 'VND'
+  const count = (active.line_items ?? []).reduce((sum, line) => sum + Math.max(0, line.quantity), 0)
+  const due = dueOf(active)
+  const { sponsor: sponsorDue, eater: eaterDue } = mealDue(String(due), plan)
+  const sponsorBlocked = sponsorDue > 0n && plan?.sponsor_unavailable === true
   const unresolved = (active.financial?.attempts ?? []).some(
     (attempt) => attempt.status === 'prepared' || attempt.status === 'unknown',
-  );
+  )
   // Payment may start: the order is open with dishes, the cashier may take
   // money into their own open drawer, and traced stock is ready.
   const open =
@@ -150,76 +147,76 @@ export function QuickPayBar({
     paymentBlock(active).ready &&
     count > 0 &&
     active.operational_status === 'editing' &&
-    !paying;
-  const branch = data?.branches.find((row) => row.id === active.branch_id);
-  const canSend = kitchenOn && branch?.kitchen_send_trigger === 'manual';
-  const pending = canSend ? pendingKitchenUnits(active) : 0;
-  const cashPayable = open && Boolean(cashMethod) && !unresolved && eaterDue > 0n && mealKnown;
+    !paying
+  const branch = data?.branches.find((row) => row.id === active.branch_id)
+  const canSend = kitchenOn && branch?.kitchen_send_trigger !== 'on_complete'
+  const pending = canSend ? pendingKitchenUnits(active) : 0
+  const cashPayable = open && Boolean(cashMethod) && !unresolved && eaterDue > 0n && mealKnown
   // A completed order cannot go to the kitchen any more: dishes still to
   // send are sent from the payment screen before the cash is taken; a
   // sponsor that cannot take its part is explained there too.
-  const cashReady = cashPayable && pending === 0 && !sponsorBlocked;
-  const vietqrReady = open && vietqrOffered && !unresolved && eaterDue > 0n && mealKnown;
+  const cashReady = cashPayable && pending === 0 && !sponsorBlocked
+  const vietqrReady = open && vietqrOffered && !unresolved && eaterDue > 0n && mealKnown
   // The full screen explains whatever stops a payment, so it opens whenever
   // there is something to pay or a payment to finish.
-  const otherReady = payment.canCollect && count > 0 && !paying && !busy;
+  const otherReady = payment.canCollect && count > 0 && !paying && !busy
   // Paid in full but not completed yet (the completion was refused or cut
   // off): the payment screen finishes it.
   const toFinish =
-    unresolved || (paidInFull(active, sponsorDue) && active.operational_status !== 'completed');
+    unresolved || (paidInFull(active, sponsorDue) && active.operational_status !== 'completed')
 
   async function payCash(handed: bigint | null) {
-    const method = cashMethod;
-    if (!method || !cashPayable || payingNow.current) return;
+    const method = cashMethod
+    if (!method || !cashPayable || payingNow.current) return
     if (!cashReady) {
-      onOpen('cash');
-      return;
+      onOpen('cash')
+      return
     }
-    payingNow.current = true;
-    setPaying(true);
-    setError('');
+    payingNow.current = true
+    setPaying(true)
+    setError('')
     try {
       let latest = await command(active, async (current) => {
         // A note smaller than what is owed (the order changed meanwhile) pays its part.
-        const amount = quickCashAmount(dueOf(current), sponsorDue, handed);
-        if (amount <= 0n) return current;
+        const amount = quickCashAmount(dueOf(current), sponsorDue, handed)
+        if (amount <= 0n) return current
         const prepared = await tenders.prepare(current, {
           paymentMethodId: method.id,
           amount: String(amount),
-        });
+        })
         const attempt = (prepared.financial?.attempts ?? []).find(
           (item) => item.kind === 'cash' && item.status === 'prepared',
-        );
-        if (!attempt) return prepared;
+        )
+        if (!attempt) return prepared
         return tenders.confirm(prepared, {
           attemptId: attempt.id,
           evidenceKind: 'cash_count',
           handedAmount: String(handed ?? amount),
-        });
-      });
+        })
+      })
       if (paidInFull(latest, sponsorDue))
         latest = await command(active, (current) =>
           tenders.complete(current, undefined, undefined, { mealSponsor: sponsorDue > 0n }),
-        );
-      if (latest.operational_status === 'completed') onPaid(latest);
+        )
+      if (latest.operational_status === 'completed') onPaid(latest)
     } catch (failure) {
-      const key = mealReasonKey(conflictReason(failure));
-      setError(key ? t(key) : describeTraceFailure(failure, t));
+      const key = mealReasonKey(conflictReason(failure))
+      setError(key ? t(key) : describeTraceFailure(failure, t))
       // Whatever part went through is on the server now: show it.
-      void tenders.refresh();
+      void tenders.refresh()
     } finally {
-      payingNow.current = false;
-      setPaying(false);
+      payingNow.current = false
+      setPaying(false)
     }
   }
 
   async function send() {
-    if (sending) return;
-    setSending(true);
+    if (sending) return
+    setSending(true)
     try {
-      await run(() => command(active, (current) => workspaces.sendToKitchen(current)));
+      await run(() => command(active, (current) => workspaces.sendToKitchen(current)))
     } finally {
-      setSending(false);
+      setSending(false)
     }
   }
 
@@ -227,26 +224,26 @@ export function QuickPayBar({
     cash: null,
     vietqr: null,
     other: null,
-  });
+  })
   keys.current = {
     cash: cashPayable ? () => void payCash(null) : null,
     vietqr: vietqrReady ? () => onOpen('vietqr') : null,
     other: otherReady ? () => onOpen('cash') : null,
-  };
+  }
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      const kind = quickPayKey(event);
-      if (!kind || event.defaultPrevented) return;
-      event.preventDefault();
-      if (typingIn(event.target) || quickKeysPaused()) return;
-      keys.current[kind]?.();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+      const kind = quickPayKey(event)
+      if (!kind || event.defaultPrevented) return
+      event.preventDefault()
+      if (typingIn(event.target) || quickKeysPaused()) return
+      keys.current[kind]?.()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
-  const items = active.totals?.item_total;
-  const discount = Number(active.totals?.discount_total ?? 0);
+  const items = active.totals?.item_total
+  const discount = Number(active.totals?.discount_total ?? 0)
   const prebill = (
     <button
       type="button"
@@ -257,7 +254,7 @@ export function QuickPayBar({
     >
       {t('quickPrebill')}
     </button>
-  );
+  )
   const sendButton = canSend ? (
     <button
       type="button"
@@ -267,7 +264,7 @@ export function QuickPayBar({
     >
       {t('ticketSend', { count: pending })}
     </button>
-  ) : null;
+  ) : null
 
   return (
     <footer className="ticket-footer quick-pay" data-compact={compact || undefined}>
@@ -400,5 +397,5 @@ export function QuickPayBar({
         </details>
       </div>
     </footer>
-  );
+  )
 }

@@ -297,7 +297,8 @@ test('a room orders, sends to the kitchen and pays only once its clock is stoppe
   await page.getByRole('list', { name: 'Thực đơn' }).getByRole('button', { name: 'Bánh flan', exact: true }).click();
   await expect(ticket(page).locator('.ticket-line')).toHaveCount(1);
   // The total says it holds the time so far, as an estimate.
-  await expect(ticket(page).getByRole('button', { name: /^Thanh toán · tạm tính/ })).toContainText('90.000');
+  await expect(ticket(page).locator('.ticket-totals-due')).toContainText('90.000');
+  await expect(ticket(page).getByRole('button', { name: /^Thanh toán · tạm tính/ })).toBeVisible();
   await ticket(page).getByRole('button', { name: 'Gửi bếp (1)', exact: true }).click();
   await expect(page).toHaveURL(/view=board/);
   const sheetId = [...world.sheets.keys()].at(-1) ?? '';

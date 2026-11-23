@@ -335,8 +335,8 @@ function Loaded({
   const focus = (next: EmenuPreviewMode) => () => setPreviewTab(next)
 
   return (
-    <div className="flex items-start gap-6">
-      <div className="min-w-0 flex-1 space-y-6">
+    <div className="flex flex-col items-start gap-6 lg:flex-row">
+      <div className="w-full min-w-0 flex-1 space-y-6">
         <SectionNav
           orientation="horizontal"
           sections={sections}
@@ -344,7 +344,7 @@ function Loaded({
           onSelect={syncSection}
           onScrollActive={syncSection}
         />
-        <div onFocusCapture={focus('phone')}>
+        <div onFocusCapture={focus('phone')} onClickCapture={focus('phone')}>
           <LookCard
             branchId={branchId}
             storeId={storeId}
@@ -353,7 +353,7 @@ function Loaded({
             draft={draft}
           />
         </div>
-        <div onFocusCapture={focus('phone')}>
+        <div onFocusCapture={focus('phone')} onClickCapture={focus('phone')}>
           <MenuCard
             branchId={branchId}
             storeId={storeId}
@@ -368,10 +368,10 @@ function Loaded({
             currency={currency}
           />
         </div>
-        <div onFocusCapture={focus('sticker')}>
+        <div onFocusCapture={focus('sticker')} onClickCapture={focus('sticker')}>
           <StickerCard branchId={branchId} storeId={storeId} write={emenuWrite} draft={draft} />
         </div>
-        <div onFocusCapture={focus('phone')}>
+        <div onFocusCapture={focus('phone')} onClickCapture={focus('phone')}>
           <ExtraCard
             branchId={branchId}
             emenuWrite={emenuWrite}
@@ -380,7 +380,7 @@ function Loaded({
           />
         </div>
       </div>
-      <div className="sticky top-[var(--spacing-header-height,4rem)] hidden max-h-[calc(100dvh-var(--spacing-header-height,4rem))] w-[340px] shrink-0 space-y-4 self-start overflow-y-auto pb-4 lg:block">
+      <div className="w-full max-w-[340px] shrink-0 space-y-4 self-start pb-4 lg:sticky lg:top-[var(--spacing-header-height,4rem)] lg:max-h-[calc(100dvh-var(--spacing-header-height,4rem))] lg:w-[340px] lg:overflow-y-auto">
         <EmenuPreview
           mode={previewTab}
           onMode={setPreviewTab}

@@ -9,7 +9,7 @@ function RulingDiagram({ ruling }: { ruling: LineRuling }) {
     <svg
       viewBox="0 0 56 36"
       aria-hidden="true"
-      className="h-9 w-14 shrink-0 rounded-[4px] border border-border/70 bg-white p-1 text-foreground"
+      className="pointer-events-none h-9 w-14 shrink-0 rounded-[4px] border border-border/70 bg-white p-1 text-foreground"
     >
       {/* Header row */}
       <rect x="4" y="4" width="22" height="3" rx="1" fill="currentColor" opacity="0.65" />
@@ -105,7 +105,10 @@ export function RulingPicker({
                 value={option}
                 checked={checked}
                 disabled={disabled}
-                className="sr-only"
+                className="
+                  absolute inset-0 z-10 cursor-pointer opacity-0
+                  disabled:cursor-not-allowed
+                "
                 onChange={() => onChange(option)}
               />
               <RulingDiagram ruling={option} />

@@ -98,7 +98,7 @@ RSpec.describe 'POS e-invoice buyer page', type: :request do
 
     document = Spree::Pos::PrintDocuments.receipt(receipt: receipt.deep_stringify_keys, print: nil,
                                                   config: Spree::Pos::ReceiptTemplate.default_config('sale'))
-    expect(document['footer'].last).to include('kind' => 'qr', 'value' => url)
+    expect(document.dig('einvoice', 'qr')).to include('value' => url)
 
     drain_outbox(at: 11.minutes.from_now)
     issued = Spree::Pos::ReceiptSnapshot.find_by!(source_type: 'sale', source_id: sale.workspace.id).to_pos

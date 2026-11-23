@@ -50,7 +50,7 @@ test('administration entry points open the POS dashboard for the current store a
   await expect(menu.getByRole('link', { name: 'Chức năng chi nhánh', exact: true })).toHaveCount(0);
 
   // Pages off the sale screen offer the same link in their navigation.
-  await page.goto('/shifts');
+  await page.goto('/store_1/sell/shifts');
   const nav = page.getByRole('navigation', { name: 'Điều hướng POS' });
   await expect(nav.getByRole('link', { name: 'Cấu hình', exact: true })).toHaveAttribute('target', '_blank');
 });

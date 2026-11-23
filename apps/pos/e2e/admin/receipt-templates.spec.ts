@@ -484,11 +484,11 @@ test('card gallery filters, preview dialog, create, variables, save, test print,
   await expect(saleList).toHaveCount(2)
 
   // Search by name and filter by paper size on URL search params
-  await page.getByRole('searchbox', { name: 'Tìm theo tên' }).fill('K58')
+  await page.getByRole('searchbox', { name: 'Tên hoặc mã' }).fill('K58')
   await expect(page).toHaveURL(/search=K58/)
   await expect(saleList).toHaveCount(1)
   await expect(card(page, 'Bán hàng K58')).toBeVisible()
-  await page.getByRole('searchbox', { name: 'Tìm theo tên' }).fill('không tồn tại')
+  await page.getByRole('searchbox', { name: 'Tên hoặc mã' }).fill('không tồn tại')
   await expect(page.getByText('Không tìm thấy mẫu in nào khớp bộ lọc.')).toBeVisible()
   await page.getByRole('button', { name: 'Xóa bộ lọc', exact: true }).click()
   await expect(saleList).toHaveCount(2)
@@ -854,6 +854,7 @@ test('Phase 6 controls: pre-bill table/check-in, ruling picker, transfer QR + Vi
   page,
 }) => {
   const { state } = await install(page)
+  page.on('dialog', (dialog) => dialog.accept())
   state.latestReceipts = [
     {
       id: 'posreceipt_old',
@@ -885,7 +886,7 @@ test('Phase 6 controls: pre-bill table/check-in, ruling picker, transfer QR + Vi
     .getByRole('button', { name: 'Sửa mẫu Phiếu tạm tính' })
     .click()
   await show(page, 'Xem trước')
-  await expect(preview(page)).toContainText('Sân vườn - Bàn 6')
+  await expect(preview(page)).toContainText('Tầng 1 - Bàn 05')
   await expect(preview(page)).toContainText('Giờ vào')
 
   await show(page, 'Chỉnh sửa')
@@ -893,15 +894,15 @@ test('Phase 6 controls: pre-bill table/check-in, ruling picker, transfer QR + Vi
   await prebillMeta.getByRole('radio', { name: 'Hai dòng riêng', exact: true }).click()
   await show(page, 'Xem trước')
   await expect(preview(page)).toContainText('Khu vực')
-  await expect(preview(page)).toContainText('Bàn 6')
+  await expect(preview(page)).toContainText('Bàn 05')
 
   // 2. Sale template: ruling, transfer QR + VietQR warning, e-invoice section, 4-side margins & legacy receipt hint
   await page.getByRole('link', { name: 'Về danh sách mẫu in' }).click()
   await act(page, 'Phiếu bán hàng', 'Chỉnh sửa')
 
   const appearance = await openSection(page, 'Giao diện')
-  await appearance.getByLabel('Lề trên').fill('6')
-  await appearance.getByLabel('Lề trái').fill('4')
+  await appearance.getByLabel('Lề trên', { exact: true }).fill('6')
+  await appearance.getByLabel('Lề trái', { exact: true }).fill('4')
 
   const lines = await openSection(page, 'Dòng hàng')
   await lines.getByRole('radio', { name: 'Kẻ dòng', exact: true }).check()
@@ -923,7 +924,7 @@ test('Phase 6 controls: pre-bill table/check-in, ruling picker, transfer QR + Vi
   await expect(
     preview(page).locator('[data-testid="receipt-transfer-qr"].receipt-qr-caption-right'),
   ).toBeVisible()
-  await expect(preview(page).getByTestId('receipt-einvoice')).toContainText('0312345678')
+  await expect(preview(page).getByTestId('receipt-einvoice')).toContainText('0101234567')
 
   // Switch preview source to Latest receipt (legacy snapshot) -> shows missing-fields hint
   await choose(page, page, 'Dữ liệu xem trước', 'Phiếu gần nhất')
@@ -938,6 +939,6 @@ test('Phase 6 controls: pre-bill table/check-in, ruling picker, transfer QR + Vi
 
   await page.reload()
   const reloadedAppearance = await openSection(page, 'Giao diện')
-  await expect(reloadedAppearance.getByLabel('Lề trên')).toHaveValue('6')
-  await expect(reloadedAppearance.getByLabel('Lề trái')).toHaveValue('4')
+  await expect(reloadedAppearance.getByLabel('Lề trên', { exact: true })).toHaveValue('6')
+  await expect(reloadedAppearance.getByLabel('Lề trái', { exact: true })).toHaveValue('4')
 })

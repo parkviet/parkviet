@@ -43,10 +43,11 @@ async function install(page: Page, branchCount: number, registerCounts: number[]
     if (id) return route.fulfill({ json: { data: state.workspaces.find((row) => row.id === id) } });
     return route.fulfill({ json: { data: [], meta: { page: 1, pages: 0, count: 0 } } });
   });
-  await page.goto('/login');
-  await page.getByLabel('Email nhân viên').fill('staff@example.test');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('fixture-only');
-  await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+  await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  await page.locator('input[type="email"]').fill('staff@example.test');
+  await page.locator('input[type="password"]').fill('fixture-only');
+  await page.locator('button[type="submit"]').click();
   return state;
 }
 
@@ -65,7 +66,7 @@ for (const status of ['missing', 'inactive'] as const) {
     await openShift(page);
     await expect(page.getByRole('button', { name: 'Đơn nháp mới' })).toBeDisabled();
     expect(state.writes.filter((write) => write.path.endsWith('/workspaces'))).toEqual([]);
-    await page.goto('/receipts');
+    await page.goto('/store_1/sell/receipts');
     await expect(page).toHaveURL(/receipts$/);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });

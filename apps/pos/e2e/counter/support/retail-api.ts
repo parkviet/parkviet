@@ -2029,6 +2029,7 @@ export function requestFamily(request: Request) {
 
 export async function login(page: Page) {
   await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
   await page.locator('input[type="email"]').fill('staff@example.test');
   await page.locator('input[type="password"]').fill('password');
   await page.locator('button[type="submit"]').click();

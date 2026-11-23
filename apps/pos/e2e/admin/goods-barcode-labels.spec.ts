@@ -136,9 +136,11 @@ const search = (page: Page) => page.getByRole('searchbox', { name: 'Tìm hoặc 
 test('pick goods by search and scan, set counts, print through the label dialog', async ({ page }) => {
   const state = await install(page)
   await page.goto('/store_1/goods/barcode-labels')
-  await expect(
-    page.locator('[data-sidebar="sidebar"]').first().getByRole('link', { name: 'In tem mã vạch', exact: true }),
-  ).toHaveAttribute('href', '/store_1/goods/barcode-labels')
+  if (test.info().project.name !== 'mobile') {
+    await expect(
+      page.locator('[data-sidebar="sidebar"]').first().getByRole('link', { name: 'In tem mã vạch', exact: true }),
+    ).toHaveAttribute('href', '/store_1/goods/barcode-labels')
+  }
   await expect(page.getByRole('link', { name: 'Mẫu tem sản phẩm' })).toHaveAttribute('href', '/store_1/settings/receipt-templates?tab=labels')
   await expect(page.getByRole('link', { name: 'Tem cân' })).toHaveAttribute('href', '/store_1/scale-labels')
 

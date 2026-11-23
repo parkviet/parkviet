@@ -125,7 +125,7 @@ test('book, take a deposit, seat the guest and pay with the deposit taken off', 
   await login(page);
   // The account menu offers the page (in a new tab from the sale screen).
   await expect(page.locator('a[href$="/reservations"]')).toHaveCount(1);
-  await page.goto('/reservations');
+  await page.goto('/store_1/sell/reservations');
   await expect(page.getByRole('heading', { name: 'Đặt bàn', exact: true, level: 1 })).toBeVisible();
 
   const form = page.getByRole('form', { name: 'Đặt bàn mới' });
@@ -228,7 +228,7 @@ test.describe('booking rules', () => {
 
     const page = await context.newPage();
     await login(page);
-    await page.goto('/reservations');
+    await page.goto('/store_1/sell/reservations');
     const tomorrow = new Date(Date.now() + 24 * 60 * 60_000);
     const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(tomorrow);
     await page.getByLabel('Ngày').fill(date);

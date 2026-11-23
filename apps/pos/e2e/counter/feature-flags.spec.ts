@@ -99,7 +99,7 @@ test('money is not taken on an order whose shift is not open; cash refunds and c
     lines: [{ saleLineId: sold.lines[0].saleLineId, name: 'Gạo ST25', quantity: 1, condition: 'resellable', value: 100000 }] });
   world.refunds.push({ id: 'posrefund_1', returnId: 'posreturn_1', allocationId: 'posalloc_1', method: 'cash', status: 'reserved', amount: 100000 });
   world.shift.open = false;
-  await page.goto('/returns?returnId=posreturn_1');
+  await page.goto('/store_1/sell/returns?returnId=posreturn_1');
   const refund = page.getByRole('region', { name: 'Hoàn tiền' });
   const payout = refund.getByRole('button', { name: 'Xác nhận chi' });
   // The cashier may own an open shift at another register: the page hints,

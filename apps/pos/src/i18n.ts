@@ -1,6 +1,6 @@
 import sharedEn from '@shared/locales/en.json'
 import sharedVi from '@shared/locales/vi.json'
-import { i18n } from '@spree/dashboard-core'
+import { ADMIN_LOCALE_STORAGE_KEY, i18n } from '@spree/dashboard-core'
 import counterEn from './counter/locales/en.json'
 import counterVi from './counter/locales/vi.json'
 import en from './locales/en.json'
@@ -137,6 +137,17 @@ for (const [code, bundle] of Object.entries({ en, vi })) {
     i18n.addResourceBundle(code, ns, bundle, true, true)
   }
   i18n.addResourceBundle(code, 'translation', shell[lang], true, true)
+}
+
+try {
+  if (typeof localStorage !== 'undefined' && !localStorage.getItem(ADMIN_LOCALE_STORAGE_KEY)) {
+    localStorage.setItem(ADMIN_LOCALE_STORAGE_KEY, 'vi')
+  }
+} catch {
+  // Ignore storage restrictions.
+}
+if (i18n.language !== 'vi') {
+  void i18n.changeLanguage('vi')
 }
 
 export { i18n }

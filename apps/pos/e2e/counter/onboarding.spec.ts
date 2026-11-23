@@ -42,10 +42,11 @@ async function installSetupApi(page: Page, canSetup: boolean) {
 }
 
 async function signIn(page: Page) {
-  await page.goto('/login');
-  await page.getByLabel('Email nhân viên').fill('owner@example.test');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('fixture-only');
-  await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+  await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  await page.locator('input[type="email"]').fill('owner@example.test');
+  await page.locator('input[type="password"]').fill('fixture-only');
+  await page.locator('button[type="submit"]').click();
   await expect(page.locator('.header-user')).toHaveText('Chủ cửa hàng');
 }
 
@@ -57,7 +58,7 @@ test('a store not set up yet points whoever may set it up to the dashboard setup
   const link = note.getByRole('link', { name: 'Mở trang thiết lập', exact: true });
   await expect(link).toHaveAttribute('href', /^https?:\/\/[^/]+(\/[^?#]*)?\/store_new\/setup$/);
   await expect(link).toHaveAttribute('target', '_blank');
-  expect(new URL(page.url()).pathname).toBe('/');
+  expect(new URL(page.url()).pathname).toBe('/store_new/sell');
   // No wizard in the POS and no branch picker over the note.
   await expect(page.getByRole('radiogroup')).toHaveCount(0);
   await expect(page.getByRole('dialog', { name: 'Chọn nơi bán hàng' })).toHaveCount(0);

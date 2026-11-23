@@ -292,10 +292,11 @@ async function mockPos(
 }
 
 async function login(page: Page) {
-  await page.goto('/login');
-  await page.getByLabel('Email nhân viên').fill('staff@example.test');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('password');
-  await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+  await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  await page.locator('input[type="email"]').fill('staff@example.test');
+  await page.locator('input[type="password"]').fill('password');
+  await page.locator('button[type="submit"]').click();
   await expect(page.getByRole('tab').first()).toBeVisible();
 }
 
@@ -321,17 +322,17 @@ test('the URL and page title follow the selected invoice tab, and a link opens i
   await expect(page).toHaveTitle(/^R250 · /);
 
   // A reload or a shared link opens that order's tab, not the remembered one.
-  await page.goto('/?order=R251');
+  await page.goto('/store_1/sell?order=R251');
   await expect(tab('ws_2')).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(/[?&]order=R251\b/);
   await expect(page).toHaveTitle(/^R251 · /);
 
   // An unknown order falls back to the selected tab and fixes the URL.
-  await page.goto('/?order=R999');
+  await page.goto('/store_1/sell?order=R999');
   await expect(page).toHaveURL(/[?&]order=R25[01]\b/);
 
   // Other pages keep the plain app title.
-  await page.goto('/receipts');
+  await page.goto('/store_1/sell/receipts');
   await expect(page).toHaveTitle('ParkViet POS');
 });
 
@@ -810,5 +811,5 @@ test('automatic printing is off by default and set per device', async ({ page, b
   await other.close();
 
   await autoPrint.uncheck();
-  expect(await page.evaluate(() => localStorage.getItem('parkviet-pos:auto-print:sale'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('parkviet-pos:auto-print:sale'))).toBe('off');
 });

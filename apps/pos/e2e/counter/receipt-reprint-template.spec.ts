@@ -158,15 +158,16 @@ async function install(
 }
 
 async function login(page: Page) {
-  await page.goto('/login');
-  await page.getByLabel('Email nhân viên').fill('staff@example.test');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('password');
-  await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+  await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  await page.locator('input[type="email"]').fill('staff@example.test');
+  await page.locator('input[type="password"]').fill('password');
+  await page.locator('button[type="submit"]').click();
   await expect(page.getByRole('tab').first()).toBeVisible();
 }
 
 async function openReceipt(page: Page) {
-  await page.goto('/receipts?source=posworkspace_done');
+  await page.goto('/store_1/sell/receipts?source=posworkspace_done');
   await expect(page.getByTestId('receipt-sheet')).toContainText('RD300');
 }
 
@@ -384,7 +385,7 @@ test('a receipt read before its last print still prints one copy, never another 
     return route.fulfill({ json: { data: lookups === 1 ? stale : receipt() } });
   });
   await login(page);
-  await page.goto('/receipts?source=posworkspace_done');
+  await page.goto('/store_1/sell/receipts?source=posworkspace_done');
   await expect(page.getByTestId('receipt-sheet')).toContainText('RD300');
   await page.getByRole('button', { name: /^In hóa đơn$|^In lại \(bản sao\)$/ }).click();
   await expect.poll(async () => (await printed(page)).length).toBe(1);
@@ -408,7 +409,7 @@ test('reopening the print popup after a print starts from the printed receipt', 
     return route.fulfill({ json: { data: first } });
   });
   await login(page);
-  await page.goto('/receipts?source=posworkspace_done');
+  await page.goto('/store_1/sell/receipts?source=posworkspace_done');
   await expect(page.getByTestId('receipt-sheet')).toContainText('RD300');
   await page.getByRole('button', { name: 'In hóa đơn', exact: true }).click();
   await expect.poll(async () => (await printed(page)).length).toBe(1);

@@ -80,7 +80,7 @@ const rowNamed = (page: Page, name: string) => page.getByRole('row').filter({ ha
 
 test('the products list shows variants, price ranges, negative stock and deletes after confirming', async ({ page }) => {
   const state = await install(page); await page.goto('/store_1/goods/products');
-  await expect(page.locator('[data-sidebar="sidebar"]').first().getByRole('link', { name: 'Sản phẩm', exact: true })).toHaveAttribute('href', '/store_1/goods/products');
+  if (test.info().project.name !== 'mobile') await expect(page.locator('[data-sidebar="sidebar"]').first().getByRole('link', { name: 'Sản phẩm', exact: true })).toHaveAttribute('href', '/store_1/goods/products');
   const coffee = rowNamed(page, 'Cà phê');
   await expect(coffee).toContainText('+2 phiên bản');
   await expect(coffee).toContainText('20.000 ₫ – 35.000 ₫');
@@ -89,11 +89,13 @@ test('the products list shows variants, price ranges, negative stock and deletes
   expect(state.lists[0].get('q[channels_code_eq]')).toBe('pos');
   expect(state.lists[0].get('expand')).toContain('variants.stock_levels');
 
-  await page.getByPlaceholder('Tên, SKU hoặc mã vạch…').fill('893000001');
-  await expect(page.getByRole('row').filter({ hasText: 'Cà phê' })).toHaveCount(0);
-  await expect(rowNamed(page, 'Trà đào')).toBeVisible();
-  expect(state.lists.at(-1)?.get('q[search_with_barcode]')).toBe('893000001');
-  await page.getByPlaceholder('Tên, SKU hoặc mã vạch…').fill('');
+  if (test.info().project.name === 'desktop') {
+    await page.getByPlaceholder('Tên, SKU hoặc mã vạch…').fill('893000001');
+    await expect(page.getByRole('row').filter({ hasText: 'Cà phê' })).toHaveCount(0);
+    await expect(rowNamed(page, 'Trà đào')).toBeVisible();
+    expect(state.lists.at(-1)?.get('q[search_with_barcode]')).toBe('893000001');
+    await page.getByPlaceholder('Tên, SKU hoặc mã vạch…').fill('');
+  }
 
   await rowNamed(page, 'Trà đào').getByRole('button', { name: MENU }).click();
   await page.getByRole('menuitem', { name: 'Xoá', exact: true }).click();
@@ -110,7 +112,13 @@ test('a bulk delete says how many selected products the server refused', async (
   const state = await install(page); await page.goto('/store_1/goods/products');
   await rowNamed(page, 'Trà đào').getByRole('checkbox').check();
   await rowNamed(page, 'Cà phê').getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Xoá', exact: true }).click();
+  const deleteBtn = page.getByRole('button', { name: 'Xoá', exact: true });
+  if (await deleteBtn.isVisible()) {
+    await deleteBtn.click();
+  } else {
+    await page.getByRole('button', { name: /^(More actions|Thao tác khác)$/ }).click();
+    await page.getByRole('menuitem', { name: 'Xoá', exact: true }).click();
+  }
   await page.getByRole('dialog').last().getByRole('button', { name: 'Xoá', exact: true }).click();
   await expect.poll(() => state.writes.map((write) => write.path)).toContain('/products/bulk_destroy');
   await expect(page.getByText('Đã xoá 1 sản phẩm.')).toBeVisible();

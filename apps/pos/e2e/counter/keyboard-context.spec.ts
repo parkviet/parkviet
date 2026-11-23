@@ -109,12 +109,13 @@ async function tabUntilFocused(page: Page, target: ReturnType<Page['getByLabel']
 test('login, choose branch and register, and open a shift with the keyboard only', async ({ page }) => {
   const world: World = { shiftOpen: false, shiftPosts: [] };
   await installApi(page, world);
-  await page.goto('/login');
+  await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
 
-  const email = page.getByLabel('Email nhân viên');
+  const email = page.locator('input[type="email"]');
   await tabUntilFocused(page, email);
   await page.keyboard.type('lan@example.com');
-  await tabUntilFocused(page, page.getByLabel('Mật khẩu', { exact: true }));
+  await tabUntilFocused(page, page.locator('input[type="password"]'));
   await page.keyboard.type('secret');
   await page.keyboard.press('Enter');
 
@@ -163,10 +164,11 @@ test('switching register never shows the previous register shift while the new c
 }) => {
   const world: World = { shiftOpen: true, shiftPosts: [] };
   await installApi(page, world);
-  await page.goto('/login');
-  await page.getByLabel('Email nhân viên').fill('lan@example.com');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('secret');
-  await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+  await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  await page.locator('input[type="email"]').fill('lan@example.com');
+  await page.locator('input[type="password"]').fill('secret');
+  await page.locator('button[type="submit"]').click();
 
   const setup = page.getByRole('dialog', { name: 'Chọn nơi bán hàng' });
   await pickOption(setup, 'Chi nhánh', branch.id);

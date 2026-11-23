@@ -469,7 +469,7 @@ test('an order the URL names on another register opens by itself, never another 
   await login(page);
 
   // The payment of table 1 (R101) opened from a bookmark shows table 1.
-  await page.goto('/?order=R101&view=pay');
+  await page.goto('/store_1/sell?order=R101&view=pay');
   await holdLease(page);
   const pay = payScreen(page);
   await expect(pay.getByRole('complementary', { name: 'Hóa đơn' })).toContainText('Bàn 1');
@@ -621,7 +621,7 @@ test('closing a paid order at a table branch goes back to the board without a ne
   await routeBoard(context);
   const page = await context.newPage();
   await login(page);
-  await page.goto('/?order=R100&view=order');
+  await page.goto('/store_1/sell?order=R100&view=order');
   await expect(ticket(page).locator('.ticket-header')).toContainText('Bàn 1');
   await page.getByRole('button', { name: 'Đóng tab', exact: true }).click();
   await expect(page).toHaveURL(/view=board/);

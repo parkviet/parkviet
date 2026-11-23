@@ -37,10 +37,11 @@ test('real API preserves one editor and rejects a stale browser after takeover',
     const first = await firstContext.newPage();
     const second = await secondContext.newPage();
     for (const page of [first, second]) {
-      await page.goto('http://127.0.0.1:5174/login');
-      await page.getByLabel('Email nhân viên').fill(credentials.email);
-      await page.getByLabel('Mật khẩu', { exact: true }).fill(credentials.password);
-      await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+      await page.goto('http://127.0.0.1:5175/login?redirect=/pos');
+      await expect(page.locator('button[type="submit"]')).toBeEnabled();
+      await page.locator('input[type="email"]').fill(credentials.email);
+      await page.locator('input[type="password"]').fill(credentials.password);
+      await page.locator('button[type="submit"]').click();
       await expect(page.locator('.header-user')).toHaveText('POS Review', { timeout: 25_000 });
       await selectReviewContext(page, credentials);
       await expect(page.getByText('Ca đang mở:', { exact: false })).toBeVisible();
@@ -125,10 +126,11 @@ test('real API recovers a committed draft after its response is lost and the pag
   const context = await browser.newContext();
   try {
     const page = await context.newPage();
-    await page.goto('http://127.0.0.1:5174/login');
-    await page.getByLabel('Email nhân viên').fill(credentials.email);
-    await page.getByLabel('Mật khẩu', { exact: true }).fill(credentials.password);
-    await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+    await page.goto('http://127.0.0.1:5175/login?redirect=/pos');
+    await expect(page.locator('button[type="submit"]')).toBeEnabled();
+    await page.locator('input[type="email"]').fill(credentials.email);
+    await page.locator('input[type="password"]').fill(credentials.password);
+    await page.locator('button[type="submit"]').click();
     await expect(page.locator('.header-user')).toHaveText('POS Review', { timeout: 25_000 });
     await selectReviewContext(page, credentials);
     await expect(page.getByText('Ca đang mở:', { exact: false })).toBeVisible();

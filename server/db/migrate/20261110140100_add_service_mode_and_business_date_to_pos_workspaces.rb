@@ -43,7 +43,7 @@ class AddServiceModeAndBusinessDateToPosWorkspaces < ActiveRecord::Migration[8.1
     <<~SQL.squish
       UPDATE spree_pos_workspaces AS w
       SET business_date = CASE
-        WHEN (w.created_at AT TIME ZONE 'UTC' AT TIME ZONE b.timezone)::time < b.business_day_cutoff
+        WHEN (w.created_at AT TIME ZONE 'UTC' AT TIME ZONE b.timezone)::time < COALESCE(b.business_day_cutoff, '04:00:00'::time)
           THEN ((w.created_at AT TIME ZONE 'UTC' AT TIME ZONE b.timezone)::date - 1)
         ELSE (w.created_at AT TIME ZONE 'UTC' AT TIME ZONE b.timezone)::date
       END

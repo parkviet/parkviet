@@ -107,10 +107,11 @@ test('cashier layout keeps the basket reachable, formats VND and safely edits qu
     }
     return route.fulfill({ status: 404, json: { error: { code: 'missing' } } });
   });
-  await page.goto('/login');
-  await page.getByLabel('Email nhân viên').fill('cashier@example.test');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('test-only');
-  await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+  await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  await page.locator('input[type="email"]').fill('cashier@example.test');
+  await page.locator('input[type="password"]').fill('test-only');
+  await page.locator('button[type="submit"]').click();
   await expect(page.locator('.pos-context-details > summary')).toContainText('Quầy 01');
   await expect(page.locator('.pos-context-details')).not.toHaveAttribute('open');
   await expect(page.locator('.catalog-product')).toHaveCount(12);

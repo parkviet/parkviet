@@ -25,6 +25,6 @@ class RepairPosBusinessDatesReadInTheWrongZone < ActiveRecord::Migration[8.1]
   end
 
   def self.business_date(local)
-    "(CASE WHEN #{local}::time < b.business_day_cutoff THEN (#{local}::date - 1) ELSE #{local}::date END)"
+    "(CASE WHEN #{local}::time < COALESCE(b.business_day_cutoff, '04:00:00'::time) THEN (#{local}::date - 1) ELSE #{local}::date END)"
   end
 end

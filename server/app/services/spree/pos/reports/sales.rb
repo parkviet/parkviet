@@ -73,7 +73,9 @@ module Spree
         # The same sales by the hour they completed, in the branch timezone:
         # [{ hour: 0..23, orders:, sales_total: }], only hours with sales.
         def by_hour
-          hour = Arel.sql("EXTRACT(HOUR FROM spree_orders.completed_at AT TIME ZONE 'UTC' AT TIME ZONE #{zone_sql})")
+          hour = Arel.sql(ActiveRecord::Base.sanitize_sql_array(
+                            ["EXTRACT(HOUR FROM spree_orders.completed_at AT TIME ZONE 'UTC' AT TIME ZONE ?)", zone_name]
+                          ))
           sales.group(hour).order(hour).pluck(hour, Arel.sql('COUNT(*)'), Arel.sql('SUM(spree_orders.total)')).map do |at, orders, total|
             { hour: at.to_i, orders: orders.to_i, sales_total: money(total) }
           end
@@ -91,7 +93,9 @@ module Spree
           counts = joined.count
           totals = joined.sum('spree_orders.total')
           visits = with_customers.group("#{table}.business_date").pluck(Arel.sql("#{table}.business_date"), Arel.sql(VISITS_SQL)).to_h
-          day = Arel.sql("DATE(spree_pos_return_operations.received_at AT TIME ZONE 'UTC' AT TIME ZONE #{zone_sql})")
+          day = Arel.sql(ActiveRecord::Base.sanitize_sql_array(
+                           ["DATE(spree_pos_return_operations.received_at AT TIME ZONE 'UTC' AT TIME ZONE ?)", zone_name]
+                         ))
           returned = returns.group(day).sum(:entitlement_total)
           (filters.from..filters.to).map do |date|
             sales_total = BigDecimal((totals[date] || 0).to_s)
@@ -143,9 +147,9 @@ module Spree
             joins('LEFT JOIN spree_pos_customers ON spree_pos_customers.id = spree_pos_workspaces.pos_customer_id')
         end
 
-        # The branch timezone as a quoted SQL literal.
-        def zone_sql
-          ActiveRecord::Base.connection.quote(ActiveSupport::TimeZone[branch.timezone]&.tzinfo&.name || 'UTC')
+        # The branch timezone IANA identifier.
+        def zone_name
+          ActiveSupport::TimeZone[branch.timezone]&.tzinfo&.name || 'UTC'
         end
 
         # The sales that were made offline and replayed later.

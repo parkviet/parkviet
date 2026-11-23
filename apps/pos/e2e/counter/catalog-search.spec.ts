@@ -27,10 +27,11 @@ test('catalog search is scoped to the selected branch and remains read-only', as
     }
     return route.fulfill({ status: 404, json: { error: { code: 'missing' } } });
   });
-  await page.goto('/login');
-  await page.getByLabel('Email nhân viên').fill('staff@example.test');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('password');
-  await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+  await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  await page.locator('input[type="email"]').fill('staff@example.test');
+  await page.locator('input[type="password"]').fill('password');
+  await page.locator('button[type="submit"]').click();
   await expect(page.locator('.pos-context-details > summary')).toContainText('Branch');
   await page.getByRole('searchbox', { name: 'Tìm hàng hoặc quét mã' }).fill('ao');
   await page.getByRole('button', { name: 'Tìm hàng', exact: true }).click();

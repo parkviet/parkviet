@@ -216,6 +216,11 @@ test.describe('on a tablet', () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) > 1100, 'the tabs sit beside the menu');
 
   test('the tabs fold into a modal drawer that picks a row and closes', async ({ page }) => {
+    await page.addInitScript(() => {
+      const original = window.matchMedia.bind(window);
+      window.matchMedia = (query: string) =>
+        query === '(pointer: coarse)' ? ({ ...original(query), matches: false } as MediaQueryList) : original(query);
+    });
     await openBar(page);
 
     await expect(tabColumn(page)).toBeHidden();

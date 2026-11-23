@@ -67,11 +67,12 @@ test('the close button drops a blank invoice tab at once and asks before closing
     if (path.endsWith('/ws_new2/lease')) return route.fulfill({ json: { data: blankNew2 } });
     return route.fulfill({ status: 404, json: { error: { code: 'missing' } } });
   });
-  await page.goto('/login');
-  await page.getByLabel('Email nhân viên').fill('staff@example.test');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('password');
-  await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
-  const workspace = page.getByRole('region', { name: 'Đơn nháp trên quầy này' });
+  await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  await page.locator('input[type="email"]').fill('staff@example.test');
+  await page.locator('input[type="password"]').fill('password');
+  await page.locator('button[type="submit"]').click();
+  const workspace = page.getByRole('tablist', { name: 'Đơn nháp trên quầy này' });
   const tab = (id: string) => workspace.locator(`[role="tab"][data-workspace-id="${id}"]`);
   const closeButton = (id: string) => workspace.locator(`.workspace-tab:has([data-workspace-id="${id}"]) .workspace-tab-close`);
   await expect(tab('ws_E')).toBeVisible();

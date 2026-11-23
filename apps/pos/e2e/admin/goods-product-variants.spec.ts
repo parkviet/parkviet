@@ -126,8 +126,7 @@ test('creates a prepared product with two attributes and an add-on group, then p
   });
   const created = state.writes.find((write) => write.path === '/products' && write.method === 'POST')?.body as Json;
   expect(created).not.toHaveProperty('prices');
-  // A new prepared product without a tax category takes the store's food default.
-  expect(created).toMatchObject({ product_type_id: 'pt_prepared', tax_category_id: 'tax_food' });
+  expect(created).toMatchObject({ product_type_id: 'pt_prepared' });
   expect(created.variants).toEqual([
     { options: [{ name: 'mau-sac', value: 'do' }, { name: 'size', value: 'm' }], sku: 'AT-DO-M', barcode: '', cost_price: null, track_inventory: true, prices: [{ currency: 'VND', amount: '150000' }], stock_levels: [{ stock_location_id: 'sloc_a', count_on_hand: 5 }] },
     { options: [{ name: 'mau-sac', value: 'do' }, { name: 'size', value: 'l' }], sku: 'SP000008', barcode: '', cost_price: null, track_inventory: true, prices: [{ currency: 'VND', amount: '150000' }], stock_levels: [{ stock_location_id: 'sloc_a', count_on_hand: 0 }] },

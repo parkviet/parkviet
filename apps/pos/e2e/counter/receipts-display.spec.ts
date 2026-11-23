@@ -406,10 +406,11 @@ async function mockPos(context: BrowserContext) {
 }
 
 async function login(page: Page) {
-  await page.goto('/login');
-  await page.getByLabel('Email nhân viên').fill('staff@example.test');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('password');
-  await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+  await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  await page.locator('input[type="email"]').fill('staff@example.test');
+  await page.locator('input[type="password"]').fill('password');
+  await page.locator('button[type="submit"]').click();
   await expect(page.getByRole('tab').first()).toBeVisible();
 }
 
@@ -646,7 +647,7 @@ test('prints the server snapshot by template on 80mm and A4 and labels every rep
     }
   });
   await login(page);
-  await page.goto('/receipts?source=posworkspace_done');
+  await page.goto('/store_1/sell/receipts?source=posworkspace_done');
   const sheet = page.getByTestId('receipt-sheet');
   await expect(sheet).toContainText('PHIẾU BÁN HÀNG');
   await expect(sheet).toContainText('1 Thùng = 24 Lon');
@@ -739,7 +740,7 @@ test('an order that is not completed has no receipt to print', async ({ context,
   const api = await mockPos(context);
   api.setLookup('open');
   await login(page);
-  await page.goto('/receipts?source=posworkspace_open');
+  await page.goto('/store_1/sell/receipts?source=posworkspace_open');
   await expect(page.getByRole('alert')).toContainText('chưa có hóa đơn');
   await expect(page.getByTestId('receipt-sheet')).toHaveCount(0);
   expect(api.printBodies).toEqual([]);

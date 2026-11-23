@@ -4,10 +4,7 @@ import {
   RECEIPT_DOCUMENT_TYPES,
   type ReceiptDocumentType,
 } from '@shared/receipt-template/types'
-import {
-  MAX_ACTIVE_TEMPLATES,
-  MAX_NAME_LENGTH,
-} from '@shared/receipt-template/validate'
+import { MAX_ACTIVE_TEMPLATES, MAX_NAME_LENGTH } from '@shared/receipt-template/validate'
 import { describeFailure, posFailureKey } from '@shared/request-failure'
 import { PageHeader, useStore } from '@spree/dashboard-core'
 import {
@@ -42,8 +39,8 @@ import { usePosContext } from '../hooks/use-pos-context'
 import {
   createReceiptTemplate,
   disableReceiptTemplate,
-  enableReceiptTemplate,
   duplicateReceiptTemplate,
+  enableReceiptTemplate,
   makeDefaultReceiptTemplate,
   type ReceiptTemplate,
   refreshReceiptTemplates,
@@ -305,7 +302,6 @@ export function ReceiptTemplatesPage() {
                 value={searchParams.search ?? ''}
                 placeholder={t('receiptTemplates.searchPlaceholder')}
                 aria-label={t('adminSearchName')}
-                clearLabel={t('receiptTemplates.clearFilters')}
                 className="h-9"
                 onValueChange={(value) => updateSearch({ search: value || undefined })}
               />

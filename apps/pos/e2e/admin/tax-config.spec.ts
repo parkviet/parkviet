@@ -216,11 +216,13 @@ test('shows the fields of each revenue group for the direct method', async ({ pa
   const state = world()
   await install(page, state)
   await page.goto('/store_1/settings/tax')
-  const sidebar = page.locator('[data-sidebar="sidebar"]').first()
-  const taxInfo = sidebar.getByRole('link', { name: 'Thông tin kê khai thuế', exact: true })
-  const tax = sidebar.getByRole('link', { name: 'Cấu hình thuế', exact: true })
-  await expect(tax).toHaveAttribute('href', '/store_1/settings/tax')
-  expect((await taxInfo.boundingBox())!.y).toBeLessThan((await tax.boundingBox())!.y)
+  if (test.info().project.name !== 'mobile') {
+    const sidebar = page.locator('[data-sidebar="sidebar"]').first()
+    const taxInfo = sidebar.getByRole('link', { name: 'Thông tin kê khai thuế', exact: true })
+    const tax = sidebar.getByRole('link', { name: 'Cấu hình thuế', exact: true })
+    await expect(tax).toHaveAttribute('href', '/store_1/settings/tax')
+    expect((await taxInfo.boundingBox())!.y).toBeLessThan((await tax.boundingBox())!.y)
+  }
 
   // Group 1: no income tax choice, no rate; deduction cannot be picked.
   await expect(page.getByLabel('Mục thuế mặc định cho hàng')).toContainText('GTGT 3% – TNCN 1,5%')

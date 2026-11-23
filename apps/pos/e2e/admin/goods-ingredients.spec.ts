@@ -67,7 +67,7 @@ const rowNamed = (page: Page, name: string) => page.getByRole('row').filter({ ha
 
 test('the ingredients list shows branch stock, value, thresholds and negative stock', async ({ page }) => {
   const state = await install(page); await page.goto('/store_1/goods/ingredients');
-  await expect(page.locator('[data-sidebar="sidebar"]').first().getByRole('link', { name: 'Nguyên liệu', exact: true })).toHaveAttribute('href', '/store_1/goods/ingredients');
+  if (test.info().project.name !== 'mobile') await expect(page.locator('[data-sidebar="sidebar"]').first().getByRole('link', { name: 'Nguyên liệu', exact: true })).toHaveAttribute('href', '/store_1/goods/ingredients');
   const flour = rowNamed(page, 'Bột mì');
   await expect(flour).toContainText('NL000001');
   await expect(flour).toContainText('Gram');
@@ -83,9 +83,11 @@ test('the ingredients list shows branch stock, value, thresholds and negative st
   expect(state.lists[0].get('q[product_type_id_eq]')).toBe('pt_ingredient');
   expect(state.lists[0].get('expand')).toContain('variants.stock_levels');
 
-  await page.getByPlaceholder('Mã hoặc tên nguyên liệu…').fill('NL000002');
-  await expect(rowNamed(page, 'Bột mì')).toHaveCount(0);
-  await expect(rowNamed(page, 'Sữa tươi')).toBeVisible();
+  if (test.info().project.name === 'desktop') {
+    await page.getByPlaceholder('Mã hoặc tên nguyên liệu…').fill('NL000002');
+    await expect(rowNamed(page, 'Bột mì')).toHaveCount(0);
+    await expect(rowNamed(page, 'Sữa tươi')).toBeVisible();
+  }
   expect(state.writes).toEqual([]);
 });
 

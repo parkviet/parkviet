@@ -11135,6 +11135,8 @@ components:
           enum: [table, room, billiard, vip]
         area_id:
           type: [string, 'null']
+        area_name:
+          type: [string, 'null']
         capacity:
           type: integer
           description: 0 when unknown.

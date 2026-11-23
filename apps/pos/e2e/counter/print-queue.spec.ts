@@ -79,14 +79,15 @@ async function install(page: Page, printers: unknown[], jobs: Job[] = [], prebil
 }
 
 async function login(page: Page) {
-  await page.goto('/login');
-  await page.getByLabel('Email nhân viên').fill('staff@example.test');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('password');
-  await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+  await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  await page.locator('input[type="email"]').fill('staff@example.test');
+  await page.locator('input[type="password"]').fill('password');
+  await page.locator('button[type="submit"]').click();
   await expect(page.getByRole('tab').first()).toBeVisible();
 }
 async function openReceipt(page: Page) {
-  await page.goto('/receipts?source=posworkspace_done');
+  await page.goto('/store_1/sell/receipts?source=posworkspace_done');
   await expect(page.getByTestId('receipt-sheet')).toContainText('RD300');
 }
 const dialogs = (page: Page) => page.evaluate(() => (window as unknown as { dialogs: number }).dialogs);

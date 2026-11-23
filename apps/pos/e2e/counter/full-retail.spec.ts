@@ -223,7 +223,7 @@ test('reload, network flapping, an expired session and logout lose no order and 
   // nothing on the server is lost or repeated.
   world.sessionExpired = true;
   await page.getByRole('button', { name: 'Đơn nháp mới' }).click();
-  await expect(page.getByLabel('Email nhân viên')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('input[type="email"]')).toBeVisible({ timeout: 15_000 });
   await login(page);
   await expect(tab(page, 'ws_wait')).toBeVisible();
   expect(effects(world, 'workspace.create')).toBe(0);
@@ -235,7 +235,7 @@ test('reload, network flapping, an expired session and logout lose no order and 
   page.on('dialog', (prompt) => void prompt.accept());
   await openUserMenu(page);
   await page.getByRole('button', { name: 'Đăng xuất' }).click();
-  await expect(page.getByLabel('Email nhân viên')).toBeVisible();
+  await expect(page.locator('input[type="email"]')).toBeVisible();
   await login(page);
   await expect(tab(page, 'ws_wait')).toBeVisible();
   await expect(tab(page, 'ws_sell')).toBeVisible();

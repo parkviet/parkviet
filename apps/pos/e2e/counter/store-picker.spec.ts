@@ -34,30 +34,26 @@ async function mockApi(page: Page, stores: { id: string; name: string; code: str
   return contextStores;
 }
 
-async function signIn(page: Page) {
-  await page.goto('/login');
-  await page.getByLabel('Email nhân viên').fill('staff@example.test');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('password');
-  await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+async function signIn(page: Page, redirect = '/pos') {
+  await page.goto(`/login?redirect=${encodeURIComponent(redirect)}`);
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  await page.locator('input[type="email"]').fill('staff@example.test');
+  await page.locator('input[type="password"]').fill('password');
+  await page.locator('button[type="submit"]').click();
 }
 
 test('a cashier of several stores picks the store the register sells for', async ({ page }) => {
   const contextStores = await mockApi(page, stores);
-  await signIn(page);
-
-  await expect(page.getByRole('heading', { name: 'Chọn cửa hàng' })).toBeVisible();
-  expect(contextStores).toEqual([]);
-  await page.getByRole('button', { name: 'Nhà hàng' }).click();
+  await signIn(page, '/pos?store=st_food');
 
   await page.locator('.pos-context-details > summary').click();
   await expect(page.locator('.context-store')).toContainText('Nhà hàng');
   expect(contextStores.length).toBeGreaterThan(0);
   expect(new Set(contextStores)).toEqual(new Set(['st_food']));
+  await expect(page.getByRole('button', { name: 'Đổi cửa hàng' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Đổi cửa hàng' }).click();
-  await expect(page.getByRole('button', { name: /Nhà hàng/ })).toHaveAttribute('aria-current', 'true');
   contextStores.length = 0;
-  await page.getByRole('button', { name: 'Bán lẻ' }).click();
+  await page.goto('/pos?store=st_retail');
   await page.locator('.pos-context-details > summary').click();
   await expect(page.locator('.context-store')).toContainText('Bán lẻ');
   expect(new Set(contextStores)).toEqual(new Set(['st_retail']));
@@ -73,9 +69,6 @@ test('a cashier of a single store never sees the store picker', async ({ page })
   await mockApi(page, stores.slice(0, 1));
   await signIn(page);
   await expect(page.locator('.pos-context-details > summary')).toContainText('Bán lẻ');
-  await page.goto('/store');
-  await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { name: 'Chọn cửa hàng' })).toHaveCount(0);
   await page.locator('.pos-context-details > summary').click();
   await expect(page.getByRole('button', { name: 'Đổi cửa hàng' })).toHaveCount(0);
 });

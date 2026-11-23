@@ -483,10 +483,11 @@ async function mockPos(page: Page, capabilities: string[]) {
 }
 
 async function login(page: Page) {
-  await page.goto('/login');
-  await page.getByLabel('Email nhân viên').fill('staff@example.test');
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('password');
-  await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
+  await page.goto('/login?redirect=/pos');
+  await expect(page.locator('button[type="submit"]')).toBeEnabled();
+  await page.locator('input[type="email"]').fill('staff@example.test');
+  await page.locator('input[type="password"]').fill('password');
+  await page.locator('button[type="submit"]').click();
   await expect(page.getByRole('tab').first()).toBeVisible();
 }
 
@@ -535,7 +536,7 @@ test('sale: serial entry with refusals, lot preview, payment blocked until trace
 test('return wizard: shows sold serials and lots, sends the ticked serial and the chosen lot', async ({ page }) => {
   const api = await mockPos(page, ['pos.shift.open', 'pos.payment.collect', 'pos.return.process']);
   await login(page);
-  await page.goto('/returns?orderId=or_100');
+  await page.goto('/store_1/sell/returns?orderId=or_100');
   await expect(page.getByRole('heading', { name: 'Trả hàng đơn R100' })).toBeVisible();
 
   const table = page.getByRole('form', { name: 'Chọn hàng trả' }).getByRole('table').first();

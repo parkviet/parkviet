@@ -78,11 +78,13 @@ test('fills the declaration details, moves the head office and saves them in one
   const state = world(); await install(page, state); await page.goto('/store_1/settings/tax-info');
   await expect(page.getByTestId('tax-info-readiness')).toHaveText('2/9 trường cần cho tờ khai');
   await expect(page.getByTestId('tax-info-missing')).toContainText('Còn thiếu: địa chỉ kinh doanh, kỳ kê khai');
-  const sidebar = page.locator('[data-sidebar="sidebar"]').first();
-  const storeInfo = sidebar.getByRole('link', { name: 'Thông tin cửa hàng', exact: true });
-  const taxInfo = sidebar.getByRole('link', { name: 'Thông tin kê khai thuế', exact: true });
-  await expect(taxInfo).toHaveAttribute('href', '/store_1/settings/tax-info');
-  expect((await storeInfo.boundingBox())!.y).toBeLessThan((await taxInfo.boundingBox())!.y);
+  if (test.info().project.name !== 'mobile') {
+    const sidebar = page.locator('[data-sidebar="sidebar"]').first();
+    const storeInfo = sidebar.getByRole('link', { name: 'Thông tin cửa hàng', exact: true });
+    const taxInfo = sidebar.getByRole('link', { name: 'Thông tin kê khai thuế', exact: true });
+    await expect(taxInfo).toHaveAttribute('href', '/store_1/settings/tax-info');
+    expect((await storeInfo.boundingBox())!.y).toBeLessThan((await taxInfo.boundingBox())!.y);
+  }
 
   await page.getByLabel('Mã số thuế / số định danh').fill('001234567890');
   await page.getByRole('button', { name: 'Chọn địa chỉ', exact: true }).click();
