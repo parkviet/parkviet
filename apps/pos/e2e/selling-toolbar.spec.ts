@@ -15,9 +15,29 @@ async function openCounter(page: Page) {
   await installRetailApi(page, world);
   await login(page);
   await expect(page.getByRole('list', { name: 'Thực đơn' })).toBeVisible();
+  // A phone-width screen starts with the toolbar folded.
+  const unfold = toolbar(page).getByRole('button', { name: 'Mở thanh công cụ' });
+  if (await unfold.isVisible()) await unfold.click();
 }
 
 const toolbar = (page: Page) => page.getByRole('region', { name: 'Công cụ bán hàng' });
+
+test('a phone-width screen starts with the toolbar folded so the header keeps one row', async ({ page }, info) => {
+  test.skip(info.project.name !== 'mobile', 'only phone-width screens fold by default');
+  await installRetailApi(
+    page,
+    newWorld({
+      modules: { 'retail.units': true, 'fnb.menu': true, 'fnb.order_number': true },
+      profile: { key: 'cafe_tra_sua', version: 1, display: { surface: 'menu_grid' } },
+      menu: teaMenu(),
+    }),
+  );
+  await login(page);
+  await expect(toolbar(page).getByRole('button', { name: 'Mở thanh công cụ' })).toBeVisible();
+  await expect(toolbar(page).getByRole('button', { name: 'Máy in' })).toHaveCount(0);
+  const height = await page.locator('header.header').evaluate((el) => el.getBoundingClientRect().height);
+  expect(height).toBeLessThanOrEqual(56);
+});
 
 test('the toolbar lists the tools that exist, with the selling screen chooser', async ({ page }) => {
   await openCounter(page);

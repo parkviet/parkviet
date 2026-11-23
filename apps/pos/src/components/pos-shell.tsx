@@ -525,14 +525,6 @@ function ShellFrame() {
           {isSale && context.data && context.data.capabilities.length === 0 ? (
             <p>{t('capabilitiesEmpty')}</p>
           ) : null}
-          {isSale && canOpenShift ? (
-            <div className="shift-banner" role="status">
-              <span>{t('shiftBanner')}</span>
-              <button type="button" onClick={() => setShiftDialogOpen(true)}>
-                {t('enterShift')}
-              </button>
-            </div>
-          ) : null}
         </div>
         <Outlet />
       </section>

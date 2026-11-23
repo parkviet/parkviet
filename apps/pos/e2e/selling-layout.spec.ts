@@ -32,6 +32,9 @@ const stored = (page: Page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), KEY);
 
 async function openChooser(page: Page) {
+  // A phone-width screen starts with the toolbar folded.
+  const unfold = toolbar(page).getByRole('button', { name: 'Mở thanh công cụ' });
+  if (await unfold.isVisible()) await unfold.click();
   await toolbar(page).getByRole('button', { name: 'Chọn màn bán hàng' }).click();
   await expect(chooser(page)).toBeVisible();
 }

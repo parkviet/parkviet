@@ -355,7 +355,6 @@
   "statusOffline": "Offline",
   "enterShift": "Start shift",
   "shiftEnterHint": "Press to enter the opening float and open the shift.",
-  "shiftBanner": "No shift is open. Start a shift to begin selling.",
   "openShiftTitle": "Open a shift",
   "shiftClosedCompact": "No shift",
   "shiftOpenHint": "A shift is open at this register; you can sell.",

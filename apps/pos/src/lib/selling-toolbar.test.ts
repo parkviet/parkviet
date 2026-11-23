@@ -51,4 +51,14 @@ describe('selling toolbar preference', () => {
     expect(savedToolbarCollapsed()).toBe(false);
     expect(() => saveToolbarCollapsed(true)).not.toThrow();
   });
+  it('starts folded on a phone-width screen until this device opens it', () => {
+    const storage = fakeStorage();
+    vi.stubGlobal('window', { localStorage: storage, matchMedia: () => ({ matches: true }) });
+    expect(savedToolbarCollapsed()).toBe(true);
+    saveToolbarCollapsed(false);
+    expect(storage.getItem(TOOLBAR_COLLAPSED_KEY)).toBe('off');
+    expect(savedToolbarCollapsed()).toBe(false);
+    saveToolbarCollapsed(true);
+    expect(savedToolbarCollapsed()).toBe(true);
+  });
 });

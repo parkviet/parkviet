@@ -1508,8 +1508,6 @@ kbd { padding: var(--pos-s1); border: 1px solid var(--pos-border); border-radius
 .pos-context-details .tip, .selling-toolbar .tip { left: 0; transform: none; }
 .pos-context-status .tip { left: auto; right: 0; transform: none; }
 @media (prefers-reduced-motion: reduce) { .tip { transition: none; } }
-.pos-layout .shift-banner { display: flex; align-items: center; justify-content: space-between; gap: var(--pos-s3); padding: var(--pos-s2) var(--pos-s3); border-radius: var(--pos-radius); background: var(--pos-warning-soft); color: var(--pos-warning); font-size: var(--pos-small); font-weight: 600; }
-.pos-layout .shift-banner button { min-height: 36px; flex: none; }
 .open-shift-dialog { width: min(420px, calc(100vw - var(--pos-s6))); }
 .open-shift-dialog h2 { margin: 0; font-size: var(--pos-heading); }
 .open-shift-dialog .dialog-actions { gap: var(--pos-s2); }
