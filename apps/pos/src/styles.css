@@ -1993,3 +1993,12 @@ kbd { padding: var(--pos-s1); border: 1px solid var(--pos-border); border-radius
 /* Chips sit right while they fit and scroll from their first one when they do not; a narrow order drops the extras' caption. */
 .order-foot-chips > :first-child { margin-left: auto; }
 @container selling-order (max-width: 560px) { .order-foot-extras-label { display: none; } }
+
+/* The arrow on the foot's top edge folds the extras row away (pointing up to bring it back). */
+.order-foot { position: relative; }
+.pos-layout .order-foot-fold { position: absolute; z-index: 2; top: 0; left: 50%; display: grid; place-items: center; width: 44px; min-width: 44px; height: 22px; min-height: 22px; padding: 0; border: 1px solid var(--pos-border); border-radius: 0 0 10px 10px; border-top: 0; background: var(--pos-surface); color: var(--pos-muted); transform: translateX(-50%); }
+.pos-layout .order-foot-fold:hover { color: var(--pos-blue); }
+.order-foot-fold .pos-icon { width: 16px; height: 16px; transition: transform .15s; }
+.order-foot[data-folded] .order-foot-fold .pos-icon { transform: rotate(180deg); }
+.order-foot[data-folded] .order-foot-main { padding-top: 18px; }
+.order-foot-extras { padding-top: 14px; }

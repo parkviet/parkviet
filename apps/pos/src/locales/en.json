@@ -2706,6 +2706,8 @@
   "orderFootExtras": "More details",
   "orderFootExtrasSettings": "Choose what the order foot shows",
   "orderFootShowTotals": "Show the total in detail",
+  "orderFootFold": "Fold the extra details",
+  "orderFootUnfold": "Show the extra details",
   "orderFootMore": "More actions",
   "orderFootPaid": "Paid",
   "orderFootChip_discount": "Discount",

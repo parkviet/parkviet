@@ -2706,6 +2706,8 @@
   "orderFootExtras": "Thông tin thêm",
   "orderFootExtrasSettings": "Chọn thông tin hiện ở chân đơn",
   "orderFootShowTotals": "Xem chi tiết tổng tiền",
+  "orderFootFold": "Thu gọn thông tin thêm",
+  "orderFootUnfold": "Mở rộng thông tin thêm",
   "orderFootMore": "Thao tác khác",
   "orderFootPaid": "Đã trả",
   "orderFootChip_discount": "Giảm giá",

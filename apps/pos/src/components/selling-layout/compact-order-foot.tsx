@@ -37,6 +37,27 @@ function hiddenChips(): string[] {
   }
 }
 
+const FOLDED_KEY = 'parkviet-pos:order-foot-folded';
+
+// Whether this device keeps the extras row folded away.
+function savedFolded(): boolean {
+  try {
+    return window.localStorage.getItem(FOLDED_KEY) === 'on';
+  } catch {
+    return false;
+  }
+}
+
+function saveFolded(folded: boolean) {
+  try {
+    if (folded) window.localStorage.setItem(FOLDED_KEY, 'on');
+    else window.localStorage.removeItem(FOLDED_KEY);
+  } catch {
+    // Storage refused: the choice lasts until the page reloads.
+  }
+  notifyPreferencesChanged();
+}
+
 function saveHiddenChips(keys: string[]) {
   try {
     window.localStorage.setItem(HIDDEN_KEY, JSON.stringify(keys));
@@ -80,15 +101,36 @@ export function CompactOrderFoot({
 }) {
   const { t } = useTranslation();
   const [hidden, setHidden] = useState(hiddenChips);
-  usePreferencesChanged(() => setHidden(hiddenChips()));
+  // The extras row folds away under the arrow on the foot's edge, and stays
+  // so on this device.
+  const [folded, setFolded] = useState(savedFolded);
+  usePreferencesChanged(() => {
+    setHidden(hiddenChips());
+    setFolded(savedFolded());
+  });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [unfolded, setUnfolded] = useState(false);
   const shown = chips.filter((chip) => !hidden.includes(chip.key));
 
   return (
-    <footer className="order-foot">
+    <footer className="order-foot" data-folded={folded || undefined}>
       {chips.length > 0 ? (
+        <button
+          type="button"
+          className="order-foot-fold"
+          aria-expanded={!folded}
+          aria-label={t(folded ? 'orderFootUnfold' : 'orderFootFold')}
+          title={t(folded ? 'orderFootUnfold' : 'orderFootFold')}
+          onClick={() => {
+            setFolded(!folded);
+            saveFolded(!folded);
+          }}
+        >
+          <PosIcon name="chevron" />
+        </button>
+      ) : null}
+      {chips.length > 0 && !folded ? (
         <div className="order-foot-extras">
           <ToolbarPopover
             icon="cog"
