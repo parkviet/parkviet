@@ -266,7 +266,8 @@ test('hides awaiting_payment orders, badges auto-accepted prepaid orders, and sh
   await expect(ticket.locator('.ticket-summary')).toContainText('Đã trả: 70.000 ₫');
   const payButton = ticket.locator('.ticket-pay');
   await expect(payButton).toContainText('Thanh toán · còn lại');
-  await expect(payButton).toContainText('30.000 ₫');
+  // What is left shows in large type above the button.
+  await expect(ticket.locator('.ticket-totals-due')).toContainText('30.000 ₫');
 
   // Opening Table 5 shows the full 30 000 paid and "Đã thanh toán đủ".
   await ticket.getByRole('button', { name: 'Về bảng bàn' }).click();

@@ -1917,3 +1917,29 @@ kbd { padding: var(--pos-s1); border: 1px solid var(--pos-border); border-radius
 }
 .sl-thumb-classic { grid-template-columns: 2fr 1fr; }
 .sl-classic-left { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; min-height: 0; }
+
+/* The order's bill in short above its buttons: dishes, discount, extras, and what the guest owes in large type. */
+.ticket-summary.ticket-totals { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch; gap: 4px; padding: 10px var(--pos-s3) 8px; font-size: .875rem; }
+.ticket-totals-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--pos-s2); margin: 0; color: var(--pos-muted); font-variant-numeric: tabular-nums; }
+.ticket-totals-note { justify-content: flex-start; font-size: var(--pos-small); }
+.ticket-totals-due { display: flex; justify-content: space-between; align-items: baseline; gap: var(--pos-s2); margin: 4px 0 0; padding-top: 8px; border-top: 1px dashed var(--pos-border); }
+.ticket-totals-due span { font-weight: 700; color: var(--pos-ink); }
+.ticket-totals-due strong { font-size: 1.5rem; font-weight: 700; color: var(--pos-blue); font-variant-numeric: tabular-nums; }
+.pos-layout .ticket-main .ticket-pay { flex-direction: row; gap: 10px; }
+.pos-layout .ticket-pay small { font-size: 1.0625rem; font-weight: 700; }
+.ticket-pay kbd { padding: 1px 6px; border: 1px solid #ffffff59; border-radius: 4px; background: #ffffff26; color: inherit; font-size: .75rem; font-weight: 600; }
+
+/* Payment: the other ways to pay as large tiles under what is due, the cash card titled with what the guest hands over, and a foot that wraps so "Hoàn tất" is never cut. */
+.pay-methods { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--pos-s2); }
+.pay-methods:empty { display: none; }
+.pos-layout .pay-methods > button, .pos-layout .pay-methods > .credit-action, .pay-methods > details > summary { justify-content: center; width: 100%; min-height: 56px; padding: 0 var(--pos-s3); border: 1px solid var(--pos-border); border-radius: 12px; background: var(--pos-surface); color: var(--pos-ink); font-size: .9375rem; font-weight: 600; }
+.pos-layout .pay-methods > button:not(:disabled):hover, .pos-layout .pay-methods > .credit-action:not(:disabled):hover { border-color: var(--pos-blue); background: var(--pos-blue-soft); color: var(--pos-blue); }
+.pay-methods .pos-icon { width: 20px; height: 20px; }
+.pay-cash-handed { margin-left: auto; font-size: var(--pos-small); font-weight: 600; color: var(--pos-muted); }
+.pay-foot { flex-wrap: wrap; }
+.pos-layout .pay-finish { flex: 1 1 280px; min-width: 0; margin-left: 0; }
+@media (min-width: 1100px) { .selling-pay-dialog .pay-screen { grid-template-columns: 320px minmax(0, 1fr); border: 0; border-radius: 0; } }
+/* In place of the order the bill keeps its own height, its dishes scroll past about four lines, and the column scrolls as one. */
+.pay-embedded .pay-screen { grid-template-rows: auto auto; }
+.pos-layout .pay-embedded .pay-bill .pay-bill-lines { flex: none; max-height: 160px; }
+.pay-embedded .pay-foot { position: sticky; bottom: 0; z-index: 1; margin: 0 calc(-1 * var(--pos-s3)) -12px; padding: 8px var(--pos-s3) 12px; background: var(--pos-bg); border-top: 1px solid var(--pos-border); }

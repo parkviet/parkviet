@@ -7,7 +7,6 @@ import {
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { quickApproveCredit } from '../hooks/use-receivables';
-import { playScanTone } from '../lib/scan-sounds';
 import { lookupStoredValueCard } from '../hooks/use-stored-value';
 import {
   usePaymentMethods,
@@ -22,6 +21,7 @@ import type { PosFinancialAttempt, PosPaymentMethod, PosWorkspace } from '../lib
 import { autoPrintEnabled } from '../lib/receipt-preferences';
 import { creditConflictKey } from '../lib/receivables';
 import { conflictReason, posFailureKey } from '../lib/request-failure';
+import { playScanTone } from '../lib/scan-sounds';
 import { normalizeStoredValueCard, storedValueReasonKey } from '../lib/stored-value';
 import {
   type VietqrTenderSummary,
@@ -1271,6 +1271,31 @@ export function PaymentPanel({
           ) : (
             <>
               {held}
+              {/* The other ways to pay, as large tiles above the cash and QR. */}
+              <div className="pay-others pay-methods" role="group" aria-label={t('paymentMethods')}>
+                {otherMethods.map((method) => (
+                  <button
+                    key={method.id}
+                    type="button"
+                    disabled={
+                      locked ||
+                      traceBlocked ||
+                      drawerBlocked ||
+                      blockingAttempts.length > 0 ||
+                      target <= 0n ||
+                      !hasItems
+                    }
+                    aria-describedby={blockedBy}
+                    onClick={() => prepareOther(method)}
+                  >
+                    <PosIcon name={methodIcon(method.kind)} />
+                    {choiceLabel(method)}
+                  </button>
+                ))}
+                {storedValue}
+                {creditAction}
+                {fundsAllocate}
+              </div>
               <div className={vietqrMethod ? 'pay-cards' : 'pay-cards pay-cards-single'}>
                 {vietqrMethod ? (
                   <VietqrCard
@@ -1293,6 +1318,7 @@ export function PaymentPanel({
                   <section className="pay-card pay-cash" aria-label={t('cash')}>
                     <h3>
                       <PosIcon name="cash" /> {t('cash')}
+                      <small className="pay-cash-handed">{t('paymentHanded')}</small>
                     </h3>
                     <div className="pay-cash-body">
                       <div className="pay-cash-quick">
@@ -1362,30 +1388,6 @@ export function PaymentPanel({
                     ) : null}
                   </section>
                 ) : null}
-              </div>
-              <div className="pay-others">
-                {otherMethods.map((method) => (
-                  <button
-                    key={method.id}
-                    type="button"
-                    disabled={
-                      locked ||
-                      traceBlocked ||
-                      drawerBlocked ||
-                      blockingAttempts.length > 0 ||
-                      target <= 0n ||
-                      !hasItems
-                    }
-                    aria-describedby={blockedBy}
-                    onClick={() => prepareOther(method)}
-                  >
-                    <PosIcon name={methodIcon(method.kind)} />
-                    {choiceLabel(method)}
-                  </button>
-                ))}
-                {storedValue}
-                {creditAction}
-                {fundsAllocate}
               </div>
               {methodsQuery.isLoading ? <p role="status">{t('waiting')}</p> : null}
               {methodsQuery.isError ? (

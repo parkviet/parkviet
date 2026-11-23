@@ -2646,6 +2646,7 @@
   "stopPayEstimate": "Estimated time charge",
   "stopPayHint": "The clock stops on the server time and the time is billed on the order before the payment opens.",
   "stopPayConfirm": "Stop the clock and pay",
+  "ticketClockTime": "Time so far",
   "ticketClockSubtotal": "Time {{time}} (estimate) + items {{items}}",
   "ticketPayEstimate": "Pay · estimate",
   "ticketPayEstimateBeforeCharges": "Pay · estimate, time before charges and tax",

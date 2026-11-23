@@ -2646,6 +2646,7 @@
   "stopPayEstimate": "Tiền giờ tạm tính",
   "stopPayHint": "Đồng hồ dừng theo giờ máy chủ, tiền giờ chốt vào đơn rồi mới mở thanh toán.",
   "stopPayConfirm": "Dừng giờ và thanh toán",
+  "ticketClockTime": "Tiền giờ (tạm tính)",
   "ticketClockSubtotal": "Giờ {{time}} (tạm tính) + đồ {{items}}",
   "ticketPayEstimate": "Thanh toán · tạm tính",
   "ticketPayEstimateBeforeCharges": "Thanh toán · tạm tính, tiền giờ chưa gồm phí, thuế",

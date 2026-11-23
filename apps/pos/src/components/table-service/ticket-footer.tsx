@@ -75,8 +75,8 @@ export function TicketFooter({
     0,
   );
   const charge = activeTable.serviceCharge;
-  const summary = [
-    t('ticketSummary', { count }),
+  // What is added on top of the dishes, said by its rate.
+  const extras = [
     ...(charge?.applies && !charge.waived && charge.rate
       ? [t('ticketServiceCharge', { rate: charge.rate.replace(/\.0+$/, '') })]
       : []),
@@ -104,25 +104,38 @@ export function TicketFooter({
 
   return (
     <footer className="ticket-footer">
-      <p className="ticket-summary">
-        <span>{summary.join(' · ')}</span>
-        {clock && active.totals ? (
-          <span>
-            {t('ticketClockSubtotal', {
-              time: formatMoney(clock, currency),
-              items: formatMoney(active.totals.item_total, currency),
-            })}
-            {hasPaid ? ` · ${t('ticketPaid', { amount: formatMoney(allocated, currency) })}` : ''}
-          </span>
-        ) : active.totals ? (
-          <span>
-            {t('ticketSubtotal', { amount: formatMoney(active.totals.item_total, currency) })}
-            {hasPaid ? ` · ${t('ticketPaid', { amount: formatMoney(allocated, currency) })}` : ''}
-          </span>
-        ) : hasPaid ? (
-          <span>{t('ticketPaid', { amount: formatMoney(allocated, currency) })}</span>
+      {/* The bill in short: the dishes, the discount, what is added on top,
+          what was paid, and what the guest still owes in large type. */}
+      <div className="ticket-summary ticket-totals">
+        <p className="ticket-totals-row">
+          <span>{t('quickSubtotal', { count })}</span>
+          <span>{active.totals ? formatMoney(active.totals.item_total, currency) : '—'}</span>
+        </p>
+        {clock ? (
+          <p className="ticket-totals-row">
+            <span>{t('ticketClockTime')}</span>
+            <span>{formatMoney(clock, currency)}</span>
+          </p>
         ) : null}
-      </p>
+        {active.totals ? (
+          <p className="ticket-totals-row">
+            <span>{t('discount')}</span>
+            <span>{formatMoney(active.totals.discount_total, currency)}</span>
+          </p>
+        ) : null}
+        {extras.length > 0 ? (
+          <p className="ticket-totals-row ticket-totals-note">{extras.join(' · ')}</p>
+        ) : null}
+        {hasPaid ? (
+          <p className="ticket-totals-row">
+            <span>{t('ticketPaid', { amount: formatMoney(allocated, currency) })}</span>
+          </p>
+        ) : null}
+        <p className="ticket-totals-due">
+          <span>{t('amountDue')}</span>
+          <strong>{paidInFull ? t('ticketPaidInFull') : formatMoney(payTotal, currency)}</strong>
+        </p>
+      </div>
       {canHold && placed.length > 0 ? (
         <p className="ticket-placement" role="status">
           <span>{t('ticketPlacement', { place: placed.join(' · ') })}</span>
@@ -183,7 +196,7 @@ export function TicketFooter({
                   ? t('ticketPayRemaining')
                   : t('ticketPay')}
           </small>{' '}
-          <b>{paidInFull ? t('ticketPaidInFull') : formatMoney(payTotal, currency)}</b>
+          {paidInFull ? <b>{t('ticketPaidInFull')}</b> : <kbd>F9</kbd>}
         </button>
       </div>
     </footer>
