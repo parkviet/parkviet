@@ -2,6 +2,10 @@
 
 Ứng dụng bán hàng tại quầy của ParkViet, chạy như một trang riêng, ở gốc tên miền của nó (ví dụ `pos.example.com`, khi chạy local là http://localhost:5175). Cách chạy hệ thống xem [README gốc](../../README.md).
 
+<p align="center">
+  <img src="../../docs/images/parkviet-pos-sell.png" alt="Màn hình bán hàng ParkViet POS" width="100%">
+</p>
+
 ## POS là gì
 
 - Bán hàng tại quầy cho **nhiều chi nhánh** của cùng một cửa hàng. Mỗi chi nhánh có thể có **nhiều quầy**, và mỗi quầy có thể mở **nhiều đơn cùng lúc**.

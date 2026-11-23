@@ -78,6 +78,10 @@ Mọi ngành ăn uống đều dùng chung thực đơn có tùy chọn (đườ
 
 POS phục vụ nhiều chi nhánh, nhiều quầy, và mở được nhiều đơn cùng lúc trên một quầy. Mô tả chi tiết từng nhóm nằm trong [README của POS](apps/pos/README.md).
 
+<p align="center">
+  <img src="docs/images/parkviet-pos-sell.png" alt="Màn hình bán hàng ParkViet POS" width="100%">
+</p>
+
 - [Bán hàng](apps/pos/README.md#bán-hàng): tìm hoặc quét mã vạch, hàng cân bằng tem EAN-13, đơn vị quy đổi, hàng theo serial / lô, khách hàng, giảm giá, nhiều đơn song song.
   - **Địa chỉ giao hàng của khách:** gõ tự do, tìm kiếm được, sửa ngay trên màn hình bán, in trên biên nhận và phiếu tạm tính.
   - **Đơn giao hàng:** ghi người giao và phí giao. Trang **Đơn cần giao** cho người giao gọi khách, xem số còn nợ, bấm **Đã giao**.
