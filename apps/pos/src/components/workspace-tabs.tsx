@@ -42,11 +42,13 @@ import { PrebillDialog } from './prebill-dialog';
 import { ReservationDepositNote } from './reservation-deposit-note';
 import { SellingMealScan } from './scan-input';
 import { SegmentEditDialog } from './segment-edit-dialog';
+import { CompactOrderFoot } from './selling-layout/compact-order-foot';
 import { PaySheetHeader, SellingFrame } from './selling-layout/selling-frame';
 import { ServiceModeControl } from './service-mode-control';
 import { TabList } from './tab-list';
 import { TableOrderBar } from './table-actions';
 import { TableFloor } from './table-floor';
+import { TicketMoreMenu, type TicketMorePanel } from './table-service/ticket-more-menu';
 import { VehicleVisitBar } from './vehicle-visit-bar';
 import { VoidItemDialog } from './void-item-dialog';
 
@@ -204,6 +206,8 @@ export function WorkspaceTabsView({
   // The order whose payment is open, when the layout opens it on demand (in
   // a dialog or in place of the order).
   const [payingFor, setPayingFor] = useState<string | null>(null);
+  // The order's editor a chip of the compact foot opened.
+  const [extra, setExtra] = useState<TicketMorePanel | null>(null);
   const sheetPay = control.layout.pay === 'popup' || control.layout.pay === 'slide';
   // The payment closes once its order is paid or canceled, or another order
   // is on the ticket: it must not open again over the next one.
@@ -343,6 +347,16 @@ export function WorkspaceTabsView({
           </div>
         </div>,
       )}
+      {extra && active ? (
+        <TicketMoreMenu
+          selling={selling}
+          active={active}
+          panel={extra}
+          onPanel={setExtra}
+          onClose={() => setExtra(null)}
+          onCanceled={() => setExtra(null)}
+        />
+      ) : null}
       {closeRequest ? (
         <CloseTabDialog
           workspace={closeRequest.workspace}
@@ -785,7 +799,64 @@ export function WorkspaceTabsView({
                     </div>
                   )}
                 </section>
-                {sheetPay && active ? (
+                {sheetPay && active && control.layout.foot === 'compact' ? (
+                  <CompactOrderFoot
+                    chips={[
+                      {
+                        key: 'discount',
+                        label: t('orderFootChip_discount'),
+                        icon: 'tag',
+                        value:
+                          Number(active.totals?.discount_total ?? 0) !== 0 && active.totals
+                            ? formatMoney(active.totals.discount_total, active.totals.currency)
+                            : null,
+                        onClick: () => setExtra('discount'),
+                      },
+                      {
+                        key: 'note',
+                        label: t('orderFootChip_note'),
+                        icon: 'note',
+                        value: active.note ? '•' : null,
+                        onClick: () => setExtra('note'),
+                      },
+                      {
+                        key: 'customer',
+                        label: t('orderFootChip_customer'),
+                        icon: 'user',
+                        value: active.customer?.name ?? null,
+                        onClick: () => setExtra('customer'),
+                      },
+                    ]}
+                    count={(active.line_items ?? []).reduce(
+                      (sum, line) => sum + Math.max(0, line.quantity),
+                      0,
+                    )}
+                    total={formatMoney(
+                      active.financial?.remaining ?? active.totals?.total ?? '0',
+                      active.totals?.currency ?? 'VND',
+                    )}
+                    rows={
+                      active.totals
+                        ? [
+                            {
+                              label: t('subtotal'),
+                              value: formatMoney(active.totals.item_total, active.totals.currency),
+                            },
+                            {
+                              label: t('discount'),
+                              value: formatMoney(
+                                active.totals.discount_total,
+                                active.totals.currency,
+                              ),
+                            },
+                          ]
+                        : []
+                    }
+                    payLabel={t('sellingLayoutPay')}
+                    payDisabled={(active.line_items?.length ?? 0) === 0}
+                    onPay={() => setPayingFor(active.id)}
+                  />
+                ) : sheetPay && active ? (
                   // The bill in short and the way to pay it, under the order.
                   <footer className="selling-pay-foot">
                     {active.totals ? (

@@ -78,6 +78,7 @@ export function useSellingLayout(): SellingLayoutControl {
     pay: layout.pay,
     split: layout.split,
     paySplit: layout.paySplit,
+    foot: layout.foot,
   });
 
   function setTiles(tiles: SellingTiles) {
@@ -98,6 +99,7 @@ export function useSellingLayout(): SellingLayoutControl {
         pay: next.pay,
         split: next.split,
         paySplit: next.paySplit,
+        foot: next.foot,
       });
       setTiles(next.tiles);
     },
@@ -119,6 +121,7 @@ export function useSellingLayout(): SellingLayoutControl {
         pay: base.pay,
         split: base.split,
         paySplit: base.paySplit,
+        foot: base.foot,
       });
       setTiles(base.tiles);
     },

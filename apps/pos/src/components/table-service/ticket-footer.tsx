@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import type { PosWorkspace } from '../../lib/pos-context';
 import { courseName } from '../../lib/table-courses';
 import { isTab, isTableOrder } from '../../lib/tables';
+import { CompactOrderFoot } from '../selling-layout/compact-order-foot';
 import type { SellingWorkspace } from '../workspace-tabs';
+import type { TicketMorePanel } from './ticket-more-menu';
 
 // The course "Giữ món" holds the next dishes in when none was picked.
 const HOLD_COURSE = 2;
@@ -21,6 +23,8 @@ export function TicketFooter({
   sending,
   clockAmount = null,
   tabMode = false,
+  compact = false,
+  onMore,
   onSend,
   onPay,
 }: {
@@ -34,6 +38,10 @@ export function TicketFooter({
   clockAmount?: string | null;
   // A bar's open tabs sit beside the ticket.
   tabMode?: boolean;
+  // The compact foot of this device's layout: chips and one bar.
+  compact?: boolean;
+  // Opens one of the order's editors (discount, note, customer, table).
+  onMore?: (panel: TicketMorePanel) => void;
   onSend: (stay: boolean) => void;
   onPay: () => void;
 }) {
@@ -101,6 +109,125 @@ export function TicketFooter({
     placement.course ? courseName(placement.course) : null,
     placement.course && placement.hold ? t('ticketPlacementHeld') : null,
   ].filter((part): part is string => part !== null);
+
+  const payText = clock
+    ? t(chargedOnTop ? 'ticketPayEstimateBeforeCharges' : 'ticketPayEstimate')
+    : tabMode && isTab(active)
+      ? t('ticketCloseTab')
+      : hasPaid && !paidInFull
+        ? t('ticketPayRemaining')
+        : t('ticketPay');
+
+  if (compact) {
+    const discount = Number(active.totals?.discount_total ?? 0);
+    const open = (panel: TicketMorePanel) => onMore?.(panel);
+    return (
+      <div className="ticket-footer ticket-footer-compact">
+        <CompactOrderFoot
+          chips={[
+            {
+              key: 'discount',
+              label: t('orderFootChip_discount'),
+              icon: 'tag',
+              value: discount !== 0 ? formatMoney(String(discount), currency) : null,
+              onClick: () => open('discount'),
+            },
+            {
+              key: 'note',
+              label: t('orderFootChip_note'),
+              icon: 'note',
+              value: active.note ? '•' : null,
+              onClick: () => open('note'),
+            },
+            {
+              key: 'customer',
+              label: t('orderFootChip_customer'),
+              icon: 'user',
+              value: active.customer?.name ?? null,
+              onClick: () => open('customer'),
+            },
+            ...(table
+              ? [
+                  {
+                    key: 'table',
+                    label: t('orderFootChip_table'),
+                    icon: 'grid' as const,
+                    value: extras.length > 0 ? extras.join(' · ') : null,
+                    onClick: () => open('table'),
+                  },
+                ]
+              : []),
+          ]}
+          count={count}
+          total={paidInFull ? t('ticketPaidInFull') : formatMoney(payTotal, currency)}
+          rows={[
+            ...(active.totals
+              ? [
+                  {
+                    label: t('quickSubtotal', { count }),
+                    value: formatMoney(active.totals.item_total, currency),
+                  },
+                  { label: t('discount'), value: formatMoney(String(discount), currency) },
+                ]
+              : []),
+            ...(clock
+              ? [{ label: t('ticketClockTime'), value: formatMoney(clock, currency) }]
+              : []),
+            ...(hasPaid
+              ? [{ label: t('orderFootPaid'), value: formatMoney(allocated, currency) }]
+              : []),
+          ]}
+          more={[
+            {
+              label: t('receiptPrebillOpen'),
+              disabled: active.operational_status !== 'editing',
+              onClick: () => setPrebillOpen(true),
+            },
+            ...(canHold
+              ? [
+                  {
+                    label: t('ticketHold'),
+                    pressed: Boolean(placement.course && placement.hold),
+                    disabled: !canAppend || busy,
+                    title: t('ticketHoldHint', {
+                      course: courseName(placement.course ?? HOLD_COURSE),
+                    }),
+                    onClick: () =>
+                      setPlacement(
+                        placement.course && placement.hold
+                          ? { ...placement, hold: false }
+                          : { ...placement, course: placement.course ?? HOLD_COURSE, hold: true },
+                      ),
+                  },
+                ]
+              : []),
+            ...(canSend && !tabMode
+              ? [
+                  {
+                    label: t('ticketSendStay'),
+                    disabled: sendDisabled,
+                    onClick: () => onSend(true),
+                  },
+                ]
+              : []),
+            { label: t('ticketMore'), onClick: () => open('menu') },
+          ]}
+          kitchen={
+            canSend
+              ? {
+                  label: t(tabMode ? 'ticketSendTab' : 'ticketSend', { count: pending }),
+                  count: pending,
+                  disabled: sendDisabled,
+                  onClick: () => onSend(tabMode),
+                }
+              : undefined
+          }
+          payLabel={payText}
+          onPay={onPay}
+        />
+      </div>
+    );
+  }
 
   return (
     <footer className="ticket-footer">
@@ -187,16 +314,7 @@ export function TicketFooter({
           </button>
         ) : null}
         <button type="button" className="ticket-pay" onClick={onPay}>
-          <small>
-            {clock
-              ? t(chargedOnTop ? 'ticketPayEstimateBeforeCharges' : 'ticketPayEstimate')
-              : tabMode && isTab(active)
-                ? t('ticketCloseTab')
-                : hasPaid && !paidInFull
-                  ? t('ticketPayRemaining')
-                  : t('ticketPay')}
-          </small>{' '}
-          {paidInFull ? <b>{t('ticketPaidInFull')}</b> : <kbd>F9</kbd>}
+          <small>{payText}</small> {paidInFull ? <b>{t('ticketPaidInFull')}</b> : <kbd>F9</kbd>}
         </button>
       </div>
     </footer>

@@ -63,6 +63,7 @@ export function Ticket({
   onBoard,
   onClosed = onBoard,
   tabMode = false,
+  compactFoot = false,
   room,
   onPay,
   onNotice,
@@ -73,6 +74,8 @@ export function Ticket({
   onClosed?: () => void;
   // A bar's open tabs sit beside the ticket.
   tabMode?: boolean;
+  // The compact foot of this device's layout.
+  compactFoot?: boolean;
   // The order's room and its clock.
   room: OrderRoom;
   // Pays the order; the screen asks to stop a room's clock first.
@@ -221,6 +224,8 @@ export function Ticket({
         sending={sending}
         clockAmount={room.running ? room.amount : null}
         tabMode={tabMode}
+        compact={compactFoot}
+        onMore={setMore}
         onSend={(stay) => void send(stay || tabMode)}
         onPay={onPay}
       />

@@ -260,6 +260,7 @@ export function TableServiceScreen({ control }: { control: SellingLayoutControl 
       onBoard={() => setView('board')}
       onClosed={goHome}
       tabMode={tabMode}
+      compactFoot={control.layout.foot === 'compact'}
       room={room}
       onPay={payActive}
       onNotice={notify}

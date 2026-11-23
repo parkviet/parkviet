@@ -1954,3 +1954,42 @@ kbd { padding: var(--pos-s1); border: 1px solid var(--pos-border); border-radius
 .pos-layout .ticket-pay small { font-size: 1rem; }
 .pos-layout .ticket-totals > p { margin: 0; }
 .basket-table th:nth-child(1) { white-space: nowrap; overflow-wrap: normal; }
+
+/* Compact order foot: a row of chips for the order's extras under "Thông tin thêm", then one bar with the count and total, the tools and the payment. Popovers open upwards. */
+.ticket-footer.ticket-footer-compact { display: block; padding: 0; }
+.order-foot { display: grid; flex: none; background: var(--pos-surface); border-top: 1px solid var(--pos-border); }
+.selling-region > .order-foot { margin-top: var(--pos-s2); border: 1px solid var(--pos-border); border-radius: var(--pos-radius-lg); box-shadow: var(--pos-shadow-card); }
+.order-foot-extras { display: flex; align-items: center; gap: var(--pos-s2); min-width: 0; padding: 8px var(--pos-s3); border-bottom: 1px solid var(--pos-border); }
+.order-foot-extras > .toolbar-item .toolbar-button { background: var(--pos-bg); }
+.order-foot-extras-label { flex: none; font-size: .875rem; color: var(--pos-ink); }
+.order-foot-chips { display: flex; flex: 1 1 0; min-width: 0; justify-content: flex-start; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.order-foot-chips::-webkit-scrollbar { display: none; }
+.pos-layout .order-foot-chip { display: inline-flex; flex: none; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--pos-bg); color: var(--pos-ink); font-size: .875rem; font-weight: 500; white-space: nowrap; }
+.pos-layout .order-foot-chip:not(:disabled):hover { background: var(--pos-blue-soft); color: var(--pos-blue); }
+.pos-layout .order-foot-chip[data-set] { background: var(--pos-blue-soft); }
+.order-foot-chip b { max-width: 140px; overflow: hidden; text-overflow: ellipsis; color: var(--pos-blue); font-weight: 600; }
+.order-foot-chip .pos-icon { width: 18px; height: 18px; }
+.order-foot .toolbar-popover { top: auto; bottom: calc(100% + var(--pos-s2)); left: 0; right: auto; }
+.order-foot-actions .toolbar-popover { left: auto; right: 0; }
+.order-foot-menu { display: grid; gap: 2px; }
+.pos-layout .order-foot-menu button { justify-content: flex-start; min-height: var(--pos-target); padding: 0 var(--pos-s3); border: 0; border-radius: var(--pos-radius-sm); background: transparent; color: var(--pos-ink); font-weight: 500; }
+.pos-layout .order-foot-menu button:not(:disabled):hover, .pos-layout .order-foot-menu button[aria-pressed='true'] { background: var(--pos-blue-soft); color: var(--pos-blue); }
+.order-foot-rows { display: grid; gap: 4px; margin: 0; padding: 8px var(--pos-s4); border-bottom: 1px solid var(--pos-border); font-size: .875rem; }
+.order-foot-rows > div { display: flex; justify-content: space-between; gap: var(--pos-s2); color: var(--pos-muted); }
+.order-foot-rows dd { margin: 0; font-variant-numeric: tabular-nums; }
+.order-foot-main { display: flex; flex-wrap: wrap; align-items: center; gap: var(--pos-s2); padding: 10px var(--pos-s3); }
+.pos-layout .order-foot-total { display: inline-flex; flex: 0 1 auto; align-items: center; gap: 10px; min-height: 48px; padding: 0 4px; border: 0; background: transparent; color: var(--pos-ink); }
+.order-foot-total strong { font-size: 1.375rem; font-weight: 700; color: var(--pos-blue); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.order-foot-total[aria-expanded='true'] > .pos-icon { transform: rotate(180deg); }
+.order-foot-bag { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--pos-bg); }
+.order-foot-badge { position: absolute; top: -4px; right: -4px; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--pos-danger); color: var(--pos-surface); font-size: .6875rem; font-weight: 700; line-height: 1; }
+.order-foot-actions { display: flex; flex: 1 1 auto; justify-content: flex-end; align-items: center; gap: var(--pos-s2); }
+.pos-layout .order-foot-actions .toolbar-button, .pos-layout .order-foot-icon { position: relative; display: inline-grid; place-items: center; width: 48px; min-width: 48px; min-height: 48px; padding: 0; border: 1px solid var(--pos-border); border-radius: 10px; background: var(--pos-surface); color: var(--pos-ink); }
+.pos-layout .order-foot-icon .order-foot-badge { background: #c26a00; }
+.pos-layout .order-foot-secondary { min-height: 48px; padding: 0 var(--pos-s4); border: 1px solid var(--pos-border); border-radius: 10px; background: var(--pos-surface); color: var(--pos-ink); font-weight: 600; white-space: nowrap; }
+.pos-layout .order-foot-pay { flex: 0 1 220px; min-width: 150px; min-height: 48px; padding: 0 var(--pos-s4); border: 0; border-radius: 10px; background: var(--pos-blue); color: var(--pos-surface); font-size: 1rem; font-weight: 700; white-space: nowrap; }
+.pos-layout .order-foot-pay:not(:disabled):hover { background: var(--pos-blue-hover); }
+.order-foot-pay kbd { margin-left: var(--pos-s1); padding: 1px 6px; border: 1px solid #ffffff59; border-radius: 4px; background: #ffffff26; color: inherit; font-size: .75rem; font-weight: 600; }
+/* Chips sit right while they fit and scroll from their first one when they do not; a narrow order drops the extras' caption. */
+.order-foot-chips > :first-child { margin-left: auto; }
+@container selling-order (max-width: 560px) { .order-foot-extras-label { display: none; } }

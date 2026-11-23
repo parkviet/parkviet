@@ -137,7 +137,14 @@ describe('parseSavedLayout', () => {
     expect(parseSavedLayout({ preset: 'kiosk' })).toBeNull();
     expect(
       parseSavedLayout({ preset: 'quick', side: 'bottom', pay: 'column', split: 5, paySplit: 'x' }),
-    ).toEqual({ preset: 'quick', side: 'left', pay: 'column', split: 4 / 5, paySplit: 0.5 });
+    ).toEqual({
+      preset: 'quick',
+      side: 'left',
+      pay: 'column',
+      split: 4 / 5,
+      paySplit: 0.5,
+      foot: 'compact',
+    });
   });
 });
 

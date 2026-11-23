@@ -145,6 +145,37 @@ const paths = {
       <path d="m3 16.5 9 4.5 9-4.5" />
     </>
   ),
+  dots: (
+    <>
+      <circle cx="12" cy="5" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="19" r="1.2" fill="currentColor" />
+    </>
+  ),
+  bag: (
+    <>
+      <path d="M5 8h14l-1 12H6Z" />
+      <path d="M9 10V7a3 3 0 0 1 6 0v3" />
+    </>
+  ),
+  chef: (
+    <>
+      <path d="M7 14a4 4 0 0 1-.6-7.9A5 5 0 0 1 12 3a5 5 0 0 1 5.6 3.1A4 4 0 0 1 17 14" />
+      <path d="M7 14v6h10v-6 M7 17h10" />
+    </>
+  ),
+  tag: (
+    <>
+      <path d="M3 12V4h8l10 10-8 8Z" />
+      <circle cx="7.5" cy="8.5" r="1.3" />
+    </>
+  ),
+  note: (
+    <>
+      <path d="M5 3h10l4 4v14H5Z M15 3v4h4" />
+      <path d="M8 12h8 M8 16h5" />
+    </>
+  ),
   wifi: (
     <>
       <path d="M5 12.5a10 10 0 0 1 14 0" />

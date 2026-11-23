@@ -33,6 +33,7 @@ describe('device selling layout', () => {
       pay: 'below',
       split: 0.4,
       paySplit: 0.5,
+      foot: 'full',
     } as const;
     saveSellingLayout('b1', layout);
     expect(savedSellingLayout('b1')).toEqual(layout);
@@ -46,6 +47,7 @@ describe('device selling layout', () => {
       pay: 'popup',
       split: 0.5,
       paySplit: 0.5,
+      foot: 'full',
     });
     saveSellingLayout('b1', null);
     expect(savedSellingLayout('b1')).toBeNull();
@@ -65,6 +67,7 @@ describe('device selling layout', () => {
       pay: 'below',
       split: 0.4,
       paySplit: 0.5,
+      foot: 'full',
     } as const;
     const storage = (window as unknown as { localStorage: Storage }).localStorage;
     const { setItem, removeItem } = storage;

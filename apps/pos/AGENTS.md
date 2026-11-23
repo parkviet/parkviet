@@ -50,6 +50,10 @@ Pure rules (presets, `clampSplit`, which preset a branch may use) are in
 - The `classic` sample (catalogue over the order, payment in a full-height
   column on the right) is a device choice only; a branch default is one of
   `BRANCH_PRESETS`.
+- The layout's `foot` is `full` (the bill above the buttons) or `compact`
+  (`selling-layout/compact-order-foot.tsx`: chips for the order's extras, which
+  a device hides under the cog in `parkviet-pos:order-foot-hidden`, and one bar
+  with the total and the buttons). Chips open the editors the ticket already has.
 - On screens 1100px and wider the counter's order tabs and new-order button sit
   in the header (`header-slot.tsx`); on a tablet or phone they keep their own
   row.

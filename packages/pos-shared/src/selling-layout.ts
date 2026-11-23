@@ -5,7 +5,13 @@ import { contextModule, sellingLayoutOf } from './pos-modules';
 // A sample is only a starting set of options: the base screen (table service,
 // quick counter or counter tabs) still comes from the branch's modules
 // (`sellingLayoutOf`), and these options only decide how its panels sit.
-export const SELLING_PRESETS = ['tables_first', 'quick', 'one_step', 'big_menu', 'classic'] as const;
+export const SELLING_PRESETS = [
+  'tables_first',
+  'quick',
+  'one_step',
+  'big_menu',
+  'classic',
+] as const;
 export type SellingPreset = (typeof SELLING_PRESETS)[number];
 
 // The samples a branch can make its default. The classic screen (the counter
@@ -28,11 +34,18 @@ export type SellingPay = (typeof SELLING_PAYS)[number];
 export const SELLING_TILES = ['s', 'm', 'l'] as const;
 export type SellingTiles = (typeof SELLING_TILES)[number];
 
+// The foot of the order: the bill laid out in full above the buttons, or one
+// compact bar (chips for the order's extras, the total that unfolds, and the
+// buttons in a row).
+export const SELLING_FOOTS = ['full', 'compact'] as const;
+export type SellingFoot = (typeof SELLING_FOOTS)[number];
+
 export type SellingLayout = {
   preset: SellingPreset;
   side: SellingSide;
   pay: SellingPay;
   tiles: SellingTiles;
+  foot: SellingFoot;
   // The catalogue's share of the screen, kept in [1/5, 4/5].
   split: number;
   // The order's share beside a payment column, kept in [1/5, 4/5].
@@ -69,8 +82,17 @@ const PRESET_LAYOUTS: Record<SellingPreset, SellingLayout> = {
     tiles: 'm',
     split: 0.62,
     paySplit: 1 / 2,
+    foot: 'full',
   },
-  quick: { preset: 'quick', side: 'left', pay: 'popup', tiles: 'm', split: 0.62, paySplit: 1 / 2 },
+  quick: {
+    preset: 'quick',
+    side: 'left',
+    pay: 'popup',
+    tiles: 'm',
+    split: 0.62,
+    paySplit: 1 / 2,
+    foot: 'compact',
+  },
   one_step: {
     preset: 'one_step',
     side: 'left',
@@ -78,6 +100,7 @@ const PRESET_LAYOUTS: Record<SellingPreset, SellingLayout> = {
     tiles: 's',
     split: 0.45,
     paySplit: 1 / 2,
+    foot: 'full',
   },
   big_menu: {
     preset: 'big_menu',
@@ -86,6 +109,7 @@ const PRESET_LAYOUTS: Record<SellingPreset, SellingLayout> = {
     tiles: 'l',
     split: 2 / 3,
     paySplit: 1 / 2,
+    foot: 'compact',
   },
   // The catalogue over the order on the left, the payment in a full-height
   // column on the right.
@@ -96,6 +120,7 @@ const PRESET_LAYOUTS: Record<SellingPreset, SellingLayout> = {
     tiles: 's',
     split: 1 / 2,
     paySplit: 2 / 3,
+    foot: 'full',
   },
 };
 
@@ -168,6 +193,7 @@ export function parseSavedLayout(value: unknown): SavedSellingLayout | null {
     pay: isOneOf(SELLING_PAYS, source.pay) ? source.pay : base.pay,
     split: share(source.split, base.split),
     paySplit: share(source.paySplit, base.paySplit),
+    foot: isOneOf(SELLING_FOOTS, source.foot) ? source.foot : base.foot,
   };
 }
 
@@ -185,6 +211,7 @@ export function resolveSellingLayout(
       pay: saved.pay,
       split: clampSplit(saved.split),
       paySplit: clampSplit(saved.paySplit),
+      foot: isOneOf(SELLING_FOOTS, saved.foot) ? saved.foot : presetLayout(saved.preset).foot,
     };
   }
   return presetLayout(defaultPreset(context));
@@ -207,7 +234,8 @@ export function layoutIsCustom(
     layout.pay !== base.pay ||
     (layout.tiles !== undefined && layout.tiles !== base.tiles) ||
     layout.split !== base.split ||
-    layout.paySplit !== base.paySplit
+    layout.paySplit !== base.paySplit ||
+    layout.foot !== base.foot
   );
 }
 

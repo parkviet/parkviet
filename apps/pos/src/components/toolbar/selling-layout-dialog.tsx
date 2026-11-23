@@ -8,6 +8,7 @@ import {
   SELLING_PAYS,
   SELLING_PRESETS,
   SELLING_SIDES,
+  SELLING_FOOTS,
   SELLING_TILES,
   type SellingLayout,
   type SellingPreset,
@@ -402,6 +403,16 @@ export function SellingLayoutDialog({ onClose }: { onClose: () => void }) {
               label: t(`sellingLayoutTiles_${value}`),
             }))}
             onChange={(tiles) => control.change({ tiles })}
+          />
+          <Segmented
+            label={t('sellingLayoutFoot')}
+            hint={t('sellingLayoutFootHint')}
+            value={layout.foot}
+            options={SELLING_FOOTS.map((value) => ({
+              value,
+              label: t(`sellingLayoutFoot_${value}`),
+            }))}
+            onChange={(foot) => control.change({ foot })}
           />
           <ShareRow
             label={t(top ? 'sellingLayoutSplitHeight' : 'sellingLayoutSplitWidth')}
