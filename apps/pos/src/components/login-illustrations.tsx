@@ -37,7 +37,7 @@ function Art({ id, children }: { id: string; children: ReactNode }) {
           <feDropShadow dx="0" dy="8" stdDeviation="9" floodColor="#0d2b48" floodOpacity=".16" />
         </filter>
       </defs>
-      <g fontFamily="system-ui, sans-serif">{children}</g>
+      <g fontFamily="inherit">{children}</g>
     </svg>
   );
 }
@@ -325,7 +325,7 @@ function PaymentArt() {
         strokeWidth={2}
       />
       <circle cx={88} cy={261} r={16} fill="#5fc3ab" />
-      <text x={88} y={266} textAnchor="middle" fontSize={14} fontWeight={800} fill={C.white}>
+      <text x={88} y={266} textAnchor="middle" fontSize={14} fontWeight={700} fill={C.white}>
         ₫
       </text>
 
@@ -357,7 +357,7 @@ function PaymentArt() {
         strokeWidth={3}
       />
       <QrMark x={190} y={100} size={96} />
-      <text x={238} y={232} textAnchor="middle" fontSize={17} fontWeight={800} fill={C.ink}>
+      <text x={238} y={232} textAnchor="middle" fontSize={17} fontWeight={700} fill={C.ink}>
         250.000 ₫
       </text>
       <Bar x={196} y={244} w={84} h={5} />
@@ -368,14 +368,14 @@ function PaymentArt() {
         <Card id={id} x={290} y={50} w={176} h={64} r={14} />
         <CheckBadge cx={316} cy={82} r={14} />
         <Bar x={338} y={70} w={78} h={6} fill={C.ink} />
-        <text x={338} y={98} fontSize={14} fontWeight={800} fill={C.teal}>
+        <text x={338} y={98} fontSize={14} fontWeight={700} fill={C.teal}>
           +250.000 ₫
         </text>
       </g>
 
       <Card id={id} x={300} y={186} w={164} h={110} r={14} />
       <circle cx={322} cy={212} r={9} fill={C.mint} />
-      <text x={322} y={216} textAnchor="middle" fontSize={10} fontWeight={800} fill={C.teal}>
+      <text x={322} y={216} textAnchor="middle" fontSize={10} fontWeight={700} fill={C.teal}>
         ₫
       </text>
       <Bar x={338} y={209} w={56} h={6} fill={C.ink} />
@@ -424,7 +424,7 @@ function CreditArt() {
         strokeWidth={18}
         strokeLinecap="round"
       />
-      <text x={cx} y={cy - 8} textAnchor="middle" fontSize={22} fontWeight={800} fill={C.ink}>
+      <text x={cx} y={cy - 8} textAnchor="middle" fontSize={22} fontWeight={700} fill={C.ink}>
         65%
       </text>
       <Bar x={cx - 26} y={cy + 4} w={52} h={5} />
@@ -506,7 +506,7 @@ function InventoryArt() {
       />
       <rect x={x + 46} y={y} width={20} height={90} fill="#d69a4c" />
       <rect x={x + 12} y={y + 40} width={64} height={38} rx={5} fill={C.white} />
-      <text x={x + 20} y={y + 56} fontSize={10} fontWeight={800} fill={C.ink}>
+      <text x={x + 20} y={y + 56} fontSize={10} fontWeight={700} fill={C.ink}>
         {label}
       </text>
       <text x={x + 20} y={y + 70} fontSize={9} fontWeight={600} fill={C.muted}>
@@ -530,7 +530,7 @@ function InventoryArt() {
             y={y - 1}
             textAnchor="middle"
             fontSize={10}
-            fontWeight={800}
+            fontWeight={700}
             fill={C.white}
           >
             FEFO
@@ -622,12 +622,12 @@ function ShiftArt() {
       />
       <path d="m48 78 20-20" stroke={C.blue} strokeWidth={2.4} strokeLinecap="round" />
       <Bar x={88} y={50} w={60} h={5} />
-      <text x={88} y={82} fontSize={20} fontWeight={800} fill={C.muted} letterSpacing={3}>
+      <text x={88} y={82} fontSize={20} fontWeight={700} fill={C.muted} letterSpacing={3}>
         ••••••
       </text>
       <path d="M182 44v48" stroke={C.line} strokeWidth={2} />
       <Bar x={198} y={50} w={58} h={5} />
-      <text x={198} y={82} fontSize={17} fontWeight={800} fill={C.ink}>
+      <text x={198} y={82} fontSize={17} fontWeight={700} fill={C.ink}>
         5.200.000
       </text>
 
@@ -683,7 +683,7 @@ function ShiftArt() {
                 y={65 + index * 44}
                 textAnchor="middle"
                 fontSize={12}
-                fontWeight={800}
+                fontWeight={700}
                 fill={C.white}
               >
                 {step}
@@ -752,7 +752,7 @@ function DisplayArt() {
             y={291}
             textAnchor="middle"
             fontSize={13}
-            fontWeight={800}
+            fontWeight={700}
             fill={index < 6 ? C.blue : C.muted}
           >
             {index < 6 ? char : ''}
@@ -811,7 +811,7 @@ function DisplayArt() {
           stroke={C.coral}
           strokeWidth={2.4}
         />
-        <text x={432} y={156} textAnchor="middle" fontSize={16} fontWeight={800} fill={C.coral}>
+        <text x={432} y={156} textAnchor="middle" fontSize={16} fontWeight={700} fill={C.coral}>
           ×2
         </text>
       </g>
@@ -840,7 +840,7 @@ function ReportsArt() {
         />
       ))}
       <Bar x={40} y={78} w={70} h={6} />
-      <text x={40} y={110} fontSize={22} fontWeight={800} fill={C.ink}>
+      <text x={40} y={110} fontSize={22} fontWeight={700} fill={C.ink}>
         48.250.000 ₫
       </text>
       <rect x={214} y={94} width={52} height={20} rx={10} fill={C.mint} />
@@ -913,7 +913,7 @@ function ReportsArt() {
         fill={C.mint}
       />
       <path d="M408 196v14a6 6 0 0 0 6 6h14" fill="#bfe9dc" />
-      <text x={395} y={244} textAnchor="middle" fontSize={14} fontWeight={800} fill={C.teal}>
+      <text x={395} y={244} textAnchor="middle" fontSize={14} fontWeight={700} fill={C.teal}>
         CSV
       </text>
       <path
@@ -926,7 +926,7 @@ function ReportsArt() {
         strokeLinejoin="round"
       />
       <rect x={410} y={268} width={40} height={22} rx={11} fill={C.white} stroke={C.line} />
-      <text x={430} y={283} textAnchor="middle" fontSize={10} fontWeight={800} fill={C.muted}>
+      <text x={430} y={283} textAnchor="middle" fontSize={10} fontWeight={700} fill={C.muted}>
         24h
       </text>
     </Art>

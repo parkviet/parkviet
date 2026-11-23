@@ -54,7 +54,7 @@
 }
 .login-hero-copy { max-width: 780px; }
 .login-split .login-eyebrow { margin: 0; font-size: var(--pos-small); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #9fd0ff; }
-.login-split .login-headline { margin: var(--pos-s3) 0; font-size: clamp(1.6rem, 3.2vw, 2.6rem); line-height: 1.15; letter-spacing: -.035em; font-weight: 800; color: white; text-wrap: balance; }
+.login-split .login-headline { margin: var(--pos-s3) 0; font-size: clamp(1.6rem, 3.2vw, 2.6rem); line-height: 1.15; letter-spacing: -.035em; font-weight: 700; color: white; text-wrap: balance; }
 .login-split .login-lead { margin: 0; max-width: 700px; font-size: clamp(.9rem, 1.2vw, 1.05rem); line-height: 1.6; color: var(--login-on-dark); }
 
 /* Carousel */
