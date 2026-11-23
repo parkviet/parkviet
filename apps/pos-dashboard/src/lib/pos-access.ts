@@ -45,6 +45,7 @@ export type PosPage =
   | 'setup'
   | 'store-model'
   | 'store-info'
+  | 'stores'
   | 'tax-info'
   | 'tax'
   | 'devices'
@@ -291,7 +292,8 @@ export function visibleNav(page: PosPage, access: PosAccess) {
     )
   // Tax declaration details are read by store readers and changed by writers,
   // like the store information they share fields with.
-  if (page === 'store-info' || page === 'tax-info') return canAdminister(access)
+  if (page === 'store-info' || page === 'tax-info' || page === 'stores')
+    return canAdminister(access)
   // The tax configuration API serves store writers only.
   if (page === 'tax') return canAdminister(access, true)
   if (page === 'setup' || page === 'store-model') return canAdminister(access, true)

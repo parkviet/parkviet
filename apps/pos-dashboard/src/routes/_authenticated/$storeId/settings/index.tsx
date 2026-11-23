@@ -8,8 +8,8 @@ function Settings() {
   const { storeId } = useStore()
   const { all } = useSettingsNav()
   return (
-    <div className="p-6">
-      <PageHeader title={t('storeSettings')} />
+    <div className="flex flex-col gap-6">
+      <PageHeader title={t('storeSettings')} sticky={false} />
       <div className="flex flex-col items-start gap-3">
         {all.map((entry) => (
           <Button key={entry.key} variant="outline" asChild>

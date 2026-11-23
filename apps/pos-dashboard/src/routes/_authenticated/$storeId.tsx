@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { PosCounterLink } from '../../components/pos-counter-link'
 import { PosSessionContext, useCreatePosSession } from '../../hooks/use-pos-session'
 import { setActiveStoreId } from '../../lib/active-store'
+import { isSettingsRailPath } from '../../lib/settings-area'
 import { rememberStore } from '../../lib/store-selection'
 import { PosNavigation } from '../../nav'
 
@@ -40,13 +41,7 @@ function PosShell() {
   const { t } = useTranslation()
   const value = useCreatePosSession()
   const path = useRouterState({ select: (state) => state.location.pathname })
-  // These pages keep a /settings URL but belong to the main Thiết lập sidebar.
-  const inSettings =
-    path.includes('/settings') &&
-    !path.includes('/settings/receipt-templates') &&
-    !path.includes('/settings/store-info') &&
-    !path.includes('/settings/tax-info') &&
-    !path.endsWith('/settings/tax')
+  const inSettings = isSettingsRailPath(path)
   return (
     <PosSessionContext.Provider value={value}>
       <PosNavigation />

@@ -122,6 +122,13 @@ description are the store information's own fields (never copied), and branches
 appear as business locations (location code, one head office). Its pickers read
 `GET /pos/tax_catalog` (`server/config/pos/vn_tax_catalog.yml`).
 
+The store list lives at `/settings/stores` (`pages/stores.tsx`, key `stores`), below
+tax configuration in the sidebar. It lists the signed-in user's stores (`user.stores`)
+and opens a new one with `POST /stores` (`hooks/use-stores.ts`, the same API and form
+as the admin dashboard's Settings → Stores; the button needs `update` on the store and
+the server allows only the current store's admin). The new store is added to the store
+switcher and opened, where POS setup asks for its first branch.
+
 Tax configuration lives at `/settings/tax` (`pages/tax-config.tsx`, key `tax`, shown
 and reachable to topology writers only, as the API serves no one else). It reads `GET /pos/tax_regime`, saves with `PUT` and previews
 the unsaved draft with `POST /pos/tax_regime/preview` (debounced; the server computes

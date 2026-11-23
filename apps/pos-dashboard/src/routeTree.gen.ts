@@ -74,6 +74,7 @@ import { Route as AuthenticatedStoreIdSettingsEinvoiceRouteImport } from './rout
 import { Route as AuthenticatedStoreIdSettingsReceiptTemplatesRouteImport } from './routes/_authenticated/$storeId/settings/receipt-templates'
 import { Route as AuthenticatedStoreIdSettingsSetupRouteImport } from './routes/_authenticated/$storeId/settings/setup'
 import { Route as AuthenticatedStoreIdSettingsStoreInfoRouteImport } from './routes/_authenticated/$storeId/settings/store-info'
+import { Route as AuthenticatedStoreIdSettingsStoresRouteImport } from './routes/_authenticated/$storeId/settings/stores'
 import { Route as AuthenticatedStoreIdSettingsSystemRouteImport } from './routes/_authenticated/$storeId/settings/system'
 import { Route as AuthenticatedStoreIdSettingsTaxRouteImport } from './routes/_authenticated/$storeId/settings/tax'
 import { Route as AuthenticatedStoreIdSettingsTaxInfoRouteImport } from './routes/_authenticated/$storeId/settings/tax-info'
@@ -493,6 +494,12 @@ const AuthenticatedStoreIdSettingsStoreInfoRoute =
     path: '/store-info',
     getParentRoute: () => AuthenticatedStoreIdSettingsRoute,
   } as any)
+const AuthenticatedStoreIdSettingsStoresRoute =
+  AuthenticatedStoreIdSettingsStoresRouteImport.update({
+    id: '/stores',
+    path: '/stores',
+    getParentRoute: () => AuthenticatedStoreIdSettingsRoute,
+  } as any)
 const AuthenticatedStoreIdSettingsSystemRoute =
   AuthenticatedStoreIdSettingsSystemRouteImport.update({
     id: '/system',
@@ -756,6 +763,7 @@ export interface FileRoutesByFullPath {
   '/$storeId/settings/receipt-templates': typeof AuthenticatedStoreIdSettingsReceiptTemplatesRouteWithChildren
   '/$storeId/settings/setup': typeof AuthenticatedStoreIdSettingsSetupRoute
   '/$storeId/settings/store-info': typeof AuthenticatedStoreIdSettingsStoreInfoRoute
+  '/$storeId/settings/stores': typeof AuthenticatedStoreIdSettingsStoresRoute
   '/$storeId/settings/system': typeof AuthenticatedStoreIdSettingsSystemRoute
   '/$storeId/settings/tax': typeof AuthenticatedStoreIdSettingsTaxRoute
   '/$storeId/settings/tax-info': typeof AuthenticatedStoreIdSettingsTaxInfoRoute
@@ -845,6 +853,7 @@ export interface FileRoutesByTo {
   '/$storeId/settings/einvoice': typeof AuthenticatedStoreIdSettingsEinvoiceRoute
   '/$storeId/settings/setup': typeof AuthenticatedStoreIdSettingsSetupRoute
   '/$storeId/settings/store-info': typeof AuthenticatedStoreIdSettingsStoreInfoRoute
+  '/$storeId/settings/stores': typeof AuthenticatedStoreIdSettingsStoresRoute
   '/$storeId/settings/system': typeof AuthenticatedStoreIdSettingsSystemRoute
   '/$storeId/settings/tax': typeof AuthenticatedStoreIdSettingsTaxRoute
   '/$storeId/settings/tax-info': typeof AuthenticatedStoreIdSettingsTaxInfoRoute
@@ -947,6 +956,7 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/settings/receipt-templates': typeof AuthenticatedStoreIdSettingsReceiptTemplatesRouteWithChildren
   '/_authenticated/$storeId/settings/setup': typeof AuthenticatedStoreIdSettingsSetupRoute
   '/_authenticated/$storeId/settings/store-info': typeof AuthenticatedStoreIdSettingsStoreInfoRoute
+  '/_authenticated/$storeId/settings/stores': typeof AuthenticatedStoreIdSettingsStoresRoute
   '/_authenticated/$storeId/settings/system': typeof AuthenticatedStoreIdSettingsSystemRoute
   '/_authenticated/$storeId/settings/tax': typeof AuthenticatedStoreIdSettingsTaxRoute
   '/_authenticated/$storeId/settings/tax-info': typeof AuthenticatedStoreIdSettingsTaxInfoRoute
@@ -1049,6 +1059,7 @@ export interface FileRouteTypes {
     | '/$storeId/settings/receipt-templates'
     | '/$storeId/settings/setup'
     | '/$storeId/settings/store-info'
+    | '/$storeId/settings/stores'
     | '/$storeId/settings/system'
     | '/$storeId/settings/tax'
     | '/$storeId/settings/tax-info'
@@ -1138,6 +1149,7 @@ export interface FileRouteTypes {
     | '/$storeId/settings/einvoice'
     | '/$storeId/settings/setup'
     | '/$storeId/settings/store-info'
+    | '/$storeId/settings/stores'
     | '/$storeId/settings/system'
     | '/$storeId/settings/tax'
     | '/$storeId/settings/tax-info'
@@ -1239,6 +1251,7 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/settings/receipt-templates'
     | '/_authenticated/$storeId/settings/setup'
     | '/_authenticated/$storeId/settings/store-info'
+    | '/_authenticated/$storeId/settings/stores'
     | '/_authenticated/$storeId/settings/system'
     | '/_authenticated/$storeId/settings/tax'
     | '/_authenticated/$storeId/settings/tax-info'
@@ -1745,6 +1758,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoreIdSettingsStoreInfoRouteImport
       parentRoute: typeof AuthenticatedStoreIdSettingsRoute
     }
+    '/_authenticated/$storeId/settings/stores': {
+      id: '/_authenticated/$storeId/settings/stores'
+      path: '/stores'
+      fullPath: '/$storeId/settings/stores'
+      preLoaderRoute: typeof AuthenticatedStoreIdSettingsStoresRouteImport
+      parentRoute: typeof AuthenticatedStoreIdSettingsRoute
+    }
     '/_authenticated/$storeId/settings/system': {
       id: '/_authenticated/$storeId/settings/system'
       path: '/system'
@@ -2203,6 +2223,7 @@ interface AuthenticatedStoreIdSettingsRouteChildren {
   AuthenticatedStoreIdSettingsReceiptTemplatesRoute: typeof AuthenticatedStoreIdSettingsReceiptTemplatesRouteWithChildren
   AuthenticatedStoreIdSettingsSetupRoute: typeof AuthenticatedStoreIdSettingsSetupRoute
   AuthenticatedStoreIdSettingsStoreInfoRoute: typeof AuthenticatedStoreIdSettingsStoreInfoRoute
+  AuthenticatedStoreIdSettingsStoresRoute: typeof AuthenticatedStoreIdSettingsStoresRoute
   AuthenticatedStoreIdSettingsSystemRoute: typeof AuthenticatedStoreIdSettingsSystemRoute
   AuthenticatedStoreIdSettingsTaxRoute: typeof AuthenticatedStoreIdSettingsTaxRoute
   AuthenticatedStoreIdSettingsTaxInfoRoute: typeof AuthenticatedStoreIdSettingsTaxInfoRoute
@@ -2221,6 +2242,8 @@ const AuthenticatedStoreIdSettingsRouteChildren: AuthenticatedStoreIdSettingsRou
       AuthenticatedStoreIdSettingsSetupRoute,
     AuthenticatedStoreIdSettingsStoreInfoRoute:
       AuthenticatedStoreIdSettingsStoreInfoRoute,
+    AuthenticatedStoreIdSettingsStoresRoute:
+      AuthenticatedStoreIdSettingsStoresRoute,
     AuthenticatedStoreIdSettingsSystemRoute:
       AuthenticatedStoreIdSettingsSystemRoute,
     AuthenticatedStoreIdSettingsTaxRoute: AuthenticatedStoreIdSettingsTaxRoute,

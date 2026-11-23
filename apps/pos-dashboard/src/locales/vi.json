@@ -4592,5 +4592,30 @@
       "empty": "Không có yêu cầu huỷ nào.",
       "failed": "Không xử lý được yêu cầu."
     }
+  },
+  "stores": {
+    "title": "Danh sách cửa hàng",
+    "subtitle": "Mỗi cửa hàng có danh mục sản phẩm, đơn hàng, phương thức thanh toán và cấu hình riêng. Chuyển giữa các cửa hàng bằng menu cửa hàng ở đầu thanh bên.",
+    "searchPlaceholder": "Tìm theo tên hoặc mã",
+    "empty": "Chưa có cửa hàng",
+    "add": "Mở cửa hàng mới",
+    "sheetDescription": "Cửa hàng mới được tạo sẵn kênh bán hàng, thị trường, kho và thuế riêng. Bạn sẽ là quản trị viên của cửa hàng này, và được đưa tới bước thiết lập chi nhánh đầu tiên.",
+    "create": "Tạo cửa hàng",
+    "creating": "Đang tạo…",
+    "created": "Đã tạo cửa hàng",
+    "current": "Đang dùng",
+    "switch": "Chuyển sang",
+    "required": "Bắt buộc",
+    "fields": {
+      "name": "Tên",
+      "code": "Mã",
+      "country_code": "Quốc gia",
+      "mail_from_address": "Email gửi đi",
+      "customer_support_email": "Email hỗ trợ"
+    },
+    "help": {
+      "country": "Quyết định tiền tệ, ngôn ngữ, vùng giao hàng và kho của cửa hàng.",
+      "copied": "Để trống để dùng email của cửa hàng hiện tại."
+    }
   }
 }

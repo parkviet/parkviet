@@ -13,6 +13,10 @@ Reference implementation: `PillTabs` and a branch page
 
 - Stack the header, the tabs, and the content with `space-y-6` or
   `flex flex-col gap-6`.
+- Never add page padding yourself. The shell wraps ordinary pages, and the
+  settings layout (`routes/_authenticated/$storeId/settings.tsx`) wraps
+  settings-rail pages with `SettingsContainer` from `@spree/dashboard-core`.
+  A page-level `p-4`/`p-6`/`container` double-pads.
 - A short introduction is `text-base text-muted-foreground`, above the first
   block. It is not a heading inside a card.
 - Every visible string goes through i18next, in both `locales/vi.json` and
