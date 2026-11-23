@@ -3,11 +3,16 @@ import type { Platform } from '@parkviet/pos-shared/platform-orders';
 import { contextFeature } from '@parkviet/pos-shared/pos-features';
 import { rateLabel } from '@parkviet/pos-shared/receipt-template/data';
 import { normalizeSalesSettings } from '@parkviet/pos-shared/sales-settings';
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { SellingLayoutControl } from '../hooks/use-selling-layout';
 import { useSellingWorkspace } from '../hooks/use-selling-workspace';
+import {
+  findDecreasableLine,
+  quantitiesByProduct,
+  quantitiesByVariant,
+} from '../lib/catalog-quantities';
 import { commandQueue } from '../lib/command-queue';
 import type { PosLineItem, PosWorkspace } from '../lib/pos-context';
 import { posFailureKey } from '../lib/request-failure';
@@ -1545,10 +1550,28 @@ export function SellingCatalog({ selling }: { selling: SellingWorkspace }) {
     soldOut,
     command,
     quickAdd,
+    run,
     calibration,
     tableAddExtra,
     enqueueScan,
   } = selling;
+  const activeLines = active?.line_items;
+  const variantQuantities = useMemo(() => quantitiesByVariant(activeLines), [activeLines]);
+  const productQuantities = useMemo(() => quantitiesByProduct(activeLines), [activeLines]);
+  const decrementVariant = active
+    ? (variantId: string) => {
+        void run(() =>
+          command(active, (current) => {
+            const target = findDecreasableLine(current.line_items, variantId);
+            if (!target) return Promise.resolve(current);
+            const lineId = target.sale_line_id ?? target.id;
+            return target.quantity > 1
+              ? workspaces.updateItem(current, lineId, { quantity: target.quantity - 1 })
+              : workspaces.removeItem(current, lineId);
+          }),
+        );
+      }
+    : undefined;
   return menuSurface ? (
     <MenuGrid
       branchId={selection.branchId}
@@ -1559,6 +1582,8 @@ export function SellingCatalog({ selling }: { selling: SellingWorkspace }) {
         data?.capabilities.includes('pos.menu.sold_out') ||
           data?.capabilities.includes('pos.menu.manage'),
       )}
+      selectedQuantities={productQuantities}
+      onDecrement={decrementVariant}
       onAdd={
         active
           ? (variantId, extra) =>
@@ -1577,9 +1602,11 @@ export function SellingCatalog({ selling }: { selling: SellingWorkspace }) {
       addDisabledReason={lockReason}
       scanNotice={scanNotice}
       soldOutVariantIds={soldOut}
+      selectedQuantities={variantQuantities}
       onScan={editable && !channelUnavailable ? (code) => enqueueScan.current(code) : undefined}
       scanTerminator={calibration.terminator}
       onAdd={active ? (variantId) => quickAdd(active, variantId) : undefined}
+      onDecrement={decrementVariant}
       onAddForm={
         active
           ? (variantId, quantity, extra) =>

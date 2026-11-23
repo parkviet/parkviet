@@ -1,9 +1,10 @@
 import { formatMoney } from '@parkviet/pos-shared/money';
-import { catalogViewOf, type PosCatalogView } from '@parkviet/pos-shared/pos-modules';
+import type { PosCatalogView } from '@parkviet/pos-shared/pos-modules';
 import { normalizeSalesSettings } from '@parkviet/pos-shared/sales-settings';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCatalog } from '../hooks/use-catalog';
+import type { SelectedQuantity } from '../lib/catalog-quantities';
 import type { PosWorkspace } from '../lib/pos-context';
 import { describeFailure } from '../lib/request-failure';
 import { AddItemForm } from './add-item-form';
@@ -25,6 +26,7 @@ export function CatalogSearch({
   branchId,
   workspaceId,
   onAdd,
+  onDecrement,
   onAddForm,
   onScan,
   scanTerminator = 'Enter',
@@ -32,11 +34,13 @@ export function CatalogSearch({
   addDisabled,
   addDisabledReason,
   soldOutVariantIds,
+  selectedQuantities,
 }: {
   storeId: string | null;
   branchId: string | null;
   workspaceId?: string | null;
   onAdd?: (variantId: string) => void;
+  onDecrement?: (variantId: string) => void;
   onAddForm?: (
     variantId: string,
     quantity: number,
@@ -52,6 +56,8 @@ export function CatalogSearch({
   // Dishes sold out today (`menu.sold_out`): dimmed and not added. The
   // server refuses them too.
   soldOutVariantIds?: ReadonlySet<string>;
+  // Quantities already in the active order, keyed by variant id.
+  selectedQuantities?: ReadonlyMap<string, SelectedQuantity>;
 }) {
   const { t } = useTranslation();
   const sales = normalizeSalesSettings(usePosSelection().context.data?.sales_settings);
@@ -59,11 +65,8 @@ export function CatalogSearch({
   const [input, setInput] = useState('');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  // The branch's industry profile picks the first view (a pharmacy reads a
-  // list, a fashion shop cards). A view the cashier picks stays for the session.
-  const { context } = usePosSelection();
-  const [chosenView, setView] = useState<PosCatalogView | null>(null);
-  const view = chosenView ?? catalogViewOf(context.data);
+  // Default to card view; a view the cashier picks stays for the session.
+  const [view, setView] = useState<PosCatalogView>('cards');
   const [advancedIds, setAdvancedIds] = useState<Record<string, boolean>>({});
   const result = useCatalog(storeId, branchId, query, page);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -192,8 +195,18 @@ export function CatalogSearch({
                 const soldOut = soldOutVariantIds?.has(item.id) === true;
                 const outOfStock =
                   !sales.allow_oversell && item.stock_on_hand !== null && item.stock_on_hand <= 0;
+                const selected = selectedQuantities?.get(item.id);
+                const selectedQty = selected?.quantity ?? 0;
+                const canAdd = Boolean(
+                  onAdd && !addDisabled && item.price !== null && !soldOut && !outOfStock,
+                );
+                const canDecrement = Boolean(onDecrement && !addDisabled && selected?.canDecrement);
                 return (
-                  <li key={item.id} data-sold-out={soldOut}>
+                  <li
+                    key={item.id}
+                    data-sold-out={soldOut}
+                    data-selected={selectedQty > 0 ? 'true' : undefined}
+                  >
                     <button
                       type="button"
                       className="catalog-product"
@@ -205,7 +218,7 @@ export function CatalogSearch({
                             ? addDisabledReason
                             : item.name
                       }
-                      disabled={!onAdd || addDisabled || item.price === null || soldOut || outOfStock}
+                      disabled={!canAdd}
                       onClick={() => onAdd?.(item.id)}
                     >
                       <div className="catalog-image" aria-hidden="true">
@@ -242,7 +255,9 @@ export function CatalogSearch({
                           ) : null}
                         </span>
                         {item.cost_price ? (
-                          <span className="catalog-meta">{t('catalogCost', { amount: item.cost_price })}</span>
+                          <span className="catalog-meta">
+                            {t('catalogCost', { amount: item.cost_price })}
+                          </span>
                         ) : null}
                         <span className="catalog-price">
                           {item.price !== null
@@ -256,6 +271,35 @@ export function CatalogSearch({
                         </span>
                       </span>
                     </button>
+                    {selectedQty > 0 ? (
+                      <div className="catalog-qty-stepper" data-testid="catalog-qty-stepper">
+                        <button
+                          type="button"
+                          className="catalog-qty-btn catalog-qty-btn--minus"
+                          aria-label={t('catalogDecreaseQuantity', { name: item.name })}
+                          disabled={!canDecrement}
+                          onClick={() => onDecrement?.(item.id)}
+                        >
+                          <PosIcon name="minus" />
+                        </button>
+                        <span className="catalog-qty-value" data-testid="catalog-qty-value">
+                          {selectedQty}
+                        </span>
+                        <button
+                          type="button"
+                          className="catalog-qty-btn catalog-qty-btn--plus"
+                          aria-label={t('catalogIncreaseQuantity', { name: item.name })}
+                          disabled={!canAdd}
+                          onClick={() => onAdd?.(item.id)}
+                        >
+                          <PosIcon name="plus" />
+                        </button>
+                      </div>
+                    ) : canAdd && view === 'cards' ? (
+                      <span className="catalog-qty-add" aria-hidden="true">
+                        <PosIcon name="plus" />
+                      </span>
+                    ) : null}
                     {/* Stays mounted while a command runs, so a refusal stays readable. */}
                     {onAddForm ? (
                       <details

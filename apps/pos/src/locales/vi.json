@@ -157,6 +157,8 @@
   "basketLines": "mặt hàng",
   "increaseQuantity": "Tăng số lượng {{name}}",
   "decreaseQuantity": "Giảm số lượng {{name}}",
+  "catalogIncreaseQuantity": "Thêm 1 {{name}}",
+  "catalogDecreaseQuantity": "Bớt 1 {{name}}",
   "lineOptions": "Giảm giá / đổi giá dòng",
   "orderMore": "Thao tác khác",
   "cancelDraftConfirm": "Hủy đơn nháp {{order}}? Hãy kiểm tra hàng và các khoản thu trước khi tiếp tục.",

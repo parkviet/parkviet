@@ -3,6 +3,7 @@ import { categoriesWithProducts } from '@parkviet/pos-shared/pos-menu';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMenu, useSoldOutToggle } from '../hooks/use-menu';
+import type { SelectedQuantity } from '../lib/catalog-quantities';
 import {
   addsInOneTap,
   describeMenuFailure,
@@ -52,7 +53,9 @@ export function MenuGrid({
   drinksFirst = false,
   menuLinesOnly = false,
   menuData,
+  selectedQuantities,
   onAdd,
+  onDecrement,
 }: {
   branchId: string | null;
   addDisabled: boolean;
@@ -64,7 +67,10 @@ export function MenuGrid({
   menuLinesOnly?: boolean;
   // A menu already at hand (the offline snapshot) instead of reading it.
   menuData?: PosMenu;
+  // Quantities already in the active order, keyed by product id.
+  selectedQuantities?: ReadonlyMap<string, SelectedQuantity>;
   onAdd?: MenuAdd;
+  onDecrement?: (variantId: string) => void;
 }) {
   const { t } = useTranslation();
   const menu = useMenu(branchId, !menuData);
@@ -238,18 +244,29 @@ export function MenuGrid({
       {data && items.length === 0 ? <p className="muted">{t('menuEmpty')}</p> : null}
       {data ? (
         <ul className="menu-tiles" aria-label={t('menuTitle')}>
-          {items.map((item) => (
-            <MenuTile
-              key={item.product_id}
-              item={item}
-              menu={data}
-              disabled={addDisabled || !onAdd}
-              disabledReason={addDisabledReason}
-              canSetSoldOut={canSetSoldOut}
-              onPick={() => void pick(item)}
-              onToggleSoldOut={() => void toggleSoldOut(item)}
-            />
-          ))}
+          {items.map((item) => {
+            const oneTapVariant = addsInOneTap(data, item) ? item.variants[0] : undefined;
+            const selected = selectedQuantities?.get(item.product_id);
+            return (
+              <MenuTile
+                key={item.product_id}
+                item={item}
+                menu={data}
+                disabled={addDisabled || !onAdd}
+                disabledReason={addDisabledReason}
+                canSetSoldOut={canSetSoldOut}
+                selectedQuantity={selected?.quantity ?? 0}
+                canDecrement={Boolean(
+                  oneTapVariant && onDecrement && !addDisabled && selected?.canDecrement,
+                )}
+                onPick={() => void pick(item)}
+                onDecrement={
+                  oneTapVariant && onDecrement ? () => onDecrement(oneTapVariant.id) : undefined
+                }
+                onToggleSoldOut={() => void toggleSoldOut(item)}
+              />
+            );
+          })}
         </ul>
       ) : null}
       {data && sheetItem && onAdd ? (
@@ -276,7 +293,10 @@ function MenuTile({
   disabled,
   disabledReason,
   canSetSoldOut,
+  selectedQuantity,
+  canDecrement,
   onPick,
+  onDecrement,
   onToggleSoldOut,
 }: {
   item: PosMenuProduct;
@@ -284,7 +304,10 @@ function MenuTile({
   disabled: boolean;
   disabledReason?: string;
   canSetSoldOut: boolean;
+  selectedQuantity: number;
+  canDecrement: boolean;
   onPick: () => void;
+  onDecrement?: () => void;
   onToggleSoldOut: () => void;
 }) {
   const { t } = useTranslation();
@@ -293,35 +316,75 @@ function MenuTile({
     (variant) => variant.schedule_id && variant.price !== variant.list_price,
   );
   const scheduled = Boolean(scheduledVariant);
+  const canAdd = !disabled && !item.sold_out;
   return (
-    <li className="menu-tile" data-sold-out={item.sold_out}>
-      <button
-        type="button"
-        className="menu-tile-pick"
-        disabled={disabled || item.sold_out}
-        title={item.sold_out ? t('menuSoldOut') : disabledReason}
-        aria-label={item.sold_out ? `${item.name} · ${t('menuSoldOut')}` : item.name}
-        onClick={onPick}
-      >
-        {item.image_url ? (
-          <img src={item.image_url} alt="" loading="lazy" />
-        ) : (
-          <span className="menu-tile-placeholder" aria-hidden="true">
-            {item.name.slice(0, 1)}
+    <li
+      className="menu-tile"
+      data-sold-out={item.sold_out}
+      data-selected={selectedQuantity > 0 ? 'true' : undefined}
+    >
+      <div className="menu-tile-card">
+        <button
+          type="button"
+          className="menu-tile-pick"
+          disabled={!canAdd}
+          title={item.sold_out ? t('menuSoldOut') : disabledReason}
+          aria-label={item.sold_out ? `${item.name} · ${t('menuSoldOut')}` : item.name}
+          onClick={onPick}
+        >
+          {item.image_url ? (
+            <img src={item.image_url} alt="" loading="lazy" />
+          ) : (
+            <span className="menu-tile-placeholder" aria-hidden="true">
+              {item.name.slice(0, 1)}
+            </span>
+          )}
+          <strong>{item.name}</strong>
+          <span className="menu-tile-price">
+            {prices[0] ? formatMoney(prices[0], menu.currency) : '—'}
+            {prices.length > 1 ? '+' : ''}
+            {scheduled ? (
+              <small className="menu-tile-schedule">
+                {scheduledVariant?.price_label || t('menuScheduledPrice')}
+              </small>
+            ) : null}
           </span>
-        )}
-        <strong>{item.name}</strong>
-        <span className="menu-tile-price">
-          {prices[0] ? formatMoney(prices[0], menu.currency) : '—'}
-          {prices.length > 1 ? '+' : ''}
-          {scheduled ? (
-            <small className="menu-tile-schedule">
-              {scheduledVariant?.price_label || t('menuScheduledPrice')}
-            </small>
+          {item.sold_out ? (
+            <span className="menu-tile-sold-out">{t('menuSoldOutShort')}</span>
           ) : null}
-        </span>
-        {item.sold_out ? <span className="menu-tile-sold-out">{t('menuSoldOutShort')}</span> : null}
-      </button>
+        </button>
+        {selectedQuantity > 0 ? (
+          <div className="catalog-qty-stepper" data-testid="catalog-qty-stepper">
+            {onDecrement ? (
+              <button
+                type="button"
+                className="catalog-qty-btn catalog-qty-btn--minus"
+                aria-label={t('catalogDecreaseQuantity', { name: item.name })}
+                disabled={!canDecrement}
+                onClick={onDecrement}
+              >
+                <PosIcon name="minus" />
+              </button>
+            ) : null}
+            <span className="catalog-qty-value" data-testid="catalog-qty-value">
+              {selectedQuantity}
+            </span>
+            <button
+              type="button"
+              className="catalog-qty-btn catalog-qty-btn--plus"
+              aria-label={t('catalogIncreaseQuantity', { name: item.name })}
+              disabled={!canAdd}
+              onClick={onPick}
+            >
+              <PosIcon name="plus" />
+            </button>
+          </div>
+        ) : canAdd ? (
+          <span className="catalog-qty-add" aria-hidden="true">
+            <PosIcon name="plus" />
+          </span>
+        ) : null}
+      </div>
       {canSetSoldOut ? (
         <button type="button" className="menu-tile-sold-out-toggle" onClick={onToggleSoldOut}>
           {t(item.sold_out ? 'menuBackOnSale' : 'menuMarkSoldOut')}

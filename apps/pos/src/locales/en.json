@@ -157,6 +157,8 @@
   "basketLines": "items",
   "increaseQuantity": "Increase quantity of {{name}}",
   "decreaseQuantity": "Decrease quantity of {{name}}",
+  "catalogIncreaseQuantity": "Add one {{name}}",
+  "catalogDecreaseQuantity": "Remove one {{name}}",
   "lineOptions": "Line discount / price override",
   "orderMore": "More actions",
   "cancelDraftConfirm": "Cancel draft {{order}}? Check its items and received funds before continuing.",

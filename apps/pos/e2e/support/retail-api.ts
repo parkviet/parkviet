@@ -36,6 +36,8 @@ export type Family =
   | 'lease'
   | 'items'
   | 'items.append'
+  | 'item.update'
+  | 'item.remove'
   | 'sale_line.edit'
   | 'sale_line.remove'
   | 'kitchen.send'
@@ -1280,6 +1282,8 @@ async function handle(world: World, route: Route) {
     if (/\/lease$/.test(path)) return 'lease';
     if (/\/items$/.test(path)) return 'items';
     if (/\/items\/append$/.test(path)) return 'items.append';
+    if (/\/items\/[^/]+\/update$/.test(path)) return 'item.update';
+    if (/\/items\/[^/]+\/remove$/.test(path)) return 'item.remove';
     if (/\/sale_lines\/[^/]+$/.test(path)) return method === 'DELETE' ? 'sale_line.remove' : 'sale_line.edit';
     if (/\/kitchen_sends$/.test(path)) return 'kitchen.send';
     if (/\/courses\/\d+\/fire$/.test(path)) return 'course.fire';
@@ -1560,6 +1564,16 @@ function run(world: World, family: Family, path: string, body: Record<string, un
             menu: priced, sent: 0, version: 0, batch, course, seat, courseStatus });
         }
       }
+      sheet.revision += 1;
+      return reply(sheet);
+    }
+    case 'item.update':
+    case 'item.remove': {
+      const targetId = segments[5];
+      const line = sheet?.lines.find((row) => row.saleLineId === targetId);
+      if (!sheet || !line) break;
+      if (family === 'item.remove') sheet.lines = sheet.lines.filter((row) => row !== line);
+      else if (body.quantity !== undefined) line.quantity = Number(body.quantity);
       sheet.revision += 1;
       return reply(sheet);
     }

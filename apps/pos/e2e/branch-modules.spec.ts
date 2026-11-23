@@ -72,14 +72,16 @@ test('a server without modules hides nothing: the stock link stays', async ({ pa
   );
 });
 
-for (const [profile, view, other] of [
-  ['nha_thuoc', 'list', 'cards'],
-  ['thoi_trang', 'cards', 'list'],
+for (const [profile, hint] of [
+  ['nha_thuoc', 'list'],
+  ['thoi_trang', 'cards'],
 ] as const) {
-  test(`a ${profile} branch opens the catalogue as ${view}, and the cashier's choice stays`, async ({ page }) => {
+  test(`a ${profile} branch opens the catalogue as cards by default, and the cashier can switch to list`, async ({
+    page,
+  }) => {
     const world = newWorld({
       modules: { 'retail.units': true, 'retail.traceability': true },
-      profile: { key: profile, version: 1, display: { catalog_view: view } },
+      profile: { key: profile, version: 1, display: { catalog_view: hint } },
     });
     addSheet(world, 'ws_1');
     await installRetailApi(page, world);
@@ -88,12 +90,47 @@ for (const [profile, view, other] of [
     await page.getByRole('searchbox', { name: 'Tìm hàng hoặc quét mã' }).fill('Gạo');
     await page.getByRole('button', { name: 'Tìm hàng', exact: true }).click();
     const results = page.getByRole('list', { name: 'Kết quả tìm hàng' });
-    await expect(results).toHaveClass(new RegExp(`catalog-results--${view}`));
-    await expect(page.getByRole('button', { name: view === 'list' ? 'Danh sách' : 'Thẻ', exact: true })).toHaveAttribute(
+    await expect(results).toHaveClass(/catalog-results--cards/);
+    await expect(page.getByRole('button', { name: 'Thẻ', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    await page.getByRole('button', { name: other === 'list' ? 'Danh sách' : 'Thẻ', exact: true }).click();
-    await expect(results).toHaveClass(new RegExp(`catalog-results--${other}`));
+    await page.getByRole('button', { name: 'Danh sách', exact: true }).click();
+    await expect(results).toHaveClass(/catalog-results--list/);
   });
 }
+
+test('selecting a product shows its quantity badge on the card and reveals +/- on hover', async ({
+  page,
+}) => {
+  const world = newWorld({
+    modules: { 'retail.units': true },
+    profile: { key: 'tap_hoa_sieu_thi', version: 1, display: { catalog_view: 'list' } },
+  });
+  addSheet(world, 'ws_1');
+  await installRetailApi(page, world);
+  await login(page);
+  await openTab(page, 'ws_1');
+
+  const results = page.getByRole('list', { name: 'Kết quả tìm hàng' });
+  await expect(results).toHaveClass(/catalog-results--cards/);
+
+  const card = results.locator('li').first();
+  await expect(card.getByTestId('catalog-qty-stepper')).toHaveCount(0);
+
+  // Clicking the card adds 1 and shows the selected quantity badge.
+  await card.locator('.catalog-product').click();
+  await expect(card.getByTestId('catalog-qty-value')).toHaveText('1');
+
+  // Hovering reveals the +/- stepper to increment and decrement directly.
+  await card.hover();
+  await card.locator('.catalog-qty-btn--plus').click();
+  await expect(card.getByTestId('catalog-qty-value')).toHaveText('2');
+
+  await card.locator('.catalog-qty-btn--minus').click();
+  await expect(card.getByTestId('catalog-qty-value')).toHaveText('1');
+
+  // Decrementing from 1 removes the line and clears the badge.
+  await card.locator('.catalog-qty-btn--minus').click();
+  await expect(card.getByTestId('catalog-qty-stepper')).toHaveCount(0);
+});
