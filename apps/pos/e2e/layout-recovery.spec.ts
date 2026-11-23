@@ -53,7 +53,8 @@ test('reload restores the selected draft and page from the server without restor
   await page.getByLabel('Email nhân viên').fill('staff@example.test');
   await page.getByLabel('Mật khẩu', { exact: true }).fill('password');
   await page.getByRole('button', { name: 'Đăng nhập bán hàng', exact: true }).click();
-  const workspace = page.getByRole('region', { name: 'Đơn nháp trên quầy này' });
+  // The order tabs sit in the header, the rest of the drafts in their region.
+  const workspace = page.locator('main.pos-layout');
   await expect(workspace.locator('[role="tab"][data-workspace-id="ws_A1"]')).toBeVisible();
   const createStarted = page.waitForRequest((request) => request.url().endsWith('/pos/workspaces') && request.method() === 'POST');
   await workspace.getByRole('button', { name: 'Đơn nháp mới' }).click();

@@ -15,11 +15,11 @@ const KEY_STEP = 0.05;
 const DRAG_THRESHOLD = 4;
 
 // The handle between two panels of a split. Dragging follows the pointer
-// (held between a third and two thirds, pulled onto the marks) and changes
+// (held between a fifth and four fifths, pulled onto the marks) and changes
 // the grid of the box it sits in right there, with no label: only the colour
 // of the handle tells when it hits a limit. The share is kept when the
 // pointer is released. A double press puts the sample's share back. The
-// arrow keys move it by 5% and Home/End jump to a third and two thirds.
+// arrow keys move it by 5% and Home/End jump to a fifth and four fifths.
 // Under 768px the stylesheet hides it and the panels stack.
 export function SplitDivider({
   share,

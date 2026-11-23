@@ -1891,3 +1891,29 @@ kbd { padding: var(--pos-s1); border: 1px solid var(--pos-border); border-radius
 .quick-ticket > .ticket-footer { flex: none; }
 .selling-layout-dialog small, .selling-layout-dialog legend { letter-spacing: normal; text-transform: none; }
 .selling-layout-dialog .dialog-actions { position: sticky; bottom: 0; margin-top: var(--pos-s4); padding-top: var(--pos-s3); background: var(--pos-surface); border-top: 1px solid var(--pos-border); }
+
+/* Order tabs in the header: the strip between the branch picker and the tools,
+   tabs as soft pills and the new-order button as a bare plus. */
+.header-slot { display: flex; flex: 1 1 0; min-width: 0; align-self: stretch; align-items: center; }
+.header-slot:empty { display: none; }
+.pos-layout .header:has(.header-slot:not(:empty)) .header-title { display: none; }
+.pos-layout .header-slot .draft-toolbar { flex: 1 1 0; min-width: 0; align-items: center; gap: 2px; margin: 0; padding: 0; background: transparent; border: 0; border-radius: 0; }
+.pos-layout .header-slot .tablist { flex: 0 1 auto; gap: 2px; align-items: center; scrollbar-width: none; }
+.pos-layout .header-slot .workspace-tab strong { font-size: .875rem; font-weight: 500; }
+.pos-layout .header-slot .tablist::-webkit-scrollbar { display: none; }
+.pos-layout .header-slot .tablist .workspace-tab > button[role='tab'] { min-width: 0; min-height: var(--pos-target); padding: 0 calc(var(--pos-s1) + 26px) 0 var(--pos-s3); border: 0; border-radius: 10px; background: transparent; color: var(--pos-muted); font-weight: 500; }
+.pos-layout .header-slot .tablist .workspace-tab > button[role='tab']:hover { background: var(--pos-bg); }
+.pos-layout .header-slot .tablist .workspace-tab > button[aria-selected='true'] { border: 0; background: var(--pos-blue-soft); color: var(--pos-blue); }
+.pos-layout .header-slot .tablist .workspace-tab-close { width: 28px; height: 28px; min-width: 28px; min-height: 28px; border-radius: 6px; }
+.pos-layout .header-slot .draft-toolbar > :is(.draft-new, .floor-toggle) { display: inline-flex; align-items: center; justify-content: center; width: var(--pos-target); min-width: var(--pos-target); min-height: var(--pos-target); padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--pos-muted); }
+.pos-layout .header-slot .draft-toolbar > :is(.draft-new, .floor-toggle):not(:disabled):hover, .pos-layout .header-slot .floor-toggle[aria-pressed='true'] { background: var(--pos-bg); color: var(--pos-blue); }
+.pos-layout .header-slot .draft-filter summary { min-width: var(--pos-target); min-height: var(--pos-target); padding: 0; color: var(--pos-muted); }
+.pos-layout .header-slot .draft-filter > label { top: calc(100% + var(--pos-s2)); color: var(--pos-ink); }
+
+/* Catalogue on top with a payment column: the payment takes the full height on the right, the catalogue sits over the order on the left. */
+@media (min-width: 768px) {
+  .selling-frame[data-pay-full] { grid-template-columns: var(--selling-tracks); grid-template-rows: minmax(0,1fr); }
+  .selling-group[data-rows] { grid-template-columns: minmax(0,1fr); grid-template-rows: var(--selling-tracks); }
+}
+.sl-thumb-classic { grid-template-columns: 2fr 1fr; }
+.sl-classic-left { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; min-height: 0; }

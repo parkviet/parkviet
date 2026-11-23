@@ -55,7 +55,7 @@ describe('device selling layout', () => {
     stored.set(sellingLayoutKey('b1'), '{not json');
     expect(savedSellingLayout('b1')).toBeNull();
     stored.set(sellingLayoutKey('b1'), JSON.stringify({ preset: 'quick', split: 0.99 }));
-    expect(savedSellingLayout('b1')?.split).toBe(2 / 3);
+    expect(savedSellingLayout('b1')?.split).toBe(4 / 5);
   });
 
   it('keeps the choice for the session when storage refuses the write', () => {

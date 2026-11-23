@@ -23,9 +23,9 @@ const quick = {
 const retail = { modules: { 'fnb.tables': false } };
 
 describe('clampSplit', () => {
-  it('holds the share between a third and two thirds', () => {
-    expect(clampSplit(0.1)).toBe(1 / 3);
-    expect(clampSplit(0.95)).toBe(2 / 3);
+  it('holds the share between a fifth and four fifths', () => {
+    expect(clampSplit(0.1)).toBe(1 / 5);
+    expect(clampSplit(0.95)).toBe(4 / 5);
     expect(clampSplit(0.4)).toBe(0.4);
   });
 
@@ -35,6 +35,8 @@ describe('clampSplit', () => {
     expect(clampSplit(0.51)).toBe(1 / 2);
     expect(clampSplit(0.65)).toBe(2 / 3);
     expect(clampSplit(0.46)).toBe(0.46);
+    expect(clampSplit(0.21)).toBe(1 / 5);
+    expect(clampSplit(0.79)).toBe(4 / 5);
   });
 
   it('reads a value that is not a number as an even split', () => {
@@ -45,7 +47,7 @@ describe('clampSplit', () => {
 describe('presets', () => {
   it('lets tables first through only with the table module', () => {
     expect(allowedPresets(tables)).toContain('tables_first');
-    expect(allowedPresets(quick)).toEqual(['quick', 'one_step', 'big_menu']);
+    expect(allowedPresets(quick)).toEqual(['quick', 'one_step', 'big_menu', 'classic']);
     expect(presetLockReason('tables_first', quick)).toBe('needs_tables');
     expect(presetLockReason('quick', quick)).toBeNull();
   });
@@ -109,8 +111,23 @@ describe('resolveSellingLayout', () => {
     expect(resolveSellingLayout(tables, undefined).preset).toBe('tables_first');
   });
 
+  it('offers the classic layout to a device but never as a branch default', () => {
+    const context = {
+      ...quick,
+      selection: { branch_id: 'b1' },
+      branches: [{ id: 'b1', selling_preset: 'classic' }],
+    };
+    expect(defaultPreset(context)).toBe('quick');
+    const saved = parseSavedLayout({ preset: 'classic' });
+    expect(resolveSellingLayout(tables, saved)).toMatchObject({
+      preset: 'classic',
+      side: 'top',
+      pay: 'column',
+    });
+  });
+
   it('keeps a stored share inside the limits', () => {
-    expect(resolveSellingLayout(quick, { ...saved, split: 0.9 }).split).toBe(2 / 3);
+    expect(resolveSellingLayout(quick, { ...saved, split: 0.9 }).split).toBe(4 / 5);
   });
 });
 
@@ -120,7 +137,7 @@ describe('parseSavedLayout', () => {
     expect(parseSavedLayout({ preset: 'kiosk' })).toBeNull();
     expect(
       parseSavedLayout({ preset: 'quick', side: 'bottom', pay: 'column', split: 5, paySplit: 'x' }),
-    ).toEqual({ preset: 'quick', side: 'left', pay: 'column', split: 2 / 3, paySplit: 0.5 });
+    ).toEqual({ preset: 'quick', side: 'left', pay: 'column', split: 4 / 5, paySplit: 0.5 });
   });
 });
 
@@ -144,5 +161,6 @@ describe('layout helpers', () => {
     expect(splitTracks(0.6, true)).toBe('minmax(0,0.4fr) 12px minmax(0,0.6fr)');
     expect(shareLabel(1 / 3)).toBe('⅓');
     expect(shareLabel(0.62)).toBe('62%');
+    expect(shareLabel(1 - 2 / 3)).toBe('⅓');
   });
 });

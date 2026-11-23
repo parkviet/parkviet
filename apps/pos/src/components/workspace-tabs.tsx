@@ -3,7 +3,8 @@ import type { Platform } from '@parkviet/pos-shared/platform-orders';
 import { contextFeature } from '@parkviet/pos-shared/pos-features';
 import { rateLabel } from '@parkviet/pos-shared/receipt-template/data';
 import { normalizeSalesSettings } from '@parkviet/pos-shared/sales-settings';
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { SellingLayoutControl } from '../hooks/use-selling-layout';
 import { useSellingWorkspace } from '../hooks/use-selling-workspace';
@@ -24,6 +25,7 @@ import { DiscountForm } from './discount-form';
 import { DisplayPinControl } from './display-pin-control';
 import { GuestNameField } from './guest-name-field';
 import { GuestOrderTray } from './guest-order-tray';
+import { useHeaderSlot } from './header-slot';
 import { KioskOrderTray } from './kiosk-order-tray';
 import { KitchenHistory } from './kitchen-history';
 import { MealBanner } from './meal-banner';
@@ -212,118 +214,135 @@ export function WorkspaceTabsView({
   }, [payingFor, payingSettled, payingActiveId]);
   const deliveryDetailsRef = useRef<HTMLDetailsElement>(null);
   const showFloor = selling.showFloor;
+  // The order tabs sit in the header when the shell offers it a place.
+  const headerSlot = useHeaderSlot();
+  const inHeader = (node: ReactNode) => (headerSlot ? createPortal(node, headerSlot) : node);
 
   return (
     <section className="draft-workspace" aria-label={t('draftList')}>
-      <div className="draft-toolbar">
-        {tabSurface ? (
+      {inHeader(
+        <div className="draft-toolbar" data-in-header={headerSlot ? 'true' : undefined}>
+          {tabSurface ? (
+            <button
+              type="button"
+              className="floor-toggle"
+              aria-pressed={showTabs}
+              aria-label={showTabs ? t('tableBackToSale') : t('tabListTitle')}
+              title={showTabs ? t('tableBackToSale') : t('tabListTitle')}
+              onClick={() => {
+                setTabsChoice(!showTabs);
+                if (!showTabs && selling.showFloor) setFloorChoice(false);
+              }}
+            >
+              <PosIcon name={showTabs ? 'back' : 'grid'} />
+            </button>
+          ) : null}
+          {tableSurface ? (
+            <button
+              type="button"
+              className="floor-toggle"
+              aria-label={showFloor ? t('tableBackToSale') : t('tableFloorOpen')}
+              title={showFloor ? t('tableBackToSale') : t('tableFloorOpen')}
+              onClick={() => setFloorChoice(!showFloor)}
+            >
+              <PosIcon name={showFloor ? 'back' : 'grid'} />
+            </button>
+          ) : null}
           <button
             type="button"
-            className="floor-toggle"
-            aria-pressed={showTabs}
+            className="draft-new"
+            aria-label={t('newDraft')}
+            title={t('newDraft')}
+            disabled={busy || !canCreate}
             onClick={() => {
-              setTabsChoice(!showTabs);
-              if (!showTabs && selling.showFloor) setFloorChoice(false);
+              createDraft();
+              if (showFloor) setFloorChoice(false);
             }}
           >
-            <PosIcon name={showTabs ? 'back' : 'grid'} />{' '}
-            {showTabs ? t('tableBackToSale') : t('tabListTitle')}
+            <PosIcon name="plus" />
           </button>
-        ) : null}
-        {tableSurface ? (
-          <button type="button" className="floor-toggle" onClick={() => setFloorChoice(!showFloor)}>
-            <PosIcon name={showFloor ? 'back' : 'grid'} />{' '}
-            {showFloor ? t('tableBackToSale') : t('tableFloorOpen')}
-          </button>
-        ) : null}
-        <button
-          type="button"
-          disabled={busy || !canCreate}
-          onClick={() => {
-            createDraft();
-            if (showFloor) setFloorChoice(false);
-          }}
-        >
-          <PosIcon name="plus" /> {t('newDraft')}
-        </button>
-        <details className="draft-filter">
-          <summary title={t('search')}>
-            <PosIcon name="search" />
-            <span className="visually-hidden">{t('search')}</span>
-          </summary>
-          <label>
-            {t('search')}
-            <input value={query} onChange={(event) => setQuery(event.target.value)} />
-          </label>
-        </details>
-        {hidden.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => {
-              setHidden([]);
-              workspaces.rememberClosed([]);
-            }}
-          >
-            {t('showClosedViews')}
-          </button>
-        ) : null}
-        <div className="tablist" ref={tablist} role="tablist" aria-label={t('draftList')}>
-          {visible.map((workspace) => {
-            const phase = workspacePhase(workspace.id === active?.id ? active : workspace);
-            const seat = tableOrderOf(workspace);
-            return (
-              <span key={workspace.id} className="workspace-tab" role="presentation">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-label={t('invoiceTab', { number: tabNumbers[workspace.id] })}
-                  aria-description={t(`workspacePhase_${phase}`)}
-                  data-workspace-id={workspace.id}
-                  title={t(`workspacePhase_${phase}`)}
-                  aria-selected={workspace.id === active?.id}
-                  onClick={() => {
-                    setActiveId(workspace.id);
-                    workspaces.rememberView(workspace.id, workspaces.page);
-                    if (showFloor) setFloorChoice(false);
-                  }}
-                >
-                  <strong>{t('invoiceTab', { number: tabNumbers[workspace.id] })}</strong>
-                  {/* The table a table order is served at. */}
-                  {seat.table ? (
-                    <span className="workspace-table-name">
-                      {tableOrderName(seat.table.name, seat.label)}
-                    </span>
-                  ) : isTab(workspace) ? (
-                    <span className="workspace-table-name">{workspace.tab_name}</span>
-                  ) : null}
-                  {/* The call number the counter calls out, once the order has one. */}
-                  {workspace.order_number != null ? (
-                    <span className="workspace-call-number" data-testid="tab-call-number">
-                      {t('callNumberShort', { number: workspace.order_number })}
-                    </span>
-                  ) : null}
-                  {/* Selling is the default; only a state that changes what to do is badged. */}
-                  {phase === 'editing' ? null : (
-                    <span className={`workspace-phase workspace-phase-${phase}`} aria-hidden="true">
-                      {t(`workspacePhase_${phase}`)}
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className="workspace-tab-close"
-                  aria-label={t('closeTabAction', { number: tabNumbers[workspace.id] })}
-                  title={t('closeTabAction', { number: tabNumbers[workspace.id] })}
-                  disabled={closing === workspace.id || Boolean(pendingCounts[workspace.id])}
-                  onClick={() => void requestClose(workspace)}
-                >
-                  <PosIcon name="close" />
-                </button>
-              </span>
-            );
-          })}
-        </div>
-      </div>
+          <details className="draft-filter">
+            <summary title={t('search')}>
+              <PosIcon name="search" />
+              <span className="visually-hidden">{t('search')}</span>
+            </summary>
+            <label>
+              {t('search')}
+              <input value={query} onChange={(event) => setQuery(event.target.value)} />
+            </label>
+          </details>
+          {hidden.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => {
+                setHidden([]);
+                workspaces.rememberClosed([]);
+              }}
+            >
+              {t('showClosedViews')}
+            </button>
+          ) : null}
+          <div className="tablist" ref={tablist} role="tablist" aria-label={t('draftList')}>
+            {visible.map((workspace) => {
+              const phase = workspacePhase(workspace.id === active?.id ? active : workspace);
+              const seat = tableOrderOf(workspace);
+              return (
+                <span key={workspace.id} className="workspace-tab" role="presentation">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-label={t('invoiceTab', { number: tabNumbers[workspace.id] })}
+                    aria-description={t(`workspacePhase_${phase}`)}
+                    data-workspace-id={workspace.id}
+                    title={t(`workspacePhase_${phase}`)}
+                    aria-selected={workspace.id === active?.id}
+                    onClick={() => {
+                      setActiveId(workspace.id);
+                      workspaces.rememberView(workspace.id, workspaces.page);
+                      if (showFloor) setFloorChoice(false);
+                    }}
+                  >
+                    <strong>{t('invoiceTab', { number: tabNumbers[workspace.id] })}</strong>
+                    {/* The table a table order is served at. */}
+                    {seat.table ? (
+                      <span className="workspace-table-name">
+                        {tableOrderName(seat.table.name, seat.label)}
+                      </span>
+                    ) : isTab(workspace) ? (
+                      <span className="workspace-table-name">{workspace.tab_name}</span>
+                    ) : null}
+                    {/* The call number the counter calls out, once the order has one. */}
+                    {workspace.order_number != null ? (
+                      <span className="workspace-call-number" data-testid="tab-call-number">
+                        {t('callNumberShort', { number: workspace.order_number })}
+                      </span>
+                    ) : null}
+                    {/* Selling is the default; only a state that changes what to do is badged. */}
+                    {phase === 'editing' ? null : (
+                      <span
+                        className={`workspace-phase workspace-phase-${phase}`}
+                        aria-hidden="true"
+                      >
+                        {t(`workspacePhase_${phase}`)}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="workspace-tab-close"
+                    aria-label={t('closeTabAction', { number: tabNumbers[workspace.id] })}
+                    title={t('closeTabAction', { number: tabNumbers[workspace.id] })}
+                    disabled={closing === workspace.id || Boolean(pendingCounts[workspace.id])}
+                    onClick={() => void requestClose(workspace)}
+                  >
+                    <PosIcon name="close" />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        </div>,
+      )}
       {closeRequest ? (
         <CloseTabDialog
           workspace={closeRequest.workspace}

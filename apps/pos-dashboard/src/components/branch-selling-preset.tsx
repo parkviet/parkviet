@@ -1,8 +1,8 @@
 import { describeFailure } from '@parkviet/pos-shared/request-failure'
 import {
   presetLockReason,
-  SELLING_PRESETS,
-  type SellingPreset,
+  BRANCH_PRESETS,
+  type BranchPreset,
 } from '@parkviet/pos-shared/selling-layout'
 import { LayoutGridIcon } from '@spree/dashboard-ui/icons'
 import { useState } from 'react'
@@ -13,7 +13,7 @@ import { ModelCard, ModelNotice } from './setup/model-ui'
 
 // A miniature of each sample screen: the blocks are the panels, the accent
 // block the payment.
-function Thumb({ preset }: { preset: SellingPreset | 'auto' }) {
+function Thumb({ preset }: { preset: BranchPreset | 'auto' }) {
   const block = 'rounded-sm bg-muted-foreground/25'
   const accent = 'rounded-sm bg-primary/70'
   if (preset === 'tables_first')
@@ -71,7 +71,7 @@ export function BranchSellingPreset() {
   const current = branch.selling_preset ?? ''
   const context = { modules }
 
-  async function choose(value: SellingPreset | '') {
+  async function choose(value: BranchPreset | '') {
     if (value === current || write.isPending || !canWrite) return
     setNotice(null)
     try {
@@ -86,9 +86,9 @@ export function BranchSellingPreset() {
     }
   }
 
-  const options: { value: SellingPreset | ''; locked: boolean }[] = [
+  const options: { value: BranchPreset | ''; locked: boolean }[] = [
     { value: '', locked: false },
-    ...SELLING_PRESETS.map((preset) => ({
+    ...BRANCH_PRESETS.map((preset) => ({
       value: preset,
       locked: presetLockReason(preset, context) !== null,
     })),

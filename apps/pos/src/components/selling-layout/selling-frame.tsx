@@ -102,6 +102,8 @@ export function PaySheetHeader({
 // the left, right or top; payment in a dialog, in place of the order, under
 // it or in a column of its own) with draggable dividers between the panels.
 // The screens keep their own panels and rules; the frame only places them.
+// With the catalogue on top and a payment column, the payment takes the full
+// height on the right and the catalogue sits over the order on the left.
 //
 // - `payment` stays open in its place when the layout pays `below` or in a
 //   `column`.
@@ -197,20 +199,54 @@ export function SellingFrame({
     />
   );
 
+  // Catalogue over the order on the left, the payment column on the right.
+  const payColumnBeside = top && pay === 'column' && paymentRegion !== null;
+  const frame = payColumnBeside ? (
+    <div
+      className="selling-frame"
+      data-side={side}
+      data-pay={pay}
+      data-pay-full="true"
+      data-card={card || undefined}
+      style={{ '--selling-tracks': splitTracks(paySplit, false) } as CSSProperties}
+    >
+      <div
+        className="selling-group"
+        data-rows="true"
+        style={{ '--selling-tracks': splitTracks(split, false) } as CSSProperties}
+      >
+        {catalogRegion}
+        {divider}
+        {orderRegion}
+      </div>
+      <SplitDivider
+        share={paySplit}
+        mirrored={false}
+        vertical={false}
+        names={[names.order, names.payment]}
+        onCommit={(share) => change({ paySplit: share })}
+        onReset={() => resetShare('paySplit')}
+      />
+      {paymentRegion}
+    </div>
+  ) : null;
+
   return (
     <>
-      <div
-        className="selling-frame"
-        data-side={side}
-        data-pay={pay}
-        data-card={card || undefined}
-        aria-hidden={dialogOpen || undefined}
-        style={{ '--selling-tracks': splitTracks(split, mirrored) } as CSSProperties}
-      >
-        {mirrored ? group : catalogRegion}
-        {divider}
-        {mirrored ? catalogRegion : group}
-      </div>
+      {frame ?? (
+        <div
+          className="selling-frame"
+          data-side={side}
+          data-pay={pay}
+          data-card={card || undefined}
+          aria-hidden={dialogOpen || undefined}
+          style={{ '--selling-tracks': splitTracks(split, mirrored) } as CSSProperties}
+        >
+          {mirrored ? group : catalogRegion}
+          {divider}
+          {mirrored ? catalogRegion : group}
+        </div>
+      )}
       {dialogOpen ? (
         <PayDialog label={payLabel} onClose={() => onPayClose?.()}>
           {sheet}

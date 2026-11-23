@@ -49,6 +49,21 @@ function Thumb({ preset }: { preset: SellingPreset }) {
         </span>
       </span>
     );
+  if (preset === 'classic')
+    return (
+      <span className="sl-thumb sl-thumb-classic" aria-hidden="true">
+        <span className="sl-classic-left">
+          <span className="sl-cell sl-menu" />
+          <span className="sl-cell sl-cart">
+            <span className="sl-lines" />
+          </span>
+        </span>
+        <span className="sl-cell sl-accent sl-pay-column">
+          <span className="sl-lines" />
+          <span className="sl-pay" />
+        </span>
+      </span>
+    );
   if (preset === 'big_menu')
     return (
       <span className="sl-thumb sl-thumb-big" aria-hidden="true">
@@ -98,6 +113,22 @@ function Preview({ layout }: { layout: SellingLayout }) {
     </span>
   );
   const catalog = <span className="sl-box sl-catalog">{t('sellingLayoutCatalog')}</span>;
+  // Catalogue over the order on the left, the payment column on the right.
+  if (side === 'top' && pay === 'column')
+    return (
+      <span
+        className="sl-preview"
+        role="img"
+        aria-label={t(`sellingLayoutPreviewNote_${pay}`)}
+        style={{ gridTemplateColumns: fr(paySplit, false) }}
+      >
+        <span className="sl-group sl-stack" style={{ gridTemplateRows: fr(split, false) }}>
+          {catalog}
+          {order}
+        </span>
+        {payment}
+      </span>
+    );
   return (
     <span
       className="sl-preview"
@@ -279,7 +310,8 @@ export function SellingLayoutDialog({ onClose }: { onClose: () => void }) {
         <div>
           <h2 id={titleId}>{t('sellingLayoutTitle')}</h2>
           <p className="sl-subtitle">
-            {t('sellingLayoutIntro')} {t('sellingLayoutSubtitleBranch', { name: branchDefaultName })}
+            {t('sellingLayoutIntro')}{' '}
+            {t('sellingLayoutSubtitleBranch', { name: branchDefaultName })}
           </p>
         </div>
         <button

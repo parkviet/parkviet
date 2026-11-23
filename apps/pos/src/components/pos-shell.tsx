@@ -29,6 +29,7 @@ import {
 import { AppUpdatePrompt } from './app-update-prompt';
 import { ContextPickerForm } from './context-selector';
 import { ContextSetupDialog } from './context-setup-dialog';
+import { HeaderSlotProvider } from './header-slot';
 import { ConnectionBadge, ShiftStatus } from './header-status';
 import { HoverTip } from './hover-tip';
 import { OfflineBanner } from './offline-banner';
@@ -136,6 +137,8 @@ function ShellFrame() {
   const server = useConnectivity();
   const [busy, setBusy] = useState(false);
   const [calibrating, setCalibrating] = useState(false);
+  // Where the selling screen puts its order tabs, in the header.
+  const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
   const [logoutError, setLogoutError] = useState('');
   const [intentsVersion, setIntentsVersion] = useState(0);
   const [financialVersion, setFinancialVersion] = useState(0);
@@ -374,6 +377,7 @@ function ShellFrame() {
             {pickerOpen ? <ContextPickerForm onClose={closePicker} /> : null}
           </div>
         </details>
+        {isSale ? <div className="header-slot" ref={setHeaderSlot} /> : null}
         {isSale && context.data ? (
           <SellingToolbar
             data={context.data}
@@ -526,7 +530,9 @@ function ShellFrame() {
             <p>{t('capabilitiesEmpty')}</p>
           ) : null}
         </div>
-        <Outlet />
+        <HeaderSlotProvider value={isSale ? headerSlot : null}>
+          <Outlet />
+        </HeaderSlotProvider>
       </section>
     </main>
   );

@@ -5,8 +5,17 @@ import { contextModule, sellingLayoutOf } from './pos-modules';
 // A sample is only a starting set of options: the base screen (table service,
 // quick counter or counter tabs) still comes from the branch's modules
 // (`sellingLayoutOf`), and these options only decide how its panels sit.
-export const SELLING_PRESETS = ['tables_first', 'quick', 'one_step', 'big_menu'] as const;
+export const SELLING_PRESETS = ['tables_first', 'quick', 'one_step', 'big_menu', 'classic'] as const;
 export type SellingPreset = (typeof SELLING_PRESETS)[number];
+
+// The samples a branch can make its default. The classic screen (the counter
+// before samples existed) is a device's own choice only.
+export const BRANCH_PRESETS = ['tables_first', 'quick', 'one_step', 'big_menu'] as const;
+export type BranchPreset = (typeof BRANCH_PRESETS)[number];
+
+export function isBranchPreset(value: unknown): value is BranchPreset {
+  return BRANCH_PRESETS.includes(value as BranchPreset);
+}
 
 export const SELLING_SIDES = ['left', 'right', 'top'] as const;
 export type SellingSide = (typeof SELLING_SIDES)[number];
@@ -24,18 +33,18 @@ export type SellingLayout = {
   side: SellingSide;
   pay: SellingPay;
   tiles: SellingTiles;
-  // The catalogue's share of the screen, kept in [1/3, 2/3].
+  // The catalogue's share of the screen, kept in [1/5, 4/5].
   split: number;
-  // The order's share beside a payment column, kept in [1/3, 2/3].
+  // The order's share beside a payment column, kept in [1/5, 4/5].
   paySplit: number;
 };
 
 // What a device keeps: the tile size lives in the device's menu density.
 export type SavedSellingLayout = Omit<SellingLayout, 'tiles'>;
 
-export const MIN_SPLIT = 1 / 3;
-export const MAX_SPLIT = 2 / 3;
-export const SPLIT_SNAPS = [1 / 3, 1 / 2, 2 / 3] as const;
+export const MIN_SPLIT = 1 / 5;
+export const MAX_SPLIT = 4 / 5;
+export const SPLIT_SNAPS = [1 / 5, 1 / 3, 1 / 2, 2 / 3, 4 / 5] as const;
 // A share this close to a snap point sits on it.
 export const SNAP_RANGE = 0.02;
 
@@ -43,8 +52,8 @@ export function isSellingPreset(value: unknown): value is SellingPreset {
   return SELLING_PRESETS.includes(value as SellingPreset);
 }
 
-// Held between a third and two thirds, and pulled onto 1/3, 1/2 and 2/3 when
-// within 0.02 of one. A value that is not a number reads as an even split.
+// Held between a fifth and four fifths, and pulled onto 1/5, 1/3, 1/2, 2/3
+// and 4/5 when within 0.02 of one. A value that is not a number reads as an even split.
 export function clampSplit(value: number): number {
   if (!Number.isFinite(value)) return 1 / 2;
   const held = Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, value));
@@ -77,6 +86,16 @@ const PRESET_LAYOUTS: Record<SellingPreset, SellingLayout> = {
     tiles: 'l',
     split: 2 / 3,
     paySplit: 1 / 2,
+  },
+  // The catalogue over the order on the left, the payment in a full-height
+  // column on the right.
+  classic: {
+    preset: 'classic',
+    side: 'top',
+    pay: 'column',
+    tiles: 's',
+    split: 1 / 2,
+    paySplit: 2 / 3,
   },
 };
 
@@ -126,7 +145,7 @@ export function inferredPreset(context: SellingLayoutContext): SellingPreset {
 export function defaultPreset(context: SellingLayoutContext): SellingPreset {
   const branchId = context?.selection?.branch_id;
   const chosen = context?.branches?.find((branch) => branch.id === branchId)?.selling_preset;
-  return isSellingPreset(chosen) && allowedPresets(context).includes(chosen)
+  return isBranchPreset(chosen) && allowedPresets(context).includes(chosen)
     ? chosen
     : inferredPreset(context);
 }
@@ -199,10 +218,15 @@ export function splitTracks(share: number, mirrored: boolean, dividerPx = 12): s
   return (mirrored ? tracks.reverse() : tracks).join(' ');
 }
 
-// The share as the screens write it: a third, a half, two thirds, else a percent.
+// The share as the screens write it: a fifth, a third, a half, two thirds, four fifths, else a percent.
+// The rest of a share (1 - 2/3) is a hair off 1/3 in floating point, so the
+// thirds are matched within a small range.
 export function shareLabel(share: number): string {
-  if (share === 1 / 3) return '⅓';
-  if (share === 1 / 2) return '½';
-  if (share === 2 / 3) return '⅔';
+  const near = (value: number) => Math.abs(share - value) < 1e-9;
+  if (near(1 / 5)) return '⅕';
+  if (near(1 / 3)) return '⅓';
+  if (near(1 / 2)) return '½';
+  if (near(2 / 3)) return '⅔';
+  if (near(4 / 5)) return '⅘';
   return `${Math.round(share * 100)}%`;
 }

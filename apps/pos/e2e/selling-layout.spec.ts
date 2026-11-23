@@ -114,7 +114,7 @@ test('a changed option is marked, and one button brings the sample back', async 
   expect(await stored(page)).toMatchObject({ preset: 'quick', side: 'left' });
 });
 
-test('the divider moves by the keyboard between a third and two thirds, and resets', async ({
+test('the divider moves by the keyboard between a fifth and four fifths, and resets', async ({
   page,
 }, info) => {
   test.skip(info.project.name === 'mobile', 'the panels stack on a phone, with no divider');
@@ -126,15 +126,15 @@ test('the divider moves by the keyboard between a third and two thirds, and rese
   await page.keyboard.press('ArrowLeft');
   await expect(divider).toHaveAttribute('aria-valuenow', '57');
   await page.keyboard.press('Home');
-  await expect(divider).toHaveAttribute('aria-valuenow', '33');
+  await expect(divider).toHaveAttribute('aria-valuenow', '20');
   await page.keyboard.press('ArrowLeft');
-  await expect(divider).toHaveAttribute('aria-valuenow', '33');
+  await expect(divider).toHaveAttribute('aria-valuenow', '20');
   await page.keyboard.press('End');
-  await expect(divider).toHaveAttribute('aria-valuenow', '67');
-  expect((await stored(page)).split).toBeCloseTo(2 / 3, 5);
+  await expect(divider).toHaveAttribute('aria-valuenow', '80');
+  expect((await stored(page)).split).toBeCloseTo(4 / 5, 5);
 
   await page.reload();
-  await expect(page.getByRole('separator').first()).toHaveAttribute('aria-valuenow', '67');
+  await expect(page.getByRole('separator').first()).toHaveAttribute('aria-valuenow', '80');
   await page.getByRole('separator').first().dblclick();
   await expect(page.getByRole('separator').first()).toHaveAttribute('aria-valuenow', '62');
 });
@@ -153,14 +153,14 @@ test('dragging the divider changes the panels at once and keeps the share on rel
   const y = box.y + box.height / 2;
   await page.mouse.move(box.x + box.width / 2, y);
   await page.mouse.down();
-  // Far past the left limit: held at a third, and flagged as the limit.
+  // Far past the left limit: held at a fifth, and flagged as the limit.
   await page.mouse.move(frameBox.x + 10, y, { steps: 5 });
   await expect(divider).toHaveAttribute('data-limit', 'true');
   await page.mouse.up();
-  await expect(divider).toHaveAttribute('aria-valuenow', '33');
-  expect((await stored(page)).split).toBeCloseTo(1 / 3, 5);
+  await expect(divider).toHaveAttribute('aria-valuenow', '20');
+  expect((await stored(page)).split).toBeCloseTo(1 / 5, 5);
   const catalog = await page.locator('.selling-catalog').boundingBox();
-  expect(catalog?.width ?? 0).toBeLessThan(frameBox.width * 0.4);
+  expect(catalog?.width ?? 0).toBeLessThan(frameBox.width * 0.25);
 });
 
 test('F9 opens the payment of an order with dishes in a dialog, and Esc closes it', async ({

@@ -45,8 +45,14 @@ Pure rules (presets, `clampSplit`, which preset a branch may use) are in
   that chose nothing starts from the branch's `selling_preset` in the context
   (set in the dashboard Features tab), else the one its modules point at. Tile
   size is not stored there; it is the device's menu density.
-- Every resizable split stays between 1/3 and 2/3 and snaps to 1/3, 1/2 and 2/3
-  within 0.02, by drag or by keyboard on the divider.
+- Every resizable split stays between 1/5 and 4/5 and snaps to 1/5, 1/3, 1/2,
+  2/3 and 4/5 within 0.02, by drag or by keyboard on the divider.
+- The `classic` sample (catalogue over the order, payment in a full-height
+  column on the right) is a device choice only; a branch default is one of
+  `BRANCH_PRESETS`.
+- On screens 1100px and wider the counter's order tabs and new-order button sit
+  in the header (`header-slot.tsx`); on a tablet or phone they keep their own
+  row.
 - F9 pays the order in whichever way the layout pays. Toolbar popovers list only
   settings that exist and apply at the branch: never add a control that does
   nothing.
