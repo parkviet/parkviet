@@ -178,6 +178,7 @@ export function PaymentPanel({
   mealSponsorAmount,
   storedValueCards = false,
   layout = 'panel',
+  showDue = false,
   defaultTender = 'cash',
   autoPrepare = true,
   cashTip = false,
@@ -191,6 +192,9 @@ export function PaymentPanel({
   // cash keypad side by side, the rarer methods below and one finish button.
   // Both run the same tender commands.
   layout?: PaymentLayout;
+  // Panel: the column that stays open beside the order leads with what the
+  // guest owes and offers the notes a guest may hand over for a cash payment.
+  showDue?: boolean;
   // The method picked first; on the full screen, VietQR shows its QR at once.
   defaultTender?: MethodKind;
   // Full screen: the QR may be prepared by itself (the workspace is the
@@ -257,13 +261,19 @@ export function PaymentPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [evidenceOpen, setEvidenceOpen] = useState(false);
+  // The note the guest hands over, picked in the column: it starts the cash
+  // evidence dialog with that amount (whole VND digits).
+  const [handedHint, setHandedHint] = useState<string | null>(null);
   // The dialog's opener ("Thanh toán") is disabled once a tender is prepared,
   // so a dialog put on hold hands keyboard focus to the resume button instead
   // of leaving it on the page body.
   const resumeButton = useRef<HTMLButtonElement>(null);
   const evidenceWasOpen = useRef(false);
   useEffect(() => {
-    if (evidenceWasOpen.current && !evidenceOpen) resumeButton.current?.focus();
+    if (evidenceWasOpen.current && !evidenceOpen) {
+      resumeButton.current?.focus();
+      setHandedHint(null);
+    }
     evidenceWasOpen.current = evidenceOpen;
   }, [evidenceOpen]);
   const [creditOpen, setCreditOpen] = useState(false);
@@ -470,6 +480,15 @@ export function PaymentPanel({
     (row): row is { method: PosPaymentMethod; raw: string; amount: string } =>
       row.amount !== null && BigInt(row.amount) > 0n,
   );
+
+  // A cash payment of its own: the note the guest hands over, and the change
+  // it leaves. Another method alongside it has no note to hand over.
+  const cashRow = rows.length === 1 && rows[0]?.method.kind === 'cash' ? rows[0] : null;
+  const cashDue = cashRow?.amount != null ? BigInt(cashRow.amount) : null;
+  const handedChange =
+    cashDue !== null && handedHint !== null && BigInt(handedHint) >= cashDue
+      ? BigInt(handedHint) - cashDue
+      : null;
 
   function confirmEvidence(inputs: TenderEvidenceItemInput[]) {
     const kindOf = (attemptId: string) =>
@@ -906,6 +925,7 @@ export function PaymentPanel({
         onConfirm={confirmEvidence}
         onCancel={cancelPrepared}
         onShowVietqr={canShowVietqr ? showVietqr : undefined}
+        initialHanded={handedHint ?? undefined}
         onHold={() => {
           setEvidenceOpen(false);
           setError('');
@@ -1431,6 +1451,12 @@ export function PaymentPanel({
 
   return (
     <section className="payment-panel" aria-label={t('paymentTitle')}>
+      {showDue && !completed ? (
+        <div className="payment-due-card" data-testid="payment-due">
+          <small>{t('amountDue')}</small>
+          <strong>{formatMoney(defaultAmount || '0', currency)}</strong>
+        </div>
+      ) : null}
       <h3 id="pos-payment-title">{t('paymentMethods')}</h3>
       {drawerNote}
       {traceBox}
@@ -1546,6 +1572,33 @@ export function PaymentPanel({
               </label>
             ))}
           </div>
+          {showDue && cashRow && cashDue !== null && cashDue > 0n ? (
+            <div className="payment-handed-quick">
+              <fieldset aria-label={t('quickPayNotes')}>
+                {[cashDue, ...cashSuggestions(cashDue, 3)].map((value) => {
+                  const digits = String(value);
+                  return (
+                    <button
+                      key={digits}
+                      type="button"
+                      aria-pressed={handedHint === digits}
+                      aria-label={t('quickPayHanded', { amount: groupVndDigits(digits) })}
+                      disabled={locked || preparedAttempts.length > 0}
+                      onClick={() => setHandedHint(handedHint === digits ? null : digits)}
+                    >
+                      {groupVndDigits(digits)}
+                    </button>
+                  );
+                })}
+              </fieldset>
+              {handedChange !== null ? (
+                <p className="payment-handed-change">
+                  <span>{t('paymentChange')}</span>
+                  <strong>{formatMoney(String(handedChange), currency)}</strong>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           {invalidRows.length > 0 ? (
             <p className="error" role="alert">
               {t('paymentAmountInvalid')}

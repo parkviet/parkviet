@@ -51,10 +51,10 @@ test('quick settings change the menu tiles at once and are kept on this device',
   await expect(page.getByRole('list', { name: 'Thực đơn' })).toHaveAttribute('data-density', 'dense');
   expect(await page.evaluate(() => localStorage.getItem('parkviet-pos:menu-density'))).toBe('dense');
 
-  await popover.getByRole('checkbox', { name: 'Ảnh món' }).uncheck();
+  await popover.getByRole('switch', { name: 'Ảnh món' }).uncheck();
   await expect(page.getByRole('list', { name: 'Thực đơn' })).toHaveAttribute('data-images', 'false');
 
-  await popover.getByRole('checkbox', { name: 'Âm báo khi quét' }).uncheck();
+  await popover.getByRole('switch', { name: 'Âm báo khi quét' }).uncheck();
   expect(await page.evaluate(() => localStorage.getItem('parkviet-pos:scan-sounds'))).toBe('off');
 });
 
@@ -62,7 +62,7 @@ test('the printer popover offers the automatic print of this device only', async
   await openCounter(page);
   await toolbar(page).getByRole('button', { name: 'Máy in' }).click();
   const popover = page.getByRole('dialog', { name: 'Máy in và mẫu in' });
-  const auto = popover.getByRole('checkbox', { name: /Tự in hoá đơn sau khi thanh toán/ });
+  const auto = popover.getByRole('switch', { name: /Tự in hoá đơn sau khi thanh toán/ });
   await expect(auto).not.toBeChecked();
   await auto.check();
   expect(await page.evaluate(() => localStorage.getItem('parkviet-pos:auto-print:sale'))).toBe('on');

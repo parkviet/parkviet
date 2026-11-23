@@ -52,7 +52,7 @@ async function install(page: Page, branchCount: number, registerCounts: number[]
 
 // The shift form is a dialog opened by the "Vào ca" button.
 async function openShift(page: Page) {
-  await page.getByRole('button', { name: 'Vào ca', exact: true }).click();
+  await page.locator('.header').getByRole('button', { name: 'Vào ca', exact: true }).click();
   await page.getByRole('dialog', { name: 'Mở ca bán hàng' }).getByRole('button', { name: 'Mở ca', exact: true }).click();
 }
 
@@ -142,7 +142,7 @@ test('sole branch and multiple registers prompt only for the remaining choice', 
 
 test('no-register branch hides the control and supports a real-shaped branch shift and invoice commands', async ({ page }, testInfo) => {
   const state = await install(page, 1, [0]);
-  await expect(page.getByRole('button', { name: 'Vào ca', exact: true })).toBeVisible();
+  await expect(page.locator('.header').getByRole('button', { name: 'Vào ca', exact: true })).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.locator('.pos-context-details > summary').click();
   await expect(page.getByRole('combobox', { name: 'Quầy', exact: true })).toHaveCount(0);
@@ -207,14 +207,14 @@ test('failed option requests cannot become a branch-only selling session', async
   const state = await install(page, 1, [0], true);
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByRole('dialog').getByRole('alert')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Vào ca', exact: true })).toHaveCount(0);
+  await expect(page.locator('.header').getByRole('button', { name: 'Vào ca', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Đơn nháp mới' })).toBeDisabled();
   expect(state.writes).toEqual([]);
 });
 
 test('recovery check explains missing, denied and failed lookups, retaining evidence until confirmed', async ({ page }) => {
   const state = await install(page, 1, [0]);
-  await expect(page.getByRole('button', { name: 'Vào ca', exact: true })).toBeVisible();
+  await expect(page.locator('.header').getByRole('button', { name: 'Vào ca', exact: true })).toBeVisible();
   let status = 404;
   const lookups: string[] = [];
   await page.route('**/pos/command_receipts?*', (route) => {

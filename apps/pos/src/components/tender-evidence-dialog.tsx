@@ -59,6 +59,7 @@ export function TenderEvidenceDialog({
   onShowVietqr,
   names = {},
   timeZone = 'Asia/Ho_Chi_Minh',
+  initialHanded,
 }: {
   names?: TicketNames;
   timeZone?: string;
@@ -74,6 +75,8 @@ export function TenderEvidenceDialog({
   // Present when VietQR is offered: turns the manual bank tender into a
   // VietQR tender of the same amount, so the QR shows here.
   onShowVietqr?: () => Promise<boolean>;
+  // The cash the guest hands over, when the cashier already picked a note.
+  initialHanded?: string;
 }) {
   const { t } = useTranslation();
   const titleId = useId();
@@ -95,7 +98,7 @@ export function TenderEvidenceDialog({
   const qrTimeLeft = vietqrTimeLeft(qr?.expires_at, now);
   const finishButton = useRef<HTMLButtonElement>(null);
   const currency = workspace.totals?.currency ?? attempts[0]?.currency ?? 'VND';
-  const [handedInput, setHandedInput] = useState('');
+  const [handedInput, setHandedInput] = useState(initialHanded ?? '');
   const [reference, setReference] = useState('');
   const [account, setAccount] = useState('');
   const [receivedInput, setReceivedInput] = useState('');

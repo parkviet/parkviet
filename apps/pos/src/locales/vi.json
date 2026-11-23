@@ -2666,7 +2666,7 @@
   "toolbarSellingLayout": "Chọn màn bán hàng",
   "toolbarHelpPayOpen": "Thanh toán đơn đang mở, theo cách thanh toán của màn bán hàng",
   "sellingLayoutTitle": "Chọn màn bán hàng",
-  "sellingLayoutIntro": "Chọn một màn mẫu rồi chỉnh bố cục theo ý. Lựa chọn được nhớ trên máy này, cho chi nhánh này.",
+  "sellingLayoutIntro": "Áp dụng cho máy này.",
   "sellingLayoutPresets": "Màn mẫu",
   "sellingLayoutPreset_tables_first": "Bàn trước, gọi món sau",
   "sellingLayoutPresetHint_tables_first": "Màn chính là sơ đồ bàn. Chạm bàn để mở đơn, gọi món, gửi bếp rồi thanh toán khi khách về.",
@@ -2735,5 +2735,15 @@
   "toolbarQuickSettingsTitle": "Cài đặt nhanh của máy này",
   "toolbarQuickScanSounds": "Âm báo khi quét",
   "toolbarQuickBranchSettings": "Cài đặt chi nhánh",
-  "toolbarQuickDeviceNote": "Các lựa chọn này chỉ lưu trên máy này."
+  "toolbarQuickDeviceNote": "Các lựa chọn này chỉ lưu trên máy này.",
+  "quickPrebill": "Tạm tính",
+  "quickSubtotal_one": "Tạm tính ({{count}} món)",
+  "quickSubtotal_other": "Tạm tính ({{count}} món)",
+  "sellingLayoutSubtitleBranch": "Mặc định của chi nhánh: {{name}}.",
+  "sellingLayoutStepPick": "Chọn màn mẫu",
+  "toolbarScopeDevice": "trên máy này",
+  "toolbarPrinterReceipts": "Hoá đơn",
+  "toolbarPrinterTemplatesEmpty": "Chi nhánh chưa có mẫu in nào để chọn.",
+  "toolbarQuickMenu": "Thực đơn",
+  "toolbarQuickScanner": "Quét mã"
 }

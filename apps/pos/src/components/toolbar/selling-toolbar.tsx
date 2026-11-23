@@ -104,6 +104,7 @@ export function SellingToolbar({
             className="toolbar-button has-tip"
             aria-label={t('toolbarSellingLayout')}
             aria-haspopup="dialog"
+            aria-expanded={layoutOpen}
             onClick={() => {
               setOpenId(null);
               setLayoutOpen(true);

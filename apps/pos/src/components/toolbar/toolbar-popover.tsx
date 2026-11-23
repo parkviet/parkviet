@@ -8,6 +8,7 @@ export function ToolbarPopover({
   icon,
   label,
   title,
+  scope,
   open,
   onOpenChange,
   children,
@@ -17,6 +18,8 @@ export function ToolbarPopover({
   label: string;
   // The popover's own heading.
   title: string;
+  // A short tag beside the heading saying how far the choices reach.
+  scope?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
@@ -65,7 +68,10 @@ export function ToolbarPopover({
       </button>
       {open ? (
         <div className="toolbar-popover" id={panelId} role="dialog" aria-label={title}>
-          <h2 className="toolbar-popover-title">{title}</h2>
+          <h2 className="toolbar-popover-title">
+            {title}
+            {scope ? <span className="toolbar-scope">{scope}</span> : null}
+          </h2>
           {children}
         </div>
       ) : null}

@@ -19,12 +19,18 @@ import { useTranslation } from 'react-i18next';
 import { type SellingLayoutControl, useSellingLayout } from '../../hooks/use-selling-layout';
 import { usePosSelection } from '../pos-selection';
 
-// A miniature of a sample screen for its card.
+// A miniature of a sample screen for its card: the menu as tiles, the order
+// as lines with a pay bar, the tables as a floor.
 function Thumb({ preset }: { preset: SellingPreset }) {
-  const cell = <span className="sl-cell" />;
+  const cart = (
+    <span className="sl-cell sl-cart">
+      <span className="sl-lines" />
+      <span className="sl-pay" />
+    </span>
+  );
   if (preset === 'tables_first')
     return (
-      <span className="sl-thumb sl-thumb-tables">
+      <span className="sl-thumb sl-thumb-tables" aria-hidden="true">
         {['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((key, index) => (
           <span key={key} className={index % 3 === 0 ? 'sl-cell sl-accent' : 'sl-cell'} />
         ))}
@@ -32,33 +38,32 @@ function Thumb({ preset }: { preset: SellingPreset }) {
     );
   if (preset === 'one_step')
     return (
-      <span className="sl-thumb sl-thumb-one">
-        {cell}
-        {cell}
-        <span className="sl-cell sl-accent" />
+      <span className="sl-thumb sl-thumb-one" aria-hidden="true">
+        <span className="sl-cell sl-menu" />
+        <span className="sl-cell sl-cart">
+          <span className="sl-lines" />
+        </span>
+        <span className="sl-cell sl-accent sl-pay-column">
+          <span className="sl-lines" />
+          <span className="sl-pay" />
+        </span>
       </span>
     );
   if (preset === 'big_menu')
     return (
-      <span className="sl-thumb sl-thumb-big">
+      <span className="sl-thumb sl-thumb-big" aria-hidden="true">
         <span className="sl-tiles">
           {['a', 'b', 'c', 'd', 'e', 'f'].map((key) => (
             <span key={key} className="sl-cell sl-accent" />
           ))}
         </span>
-        <span className="sl-cart">
-          {cell}
-          <span className="sl-cell sl-pay" />
-        </span>
+        {cart}
       </span>
     );
   return (
-    <span className="sl-thumb sl-thumb-quick">
-      {cell}
-      <span className="sl-cart">
-        {cell}
-        <span className="sl-cell sl-pay" />
-      </span>
+    <span className="sl-thumb sl-thumb-quick" aria-hidden="true">
+      <span className="sl-cell sl-menu" />
+      {cart}
     </span>
   );
 }
@@ -233,6 +238,7 @@ export function SellingLayoutDialog({ onClose }: { onClose: () => void }) {
   const control: SellingLayoutControl = useSellingLayout();
   const { context } = usePosSelection();
   const { layout, chosen, branchDefault, allowed } = control;
+  const branchDefaultName = t(`sellingLayoutPreset_${branchDefault}`);
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -270,7 +276,12 @@ export function SellingLayoutDialog({ onClose }: { onClose: () => void }) {
       }}
     >
       <div className="selling-layout-head">
-        <h2 id={titleId}>{t('sellingLayoutTitle')}</h2>
+        <div>
+          <h2 id={titleId}>{t('sellingLayoutTitle')}</h2>
+          <p className="sl-subtitle">
+            {t('sellingLayoutIntro')} {t('sellingLayoutSubtitleBranch', { name: branchDefaultName })}
+          </p>
+        </div>
         <button
           type="button"
           className="selling-layout-x"
@@ -280,7 +291,12 @@ export function SellingLayoutDialog({ onClose }: { onClose: () => void }) {
           ×
         </button>
       </div>
-      <p className="muted">{t('sellingLayoutIntro')}</p>
+      <h3 className="sl-step">
+        <span className="sl-step-no" aria-hidden="true">
+          1
+        </span>
+        {t('sellingLayoutStepPick')}
+      </h3>
       <ul className="sl-cards" aria-label={t('sellingLayoutPresets')}>
         {SELLING_PRESETS.map((preset) => {
           const locked = presetLockReason(preset, context.data) !== null;
@@ -294,12 +310,17 @@ export function SellingLayoutDialog({ onClose }: { onClose: () => void }) {
                 disabled={locked || !allowed.includes(preset)}
                 onClick={() => control.choosePreset(preset)}
               >
-                {current ? (
-                  <span className="sl-tag sl-tag-on">
-                    {t(custom ? 'sellingLayoutCustomized' : 'sellingLayoutInUse')}
+                {current || preset === branchDefault ? (
+                  <span className="sl-tags">
+                    {preset === branchDefault ? (
+                      <span className="sl-tag">{t('sellingLayoutBranchDefault')}</span>
+                    ) : null}
+                    {current ? (
+                      <span className="sl-tag sl-tag-on">
+                        {t(custom ? 'sellingLayoutCustomized' : 'sellingLayoutInUse')}
+                      </span>
+                    ) : null}
                   </span>
-                ) : preset === branchDefault ? (
-                  <span className="sl-tag">{t('sellingLayoutBranchDefault')}</span>
                 ) : null}
                 <Thumb preset={preset} />
                 <strong>{t(`sellingLayoutPreset_${preset}`)}</strong>
@@ -313,7 +334,12 @@ export function SellingLayoutDialog({ onClose }: { onClose: () => void }) {
           );
         })}
       </ul>
-      <h3>{t('sellingLayoutCustomizeTitle')}</h3>
+      <h3 className="sl-step">
+        <span className="sl-step-no" aria-hidden="true">
+          2
+        </span>
+        {t('sellingLayoutCustomizeTitle')}
+      </h3>
       <div className="sl-customize">
         <div className="sl-options">
           <Segmented

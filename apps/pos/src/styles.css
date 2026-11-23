@@ -1711,3 +1711,185 @@ kbd { padding: var(--pos-s1); border: 1px solid var(--pos-border); border-radius
 .sl-payment { background: var(--pos-selected); color: var(--pos-blue); border-color: var(--pos-blue); }
 .sl-pay-tag { position: absolute; right: 6px; bottom: 6px; width: 28px; height: 10px; border-radius: 3px; background: var(--pos-success); }
 @media (max-width: 767px) { .sl-customize { grid-template-columns: minmax(0, 1fr); } }
+
+/* "Vào ca": a compact outlined text button where the shift icon sits once a shift is open. */
+.pos-layout .shift-enter { min-height: 32px; padding: 0 var(--pos-s3); border: 1.5px solid var(--pos-blue); border-radius: 999px; background: transparent; color: var(--pos-blue); font-size: var(--pos-small); font-weight: 700; white-space: nowrap; }
+.pos-layout .shift-enter:not(:disabled):hover { background: var(--pos-blue-soft); border-color: var(--pos-blue); }
+.shift-enter:focus-visible { outline: 2px solid var(--pos-blue); outline-offset: 2px; }
+
+/* Selling screens, closer to the approved look: header tools, picture tiles,
+   the order foot, the payment column and sheet, the layout dialog and the
+   toolbar popovers. */
+
+/* Header tools: an unpadded pill keeps the header at 56px with 44px tools; the focus ring is an inset blue ring like the header's other controls. */
+.selling-toolbar { padding: 0; }
+.selling-toolbar :focus-visible { outline: 2px solid var(--pos-blue); outline-offset: -2px; }
+
+/* Menu tiles: one fixed height per density, with or without pictures. */
+.table-service .menu-items { --tile-h: 108px; }
+.table-service .menu-items[data-density="airy"] { --tile-h: 124px; }
+.table-service .menu-items[data-density="dense"] { --tile-h: 96px; }
+.table-service .menu-items[data-images="true"] { --tile-h: 206px; }
+.table-service .menu-items[data-images="true"][data-density="airy"] { --tile-h: 238px; }
+.table-service .menu-items[data-images="true"][data-density="dense"] { --tile-h: 172px; }
+.table-service .menu-item-sku { display: block; min-height: 1.15em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .6875rem; font-weight: 500; color: var(--pos-muted); }
+.table-service .menu-items[data-images="true"] .menu-item-name { min-height: 2.4em; }
+.table-service .menu-items { --media-h: 96px; }
+.table-service .menu-items[data-density="airy"] { --media-h: 120px; }
+.table-service .menu-items[data-density="dense"] { --media-h: 64px; }
+.table-service .menu-item-media { position: relative; display: block; flex: none; height: var(--media-h); margin: -9px -10px 8px; overflow: hidden; border-radius: var(--pos-radius) var(--pos-radius) 0 0; background: linear-gradient(135deg, #f2f6fa, #e6edf4); }
+.table-service .menu-item-media .menu-item-image { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; border-radius: 0; object-fit: cover; }
+.table-service .menu-item-placeholder { position: absolute; inset: 0; display: grid; place-items: center; font-size: 1.75rem; font-weight: 800; color: #a9bbcd; text-transform: uppercase; }
+.table-service .menu-items[data-density="dense"] .menu-item-placeholder { font-size: 1.25rem; }
+.table-service .menu-item-chip { position: absolute; top: 8px; left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--pos-success-soft); color: var(--pos-success); font-size: .6875rem; font-weight: 700; }
+.table-service .menu-item-chip[data-tone="out"] { background: var(--pos-danger-soft); color: var(--pos-danger); }
+.table-service .menu-items[data-images="true"] .menu-item-price { margin-top: auto; }
+
+/* Categories along the top edge are a row of chips. */
+.pos-layout .table-service .selling-frame[data-side="top"] .order-menu-body { flex-direction: column; }
+.pos-layout .table-service .selling-frame[data-side="top"] .category-rail { width: auto; flex-direction: row; align-items: center; overflow-x: auto; overflow-y: hidden; border-right: 0; border-bottom: 1px solid var(--pos-border); padding: var(--pos-s2) var(--pos-s3); }
+.pos-layout .table-service .selling-frame[data-side="top"] .category-rail button { display: inline-flex; align-items: baseline; gap: 6px; width: auto; min-height: 36px; padding: 0 14px; border-radius: 999px; white-space: nowrap; }
+.pos-layout .table-service .selling-frame[data-side="top"] .category-rail button small { display: inline; }
+
+/* The foot of the quick ticket: totals, one-tap tenders, then the three actions. */
+.quick-pay { border-top: 1px dashed var(--pos-border); }
+.quick-totals { display: grid; gap: 6px; padding: var(--pos-s3) var(--pos-s4) var(--pos-s2); }
+.quick-totals-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--pos-s2); margin: 0; color: var(--pos-muted); font-variant-numeric: tabular-nums; }
+.pos-layout .quick-pay .quick-totals .quick-pay-total { padding: 0; }
+.pos-layout .quick-pay .quick-totals .quick-pay-total > span { font-size: 1rem; font-weight: 700; color: var(--pos-ink); }
+.pos-layout .quick-pay .quick-totals .quick-pay-total > strong { font-size: 1.5rem; font-weight: 800; color: var(--pos-blue); }
+.pos-layout .quick-pay .quick-totals .quick-pay-eater > span { font-size: var(--pos-small); font-weight: 600; color: var(--pos-muted); }
+.pos-layout .quick-pay .quick-totals .quick-pay-eater > strong { font-size: 1.125rem; color: var(--pos-success); }
+.pos-layout .quick-pay-notes button { min-height: 38px; }
+.quick-pay-methods { grid-template-columns: 1.4fr 1fr; }
+.quick-pay-methods:not(:has(.quick-pay-qr)) { grid-template-columns: 1fr; }
+.pos-layout .quick-pay-methods button { min-height: 44px; font-size: .9375rem; }
+.pos-layout .quick-pay-methods .quick-pay-cash { background: var(--pos-success-soft); border-color: #1f7a4d44; color: var(--pos-success); }
+.pos-layout .quick-pay-methods .quick-pay-cash:not(:disabled):hover { background: #d3eddf; border-color: #1f7a4d; }
+.pos-layout .quick-pay-methods .quick-pay-qr { background: var(--pos-blue-soft); border-color: #07569a44; color: var(--pos-blue); }
+.pos-layout .quick-pay-methods .quick-pay-qr:not(:disabled):hover { background: #d4e6f6; border-color: var(--pos-blue); }
+.quick-actions { display: flex; gap: var(--pos-s2); padding: 0 var(--pos-s3) var(--pos-s2); }
+.pos-layout .quick-actions button { flex: none; min-height: 48px; padding: 0 var(--pos-s3); border-radius: var(--pos-radius); font-weight: 600; white-space: nowrap; }
+.pos-layout .quick-actions .quick-send { color: var(--pos-warning); background: var(--pos-warning-soft); border-color: #f0d9ad; }
+.pos-layout .quick-actions .quick-pay-open { flex: 1 1 auto; background: var(--pos-blue); border-color: var(--pos-blue); color: var(--pos-surface); font-size: 1rem; font-weight: 800; }
+.pos-layout .quick-actions .quick-pay-open:not(:disabled):hover { background: var(--pos-blue-hover); border-color: var(--pos-blue-hover); }
+.pos-layout .quick-actions .quick-pay-open:disabled { opacity: .5; }
+.quick-actions kbd { padding: 0 4px; border-radius: 4px; font-size: .6875rem; font-weight: 600; background: color-mix(in srgb, currentColor 18%, transparent); color: inherit; }
+.ticket-tools { flex-wrap: wrap; }
+.pos-layout .ticket-tools button { flex: 1 1 auto; white-space: nowrap; }
+
+/* The payment column that stays open: it fills the column and scrolls, leads with what is owed, and its methods are tiles. */
+.selling-pay-panel { padding: var(--pos-s4); gap: var(--pos-s3); }
+.selling-pay-panel .payment-panel { margin-top: 0; padding-top: 0; border-top: 0; }
+.payment-due-card { display: grid; gap: 2px; padding: 14px var(--pos-s4); border-radius: var(--pos-radius); background: var(--pos-blue-soft); }
+.payment-due-card small { color: var(--pos-muted); }
+.payment-due-card strong { font-size: 1.75rem; font-weight: 800; line-height: 1.15; color: var(--pos-blue); font-variant-numeric: tabular-nums; }
+.pos-layout .selling-pay-panel .payment-panel > h3 { font-size: var(--pos-small); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--pos-muted); }
+.selling-pay-panel .payment-methods, .selling-pay-panel .payment-methods:has(> button:only-child) { width: 100%; grid-template-columns: repeat(auto-fit, minmax(min(96px, 100%), 1fr)); }
+.selling-pay-panel .payment-method-rows { grid-template-columns: minmax(0, 1fr); }
+.selling-pay-panel .payment-panel > form { min-width: 0; }
+.pos-layout .selling-pay-panel .payment-methods button { flex-direction: column; gap: 2px; min-height: 64px; border: 1.5px solid var(--pos-border); border-radius: var(--pos-radius); font-size: var(--pos-body); }
+.pos-layout .selling-pay-panel .payment-methods button .pos-icon { width: 20px; height: 20px; }
+.pos-layout .selling-pay-panel .payment-methods button[aria-pressed="true"] { border-color: var(--pos-blue); background: var(--pos-blue-soft); color: var(--pos-blue); }
+.selling-pay-panel .payment-method-row { min-height: 52px; border: 1.5px solid var(--pos-blue); background: var(--pos-surface); }
+.pos-layout .selling-pay-panel .payment-method-row .money-input { flex: 1; width: auto; min-width: 0; border: 0; font-size: 1.375rem; font-weight: 700; }
+.payment-handed-quick { display: grid; gap: var(--pos-s2); }
+.pos-layout .payment-handed-quick fieldset { display: grid; width: 100%; grid-template-columns: repeat(auto-fit, minmax(min(88px, 100%), 1fr)); gap: var(--pos-s2); margin: 0; padding: 0; border: 0; min-width: 0; }
+.pos-layout .payment-handed-quick button { min-height: 42px; border-radius: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pos-layout .payment-handed-quick button[aria-pressed="true"] { border-color: var(--pos-blue); background: var(--pos-blue-soft); color: var(--pos-blue); }
+.payment-handed-change { display: flex; justify-content: space-between; align-items: baseline; margin: 0; font-weight: 600; color: var(--pos-ink); }
+.payment-handed-change strong { font-size: 1.25rem; color: var(--pos-success); }
+.pos-layout .selling-pay-panel .checkout-submit { min-height: 52px; border-radius: var(--pos-radius); font-size: 1rem; }
+
+/* The payment sheet (in place of the order, or in a dialog): an amount card, one cash card, and a foot that stays in view. */
+.pay-due > div:first-child { background: var(--pos-blue-soft); border-color: transparent; }
+.pay-due > div:first-child dd { color: var(--pos-blue); }
+.pay-bill-sum .pay-bill-total { color: var(--pos-blue); }
+.pos-layout .pay-screen .pay-bill-name { font-size: 1.0625rem; font-weight: 700; }
+.pos-layout .pay-finish, .pos-layout .pay-finish:not(:disabled):hover { background: var(--pos-blue); border-color: var(--pos-blue); }
+.pos-layout .pay-finish:not(:disabled):hover { background: var(--pos-blue-hover); border-color: var(--pos-blue-hover); }
+.pay-embedded .pay-screen { grid-template-rows: minmax(150px, 1fr) auto; overflow-y: auto; }
+.pay-embedded .pay-bill-header { padding: 8px var(--pos-s3); }
+.pay-embedded .pay-bill-lines li { min-height: 38px; }
+.pay-embedded .pay-main { overflow: visible; gap: 10px; padding: 12px var(--pos-s3); }
+.pay-embedded .pay-due { grid-template-columns: 1.4fr 1fr 1fr; }
+.pay-embedded .pay-due > div { padding: 8px 12px; }
+.pay-embedded .pay-due dd { font-size: 1.375rem; }
+.pay-embedded .pay-cards { grid-template-columns: minmax(0, 1fr); }
+.pay-embedded .pay-cash-body { grid-template-columns: minmax(0, 1fr) minmax(150px, 200px); }
+.pos-layout .pay-embedded .pay-cash-quick button { min-height: 44px; font-size: 1rem; }
+.pay-embedded .pay-keypad { gap: 4px; }
+.pos-layout .pay-embedded .pay-keypad button, .pos-layout .pay-embedded .pay-keypad .pay-keypad-display { min-height: 38px; height: 38px; }
+.pos-layout .pay-embedded .pay-finish { min-height: 52px; }
+
+/* "Chọn màn bán hàng": a titled sheet, a 2x2 grid of samples, numbered steps. */
+.selling-layout-dialog { width: min(880px, calc(100vw - var(--pos-s6))); }
+.selling-layout-head { align-items: flex-start; }
+.selling-layout-head h2 { font-size: 1.0625rem; }
+.pos-layout .selling-layout-head .sl-subtitle { margin: 2px 0 0; font-size: .8125rem; color: var(--pos-muted); }
+.pos-layout .selling-layout-dialog .sl-step { display: flex; align-items: center; gap: var(--pos-s2); margin: var(--pos-s5) 0 var(--pos-s2); font-size: .9375rem; }
+.sl-step-no { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--pos-blue-soft); color: var(--pos-blue); font-size: .75rem; font-weight: 800; }
+.sl-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--pos-s3); }
+.pos-layout .sl-card { gap: 10px; padding: var(--pos-s3); border-width: 1.5px; border-radius: var(--pos-radius-lg); }
+.pos-layout .sl-card[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--pos-blue-soft); background: var(--pos-surface); }
+.sl-card strong { font-size: .9375rem; }
+.sl-card small, .sl-card-text { letter-spacing: normal; text-transform: none; line-height: 1.45; }
+.sl-card .sl-card-text { font-size: .78rem; }
+.sl-card small { font-size: .72rem; font-weight: 600; color: var(--pos-blue); }
+.sl-card small.sl-locked { color: var(--pos-danger) !important; }
+.sl-tags { position: absolute; z-index: 1; top: 18px; left: 18px; right: 18px; display: flex; justify-content: space-between; gap: var(--pos-s1); pointer-events: none; }
+.sl-tag { align-self: auto; padding: 1px 8px; background: #ffffffe6; color: var(--pos-muted); box-shadow: 0 0 0 1px var(--pos-border); }
+.sl-tag-on { margin-left: auto; background: var(--pos-blue); color: var(--pos-surface); box-shadow: none; }
+.sl-thumb { height: 110px; gap: 6px; padding: 8px; border-radius: 10px; background: var(--pos-bg); }
+.sl-cell { background: #fff; border-radius: 6px; box-shadow: 0 0 0 1px var(--pos-border); }
+.sl-accent { background: #d4e6f6; opacity: 1; box-shadow: none; }
+.sl-menu { background: #e6edf4 linear-gradient(90deg, #fff 0 6px, transparent 6px) 0 0 / 30px 26px, linear-gradient(#fff 0 6px, transparent 6px) 0 0 / 30px 26px; }
+.sl-cart { display: grid; grid-template-rows: minmax(0, 1fr) 16px; gap: 6px; padding: 6px; }
+.sl-cart:not(:has(.sl-pay)) { grid-template-rows: minmax(0, 1fr); }
+.sl-lines { display: block; border-radius: 3px; background: repeating-linear-gradient(#e6edf4 0 6px, transparent 6px 14px); }
+.sl-pay { display: block; border-radius: 4px; background: var(--pos-blue); }
+.sl-pay-column { display: grid; grid-template-rows: minmax(0, 1fr) 16px; gap: 6px; padding: 6px; }
+.sl-pay-column .sl-lines { background: repeating-linear-gradient(#fff 0 6px, transparent 6px 14px); }
+.sl-thumb-quick { grid-template-columns: 2fr 1fr; }
+.sl-thumb-one { grid-template-columns: 1.2fr 1fr 1fr; }
+.sl-thumb-big { grid-template-columns: 2.4fr 1fr; }
+.sl-tiles { gap: 5px; grid-template-rows: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 640px) { .sl-cards { grid-template-columns: minmax(0, 1fr); } }
+
+/* Toolbar popovers: a heading with its scope, titled groups, switches and segmented choices. */
+.toolbar-popover { gap: 0; padding: 0 0 var(--pos-s2); }
+.pos-layout .toolbar-popover-title { display: flex; align-items: center; gap: var(--pos-s2); padding: 14px var(--pos-s4) 6px; font-size: .875rem; font-weight: 700; }
+.toolbar-scope { padding: 1px 8px; border-radius: 6px; background: var(--pos-bg); color: var(--pos-muted); font-size: .6875rem; font-weight: 600; }
+.toolbar-popover > :not(.toolbar-popover-title):not(.toolbar-group) { margin-inline: var(--pos-s2); }
+.toolbar-popover > .toolbar-shortcuts { padding: var(--pos-s2) var(--pos-s2) var(--pos-s1); }
+.toolbar-group { display: grid; gap: 2px; padding: 4px var(--pos-s2) var(--pos-s2); border-bottom: 1px solid var(--pos-border); }
+.pos-layout .toolbar-section-title { margin: 0; padding: 8px var(--pos-s2) 4px; font-size: .6875rem; letter-spacing: .06em; }
+.pos-layout .toolbar-switch { align-items: center; justify-content: space-between; gap: var(--pos-s3); min-height: 42px; padding: 6px var(--pos-s2); border-radius: 10px; font-weight: 500; cursor: pointer; }
+.pos-layout .toolbar-switch:hover { background: #f6f8fa; }
+.toolbar-switch-text { display: grid; flex: 1; gap: 1px; }
+.toolbar-switch-text small { font-size: .75rem; font-weight: 400; letter-spacing: normal; text-transform: none; color: var(--pos-muted); }
+.pos-layout .toolbar-switch input[type="checkbox"] { appearance: none; position: relative; flex: 0 0 36px; width: 36px; height: 20px; min-height: 20px; padding: 0; border: 0; border-radius: 999px; background: #cfd8e1; cursor: pointer; transition: background-color .15s; }
+.toolbar-switch input[type="checkbox"]::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #0003; transition: left .15s; }
+.pos-layout .toolbar-switch input[type="checkbox"]:checked { background: var(--pos-blue); }
+.toolbar-switch input[type="checkbox"]:checked::after { left: 18px; }
+.toolbar-switch input[type="checkbox"]:focus-visible { outline: 2px solid var(--pos-blue); outline-offset: 2px; }
+.pos-layout .toolbar-segment { flex-wrap: nowrap; gap: 2px; margin: 2px var(--pos-s2); padding: 3px; border-radius: 10px; background: var(--pos-bg); }
+.pos-layout .toolbar-segment button { min-height: 30px; padding: 0 var(--pos-s2); border: 0; border-radius: 8px; background: transparent; color: var(--pos-muted); font-size: var(--pos-small); font-weight: 600; }
+.pos-layout .toolbar-segment button[aria-pressed="true"] { background: var(--pos-surface); color: var(--pos-ink); box-shadow: 0 1px 2px #0002; }
+.toolbar-field { padding: 2px var(--pos-s2); }
+.toolbar-field label { font-weight: 500; }
+.toolbar-empty { display: grid; justify-items: start; gap: var(--pos-s2); margin: 4px var(--pos-s2); padding: var(--pos-s3); border: 1px dashed var(--pos-border); border-radius: 10px; background: var(--pos-tint); }
+.pos-layout .toolbar-empty p { margin: 0; }
+.pos-layout .toolbar-empty button { min-height: 32px; padding: 0 var(--pos-s3); border-radius: 999px; font-size: var(--pos-small); }
+.pos-layout .toolbar-note { padding: var(--pos-s2) var(--pos-s2) 0; }
+.quick-display { flex: 1 1 auto; }
+.quick-display > summary { white-space: nowrap; }
+
+/* Follow-ups: chips centred, a short order panel scrolls as a whole, the layout dialog keeps its actions in view. */
+.pos-layout .table-service .selling-frame[data-side="top"] .category-rail button { align-items: center; }
+.pos-layout .table-service .selling-frame[data-side="top"] .category-rail { flex: none; min-height: 52px; }
+.quick-ticket { overflow-y: auto; }
+.pos-layout .quick-ticket .ticket-lines { min-height: 88px; }
+.quick-ticket > .ticket-footer { flex: none; }
+.selling-layout-dialog small, .selling-layout-dialog legend { letter-spacing: normal; text-transform: none; }
+.selling-layout-dialog .dialog-actions { position: sticky; bottom: 0; margin-top: var(--pos-s4); padding-top: var(--pos-s3); background: var(--pos-surface); border-top: 1px solid var(--pos-border); }

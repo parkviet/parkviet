@@ -44,14 +44,17 @@ function quickKeysPaused() {
   );
 }
 
-// The foot of the quick counter's ticket: the total, then payment in one
-// tap. "Tiền mặt" (F1) takes exactly what is due in cash, a note the guest
+// The foot of the quick counter's ticket: what the order comes to (items,
+// discount, what the guest owes), the one-tap cash and VietQR buttons, then
+// the pre-bill, the kitchen send (where the branch sends by hand) and
+// "Thanh toán" (F9), which opens the payment the way the layout pays.
+// "Tiền mặt" (F1) takes exactly what is due in cash, a note the guest
 // hands over takes that note and leaves the change; VietQR (F2) and the
-// other methods (F3, "⋯") open the full payment screen. With dishes the
-// kitchen has not had yet, cash opens the payment screen too, which sends
-// them first. F1 to F3 never reach the browser (help, search); they act
-// unless the cashier is typing or busy in a dialog or a dish's options.
-// "Giữ đơn" puts the order aside and starts the next one. On a canteen
+// other methods (F3, the payment button) open the full payment screen. With
+// dishes the kitchen has not had yet, cash opens the payment screen too,
+// which sends them first. F1 to F3 never reach the browser (help, search);
+// they act unless the cashier is typing or busy in a dialog or a dish's
+// options. "Giữ đơn" puts the order aside and starts the next one. On a canteen
 // meal with a sponsor, cash takes only the eater's part and completing the
 // order charges the sponsor's; while a meal code is being looked up or
 // recorded, or until the meal of the order's latest change is known, cash
@@ -74,8 +77,9 @@ export function QuickPayBar({
   // The order was paid in cash here and completed.
   onPaid: (workspace: PosWorkspace) => void;
   onHold: () => void;
-  // The payment panel stays open beside the ticket: the foot keeps only what
-  // that panel does not have (hold, send, the display) and the keys.
+  // The payment panel stays open beside the ticket: the foot keeps the
+  // totals and what that panel does not have (pre-bill, hold, send, the
+  // display) and the keys.
   compact?: boolean;
 }) {
   const { t } = useTranslation();
@@ -92,6 +96,7 @@ export function QuickPayBar({
     kitchenOn,
     callNumbers,
     mealAccounts,
+    setPrebillOpen,
   } = selling;
   const payment = activePaymentProps(selling, active);
   // The same query as the selling screen's: one request, read here for
@@ -240,72 +245,99 @@ export function QuickPayBar({
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const items = active.totals?.item_total;
+  const discount = Number(active.totals?.discount_total ?? 0);
+  const prebill = (
+    <button
+      type="button"
+      className="quick-prebill"
+      aria-label={t('receiptPrebillOpen')}
+      disabled={busy || paying || active.operational_status !== 'editing' || count === 0}
+      onClick={() => setPrebillOpen(true)}
+    >
+      {t('quickPrebill')}
+    </button>
+  );
+  const sendButton = canSend ? (
+    <button
+      type="button"
+      className="quick-send"
+      disabled={sending || pending <= 0 || editDisabled || !isEditor}
+      onClick={() => void send()}
+    >
+      {t('ticketSend', { count: pending })}
+    </button>
+  ) : null;
+
   return (
-    <footer className="ticket-footer quick-pay">
-      {compact ? null : (
+    <footer className="ticket-footer quick-pay" data-compact={compact || undefined}>
+      <div className="quick-totals">
+        {items !== undefined ? (
+          <p className="quick-totals-row">
+            <span>{t('quickSubtotal', { count })}</span>
+            <span>{formatMoney(items, currency)}</span>
+          </p>
+        ) : null}
+        {discount > 0 ? (
+          <p className="quick-totals-row">
+            <span>{t('discount')}</span>
+            <span>−{formatMoney(String(discount), currency)}</span>
+          </p>
+        ) : null}
         <p className="quick-pay-total">
-          <span>
-            {t('payTotal')} · {t('ticketSummary', { count })}
-          </span>
+          <span>{t('amountDue')}</span>
           <strong data-testid="quick-total">
             {formatMoney(active.payments ? String(due) : (active.totals?.total ?? '0'), currency)}
           </strong>
         </p>
-      )}
-      {!compact && sponsorDue > 0n ? (
-        <p className="quick-pay-total quick-pay-eater" data-testid="quick-eater-due">
-          <span>{t('mealEaterPart')}</span>
-          <strong>{formatMoney(String(eaterDue), currency)}</strong>
-        </p>
-      ) : null}
-      {!compact && cashPayable ? (
-        <fieldset className="quick-pay-notes">
-          <legend className="visually-hidden">{t('quickPayNotes')}</legend>
-          {cashSuggestions(eaterDue, 3).map((value) => (
-            <button
-              key={String(value)}
-              type="button"
-              aria-label={t('quickPayHanded', { amount: groupVndDigits(String(value)) })}
-              onClick={() => void payCash(value)}
-            >
-              {groupVndDigits(String(value))}
-            </button>
-          ))}
-        </fieldset>
-      ) : null}
-      <div className="quick-pay-methods" hidden={compact}>
-        <button
-          type="button"
-          className="quick-pay-cash"
-          aria-keyshortcuts="F1"
-          disabled={!cashPayable}
-          onClick={() => void payCash(null)}
-        >
-          {paying ? t('waiting') : t('quickPayCash')} <kbd>F1</kbd>
-        </button>
-        {vietqrOffered ? (
-          <button
-            type="button"
-            className="quick-pay-qr"
-            aria-keyshortcuts="F2"
-            disabled={!vietqrReady}
-            onClick={() => onOpen('vietqr')}
-          >
-            {t('vietqr')} <kbd>F2</kbd>
-          </button>
+        {sponsorDue > 0n ? (
+          <p className="quick-pay-total quick-pay-eater" data-testid="quick-eater-due">
+            <span>{t('mealEaterPart')}</span>
+            <strong>{formatMoney(String(eaterDue), currency)}</strong>
+          </p>
         ) : null}
-        <button
-          type="button"
-          className="quick-pay-other"
-          aria-keyshortcuts="F3"
-          aria-label={toFinish ? t('quickPayContinue') : t('quickPayOther')}
-          title={toFinish ? t('quickPayContinue') : t('quickPayOther')}
-          disabled={!otherReady}
-          onClick={() => onOpen('cash')}
-        >
-          {toFinish ? t('quickPayContinue') : <span aria-hidden="true">⋯</span>} <kbd>F3</kbd>
-        </button>
       </div>
+      {compact ? null : (
+        <>
+          {cashPayable ? (
+            <fieldset className="quick-pay-notes">
+              <legend className="visually-hidden">{t('quickPayNotes')}</legend>
+              {cashSuggestions(eaterDue, 3).map((value) => (
+                <button
+                  key={String(value)}
+                  type="button"
+                  aria-label={t('quickPayHanded', { amount: groupVndDigits(String(value)) })}
+                  onClick={() => void payCash(value)}
+                >
+                  {groupVndDigits(String(value))}
+                </button>
+              ))}
+            </fieldset>
+          ) : null}
+          <div className="quick-pay-methods">
+            <button
+              type="button"
+              className="quick-pay-cash"
+              aria-keyshortcuts="F1"
+              disabled={!cashPayable}
+              onClick={() => void payCash(null)}
+            >
+              {paying ? t('waiting') : t('quickPayCash')} <kbd>F1</kbd>
+            </button>
+            {vietqrOffered ? (
+              <button
+                type="button"
+                className="quick-pay-qr"
+                aria-keyshortcuts="F2"
+                disabled={!vietqrReady}
+                onClick={() => onOpen('vietqr')}
+              >
+                {t('vietqr')} <kbd>F2</kbd>
+              </button>
+            ) : null}
+          </div>
+        </>
+      )}
       {open && !mealKnown ? (
         mealQuery.isError && !mealPending ? (
           <p className="error ticket-hint" role="alert">
@@ -330,7 +362,23 @@ export function QuickPayBar({
           {error}
         </p>
       ) : null}
+      {compact ? null : (
+        <div className="quick-actions">
+          {prebill}
+          {sendButton}
+          <button
+            type="button"
+            className="quick-pay-open"
+            aria-keyshortcuts="F3 F9"
+            disabled={!otherReady}
+            onClick={() => onOpen('cash')}
+          >
+            {toFinish ? t('quickPayContinue') : t('payTitle')} <kbd>F9</kbd>
+          </button>
+        </div>
+      )}
       <div className="ticket-tools">
+        {compact ? prebill : null}
         <button
           type="button"
           disabled={busy || paying || active.operational_status !== 'editing' || blankOrder(active)}
@@ -339,15 +387,7 @@ export function QuickPayBar({
         >
           {t('quickHold')}
         </button>
-        {canSend ? (
-          <button
-            type="button"
-            disabled={sending || pending <= 0 || editDisabled || !isEditor}
-            onClick={() => void send()}
-          >
-            {t('ticketSend', { count: pending })}
-          </button>
-        ) : null}
+        {compact ? sendButton : null}
         <details className="quick-display">
           <summary>{t('displayTitle')}</summary>
           <DisplayPinControl

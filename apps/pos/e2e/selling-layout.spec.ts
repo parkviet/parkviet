@@ -223,3 +223,18 @@ test('F9 opens the payment from an empty search box but not from a typed one', a
   await page.keyboard.press('F9');
   await expect(page.getByRole('dialog', { name: 'Thanh toán' })).toBeVisible();
 });
+
+test('the payment column shows what is owed and the change of a note the guest hands over', async ({
+  page,
+}) => {
+  await openCounter(page, cafeWorld('one_step'));
+  await page.getByRole('list', { name: 'Thực đơn' }).getByRole('button', { name: 'Bánh flan', exact: true }).click();
+  const column = page.getByRole('complementary', { name: 'Thông tin thanh toán' });
+  await expect(column.getByTestId('payment-due')).toContainText('15.000');
+  await column.getByRole('button', { name: 'Khách đưa 20.000' }).click();
+  await expect(column.getByText('Tiền thừa trả khách')).toBeVisible();
+  await expect(column).toContainText('5.000 ₫');
+  // The note carries into the cash evidence of the payment.
+  await column.getByRole('button', { name: 'Thanh toán', exact: true }).click();
+  await expect(page.locator('input[name="handed_amount"]')).toHaveValue('20000');
+});

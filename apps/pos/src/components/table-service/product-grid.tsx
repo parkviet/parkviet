@@ -8,7 +8,6 @@ import {
   type MenuDensity,
   savedMenuImages,
   saveMenuDensity,
-  saveMenuImages,
 } from '../../lib/menu-density';
 import { addsInOneTap, visibleItems } from '../../lib/menu-selection';
 import type { PosMenu, PosMenuProduct } from '../../lib/pos-context';
@@ -22,9 +21,10 @@ const DENSITY_LABELS: Record<MenuDensity, string> = {
 };
 
 // The products of the order screen as tiles: the search box (`/` jumps to
-// it), the density of this device and whether it shows the pictures, and
-// per product its picture when it has one, its price, how many the open
-// order already has, and a dimmed "sold out".
+// it) and the density of this device, and per product its picture area when
+// this device shows pictures (the picture, or a plain placeholder), its
+// code when it has exactly one, its price, how many the open order already
+// has, and a dimmed "sold out".
 export function ProductGrid({
   menu,
   categoryId,
@@ -53,7 +53,8 @@ export function ProductGrid({
   const [query, setQuery] = useState('');
   const density = useMenuDensity();
   const [images, setImages] = useState(() => savedMenuImages(imagesByDefault));
-  // The toolbar's quick settings change the same two choices.
+  // The toolbar's quick settings change the same two choices (the density
+  // here too); whether pictures show is set there only.
   usePreferencesChanged(() => {
     setImages(savedMenuImages(imagesByDefault));
   });
@@ -113,17 +114,6 @@ export function ProductGrid({
             </button>
           ))}
         </fieldset>
-        <button
-          type="button"
-          className="menu-images-toggle"
-          aria-pressed={images}
-          onClick={() => {
-            setImages(!images);
-            saveMenuImages(!images);
-          }}
-        >
-          {t('menuImages')}
-        </button>
       </div>
       {disabled && disabledReason ? (
         <p className="muted" role="status">
@@ -144,6 +134,9 @@ export function ProductGrid({
             (variant) => variant.schedule_id && variant.price !== variant.list_price,
           );
           const quantity = quantities.get(item.product_id) ?? 0;
+          // One code only when the product has a single variant: another
+          // variant's code would be a wrong label for the tile.
+          const sku = item.variants.length === 1 ? item.variants[0]?.sku?.trim() : undefined;
           return (
             <li key={item.product_id} className="menu-item" data-sold-out={item.sold_out}>
               <button
@@ -155,10 +148,24 @@ export function ProductGrid({
                 aria-description={quantity > 0 ? t('menuInOrder', { count: quantity }) : undefined}
                 onClick={() => onPick(item)}
               >
-                {images && item.image_url ? (
-                  <img className="menu-item-image" src={item.image_url} alt="" loading="lazy" />
+                {images ? (
+                  <span className="menu-item-media">
+                    {item.image_url ? (
+                      <img className="menu-item-image" src={item.image_url} alt="" loading="lazy" />
+                    ) : (
+                      <span className="menu-item-placeholder" aria-hidden="true">
+                        {item.name.trim().slice(0, 1)}
+                      </span>
+                    )}
+                    {item.sold_out ? (
+                      <span className="menu-item-chip" data-tone="out">
+                        {t('menuSoldOutShort')}
+                      </span>
+                    ) : null}
+                  </span>
                 ) : null}
                 <strong className="menu-item-name">{item.name}</strong>
+                {sku || images ? <span className="menu-item-sku">{sku}</span> : null}
                 <span className="menu-item-price">
                   {item.sold_out
                     ? t('menuSoldOutTile')

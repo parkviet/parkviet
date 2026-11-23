@@ -50,8 +50,9 @@ export function ConnectionBadge({ offline, loading }: { offline: boolean; loadin
 }
 
 // The shift of this register as one icon button with a dot: green when a shift
-// is open, amber when none is. With no shift and the right to open one it
-// opens the open-shift dialog; otherwise it only tells the state.
+// is open, amber when none is. With no shift and the right to open one it is
+// a "Vào ca" text button that opens the open-shift dialog; otherwise it only
+// tells the state.
 export function ShiftStatus({
   open,
   canOpen,
@@ -80,14 +81,18 @@ export function ShiftStatus({
   return actionable ? (
     <button
       type="button"
-      className="header-status shift-status has-tip"
+      className="shift-enter has-tip"
+      aria-label={t('enterShift')}
       data-open={false}
-      aria-label={title}
       aria-describedby={tipId}
       aria-haspopup="dialog"
       onClick={onEnter}
     >
-      {body}
+      {t('enterShift')}
+      <HoverTip id={tipId}>
+        <strong>{title}</strong>
+        <span>{t('shiftEnterHint')}</span>
+      </HoverTip>
     </button>
   ) : (
     <span

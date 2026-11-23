@@ -66,6 +66,7 @@ export function EmbeddedPayment({
         <PaymentPanel
           key={active.id}
           {...activePaymentProps(selling, active)}
+          showDue
           onSettled={onSettled}
         />
       ) : (

@@ -239,3 +239,31 @@ test('F1 with dishes the kitchen has not had opens the payment screen, which sen
   await expect.poll(() => order.status).toBe('completed');
   await expect(ticket(page).getByTestId('quick-done')).toContainText('Tiền thừa: 5.000 ₫');
 });
+
+test('the ticket foot says what the guest owes and opens the pre-bill and the payment', async ({ page }) => {
+  const world = cafeWorld();
+  await openCounter(page, world);
+  // Nothing to pre-bill or pay on an empty ticket.
+  await expect(ticket(page).getByRole('button', { name: 'In tạm tính' })).toBeDisabled();
+  await expect(ticket(page).getByRole('button', { name: /^Thanh toán/ })).toBeDisabled();
+  await dish(page, 'Bánh flan').click();
+  await expect(ticket(page).getByText('Khách cần trả', { exact: true })).toBeVisible();
+  await expect(ticket(page).getByText('Tạm tính (1 món)')).toBeVisible();
+  await expect(ticket(page).getByTestId('quick-total')).toHaveText('15.000 ₫');
+  // No kitchen at this branch: no send button is made up.
+  await expect(ticket(page).getByRole('button', { name: /^Gửi bếp/ })).toHaveCount(0);
+
+  await ticket(page).getByRole('button', { name: 'In tạm tính' }).click();
+  await expect(page.getByRole('dialog', { name: 'Phiếu tạm tính' })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await ticket(page).getByRole('button', { name: /^Thanh toán/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Thanh toán' })).toBeVisible();
+});
+
+test('a menu tile shows a picture area with the product code', async ({ page }) => {
+  await openCounter(page, cafeWorld());
+  const tile = dish(page, 'Bánh flan');
+  await expect(tile.locator('.menu-item-placeholder')).toHaveText('B');
+  await expect(tile.locator('.menu-item-sku')).toHaveText('PROD_FLAN');
+});

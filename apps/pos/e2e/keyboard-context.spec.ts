@@ -136,7 +136,7 @@ test('login, choose branch and register, and open a shift with the keyboard only
   await page.keyboard.press('Enter');
   await expect(setup).toBeHidden();
 
-  await page.getByRole('button', { name: 'Vào ca', exact: true }).click();
+  await page.locator('.header').getByRole('button', { name: 'Vào ca', exact: true }).click();
   const shiftDialog = page.getByRole('dialog', { name: 'Mở ca bán hàng' });
   const float = shiftDialog.getByLabel('Tiền đầu ca');
   await expect(float).toBeFocused();
@@ -193,5 +193,5 @@ test('switching register never shows the previous register shift while the new c
   await expect.poll(() => world.lateServedAt ?? 0, { timeout: 5000 }).toBeGreaterThan(0);
   await expect(summary).toContainText('Quay 2');
   await expect(page.getByText('Ca đang mở', { exact: true })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Vào ca', exact: true })).toBeVisible();
+  await expect(page.locator('.header').getByRole('button', { name: 'Vào ca', exact: true })).toBeVisible();
 });

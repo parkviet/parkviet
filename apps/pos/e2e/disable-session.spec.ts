@@ -221,7 +221,7 @@ async function expectLockedWithHistory(page: Page) {
   await expect(page.getByText('Ca và đơn đã có vẫn còn')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Đơn nháp mới' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Tạm giữ' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Vào ca', exact: true })).toHaveCount(0);
+  await expect(page.locator('.header').getByRole('button', { name: 'Vào ca', exact: true })).toHaveCount(0);
 }
 
 for (const disabled of ['membership', 'branch'] as const) {

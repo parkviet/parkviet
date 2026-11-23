@@ -2666,7 +2666,7 @@
   "toolbarSellingLayout": "Selling screen",
   "toolbarHelpPayOpen": "Pay the open order, the way the selling screen pays",
   "sellingLayoutTitle": "Choose the selling screen",
-  "sellingLayoutIntro": "Pick a sample screen, then adjust its layout. The choice is kept on this device, for this branch.",
+  "sellingLayoutIntro": "Applies to this device.",
   "sellingLayoutPresets": "Sample screens",
   "sellingLayoutPreset_tables_first": "Tables first, order later",
   "sellingLayoutPresetHint_tables_first": "The table board is the main screen. Tap a table to open an order, add dishes, send to the kitchen and pay when guests leave.",
@@ -2735,5 +2735,15 @@
   "toolbarQuickSettingsTitle": "Quick settings of this device",
   "toolbarQuickScanSounds": "Scan sounds",
   "toolbarQuickBranchSettings": "Branch settings",
-  "toolbarQuickDeviceNote": "These choices are kept on this device only."
+  "toolbarQuickDeviceNote": "These choices are kept on this device only.",
+  "quickPrebill": "Pre-bill",
+  "quickSubtotal_one": "Subtotal ({{count}} item)",
+  "quickSubtotal_other": "Subtotal ({{count}} items)",
+  "sellingLayoutSubtitleBranch": "Branch default: {{name}}.",
+  "sellingLayoutStepPick": "Pick a sample screen",
+  "toolbarScopeDevice": "on this device",
+  "toolbarPrinterReceipts": "Receipts",
+  "toolbarPrinterTemplatesEmpty": "The branch has no print templates to pick from yet.",
+  "toolbarQuickMenu": "Menu",
+  "toolbarQuickScanner": "Scanning"
 }

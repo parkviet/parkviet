@@ -73,9 +73,10 @@ export function QuickSettingsPopover({
       onOpenChange={onOpenChange}
     >
       {menuTiles ? (
-        <>
+        <div className="toolbar-group">
+          <h3 className="toolbar-section-title">{t('toolbarQuickMenu')}</h3>
           <fieldset className="toolbar-segment">
-            <legend>{t('menuDensity')}</legend>
+            <legend className="visually-hidden">{t('menuDensity')}</legend>
             {MENU_DENSITIES.map((value) => (
               <button
                 key={value}
@@ -90,21 +91,25 @@ export function QuickSettingsPopover({
             ))}
           </fieldset>
           <label className="toolbar-switch">
+            <span className="toolbar-switch-text">{t('menuImages')}</span>
             <input
               type="checkbox"
+              role="switch"
               checked={images}
+          aria-checked={images}
               onChange={(event) => {
                 setImages(event.target.checked);
                 saveMenuImages(event.target.checked);
               }}
             />
-            <span>{t('menuImages')}</span>
           </label>
-        </>
+        </div>
       ) : null}
       {surface ? (
-        <fieldset className="toolbar-segment">
-          <legend>{t('tableSurface')}</legend>
+        <div className="toolbar-group">
+          <h3 className="toolbar-section-title">{t('tableSurface')}</h3>
+          <fieldset className="toolbar-segment">
+          <legend className="visually-hidden">{t('tableSurface')}</legend>
           {surfaces.map((value: PosTableSurface) => (
             <button
               key={value}
@@ -118,19 +123,25 @@ export function QuickSettingsPopover({
               {t(`tableSurface_${value}`)}
             </button>
           ))}
-        </fieldset>
+          </fieldset>
+        </div>
       ) : null}
-      <label className="toolbar-switch">
-        <input
-          type="checkbox"
-          checked={sounds}
-          onChange={(event) => {
-            setSounds(event.target.checked);
-            setScanSounds(event.target.checked);
-          }}
-        />
-        <span>{t('toolbarQuickScanSounds')}</span>
-      </label>
+      <div className="toolbar-group">
+        <h3 className="toolbar-section-title">{t('toolbarQuickScanner')}</h3>
+        <label className="toolbar-switch">
+          <span className="toolbar-switch-text">{t('toolbarQuickScanSounds')}</span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={sounds}
+          aria-checked={sounds}
+            onChange={(event) => {
+              setSounds(event.target.checked);
+              setScanSounds(event.target.checked);
+            }}
+          />
+        </label>
+      </div>
       {staffed && registerId ? (
         <button
           type="button"

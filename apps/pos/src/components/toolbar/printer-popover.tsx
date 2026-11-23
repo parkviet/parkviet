@@ -55,27 +55,42 @@ export function PrinterPopover({
       icon="print"
       label={t('toolbarPrinter')}
       title={t('toolbarPrinterTitle')}
+      scope={t('toolbarScopeDevice')}
       open={open}
       onOpenChange={onOpenChange}
     >
-      <label className="toolbar-switch">
-        <input
-          type="checkbox"
-          checked={auto}
-          onChange={(event) => {
-            setAutoPrint(event.target.checked);
-            setAuto(event.target.checked);
-          }}
-        />
-        <span>
-          {t('toolbarPrinterAuto')}
-          <small className="muted">{t('toolbarPrinterAutoHint')}</small>
-        </span>
-      </label>
-      <div className="toolbar-section">
+      <div className="toolbar-group">
+        <h3 className="toolbar-section-title">{t('toolbarPrinterReceipts')}</h3>
+        <label className="toolbar-switch">
+          <span className="toolbar-switch-text">
+            {t('toolbarPrinterAuto')}
+            <small>{t('toolbarPrinterAutoHint')}</small>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={auto}
+          aria-checked={auto}
+            onChange={(event) => {
+              setAutoPrint(event.target.checked);
+              setAuto(event.target.checked);
+            }}
+          />
+        </label>
+      </div>
+      <div className="toolbar-group">
         <h3 className="toolbar-section-title">{t('toolbarPrinterTemplates')}</h3>
-        {templates.isError || (templates.isSuccess && (templates.data?.length ?? 0) === 0) ? (
-          <p className="muted">{t('toolbarPrinterNoTemplates')}</p>
+        {templates.isError ? (
+          <div className="toolbar-empty" role="status">
+            <p>{t('toolbarPrinterNoTemplates')}</p>
+            <button type="button" onClick={() => void templates.refetch()}>
+              {t('retry')}
+            </button>
+          </div>
+        ) : templates.isSuccess && (templates.data?.length ?? 0) === 0 ? (
+          <div className="toolbar-empty" role="status">
+            <p>{t('toolbarPrinterTemplatesEmpty')}</p>
+          </div>
         ) : null}
         {PICKABLE_DOCUMENTS.map(({ type, label }) => {
           const choices = choicesOf(type);
@@ -106,7 +121,7 @@ export function PrinterPopover({
           );
         })}
       </div>
-      <div className="toolbar-section">
+      <div className="toolbar-group">
         {/* Leaving the sale page would drop the open invoice tabs, so the queue opens in a new tab. */}
         <Link
           to="/receipts"
