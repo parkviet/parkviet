@@ -786,15 +786,43 @@ export function WorkspaceTabsView({
                   )}
                 </section>
                 {sheetPay && active ? (
-                  <button
-                    type="button"
-                    className="primary-button selling-pay-open"
-                    disabled={(active.line_items?.length ?? 0) === 0}
-                    aria-keyshortcuts="F9"
-                    onClick={() => setPayingFor(active.id)}
-                  >
-                    {t('sellingLayoutPay')} <kbd>F9</kbd>
-                  </button>
+                  // The bill in short and the way to pay it, under the order.
+                  <footer className="selling-pay-foot">
+                    {active.totals ? (
+                      <div className="ticket-totals">
+                        <p className="ticket-totals-row">
+                          <span>{t('subtotal')}</span>
+                          <span>
+                            {formatMoney(active.totals.item_total, active.totals.currency)}
+                          </span>
+                        </p>
+                        <p className="ticket-totals-row">
+                          <span>{t('discount')}</span>
+                          <span>
+                            {formatMoney(active.totals.discount_total, active.totals.currency)}
+                          </span>
+                        </p>
+                        <p className="ticket-totals-due">
+                          <span>{t('amountDue')}</span>
+                          <strong>
+                            {formatMoney(
+                              active.financial?.remaining ?? active.totals.total,
+                              active.totals.currency,
+                            )}
+                          </strong>
+                        </p>
+                      </div>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="primary-button selling-pay-open"
+                      disabled={(active.line_items?.length ?? 0) === 0}
+                      aria-keyshortcuts="F9"
+                      onClick={() => setPayingFor(active.id)}
+                    >
+                      {t('sellingLayoutPay')} <kbd>F9</kbd>
+                    </button>
+                  </footer>
                 ) : null}
               </>
             }
