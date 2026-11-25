@@ -417,11 +417,12 @@ test('reopening the print popup after a print starts from the printed receipt', 
 
   // Back on the same screen: the cached receipt is the printed one.
   await page.getByRole('link', { name: 'Về quầy' }).click();
+  await expect(page.getByTestId('receipt-sheet')).toHaveCount(0);
   await page.goBack();
   await expect(page.getByRole('button', { name: 'In lại (bản sao)' })).toBeVisible();
   await expect(page.getByTestId('receipt-sheet')).toContainText('BẢN SAO – lần 2');
   await expect(page.getByTestId('receipt-copies-note')).toHaveCount(0);
-  expect(lookups).toBe(2);
+  await expect.poll(() => lookups).toBe(2);
 });
 
 test('when allow_sheet_receipts is off, the print popup hides A4 templates and ignores a remembered A4', async ({

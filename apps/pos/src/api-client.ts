@@ -63,18 +63,18 @@ const auth = {
     return ensureUser(res)
   },
   refresh: async () => {
-    const res = await adminClient.auth.refresh()
-    if (!res.user) {
+    if (typeof window !== 'undefined' && window.location.pathname.endsWith('/login')) {
       let authed = false
       try {
         authed = sessionStorage.getItem(LEGACY_AUTH_KEY) === '1'
       } catch {
         authed = false
       }
-      if (!authed && typeof window !== 'undefined' && window.location.pathname.endsWith('/login')) {
+      if (!authed) {
         throw new Error('Unauthorized')
       }
     }
+    const res = await adminClient.auth.refresh()
     return ensureUser(res)
   },
   logout: async () => {
@@ -93,7 +93,18 @@ setApiClient({
     currentToken = token || null
     adminClient.setToken(token)
   },
-  onUnauthorized: (handler) => adminClient.onUnauthorized(handler),
+  onUnauthorized: (handler) =>
+    adminClient.onUnauthorized(async () => {
+      const recovered = await handler()
+      if (!recovered) {
+        try {
+          sessionStorage.removeItem(LEGACY_AUTH_KEY)
+        } catch {
+          // Ignore storage errors.
+        }
+      }
+      return recovered
+    }),
   clearTenant: () => adminClient.setStore(''),
   fetchPermissions: async () => {
     const me = await adminClient.me.get().catch(() => ({ permissions: [], permission_keys: [] }))

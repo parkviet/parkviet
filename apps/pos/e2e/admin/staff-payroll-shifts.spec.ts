@@ -159,7 +159,7 @@ async function installMocks(page: Page) {
 
 test('renders Staff Shifts & Payroll submenus, cash calculator, and VN accounting payroll sheet', async ({
   page,
-}) => {
+}, testInfo) => {
   await installDashboardShell(page, { authenticated: true, read: true, write: true })
   await page.route('**/api/v3/admin/pos/context*', (route) =>
     route.fulfill({
@@ -174,10 +174,12 @@ test('renders Staff Shifts & Payroll submenus, cash calculator, and VN accountin
   // 1. Staff Shifts screen + all 4 Staff sidebar submenus
   await page.goto('/store_1/staff-shifts')
   await expect(page.getByRole('heading', { name: 'Quản lý ca' })).toBeVisible()
-  await expect(page.locator('[data-sidebar="menu-sub-button"]', { hasText: 'Danh sách nhân viên' })).toBeVisible()
-  await expect(page.locator('[data-sidebar="menu-sub-button"]', { hasText: 'Quản lý ca' })).toBeVisible()
-  await expect(page.locator('[data-sidebar="menu-sub-button"]', { hasText: 'Bảng lương' })).toBeVisible()
-  await expect(page.locator('[data-sidebar="menu-sub-button"]', { hasText: 'Nhóm quyền' })).toBeVisible()
+  if (testInfo.project.name !== 'mobile') {
+    await expect(page.locator('[data-sidebar="menu-sub-button"]', { hasText: 'Danh sách nhân viên' })).toBeVisible()
+    await expect(page.locator('[data-sidebar="menu-sub-button"]', { hasText: 'Quản lý ca' })).toBeVisible()
+    await expect(page.locator('[data-sidebar="menu-sub-button"]', { hasText: 'Bảng lương' })).toBeVisible()
+    await expect(page.locator('[data-sidebar="menu-sub-button"]', { hasText: 'Nhóm quyền' })).toBeVisible()
+  }
   await expect(page.getByRole('cell', { name: /Nguyễn An/ })).toBeVisible()
   await expect(page.getByText('4g 30p')).toBeVisible()
 

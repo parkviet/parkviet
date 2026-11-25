@@ -573,7 +573,7 @@ test('return wizard: preview, approval wait, receive, refund with evidence and e
   await expect(page.getByText('Đã mở đơn đổi R101.')).toBeVisible();
   await page.getByRole('button', { name: 'Mở màn hình bán' }).click();
   // The sale screen, with the selected invoice tab's order in the URL.
-  await expect(page).toHaveURL(/:\d+\/(\?order=[\w-]+)?$/);
+  await expect(page).toHaveURL(/\/store_1\/sell(\?order=[\w-]+)?$/);
   const layout = await page.evaluate(() => localStorage.getItem('parkviet-pos-layout'));
   expect(JSON.parse(layout ?? '{}')).toMatchObject({ activeWorkspaceId: 'ws_2' });
 });

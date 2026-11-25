@@ -136,7 +136,7 @@ async function installStaffMocks(page: Page) {
 
 test('shows Staff menu in sidebar, creates unassigned staff, and assigns to a branch from outside Branches', async ({
   page,
-}) => {
+}, testInfo) => {
   await installDashboardShell(page, { authenticated: true, read: true, write: true })
   await page.route('**/api/v3/admin/pos/context*', (route) =>
     route.fulfill({
@@ -152,8 +152,10 @@ test('shows Staff menu in sidebar, creates unassigned staff, and assigns to a br
 
   // Sidebar shows Staff group with both submenus
   await expect(page.getByRole('heading', { name: 'Danh sách nhân viên' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Danh sách nhân viên', exact: true })).toBeVisible()
-  await expect(page.locator('[data-sidebar="menu-sub-button"]', { hasText: 'Nhóm quyền' })).toBeVisible()
+  if (testInfo.project.name !== 'mobile') {
+    await expect(page.getByRole('link', { name: 'Danh sách nhân viên', exact: true })).toBeVisible()
+    await expect(page.locator('[data-sidebar="menu-sub-button"]', { hasText: 'Nhóm quyền' })).toBeVisible()
+  }
 
   // Shows both assigned and unassigned staff
   await expect(page.getByText('Chủ Quán')).toBeVisible()

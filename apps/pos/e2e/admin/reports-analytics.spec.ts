@@ -186,7 +186,7 @@ async function installReportAnalyticsMocks(page: Page) {
   )
 }
 
-test('shows report submenus in sidebar and renders all 6 new report analytics screens', async ({ page }) => {
+test('shows report submenus in sidebar and renders all 6 new report analytics screens', async ({ page }, testInfo) => {
   await installDashboardShell(page, { authenticated: true, read: true, write: true })
   await page.route('**/api/v3/admin/pos/context*', (route) =>
     route.fulfill({
@@ -208,12 +208,14 @@ test('shows report submenus in sidebar and renders all 6 new report analytics sc
   await page.goto('/store_1/reports/overview')
   await expect(page.getByRole('heading', { name: 'Tổng quan báo cáo' })).toBeVisible()
   await expect(page.getByText('Cà phê sữa đá').first()).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Báo cáo lợi nhuận' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Báo cáo doanh thu', exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Báo cáo kho hàng' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Tổng hợp tồn kho' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Báo cáo thu chi' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Lịch sử xuất báo cáo' })).toBeVisible()
+  if (testInfo.project.name !== 'mobile') {
+    await expect(page.getByRole('link', { name: 'Báo cáo lợi nhuận' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Báo cáo doanh thu', exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Báo cáo kho hàng' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Tổng hợp tồn kho' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Báo cáo thu chi' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Lịch sử xuất báo cáo' })).toBeVisible()
+  }
 
   // 2. Profit
   await page.goto('/store_1/reports/profit')

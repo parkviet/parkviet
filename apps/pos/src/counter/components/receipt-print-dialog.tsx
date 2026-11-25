@@ -71,6 +71,7 @@ export function ReceiptPrintDialog({
     queryKey: ['pos', 'receipt-source', snapshot.generation, sourceId],
     enabled: snapshot.status === 'authenticated',
     retry: false,
+    staleTime: 0,
     queryFn: async () => {
       try {
         return (

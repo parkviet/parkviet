@@ -62,26 +62,7 @@ export function AccountingBooksPage() {
   const readiness = overview.data?.taxpayer.readiness
 
   return (
-    <ModelPage
-      title={t('accounting.booksTitle')}
-      actions={
-        <div className="flex flex-wrap items-center gap-2">
-          <Link to="/$storeId/settings/tax-info" params={{ storeId: session.storeId }}>
-            <Button variant="outline" size="sm">
-              <CheckCircle2 className="mr-1.5 size-4" />
-              {t('taxInfo.title')}
-              {readiness ? ` (${readiness.filled}/${readiness.total})` : ''}
-            </Button>
-          </Link>
-          <Link to="/$storeId/settings/tax" params={{ storeId: session.storeId }}>
-            <Button variant="outline" size="sm">
-              <Settings2 className="mr-1.5 size-4" />
-              {t('accounting.taxConfigLink')}
-            </Button>
-          </Link>
-        </div>
-      }
-    >
+    <ModelPage title={t('accounting.booksTitle')}>
       {overview.isPending ? (
         <PageSkeleton />
       ) : overview.isError || !overview.data ? (
@@ -92,7 +73,24 @@ export function AccountingBooksPage() {
         />
       ) : (
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">{t('accounting.booksSubtitle')}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">{t('accounting.booksSubtitle')}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link to="/$storeId/settings/tax-info" params={{ storeId: session.storeId }}>
+                <Button variant="outline" size="sm">
+                  <CheckCircle2 className="mr-1.5 size-4" />
+                  {t('taxInfo.title')}
+                  {readiness ? ` (${readiness.filled}/${readiness.total})` : ''}
+                </Button>
+              </Link>
+              <Link to="/$storeId/settings/tax" params={{ storeId: session.storeId }}>
+                <Button variant="outline" size="sm">
+                  <Settings2 className="mr-1.5 size-4" />
+                  {t('accounting.taxConfigLink')}
+                </Button>
+              </Link>
+            </div>
+          </div>
 
           {readiness && readiness.filled < readiness.total && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">

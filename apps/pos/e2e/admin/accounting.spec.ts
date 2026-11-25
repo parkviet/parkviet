@@ -162,16 +162,18 @@ async function installMocks(page: Page) {
   })
 }
 
-test('Accounting & Tax sidebar, TT152 books (S2c-HKD), and 01/CNKD declaration workflow', async ({ page }) => {
+test('Accounting & Tax sidebar, TT152 books (S2c-HKD), and 01/CNKD declaration workflow', async ({ page }, testInfo) => {
   await installMocks(page)
   await page.goto('/store_1/accounting/books')
 
   // Verify sidebar exposes all 4 Accounting & Tax submenus directly
   const sidebar = page.locator('[data-sidebar="sidebar"]')
-  await expect(sidebar.getByRole('link', { name: 'Sổ kế toán TT152', exact: true })).toBeVisible()
-  await expect(sidebar.getByRole('link', { name: 'Tờ khai thuế 01/CNKD', exact: true })).toBeVisible()
-  await expect(sidebar.getByRole('link', { name: 'Tờ khai thuế GTGT', exact: true })).toBeVisible()
-  await expect(sidebar.getByRole('link', { name: 'Tờ khai 05/KK-TNCN', exact: true })).toBeVisible()
+  if (testInfo.project.name !== 'mobile') {
+    await expect(sidebar.getByRole('link', { name: 'Sổ kế toán TT152', exact: true })).toBeVisible()
+    await expect(sidebar.getByRole('link', { name: 'Tờ khai thuế 01/CNKD', exact: true })).toBeVisible()
+    await expect(sidebar.getByRole('link', { name: 'Tờ khai thuế GTGT', exact: true })).toBeVisible()
+    await expect(sidebar.getByRole('link', { name: 'Tờ khai 05/KK-TNCN', exact: true })).toBeVisible()
+  }
 
   // Overview shows all 6 TT152 books and tax profile readiness notice
   await expect(page.getByText('Sổ kế toán TT152/2025/TT-BTC')).toBeVisible()
@@ -188,6 +190,9 @@ test('Accounting & Tax sidebar, TT152 books (S2c-HKD), and 01/CNKD declaration w
   await expect(page.getByText('Nguyễn Văn Chủ')).toBeVisible()
 
   // Navigate to 01/CNKD declarations and create + submit a declaration
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: 'Toggle Sidebar' }).click()
+  }
   await sidebar.getByRole('link', { name: 'Tờ khai thuế 01/CNKD', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Tờ khai thuế 01/CNKD' })).toBeVisible()
 

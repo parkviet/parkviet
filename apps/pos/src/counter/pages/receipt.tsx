@@ -47,6 +47,8 @@ function Receipts() {
     queryKey: ['pos', 'receipt-source', snapshot.generation, search.source ?? null],
     enabled: authed && Boolean(search.source) && !selectedId,
     retry: false,
+    staleTime: 0,
+    refetchOnMount: 'always',
     queryFn: async () =>
       (await read<{ data: ReceiptSnapshot }>('/pos/receipts/lookup', { source_id: search.source }))
         .data,

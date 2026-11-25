@@ -242,7 +242,7 @@ async function installStockAndPartnerMocks(page: Page) {
 
 test('shows Stock submenus in sidebar and renders Stock Overview, Ledger, Imports, and Opening pages', async ({
   page,
-}) => {
+}, testInfo) => {
   await installStockAndPartnerMocks(page)
   await page.goto('/store_1/stock/overview')
 
@@ -250,29 +250,33 @@ test('shows Stock submenus in sidebar and renders Stock Overview, Ledger, Import
   await expect(page.getByText('Cà phê Arabica')).toBeVisible()
 
   // Navigate to Sổ kho via sidebar
+  if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Toggle Sidebar' }).click()
   await page.getByRole('link', { name: 'Sổ kho' }).click()
   await expect(page.getByRole('heading', { name: 'Sổ kho' })).toBeVisible()
   await expect(page.getByText('PN00001').first()).toBeVisible()
 
   // Navigate to Nhập hàng via sidebar
+  if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Toggle Sidebar' }).click()
   await page.getByRole('link', { name: 'Nhập hàng' }).first().click()
   await expect(page.getByRole('heading', { name: 'Nhập hàng' })).toBeVisible()
   await expect(page.getByRole('cell', { name: 'Công ty Cà Phê Đà Lạt' })).toBeVisible()
 
   // Navigate to Tồn kho đầu kỳ via sidebar
+  if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Toggle Sidebar' }).click()
   await page.getByRole('link', { name: 'Tồn kho đầu kỳ' }).click()
   await expect(page.getByRole('heading', { name: 'Tồn kho đầu kỳ' })).toBeVisible()
 })
 
 test('renders Partners > Customers and Suppliers pages with KPIs and sidebar links', async ({
   page,
-}) => {
+}, testInfo) => {
   await installStockAndPartnerMocks(page)
   await page.goto('/store_1/partners/customers')
 
   await expect(page.getByRole('heading', { name: 'Khách hàng' })).toBeVisible()
   await expect(page.getByText('Nguyễn Văn A')).toBeVisible()
 
+  if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Toggle Sidebar' }).click()
   await page.getByRole('link', { name: 'Nhà cung cấp' }).click()
   await expect(page.getByRole('heading', { name: 'Nhà cung cấp' })).toBeVisible()
   await expect(page.getByRole('cell', { name: 'Công ty Cà Phê Đà Lạt' })).toBeVisible()

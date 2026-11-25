@@ -342,6 +342,16 @@ export function useSellingWorkspace(options: { view?: SellingView } = {}) {
       requestedOrder.current = null;
     }
   });
+  // When the counter falls back to the first visible tab (fresh visit, closed
+  // tab, or a remembered id that is no longer available), pin it as `activeId`
+  // so `selectedQuery` loads and retains its full line items instead of
+  // falling back to summary rows after background list refetches.
+  useEffect(() => {
+    if (!fallback || requestedOrder.current || selecting.current || !activeSummary) return;
+    if (activeSummary.id === activeId) return;
+    if (activeId !== null && workspaces.selectedQuery.isPending) return;
+    setActiveId(activeSummary.id);
+  });
   // Frames: the selected order is on its way (the URL's order being looked
   // up, or the details of an order outside the list); nothing stands in.
   const activeLoading =

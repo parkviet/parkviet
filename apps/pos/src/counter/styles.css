@@ -192,8 +192,9 @@ kbd { padding: var(--pos-s1); border: 1px solid var(--pos-border); border-radius
 .pos-layout .product-search-row { display: flex; gap: var(--pos-s2); margin-top: 0; }
 .search-input-wrap { position: relative; flex: 1; min-width: 0; }
 .search-input-wrap > .pos-icon { position: absolute; top: 50%; transform: translateY(-50%); left: var(--pos-s3); color: var(--pos-muted); pointer-events: none; }
-.pos-layout .search-input-wrap input { min-height: 32px; height: 32px; padding: 2px var(--pos-s3) 2px 40px; }
-.pos-layout .product-search-row > button { min-height: 32px; height: 32px; padding: 2px var(--pos-s3); }
+.pos-layout .search-input-wrap input { min-height: 32px; height: 32px; padding: 2px var(--pos-s3) 2px 40px; font-size: var(--pos-body); }
+@layer base { .pos-layout .search-input-wrap input { font-size: var(--pos-body) !important; } }
+.pos-layout .product-search-row > button { min-height: 32px; height: 32px; padding: 2px var(--pos-s3); font-size: var(--pos-body); }
 .catalog-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--pos-s2); margin-top: var(--pos-s2); margin-bottom: var(--pos-s2); }
 .catalog-heading h3 { margin: 0; font-size: var(--pos-body); }
 .catalog-count { margin-left: var(--pos-s1); color: var(--pos-muted); font-size: var(--pos-small); font-weight: 400; }

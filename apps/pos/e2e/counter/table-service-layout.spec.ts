@@ -503,7 +503,7 @@ test('leaving the payment by another route lets the waiting QR go, never one the
   await expect.poll(() => attempts(world, 'vietqr', 'prepared').length).toBe(1);
 
   // The URL goes to the board (a link, the history): the waiting QR goes with the screen.
-  await followUrl(page, '/?view=board');
+  await followUrl(page, '/store_1/sell?view=board');
   await expect(page.getByRole('region', { name: 'Bảng bàn' })).toBeVisible();
   await expect.poll(() => attempts(world, 'vietqr', 'canceled').length).toBe(1);
   expect(attempts(world, 'vietqr', 'prepared')).toHaveLength(0);
@@ -514,7 +514,7 @@ test('leaving the payment by another route lets the waiting QR go, never one the
   await expect.poll(() => attempts(world, 'vietqr', 'prepared').length).toBe(1);
   world.vietqrReceived?.add(attempts(world, 'vietqr', 'prepared')[0].id);
   await expect(qr.getByRole('status')).toContainText('Ngân hàng đã báo nhận tiền', { timeout: 10_000 });
-  await followUrl(page, '/?view=board');
+  await followUrl(page, '/store_1/sell?view=board');
   await expect(page.getByRole('region', { name: 'Bảng bàn' })).toBeVisible();
   // A release would have been sent as the screen went; give it the time to land.
   await page.waitForTimeout(500);

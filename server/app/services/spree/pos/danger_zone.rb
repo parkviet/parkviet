@@ -462,15 +462,17 @@ module Spree
           return if location_ids.empty? || !ActiveRecord::Base.connection.data_source_exists?('spree_stock_levels')
 
           conn = ActiveRecord::Base.connection
-          updates = []
-          %w[count_on_hand allocated_count reserved_count incoming_count].each do |col|
-            updates << "#{conn.quote_column_name(col)} = 0" if conn.column_exists?('spree_stock_levels', col)
+          table = Arel::Table.new('spree_stock_levels')
+          assignments = %w[count_on_hand allocated_count reserved_count incoming_count].filter_map do |col|
+            [table[col], 0] if conn.column_exists?('spree_stock_levels', col)
           end
-          return if updates.empty?
+          return if assignments.empty?
 
-          conn.execute(
-            "UPDATE spree_stock_levels SET #{updates.join(', ')} WHERE stock_location_id IN (#{location_ids.map(&:to_i).join(',')})"
-          )
+          stmt = Arel::UpdateManager.new
+          stmt.table(table)
+          stmt.set(assignments)
+          stmt.where(table['stock_location_id'].in(location_ids.map(&:to_i)))
+          conn.update(stmt)
         end
 
         def record_audit!(store:, actor:, action:, subject:, metadata: {})
@@ -515,10 +517,9 @@ module Spree
         def select_ids(table, column, values)
           return [] if values.empty? || !table_exists?(table) || !column_exists?(table, column) || !column_exists?(table, 'id')
 
-          q_table = @conn.quote_table_name(table)
-          q_col = @conn.quote_column_name(column)
-          in_list = values.map(&:to_i).uniq.join(',')
-          @conn.select_values("SELECT id FROM #{q_table} WHERE #{q_col} IN (#{in_list})").map(&:to_i)
+          arel_table = Arel::Table.new(table)
+          query = arel_table.project(arel_table['id']).where(arel_table[column].in(values.map(&:to_i).uniq))
+          @conn.select_values(query).map(&:to_i)
         end
 
         def delete_records(table, ids, visited_stack = Set.new)
@@ -587,19 +588,22 @@ module Spree
         def nullify_column(table, column, ids)
           return if ids.empty?
 
-          q_table = @conn.quote_table_name(table)
-          q_col = @conn.quote_column_name(column)
-          in_list = ids.map(&:to_i).uniq.join(',')
-          @conn.execute("UPDATE #{q_table} SET #{q_col} = NULL WHERE #{q_col} IN (#{in_list})")
+          arel_table = Arel::Table.new(table)
+          stmt = Arel::UpdateManager.new
+          stmt.table(arel_table)
+          stmt.set([[arel_table[column], nil]])
+          stmt.where(arel_table[column].in(ids.map(&:to_i).uniq))
+          @conn.update(stmt)
         end
 
         def delete_by_column(table, column, ids)
           return 0 if ids.empty?
 
-          q_table = @conn.quote_table_name(table)
-          q_col = @conn.quote_column_name(column)
-          in_list = ids.map(&:to_i).uniq.join(',')
-          @conn.delete("DELETE FROM #{q_table} WHERE #{q_col} IN (#{in_list})")
+          arel_table = Arel::Table.new(table)
+          stmt = Arel::DeleteManager.new
+          stmt.from(arel_table)
+          stmt.where(arel_table[column].in(ids.map(&:to_i).uniq))
+          @conn.delete(stmt)
         end
       end
     end

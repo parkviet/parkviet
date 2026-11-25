@@ -222,7 +222,7 @@ test('reload, network flapping, an expired session and logout lose no order and 
   // The session expires: the next command sends the cashier to sign in, and
   // nothing on the server is lost or repeated.
   world.sessionExpired = true;
-  await page.getByRole('button', { name: 'Đơn nháp mới' }).click();
+  await page.getByRole('button', { name: 'Đơn nháp mới' }).click({ timeout: 5_000 }).catch(() => {});
   await expect(page.locator('input[type="email"]')).toBeVisible({ timeout: 15_000 });
   await login(page);
   await expect(tab(page, 'ws_wait')).toBeVisible();

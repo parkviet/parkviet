@@ -110,6 +110,40 @@ test('a reconnect refetches what changed while the socket was down', async ({ br
   }
 });
 
+test('fallback tab keeps its lines after a summary list refetch', async ({ browser }) => {
+  const world = newWorld({ features: { edit_lease: false } });
+  world.summaryList = true;
+  const oldest = addSheet(world, 'ws_1');
+  addSheet(world, 'ws_2');
+  const hub = cableHub();
+  const context = await browser.newContext();
+  try {
+    await installRetailApi(context, world);
+    await hub.install(context);
+    const page = await context.newPage();
+    await login(page);
+    await live(page);
+
+    // Without clicking a tab, the counter falls back to Hóa đơn 1 (`ws_1`) and auto-claims it.
+    await expect(tab(page, 'ws_1')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('button', { name: 'Tạm giữ' })).toBeEnabled();
+    await scan(page, BARCODE);
+    await expect.poll(() => oldest.lines.length).toBe(1);
+    await expect(page.locator('.basket-panel')).toContainText(NAME);
+
+    // The server's `workspace.updated` triggers a background list refetch returning summary rows.
+    const listRefetch = page.waitForResponse(
+      (response) => /\/pos\/workspaces(\?|$)/.test(response.url()) && response.request().method() === 'GET' && response.ok(),
+    );
+    hub.publish('ws_1', oldest.revision);
+    await listRefetch;
+
+    await expect(page.locator('.basket-panel')).toContainText(NAME);
+  } finally {
+    await context.close();
+  }
+});
+
 test('real API: a line added in one tab shows in another tab within two seconds', async ({ browser }) => {
   test.setTimeout(180_000);
   const fixture = requireLive();

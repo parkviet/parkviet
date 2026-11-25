@@ -91,7 +91,7 @@ test('back-office pages open in the POS dashboard from the "Quản trị" group'
     ['Đơn hàng', 'orders'],
     ['Sổ tiền đã nhận / nghĩa vụ', 'funds'],
     ['Khoản thu cần chú ý', 'funds/attention'],
-    ['Công nợ khách hàng', 'receivables'],
+    ['Công nợ phải thu', 'receivables'],
     ['Báo cáo', 'reports'],
   ] as const) {
     const link = group.getByRole('link', { name, exact: true });
@@ -102,5 +102,5 @@ test('back-office pages open in the POS dashboard from the "Quản trị" group'
     await expect(link).toHaveAttribute('target', '_blank');
   }
   for (const name of ['Trả / đổi hàng', 'Hóa đơn', 'Ca của tôi', 'Thu nợ'])
-    await expect(menu.getByRole('link', { name, exact: true })).not.toHaveAttribute('href', /store_1/);
+    await expect(menu.getByRole('link', { name, exact: true })).toHaveAttribute('href', /\/store_1\/sell\//);
 });

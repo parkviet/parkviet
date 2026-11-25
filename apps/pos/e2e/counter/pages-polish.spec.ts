@@ -21,7 +21,7 @@ test('login shares register styling, reveals password and handles pending / fail
   await page.goto('/login');
   // The sign-in page is the split login layout with its own brand column; the register shell header is not rendered here.
   await expect(page.locator('.header')).toHaveCount(0);
-  await expect(page.getByText('Quản trị POS').first()).toBeVisible();
+  await expect(page.locator('span:visible', { hasText: 'Quản trị POS' }).first()).toBeVisible();
   const saleButton = page.getByRole('button', { name: 'Đăng nhập', exact: true });
   await expect(saleButton).toBeEnabled();
   await capture(page, testInfo, 'login');

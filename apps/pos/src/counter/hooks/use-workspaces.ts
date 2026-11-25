@@ -104,12 +104,7 @@ export function useWorkspaces(
       }
     },
   });
-  const detailId =
-    activeId ??
-    query.data?.data.find(
-      (workspace) => workspace.branch_id === branchId && workspace.register_id === registerId,
-    )?.id ??
-    null;
+  const detailId = activeId;
   const selectedQuery = useQuery({
     queryKey: [
       ...posWorkspacesKey(snapshot.generation, storeId),

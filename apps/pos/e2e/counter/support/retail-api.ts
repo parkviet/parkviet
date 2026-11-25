@@ -217,6 +217,8 @@ export type Write = { family: Family; key: string; path: string; body: Record<st
 export type World = {
   // Adds what a test's own routes keep to every order the API answers.
   decorate?: <T extends { id: string; line_items: unknown[] }>(view: T) => T;
+  // When true, `GET /pos/workspaces` returns newest-first summary rows without `line_items`, matching the real API.
+  summaryList?: boolean;
   capabilities: string[];
   // Absent: the server predates branch flags and the context has no `features`.
   features?: Record<string, boolean>;
@@ -980,7 +982,10 @@ async function handle(world: World, route: Route) {
     if (world.logins === 0) return route.fulfill({ status: 401, json: { error: { code: 'unauthorized', message: 'Signed out.' } } });
     return route.fulfill({ json: { token: `token-${world.logins}`, user: staffUser } });
   }
-  if (path === '/auth/logout') return route.fulfill({ json: {} });
+  if (path === '/auth/logout') {
+    world.logins = 0;
+    return route.fulfill({ json: {} });
+  }
   if (path === '/me') return route.fulfill({ json: { user: staffUser, permissions: [], permission_keys: [] } });
   if (path === '/stores/store_1') {
     return route.fulfill({
@@ -1043,22 +1048,28 @@ async function handle(world: World, route: Route) {
       const q = (url.searchParams.get('q') ?? '').toLowerCase();
       const rows = [...world.sheets.values()]
         .filter((sheet) => !tabs || (sheet.tabName && sheet.status !== 'completed' && sheet.tabName.toLowerCase().includes(q)))
-        .map((sheet) =>
-          tabs
-            ? {
-                ...serialize(world, sheet),
-                total: money(sheetTotal(world, sheet)),
-                unsent_kitchen_items: unsentUnits(sheet),
-              }
-            : serialize(world, sheet),
-        );
+        .map((sheet) => {
+          const full = serialize(world, sheet);
+          if (tabs) {
+            return {
+              ...full,
+              total: money(sheetTotal(world, sheet)),
+              unsent_kitchen_items: unsentUnits(sheet),
+            };
+          }
+          if (world.summaryList) {
+            const { line_items: _lines, ...summary } = full;
+            return summary;
+          }
+          return full;
+        });
       if (slow) await sleep(slow[1]);
       // The tab list reads one page, newest first, with the count of them all.
       if (tabs) {
         const limit = Number(url.searchParams.get('limit')) || rows.length;
         return route.fulfill(page(rows.reverse().slice(0, limit), { count: rows.length }));
       }
-      return route.fulfill(page(rows));
+      return route.fulfill(page(world.summaryList ? rows.reverse() : rows));
     }
     // The QR of a VietQR tender, received once the test says the bank reported it.
     const qr = /^\/pos\/workspaces\/([^/]+)\/tender_attempts\/([^/]+)\/vietqr$/.exec(path);

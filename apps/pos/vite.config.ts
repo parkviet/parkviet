@@ -84,7 +84,13 @@ export default defineConfig(({ mode }) => {
   return {
     base: process.env.VITE_BASE_PATH || env.VITE_BASE_PATH || '/',
     plugins: [
-      tanstackRouter({ target: 'react', autoCodeSplitting: true }),
+      tanstackRouter({
+        target: 'react',
+        autoCodeSplitting: true,
+        codeSplittingOptions: {
+          splitBehavior: ({ routeId }) => (routeId === '/offline' ? [] : undefined),
+        },
+      }),
       tailwindcss(),
       react(),
       serviceWorker(),
