@@ -1,4 +1,5 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useRouter } from '@tanstack/react-router';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useConnectivity,
@@ -31,7 +32,13 @@ export function OfflineBanner({
   offline: boolean;
 }) {
   const { t } = useTranslation();
+  const router = useRouter();
   const { online } = useConnectivity();
+  useEffect(() => {
+    if (menuOn && online && !offline) {
+      void router.preloadRoute({ to: '/offline' }).catch(() => {});
+    }
+  }, [router, menuOn, online, offline]);
   useOfflineSnapshotRefresh(registerId, shiftId, menuOn);
   const stored = useStoredSnapshot();
   const sync = useOfflineSync(staffId, storeId);

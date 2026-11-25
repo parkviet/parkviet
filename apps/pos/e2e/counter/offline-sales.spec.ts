@@ -145,9 +145,17 @@ test('cash sales made offline are sent once the server answers, a changed price 
   const world = newWorld({ modules: { 'fnb.menu': true }, menu: teaMenu() });
   await installRetailApi(page, world);
   const server = await installOfflineServer(page, world);
+  await page.addInitScript(() => {
+    const win = window as unknown as { __offlineSaved?: number };
+    win.__offlineSaved = 0;
+    window.addEventListener('pos:offline-changed', () => {
+      win.__offlineSaved = (win.__offlineSaved ?? 0) + 1;
+    });
+  });
   await login(page);
   // The register keeps its offline snapshot while online.
   await expect.poll(() => server.snapshots).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __offlineSaved?: number }).__offlineSaved ?? 0)).toBeGreaterThan(0);
 
   await setNetwork(context, world, false);
   await page.getByRole('link', { name: 'Bán offline (chỉ tiền mặt)' }).click();
