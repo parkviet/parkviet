@@ -155,6 +155,9 @@ Rails.application.routes.draw do
             resource :store_info, only: [:show, :update], controller: 'store_infos' do
               post :logo
               delete :logo, action: :destroy_logo
+              post :reset_data
+              post :delete_branch
+              post :delete_store
             end
             resource :store_profile, only: [:show, :update]
             resource :tax_profile, only: [:show, :update]

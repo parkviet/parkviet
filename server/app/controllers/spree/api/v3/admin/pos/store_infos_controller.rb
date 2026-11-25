@@ -41,6 +41,44 @@ module Spree
               render json: { data: data }
             end
 
+            def reset_data
+              return if channel_rejected?
+
+              data = Spree::Pos::DangerZone.reset_data(
+                store: current_store,
+                actor: current_user,
+                scope: params[:scope],
+                branch_id: params[:branch_id],
+                wipe_transactions: params.key?(:wipe_transactions) ? params[:wipe_transactions] : true,
+                wipe_catalog: params.key?(:wipe_catalog) ? params[:wipe_catalog] : false,
+                confirmation: params[:confirmation]
+              )
+              render json: { data: data }
+            end
+
+            def delete_branch
+              return if channel_rejected?
+
+              data = Spree::Pos::DangerZone.delete_branch(
+                store: current_store,
+                actor: current_user,
+                branch_id: params[:branch_id],
+                confirmation: params[:confirmation]
+              )
+              render json: { data: data }
+            end
+
+            def delete_store
+              return if channel_rejected?
+
+              data = Spree::Pos::DangerZone.delete_store(
+                store: current_store,
+                actor: current_user,
+                confirmation: params[:confirmation]
+              )
+              render json: { data: data }
+            end
+
             private
 
             def profile_keys

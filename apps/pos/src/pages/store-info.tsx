@@ -6,10 +6,25 @@ import {
   storeInfoFilled,
   suggestedCutoff,
 } from '@shared/store-info'
-import { Button, Input, Label } from '@spree/dashboard-ui'
+import {
+  Button,
+  Card,
+  CardContent,
+  Checkbox,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+  SectionTitle,
+} from '@spree/dashboard-ui'
 import { Building2Icon, StoreIcon } from '@spree/dashboard-ui/icons'
-import { useMutation } from '@tanstack/react-query'
-import { ChevronDown } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
+import { AlertTriangle, ChevronDown, Database, Trash2 } from 'lucide-react'
 import {
   type KeyboardEvent,
   type ReactNode,
@@ -34,9 +49,14 @@ import { refreshBusinessModel } from '../hooks/use-onboarding'
 import { usePosContext } from '../hooks/use-pos-context'
 import {
   clearStoreLogo,
+  type DangerZoneBranch,
+  deleteCurrentStore,
+  deleteStoreBranch,
+  resetStoreOrBranchData,
   type StoreInfoRecord,
   saveStoreInfo,
   uploadStoreLogo,
+  useStoreBranches,
   useStoreInfo,
 } from '../hooks/use-store-info'
 
@@ -386,7 +406,584 @@ function StoreInfoForm({
           }}
         />
       ) : null}
+      <DangerZoneSection
+        storeId={storeId}
+        storeName={draft.name.trim() || record.fallback.name || ''}
+        write={write}
+        onNotice={setNotice}
+      />
     </div>
+  )
+}
+
+function DangerZoneSection({
+  storeId,
+  storeName,
+  write,
+  onNotice,
+}: {
+  storeId: string | null
+  storeName: string
+  write: boolean
+  onNotice: (notice: { text: string; failed: boolean } | null) => void
+}) {
+  const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const branchesQuery = useStoreBranches(storeId, Boolean(storeId))
+  const branches = branchesQuery.data ?? []
+
+  const [resetOpen, setResetOpen] = useState(false)
+  const [deleteBranchOpen, setDeleteBranchOpen] = useState(false)
+  const [deleteStoreOpen, setDeleteStoreOpen] = useState(false)
+
+  return (
+    <section
+      className="flex flex-col gap-3"
+      aria-labelledby="store-info-danger-zone"
+      data-testid="store-danger-zone"
+    >
+      <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+        <SectionTitle id="store-info-danger-zone" className="text-destructive">
+          <AlertTriangle className="size-4 text-destructive" aria-hidden />
+          {t('storeInfo.dangerZone.title')}
+        </SectionTitle>
+      </div>
+      <Card className="border-destructive/40">
+        <CardContent>
+          <div className="flex flex-col divide-y divide-border">
+            <p className="pb-4 text-sm text-muted-foreground">
+              {t('storeInfo.dangerZone.subtitle')}
+            </p>
+
+            {/* 1. Reset Data (Store or Branch) */}
+            <div className="flex flex-col justify-between gap-3 py-4 sm:flex-row sm:items-center">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 font-medium">
+                  <Database className="size-4 text-destructive" aria-hidden />
+                  <span>{t('storeInfo.dangerZone.resetTitle')}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {t('storeInfo.dangerZone.resetDesc')}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                className="shrink-0"
+                disabled={!write}
+                onClick={() => setResetOpen(true)}
+                data-testid="danger-zone-reset-btn"
+              >
+                {t('storeInfo.dangerZone.resetButton')}
+              </Button>
+            </div>
+
+            {/* 2. Delete Single Branch */}
+            <div className="flex flex-col justify-between gap-3 py-4 sm:flex-row sm:items-center">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 font-medium">
+                  <Trash2 className="size-4 text-destructive" aria-hidden />
+                  <span>{t('storeInfo.dangerZone.deleteBranchTitle')}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {t('storeInfo.dangerZone.deleteBranchDesc')}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                className="shrink-0"
+                disabled={!write || branches.length === 0}
+                onClick={() => setDeleteBranchOpen(true)}
+                data-testid="danger-zone-delete-branch-btn"
+              >
+                {t('storeInfo.dangerZone.deleteBranchButton')}
+              </Button>
+            </div>
+
+            {/* 3. Delete Store */}
+            <div className="flex flex-col justify-between gap-3 pt-4 sm:flex-row sm:items-center">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 font-medium">
+                  <Trash2 className="size-4 text-destructive" aria-hidden />
+                  <span>{t('storeInfo.dangerZone.deleteStoreTitle')}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {t('storeInfo.dangerZone.deleteStoreDesc')}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                className="shrink-0"
+                disabled={!write}
+                onClick={() => setDeleteStoreOpen(true)}
+                data-testid="danger-zone-delete-store-btn"
+              >
+                {t('storeInfo.dangerZone.deleteStoreButton')}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {resetOpen ? (
+        <ResetDataDialog
+          storeName={storeName}
+          branches={branches}
+          onClose={() => setResetOpen(false)}
+          onDone={(message) => {
+            setResetOpen(false)
+            onNotice({ text: message, failed: false })
+            void queryClient.invalidateQueries()
+          }}
+        />
+      ) : null}
+
+      {deleteBranchOpen ? (
+        <DeleteBranchDialog
+          branches={branches}
+          onClose={() => setDeleteBranchOpen(false)}
+          onDone={(message) => {
+            setDeleteBranchOpen(false)
+            onNotice({ text: message, failed: false })
+            void branchesQuery.refetch()
+            void queryClient.invalidateQueries()
+          }}
+        />
+      ) : null}
+
+      {deleteStoreOpen ? (
+        <DeleteStoreDialog
+          storeName={storeName}
+          onClose={() => setDeleteStoreOpen(false)}
+          onDone={(result) => {
+            setDeleteStoreOpen(false)
+            onNotice({
+              text: t('storeInfo.dangerZone.deleteStoreSuccess', {
+                store: result.deleted_store_name,
+              }),
+              failed: false,
+            })
+            void queryClient.invalidateQueries()
+            if (result.next_store_id) {
+              void navigate({ to: '/$storeId', params: { storeId: result.next_store_id } })
+            }
+          }}
+        />
+      ) : null}
+    </section>
+  )
+}
+
+function ResetDataDialog({
+  storeName,
+  branches,
+  onClose,
+  onDone,
+}: {
+  storeName: string
+  branches: DangerZoneBranch[]
+  onClose: () => void
+  onDone: (message: string) => void
+}) {
+  const { t } = useTranslation()
+  const [scope, setScope] = useState<'store' | 'branch'>('store')
+  const [branchId, setBranchId] = useState<string>(branches[0]?.id ?? '')
+  const [wipeTransactions, setWipeTransactions] = useState(true)
+  const [wipeCatalog, setWipeCatalog] = useState(false)
+  const [confirmation, setConfirmation] = useState('')
+  const [errorText, setErrorText] = useState<string | null>(null)
+
+  const selectedBranch = branches.find((b) => b.id === branchId) ?? branches[0] ?? null
+  const targetName = scope === 'branch' ? (selectedBranch?.name ?? '') : storeName
+  const confirmationMatches =
+    targetName.trim() !== '' &&
+    confirmation.trim().toLowerCase() === targetName.trim().toLowerCase()
+  const canSubmit =
+    (wipeTransactions || wipeCatalog) &&
+    confirmationMatches &&
+    (scope === 'store' || Boolean(selectedBranch))
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      resetStoreOrBranchData({
+        scope,
+        branch_id: scope === 'branch' ? selectedBranch?.id : null,
+        wipe_transactions: wipeTransactions,
+        wipe_catalog: wipeCatalog,
+        confirmation: confirmation.trim(),
+      }),
+  })
+
+  async function handleConfirm() {
+    setErrorText(null)
+    try {
+      const result = await mutation.mutateAsync()
+      const message =
+        result.scope === 'branch'
+          ? t('storeInfo.dangerZone.resetSuccessBranch', {
+              branch: result.branch_name ?? '',
+              count: result.deleted_counts.total,
+            })
+          : t('storeInfo.dangerZone.resetSuccessStore', {
+              count: result.deleted_counts.total,
+            })
+      onDone(message)
+    } catch (error) {
+      setErrorText(describeFailure(error, t))
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{t('storeInfo.dangerZone.resetTitle')}</DialogTitle>
+        </DialogHeader>
+        <DialogBody className="space-y-4">
+          {errorText ? (
+            <div
+              role="alert"
+              className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {errorText}
+            </div>
+          ) : null}
+
+          <div className="space-y-2">
+            <Label>{t('storeInfo.dangerZone.scopeLabel')}</Label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setScope('store')
+                  setConfirmation('')
+                }}
+                className={`rounded-md border p-3 text-left text-sm transition ${
+                  scope === 'store'
+                    ? 'border-destructive bg-destructive/5'
+                    : 'border-border hover:bg-muted/50'
+                }`}
+                data-testid="reset-scope-store"
+              >
+                <div className="font-medium">{t('storeInfo.dangerZone.scopeStore')}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  {t('storeInfo.dangerZone.scopeStoreDesc')}
+                </div>
+              </button>
+              <button
+                type="button"
+                disabled={branches.length === 0}
+                onClick={() => {
+                  setScope('branch')
+                  if (!branchId && branches[0]) setBranchId(branches[0].id)
+                  setConfirmation('')
+                }}
+                className={`rounded-md border p-3 text-left text-sm transition disabled:opacity-50 ${
+                  scope === 'branch'
+                    ? 'border-destructive bg-destructive/5'
+                    : 'border-border hover:bg-muted/50'
+                }`}
+                data-testid="reset-scope-branch"
+              >
+                <div className="font-medium">{t('storeInfo.dangerZone.scopeBranch')}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  {t('storeInfo.dangerZone.scopeBranchDesc')}
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {scope === 'branch' ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="danger-reset-branch">{t('storeInfo.dangerZone.selectBranch')}</Label>
+              <select
+                id="danger-reset-branch"
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                value={selectedBranch?.id ?? ''}
+                onChange={(e) => {
+                  setBranchId(e.target.value)
+                  setConfirmation('')
+                }}
+              >
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                    {branch.is_default ? ` (${t('storeInfo.dangerZone.defaultBadge')})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
+          <div className="space-y-2.5 rounded-md border p-3">
+            <p className="text-sm font-medium">{t('storeInfo.dangerZone.dataIncluded')}</p>
+            <label className="flex items-start gap-2.5 text-sm">
+              <Checkbox
+                checked={wipeTransactions}
+                onCheckedChange={(checked) => setWipeTransactions(checked === true)}
+              />
+              <span>{t('storeInfo.dangerZone.wipeTransactions')}</span>
+            </label>
+            <label className="flex items-start gap-2.5 text-sm">
+              <Checkbox
+                checked={wipeCatalog}
+                onCheckedChange={(checked) => setWipeCatalog(checked === true)}
+              />
+              <span>
+                {t('storeInfo.dangerZone.wipeCatalog')}
+                {scope === 'branch' ? (
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {t('storeInfo.dangerZone.wipeCatalogBranchHint')}
+                  </span>
+                ) : null}
+              </span>
+            </label>
+          </div>
+
+          <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>{t('storeInfo.dangerZone.staffPreservedNote')}</span>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="danger-reset-confirm">
+              {t('storeInfo.dangerZone.confirmLabel', { name: targetName })}
+            </Label>
+            <Input
+              id="danger-reset-confirm"
+              value={confirmation}
+              placeholder={t('storeInfo.dangerZone.confirmPlaceholder')}
+              onChange={(e) => setConfirmation(e.target.value)}
+            />
+          </div>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
+            {t('storeInfo.dangerZone.cancel')}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={!canSubmit || mutation.isPending}
+            onClick={() => void handleConfirm()}
+            data-testid="danger-reset-submit"
+          >
+            {mutation.isPending
+              ? t('storeInfo.dangerZone.processing')
+              : t('storeInfo.dangerZone.continue')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function DeleteBranchDialog({
+  branches,
+  onClose,
+  onDone,
+}: {
+  branches: DangerZoneBranch[]
+  onClose: () => void
+  onDone: (message: string) => void
+}) {
+  const { t } = useTranslation()
+  const [branchId, setBranchId] = useState<string>(branches[0]?.id ?? '')
+  const [confirmation, setConfirmation] = useState('')
+  const [errorText, setErrorText] = useState<string | null>(null)
+
+  const selectedBranch = branches.find((b) => b.id === branchId) ?? branches[0] ?? null
+  const targetName = selectedBranch?.name ?? ''
+  const confirmationMatches =
+    targetName.trim() !== '' &&
+    confirmation.trim().toLowerCase() === targetName.trim().toLowerCase()
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      deleteStoreBranch({
+        branch_id: selectedBranch?.id ?? '',
+        confirmation: confirmation.trim(),
+      }),
+  })
+
+  async function handleConfirm() {
+    if (!selectedBranch) return
+    setErrorText(null)
+    try {
+      const result = await mutation.mutateAsync()
+      onDone(
+        t('storeInfo.dangerZone.deleteBranchSuccess', {
+          branch: result.deleted_branch_name,
+        }),
+      )
+    } catch (error) {
+      setErrorText(describeFailure(error, t))
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            {t('storeInfo.dangerZone.deleteBranchModalTitle', { name: targetName })}
+          </DialogTitle>
+        </DialogHeader>
+        <DialogBody className="space-y-4">
+          {errorText ? (
+            <div
+              role="alert"
+              className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {errorText}
+            </div>
+          ) : null}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="danger-delete-branch">{t('storeInfo.dangerZone.selectBranch')}</Label>
+            <select
+              id="danger-delete-branch"
+              className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              value={selectedBranch?.id ?? ''}
+              onChange={(e) => {
+                setBranchId(e.target.value)
+                setConfirmation('')
+              }}
+            >
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                  {branch.is_default ? ` (${t('storeInfo.dangerZone.defaultBadge')})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>{t('storeInfo.dangerZone.deleteBranchWarning', { name: targetName })}</span>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="danger-delete-branch-confirm">
+              {t('storeInfo.dangerZone.confirmLabel', { name: targetName })}
+            </Label>
+            <Input
+              id="danger-delete-branch-confirm"
+              value={confirmation}
+              placeholder={t('storeInfo.dangerZone.confirmPlaceholder')}
+              onChange={(e) => setConfirmation(e.target.value)}
+            />
+          </div>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
+            {t('storeInfo.dangerZone.cancel')}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={!selectedBranch || !confirmationMatches || mutation.isPending}
+            onClick={() => void handleConfirm()}
+            data-testid="danger-delete-branch-submit"
+          >
+            {mutation.isPending
+              ? t('storeInfo.dangerZone.processing')
+              : t('storeInfo.dangerZone.confirmDelete')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function DeleteStoreDialog({
+  storeName,
+  onClose,
+  onDone,
+}: {
+  storeName: string
+  onClose: () => void
+  onDone: (result: { deleted_store_id: string; deleted_store_name: string; next_store_id: string }) => void
+}) {
+  const { t } = useTranslation()
+  const [confirmation, setConfirmation] = useState('')
+  const [errorText, setErrorText] = useState<string | null>(null)
+
+  const confirmationMatches =
+    storeName.trim() !== '' &&
+    confirmation.trim().toLowerCase() === storeName.trim().toLowerCase()
+
+  const mutation = useMutation({
+    mutationFn: () => deleteCurrentStore({ confirmation: confirmation.trim() }),
+  })
+
+  async function handleConfirm() {
+    setErrorText(null)
+    try {
+      const result = await mutation.mutateAsync()
+      onDone(result)
+    } catch (error) {
+      setErrorText(describeFailure(error, t))
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            {t('storeInfo.dangerZone.deleteStoreModalTitle', { name: storeName })}
+          </DialogTitle>
+        </DialogHeader>
+        <DialogBody className="space-y-4">
+          {errorText ? (
+            <div
+              role="alert"
+              className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {errorText}
+            </div>
+          ) : null}
+
+          <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>{t('storeInfo.dangerZone.deleteStoreWarning')}</span>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="danger-delete-store-confirm">
+              {t('storeInfo.dangerZone.confirmLabel', { name: storeName })}
+            </Label>
+            <Input
+              id="danger-delete-store-confirm"
+              value={confirmation}
+              placeholder={t('storeInfo.dangerZone.confirmPlaceholder')}
+              onChange={(e) => setConfirmation(e.target.value)}
+            />
+          </div>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
+            {t('storeInfo.dangerZone.cancel')}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={!confirmationMatches || mutation.isPending}
+            onClick={() => void handleConfirm()}
+            data-testid="danger-delete-store-submit"
+          >
+            {mutation.isPending
+              ? t('storeInfo.dangerZone.processing')
+              : t('storeInfo.dangerZone.confirmDelete')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

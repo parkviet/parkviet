@@ -108,6 +108,96 @@ export function clearStoreLogo() {
   return posRequest<{ data?: unknown }>('DELETE', '/pos/store_info/logo')
 }
 
+export type DangerZoneBranch = {
+  id: string
+  name: string
+  code: string
+  status: string
+  is_default: boolean
+}
+
+export function useStoreBranches(storeId: string | null, enabled = true) {
+  const snapshot = useSession()
+  return useQuery({
+    queryKey: posKey(snapshot.storeId, 'store-info-branches', storeId),
+    enabled: enabled && snapshot.status === 'authenticated' && Boolean(storeId),
+    queryFn: async () => {
+      const response = await posRequest<{ data?: unknown[] }>('GET', '/pos/branches', {
+        params: { per_page: '100' },
+      })
+      const rows = Array.isArray(response.data) ? response.data : []
+      return rows.flatMap((row) => {
+        const item = row as Record<string, unknown>
+        if (typeof item.id !== 'string' || typeof item.name !== 'string') return []
+        return [
+          {
+            id: item.id,
+            name: item.name,
+            code: typeof item.code === 'string' ? item.code : '',
+            status: typeof item.status === 'string' ? item.status : 'active',
+            is_default: item.is_default === true,
+          } satisfies DangerZoneBranch,
+        ]
+      })
+    },
+  })
+}
+
+export type ResetDataResult = {
+  scope: 'store' | 'branch'
+  branch_id: string | null
+  branch_name: string | null
+  deleted_counts: {
+    transactions: number
+    catalog: number
+    total: number
+  }
+  preserved_staff: boolean
+}
+
+export async function resetStoreOrBranchData(body: {
+  scope: 'store' | 'branch'
+  branch_id?: string | null
+  wipe_transactions: boolean
+  wipe_catalog: boolean
+  confirmation: string
+}) {
+  const res = await posRequest<{ data: ResetDataResult }>('POST', '/pos/store_info/reset_data', {
+    body,
+  })
+  return res.data
+}
+
+export type DeleteBranchResult = {
+  deleted_branch_id: string
+  deleted_branch_name: string
+  remaining_branches_count: number
+}
+
+export async function deleteStoreBranch(body: { branch_id: string; confirmation: string }) {
+  const res = await posRequest<{ data: DeleteBranchResult }>(
+    'POST',
+    '/pos/store_info/delete_branch',
+    { body },
+  )
+  return res.data
+}
+
+export type DeleteStoreResult = {
+  deleted_store_id: string
+  deleted_store_name: string
+  next_store_id: string
+}
+
+export async function deleteCurrentStore(body: { confirmation: string }) {
+  const res = await posRequest<{ data: DeleteStoreResult }>(
+    'POST',
+    '/pos/store_info/delete_store',
+    { body },
+  )
+  return res.data
+}
+
 export function useBranchInfo(branchId: string | null, enabled = true) {
   const snapshot = useSession()
   return useQuery({
