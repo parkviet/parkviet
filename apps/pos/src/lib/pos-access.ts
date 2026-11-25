@@ -29,6 +29,12 @@ export type PosPage =
   | 'partners-customers'
   | 'partners-suppliers'
   | 'reports'
+  | 'reports-overview'
+  | 'reports-profit'
+  | 'reports-inventory'
+  | 'reports-inventory-summary'
+  | 'reports-transaction'
+  | 'reports-history'
   | 'branches'
   | 'branch'
   | 'registers'
@@ -260,7 +266,16 @@ export function visibleNav(page: PosPage, access: PosAccess) {
   if (page === 'credit-accounts') return canManageCredit(access)
   if (page === 'credit-approvals') return canApproveSales(access)
   if (page === 'inventory') return navVisible(access.context, 'inventory')
-  if (page === 'reports') return canReadReports(access)
+  if (
+    page === 'reports' ||
+    page === 'reports-overview' ||
+    page === 'reports-profit' ||
+    page === 'reports-inventory' ||
+    page === 'reports-inventory-summary' ||
+    page === 'reports-transaction' ||
+    page === 'reports-history'
+  )
+    return canReadReports(access)
   if (page === 'menu') return runsMenu(access) && canSetSoldOut(access)
   if (page === 'orders') return canReadOrders(access)
   if (page === 'funds') return canReadFunds(access)

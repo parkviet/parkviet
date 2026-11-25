@@ -210,6 +210,11 @@ Rails.application.routes.draw do
             get 'shift_closures/open', to: 'shifts/closures#open'
             get 'cash_reconciliations/candidates', to: 'cash_reconciliations#candidates'
             resources :cash_reconciliations, only: [:index, :create]
+            get 'reports/overview', to: 'report_analytics#overview'
+            get 'reports/profit', to: 'report_analytics#profit'
+            get 'reports/inventory', to: 'report_analytics#inventory'
+            get 'reports/inventory_summary', to: 'report_analytics#inventory_summary'
+            get 'reports/transaction', to: 'report_analytics#transaction'
             get 'reports/:report', to: 'reports#show', as: :report, constraints: { report: /sales|receipts|cashbook|receivables|closures|ingredient_usage|menu_margin|platforms|bar|meals|meal_statement|vehicle_commissions|attendants/ }
             get 'overview', to: 'overview#show'
             # The signed-in user's own widget arrangement of the dashboard home.

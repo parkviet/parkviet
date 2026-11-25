@@ -146,7 +146,23 @@ const groups: { key: string; labelKey: string; icon: NavEntry['icon']; children:
     key: 'reporting',
     labelKey: 'navReports',
     icon: ChartColumn,
-    children: [{ key: 'reports', labelKey: 'reportsNav', path: '/reports' }],
+    children: [
+      { key: 'reports-overview', labelKey: 'reports.overviewTitle', path: '/reports/overview' },
+      { key: 'reports-profit', labelKey: 'reports.profitTitle', path: '/reports/profit' },
+      { key: 'reports', labelKey: 'reports.revenueTitle', path: '/reports' },
+      { key: 'reports-inventory', labelKey: 'reports.inventoryTitle', path: '/reports/inventory' },
+      {
+        key: 'reports-inventory-summary',
+        labelKey: 'reports.inventorySummaryTitle',
+        path: '/reports/inventory-summary',
+      },
+      {
+        key: 'reports-transaction',
+        labelKey: 'reports.transactionTitle',
+        path: '/reports/transaction',
+      },
+      { key: 'reports-history', labelKey: 'reports.historyTitle', path: '/reports/history' },
+    ],
   },
   {
     key: 'configuration',

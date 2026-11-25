@@ -71,13 +71,19 @@ import { Route as AuthenticatedStoreIdReportsIndexRouteImport } from './routes/_
 import { Route as AuthenticatedStoreIdReportsAttendantsRouteImport } from './routes/_authenticated/$storeId/reports/attendants'
 import { Route as AuthenticatedStoreIdReportsCashbookRouteImport } from './routes/_authenticated/$storeId/reports/cashbook'
 import { Route as AuthenticatedStoreIdReportsClosuresRouteImport } from './routes/_authenticated/$storeId/reports/closures'
+import { Route as AuthenticatedStoreIdReportsHistoryRouteImport } from './routes/_authenticated/$storeId/reports/history'
 import { Route as AuthenticatedStoreIdReportsIngredient_usageRouteImport } from './routes/_authenticated/$storeId/reports/ingredient_usage'
+import { Route as AuthenticatedStoreIdReportsInventoryRouteImport } from './routes/_authenticated/$storeId/reports/inventory'
+import { Route as AuthenticatedStoreIdReportsInventorySummaryRouteImport } from './routes/_authenticated/$storeId/reports/inventory-summary'
 import { Route as AuthenticatedStoreIdReportsMeal_statementRouteImport } from './routes/_authenticated/$storeId/reports/meal_statement'
 import { Route as AuthenticatedStoreIdReportsMealsRouteImport } from './routes/_authenticated/$storeId/reports/meals'
 import { Route as AuthenticatedStoreIdReportsMenu_marginRouteImport } from './routes/_authenticated/$storeId/reports/menu_margin'
+import { Route as AuthenticatedStoreIdReportsOverviewRouteImport } from './routes/_authenticated/$storeId/reports/overview'
 import { Route as AuthenticatedStoreIdReportsPlatformsRouteImport } from './routes/_authenticated/$storeId/reports/platforms'
+import { Route as AuthenticatedStoreIdReportsProfitRouteImport } from './routes/_authenticated/$storeId/reports/profit'
 import { Route as AuthenticatedStoreIdReportsReceiptsRouteImport } from './routes/_authenticated/$storeId/reports/receipts'
 import { Route as AuthenticatedStoreIdReportsReceivablesRouteImport } from './routes/_authenticated/$storeId/reports/receivables'
+import { Route as AuthenticatedStoreIdReportsTransactionRouteImport } from './routes/_authenticated/$storeId/reports/transaction'
 import { Route as AuthenticatedStoreIdReportsVehicle_commissionsRouteImport } from './routes/_authenticated/$storeId/reports/vehicle_commissions'
 import { Route as AuthenticatedStoreIdSellIndexRouteImport } from './routes/_authenticated/$storeId/sell/index'
 import { Route as AuthenticatedStoreIdSellBottleKeepsRouteImport } from './routes/_authenticated/$storeId/sell/bottle-keeps'
@@ -501,10 +507,28 @@ const AuthenticatedStoreIdReportsClosuresRoute =
     path: '/closures',
     getParentRoute: () => AuthenticatedStoreIdReportsRoute,
   } as any)
+const AuthenticatedStoreIdReportsHistoryRoute =
+  AuthenticatedStoreIdReportsHistoryRouteImport.update({
+    id: '/history',
+    path: '/history',
+    getParentRoute: () => AuthenticatedStoreIdReportsRoute,
+  } as any)
 const AuthenticatedStoreIdReportsIngredient_usageRoute =
   AuthenticatedStoreIdReportsIngredient_usageRouteImport.update({
     id: '/ingredient_usage',
     path: '/ingredient_usage',
+    getParentRoute: () => AuthenticatedStoreIdReportsRoute,
+  } as any)
+const AuthenticatedStoreIdReportsInventoryRoute =
+  AuthenticatedStoreIdReportsInventoryRouteImport.update({
+    id: '/inventory',
+    path: '/inventory',
+    getParentRoute: () => AuthenticatedStoreIdReportsRoute,
+  } as any)
+const AuthenticatedStoreIdReportsInventorySummaryRoute =
+  AuthenticatedStoreIdReportsInventorySummaryRouteImport.update({
+    id: '/inventory-summary',
+    path: '/inventory-summary',
     getParentRoute: () => AuthenticatedStoreIdReportsRoute,
   } as any)
 const AuthenticatedStoreIdReportsMeal_statementRoute =
@@ -525,10 +549,22 @@ const AuthenticatedStoreIdReportsMenu_marginRoute =
     path: '/menu_margin',
     getParentRoute: () => AuthenticatedStoreIdReportsRoute,
   } as any)
+const AuthenticatedStoreIdReportsOverviewRoute =
+  AuthenticatedStoreIdReportsOverviewRouteImport.update({
+    id: '/overview',
+    path: '/overview',
+    getParentRoute: () => AuthenticatedStoreIdReportsRoute,
+  } as any)
 const AuthenticatedStoreIdReportsPlatformsRoute =
   AuthenticatedStoreIdReportsPlatformsRouteImport.update({
     id: '/platforms',
     path: '/platforms',
+    getParentRoute: () => AuthenticatedStoreIdReportsRoute,
+  } as any)
+const AuthenticatedStoreIdReportsProfitRoute =
+  AuthenticatedStoreIdReportsProfitRouteImport.update({
+    id: '/profit',
+    path: '/profit',
     getParentRoute: () => AuthenticatedStoreIdReportsRoute,
   } as any)
 const AuthenticatedStoreIdReportsReceiptsRoute =
@@ -541,6 +577,12 @@ const AuthenticatedStoreIdReportsReceivablesRoute =
   AuthenticatedStoreIdReportsReceivablesRouteImport.update({
     id: '/receivables',
     path: '/receivables',
+    getParentRoute: () => AuthenticatedStoreIdReportsRoute,
+  } as any)
+const AuthenticatedStoreIdReportsTransactionRoute =
+  AuthenticatedStoreIdReportsTransactionRouteImport.update({
+    id: '/transaction',
+    path: '/transaction',
     getParentRoute: () => AuthenticatedStoreIdReportsRoute,
   } as any)
 const AuthenticatedStoreIdReportsVehicle_commissionsRoute =
@@ -960,13 +1002,19 @@ export interface FileRoutesByFullPath {
   '/$storeId/reports/attendants': typeof AuthenticatedStoreIdReportsAttendantsRoute
   '/$storeId/reports/cashbook': typeof AuthenticatedStoreIdReportsCashbookRoute
   '/$storeId/reports/closures': typeof AuthenticatedStoreIdReportsClosuresRoute
+  '/$storeId/reports/history': typeof AuthenticatedStoreIdReportsHistoryRoute
   '/$storeId/reports/ingredient_usage': typeof AuthenticatedStoreIdReportsIngredient_usageRoute
+  '/$storeId/reports/inventory': typeof AuthenticatedStoreIdReportsInventoryRoute
+  '/$storeId/reports/inventory-summary': typeof AuthenticatedStoreIdReportsInventorySummaryRoute
   '/$storeId/reports/meal_statement': typeof AuthenticatedStoreIdReportsMeal_statementRoute
   '/$storeId/reports/meals': typeof AuthenticatedStoreIdReportsMealsRoute
   '/$storeId/reports/menu_margin': typeof AuthenticatedStoreIdReportsMenu_marginRoute
+  '/$storeId/reports/overview': typeof AuthenticatedStoreIdReportsOverviewRoute
   '/$storeId/reports/platforms': typeof AuthenticatedStoreIdReportsPlatformsRoute
+  '/$storeId/reports/profit': typeof AuthenticatedStoreIdReportsProfitRoute
   '/$storeId/reports/receipts': typeof AuthenticatedStoreIdReportsReceiptsRoute
   '/$storeId/reports/receivables': typeof AuthenticatedStoreIdReportsReceivablesRoute
+  '/$storeId/reports/transaction': typeof AuthenticatedStoreIdReportsTransactionRoute
   '/$storeId/reports/vehicle_commissions': typeof AuthenticatedStoreIdReportsVehicle_commissionsRoute
   '/$storeId/sell/bottle-keeps': typeof AuthenticatedStoreIdSellBottleKeepsRoute
   '/$storeId/sell/collect': typeof AuthenticatedStoreIdSellCollectRoute
@@ -1079,13 +1127,19 @@ export interface FileRoutesByTo {
   '/$storeId/reports/attendants': typeof AuthenticatedStoreIdReportsAttendantsRoute
   '/$storeId/reports/cashbook': typeof AuthenticatedStoreIdReportsCashbookRoute
   '/$storeId/reports/closures': typeof AuthenticatedStoreIdReportsClosuresRoute
+  '/$storeId/reports/history': typeof AuthenticatedStoreIdReportsHistoryRoute
   '/$storeId/reports/ingredient_usage': typeof AuthenticatedStoreIdReportsIngredient_usageRoute
+  '/$storeId/reports/inventory': typeof AuthenticatedStoreIdReportsInventoryRoute
+  '/$storeId/reports/inventory-summary': typeof AuthenticatedStoreIdReportsInventorySummaryRoute
   '/$storeId/reports/meal_statement': typeof AuthenticatedStoreIdReportsMeal_statementRoute
   '/$storeId/reports/meals': typeof AuthenticatedStoreIdReportsMealsRoute
   '/$storeId/reports/menu_margin': typeof AuthenticatedStoreIdReportsMenu_marginRoute
+  '/$storeId/reports/overview': typeof AuthenticatedStoreIdReportsOverviewRoute
   '/$storeId/reports/platforms': typeof AuthenticatedStoreIdReportsPlatformsRoute
+  '/$storeId/reports/profit': typeof AuthenticatedStoreIdReportsProfitRoute
   '/$storeId/reports/receipts': typeof AuthenticatedStoreIdReportsReceiptsRoute
   '/$storeId/reports/receivables': typeof AuthenticatedStoreIdReportsReceivablesRoute
+  '/$storeId/reports/transaction': typeof AuthenticatedStoreIdReportsTransactionRoute
   '/$storeId/reports/vehicle_commissions': typeof AuthenticatedStoreIdReportsVehicle_commissionsRoute
   '/$storeId/sell/bottle-keeps': typeof AuthenticatedStoreIdSellBottleKeepsRoute
   '/$storeId/sell/collect': typeof AuthenticatedStoreIdSellCollectRoute
@@ -1210,13 +1264,19 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/reports/attendants': typeof AuthenticatedStoreIdReportsAttendantsRoute
   '/_authenticated/$storeId/reports/cashbook': typeof AuthenticatedStoreIdReportsCashbookRoute
   '/_authenticated/$storeId/reports/closures': typeof AuthenticatedStoreIdReportsClosuresRoute
+  '/_authenticated/$storeId/reports/history': typeof AuthenticatedStoreIdReportsHistoryRoute
   '/_authenticated/$storeId/reports/ingredient_usage': typeof AuthenticatedStoreIdReportsIngredient_usageRoute
+  '/_authenticated/$storeId/reports/inventory': typeof AuthenticatedStoreIdReportsInventoryRoute
+  '/_authenticated/$storeId/reports/inventory-summary': typeof AuthenticatedStoreIdReportsInventorySummaryRoute
   '/_authenticated/$storeId/reports/meal_statement': typeof AuthenticatedStoreIdReportsMeal_statementRoute
   '/_authenticated/$storeId/reports/meals': typeof AuthenticatedStoreIdReportsMealsRoute
   '/_authenticated/$storeId/reports/menu_margin': typeof AuthenticatedStoreIdReportsMenu_marginRoute
+  '/_authenticated/$storeId/reports/overview': typeof AuthenticatedStoreIdReportsOverviewRoute
   '/_authenticated/$storeId/reports/platforms': typeof AuthenticatedStoreIdReportsPlatformsRoute
+  '/_authenticated/$storeId/reports/profit': typeof AuthenticatedStoreIdReportsProfitRoute
   '/_authenticated/$storeId/reports/receipts': typeof AuthenticatedStoreIdReportsReceiptsRoute
   '/_authenticated/$storeId/reports/receivables': typeof AuthenticatedStoreIdReportsReceivablesRoute
+  '/_authenticated/$storeId/reports/transaction': typeof AuthenticatedStoreIdReportsTransactionRoute
   '/_authenticated/$storeId/reports/vehicle_commissions': typeof AuthenticatedStoreIdReportsVehicle_commissionsRoute
   '/_authenticated/$storeId/sell/bottle-keeps': typeof AuthenticatedStoreIdSellBottleKeepsRoute
   '/_authenticated/$storeId/sell/collect': typeof AuthenticatedStoreIdSellCollectRoute
@@ -1342,13 +1402,19 @@ export interface FileRouteTypes {
     | '/$storeId/reports/attendants'
     | '/$storeId/reports/cashbook'
     | '/$storeId/reports/closures'
+    | '/$storeId/reports/history'
     | '/$storeId/reports/ingredient_usage'
+    | '/$storeId/reports/inventory'
+    | '/$storeId/reports/inventory-summary'
     | '/$storeId/reports/meal_statement'
     | '/$storeId/reports/meals'
     | '/$storeId/reports/menu_margin'
+    | '/$storeId/reports/overview'
     | '/$storeId/reports/platforms'
+    | '/$storeId/reports/profit'
     | '/$storeId/reports/receipts'
     | '/$storeId/reports/receivables'
+    | '/$storeId/reports/transaction'
     | '/$storeId/reports/vehicle_commissions'
     | '/$storeId/sell/bottle-keeps'
     | '/$storeId/sell/collect'
@@ -1461,13 +1527,19 @@ export interface FileRouteTypes {
     | '/$storeId/reports/attendants'
     | '/$storeId/reports/cashbook'
     | '/$storeId/reports/closures'
+    | '/$storeId/reports/history'
     | '/$storeId/reports/ingredient_usage'
+    | '/$storeId/reports/inventory'
+    | '/$storeId/reports/inventory-summary'
     | '/$storeId/reports/meal_statement'
     | '/$storeId/reports/meals'
     | '/$storeId/reports/menu_margin'
+    | '/$storeId/reports/overview'
     | '/$storeId/reports/platforms'
+    | '/$storeId/reports/profit'
     | '/$storeId/reports/receipts'
     | '/$storeId/reports/receivables'
+    | '/$storeId/reports/transaction'
     | '/$storeId/reports/vehicle_commissions'
     | '/$storeId/sell/bottle-keeps'
     | '/$storeId/sell/collect'
@@ -1591,13 +1663,19 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/reports/attendants'
     | '/_authenticated/$storeId/reports/cashbook'
     | '/_authenticated/$storeId/reports/closures'
+    | '/_authenticated/$storeId/reports/history'
     | '/_authenticated/$storeId/reports/ingredient_usage'
+    | '/_authenticated/$storeId/reports/inventory'
+    | '/_authenticated/$storeId/reports/inventory-summary'
     | '/_authenticated/$storeId/reports/meal_statement'
     | '/_authenticated/$storeId/reports/meals'
     | '/_authenticated/$storeId/reports/menu_margin'
+    | '/_authenticated/$storeId/reports/overview'
     | '/_authenticated/$storeId/reports/platforms'
+    | '/_authenticated/$storeId/reports/profit'
     | '/_authenticated/$storeId/reports/receipts'
     | '/_authenticated/$storeId/reports/receivables'
+    | '/_authenticated/$storeId/reports/transaction'
     | '/_authenticated/$storeId/reports/vehicle_commissions'
     | '/_authenticated/$storeId/sell/bottle-keeps'
     | '/_authenticated/$storeId/sell/collect'
@@ -2110,11 +2188,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoreIdReportsClosuresRouteImport
       parentRoute: typeof AuthenticatedStoreIdReportsRoute
     }
+    '/_authenticated/$storeId/reports/history': {
+      id: '/_authenticated/$storeId/reports/history'
+      path: '/history'
+      fullPath: '/$storeId/reports/history'
+      preLoaderRoute: typeof AuthenticatedStoreIdReportsHistoryRouteImport
+      parentRoute: typeof AuthenticatedStoreIdReportsRoute
+    }
     '/_authenticated/$storeId/reports/ingredient_usage': {
       id: '/_authenticated/$storeId/reports/ingredient_usage'
       path: '/ingredient_usage'
       fullPath: '/$storeId/reports/ingredient_usage'
       preLoaderRoute: typeof AuthenticatedStoreIdReportsIngredient_usageRouteImport
+      parentRoute: typeof AuthenticatedStoreIdReportsRoute
+    }
+    '/_authenticated/$storeId/reports/inventory': {
+      id: '/_authenticated/$storeId/reports/inventory'
+      path: '/inventory'
+      fullPath: '/$storeId/reports/inventory'
+      preLoaderRoute: typeof AuthenticatedStoreIdReportsInventoryRouteImport
+      parentRoute: typeof AuthenticatedStoreIdReportsRoute
+    }
+    '/_authenticated/$storeId/reports/inventory-summary': {
+      id: '/_authenticated/$storeId/reports/inventory-summary'
+      path: '/inventory-summary'
+      fullPath: '/$storeId/reports/inventory-summary'
+      preLoaderRoute: typeof AuthenticatedStoreIdReportsInventorySummaryRouteImport
       parentRoute: typeof AuthenticatedStoreIdReportsRoute
     }
     '/_authenticated/$storeId/reports/meal_statement': {
@@ -2138,11 +2237,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoreIdReportsMenu_marginRouteImport
       parentRoute: typeof AuthenticatedStoreIdReportsRoute
     }
+    '/_authenticated/$storeId/reports/overview': {
+      id: '/_authenticated/$storeId/reports/overview'
+      path: '/overview'
+      fullPath: '/$storeId/reports/overview'
+      preLoaderRoute: typeof AuthenticatedStoreIdReportsOverviewRouteImport
+      parentRoute: typeof AuthenticatedStoreIdReportsRoute
+    }
     '/_authenticated/$storeId/reports/platforms': {
       id: '/_authenticated/$storeId/reports/platforms'
       path: '/platforms'
       fullPath: '/$storeId/reports/platforms'
       preLoaderRoute: typeof AuthenticatedStoreIdReportsPlatformsRouteImport
+      parentRoute: typeof AuthenticatedStoreIdReportsRoute
+    }
+    '/_authenticated/$storeId/reports/profit': {
+      id: '/_authenticated/$storeId/reports/profit'
+      path: '/profit'
+      fullPath: '/$storeId/reports/profit'
+      preLoaderRoute: typeof AuthenticatedStoreIdReportsProfitRouteImport
       parentRoute: typeof AuthenticatedStoreIdReportsRoute
     }
     '/_authenticated/$storeId/reports/receipts': {
@@ -2157,6 +2270,13 @@ declare module '@tanstack/react-router' {
       path: '/receivables'
       fullPath: '/$storeId/reports/receivables'
       preLoaderRoute: typeof AuthenticatedStoreIdReportsReceivablesRouteImport
+      parentRoute: typeof AuthenticatedStoreIdReportsRoute
+    }
+    '/_authenticated/$storeId/reports/transaction': {
+      id: '/_authenticated/$storeId/reports/transaction'
+      path: '/transaction'
+      fullPath: '/$storeId/reports/transaction'
+      preLoaderRoute: typeof AuthenticatedStoreIdReportsTransactionRouteImport
       parentRoute: typeof AuthenticatedStoreIdReportsRoute
     }
     '/_authenticated/$storeId/reports/vehicle_commissions': {
@@ -2743,13 +2863,19 @@ interface AuthenticatedStoreIdReportsRouteChildren {
   AuthenticatedStoreIdReportsAttendantsRoute: typeof AuthenticatedStoreIdReportsAttendantsRoute
   AuthenticatedStoreIdReportsCashbookRoute: typeof AuthenticatedStoreIdReportsCashbookRoute
   AuthenticatedStoreIdReportsClosuresRoute: typeof AuthenticatedStoreIdReportsClosuresRoute
+  AuthenticatedStoreIdReportsHistoryRoute: typeof AuthenticatedStoreIdReportsHistoryRoute
   AuthenticatedStoreIdReportsIngredient_usageRoute: typeof AuthenticatedStoreIdReportsIngredient_usageRoute
+  AuthenticatedStoreIdReportsInventoryRoute: typeof AuthenticatedStoreIdReportsInventoryRoute
+  AuthenticatedStoreIdReportsInventorySummaryRoute: typeof AuthenticatedStoreIdReportsInventorySummaryRoute
   AuthenticatedStoreIdReportsMeal_statementRoute: typeof AuthenticatedStoreIdReportsMeal_statementRoute
   AuthenticatedStoreIdReportsMealsRoute: typeof AuthenticatedStoreIdReportsMealsRoute
   AuthenticatedStoreIdReportsMenu_marginRoute: typeof AuthenticatedStoreIdReportsMenu_marginRoute
+  AuthenticatedStoreIdReportsOverviewRoute: typeof AuthenticatedStoreIdReportsOverviewRoute
   AuthenticatedStoreIdReportsPlatformsRoute: typeof AuthenticatedStoreIdReportsPlatformsRoute
+  AuthenticatedStoreIdReportsProfitRoute: typeof AuthenticatedStoreIdReportsProfitRoute
   AuthenticatedStoreIdReportsReceiptsRoute: typeof AuthenticatedStoreIdReportsReceiptsRoute
   AuthenticatedStoreIdReportsReceivablesRoute: typeof AuthenticatedStoreIdReportsReceivablesRoute
+  AuthenticatedStoreIdReportsTransactionRoute: typeof AuthenticatedStoreIdReportsTransactionRoute
   AuthenticatedStoreIdReportsVehicle_commissionsRoute: typeof AuthenticatedStoreIdReportsVehicle_commissionsRoute
   AuthenticatedStoreIdReportsIndexRoute: typeof AuthenticatedStoreIdReportsIndexRoute
 }
@@ -2762,20 +2888,32 @@ const AuthenticatedStoreIdReportsRouteChildren: AuthenticatedStoreIdReportsRoute
       AuthenticatedStoreIdReportsCashbookRoute,
     AuthenticatedStoreIdReportsClosuresRoute:
       AuthenticatedStoreIdReportsClosuresRoute,
+    AuthenticatedStoreIdReportsHistoryRoute:
+      AuthenticatedStoreIdReportsHistoryRoute,
     AuthenticatedStoreIdReportsIngredient_usageRoute:
       AuthenticatedStoreIdReportsIngredient_usageRoute,
+    AuthenticatedStoreIdReportsInventoryRoute:
+      AuthenticatedStoreIdReportsInventoryRoute,
+    AuthenticatedStoreIdReportsInventorySummaryRoute:
+      AuthenticatedStoreIdReportsInventorySummaryRoute,
     AuthenticatedStoreIdReportsMeal_statementRoute:
       AuthenticatedStoreIdReportsMeal_statementRoute,
     AuthenticatedStoreIdReportsMealsRoute:
       AuthenticatedStoreIdReportsMealsRoute,
     AuthenticatedStoreIdReportsMenu_marginRoute:
       AuthenticatedStoreIdReportsMenu_marginRoute,
+    AuthenticatedStoreIdReportsOverviewRoute:
+      AuthenticatedStoreIdReportsOverviewRoute,
     AuthenticatedStoreIdReportsPlatformsRoute:
       AuthenticatedStoreIdReportsPlatformsRoute,
+    AuthenticatedStoreIdReportsProfitRoute:
+      AuthenticatedStoreIdReportsProfitRoute,
     AuthenticatedStoreIdReportsReceiptsRoute:
       AuthenticatedStoreIdReportsReceiptsRoute,
     AuthenticatedStoreIdReportsReceivablesRoute:
       AuthenticatedStoreIdReportsReceivablesRoute,
+    AuthenticatedStoreIdReportsTransactionRoute:
+      AuthenticatedStoreIdReportsTransactionRoute,
     AuthenticatedStoreIdReportsVehicle_commissionsRoute:
       AuthenticatedStoreIdReportsVehicle_commissionsRoute,
     AuthenticatedStoreIdReportsIndexRoute:

@@ -4617,5 +4617,14 @@
       "country": "Quyết định tiền tệ, ngôn ngữ, vùng giao hàng và kho của cửa hàng.",
       "copied": "Để trống để dùng email của cửa hàng hiện tại."
     }
+  },
+  "reports": {
+    "overviewTitle": "Tổng quan báo cáo",
+    "profitTitle": "Báo cáo lợi nhuận",
+    "revenueTitle": "Báo cáo doanh thu",
+    "inventoryTitle": "Báo cáo kho hàng",
+    "inventorySummaryTitle": "Tổng hợp tồn kho",
+    "transactionTitle": "Báo cáo thu chi",
+    "historyTitle": "Lịch sử xuất báo cáo"
   }
 }

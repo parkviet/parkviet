@@ -4659,5 +4659,14 @@
       "country": "Sets the store's currency, language, delivery zones and warehouse.",
       "copied": "Leave blank to use the current store's."
     }
+  },
+  "reports": {
+    "overviewTitle": "Reports overview",
+    "profitTitle": "Profit report",
+    "revenueTitle": "Revenue report",
+    "inventoryTitle": "Inventory report",
+    "inventorySummaryTitle": "Inventory summary",
+    "transactionTitle": "Income & expense report",
+    "historyTitle": "Export history"
   }
 }
