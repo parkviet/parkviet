@@ -39,6 +39,7 @@ export type PosPage =
   | 'branch'
   | 'registers'
   | 'staff'
+  | 'staff-directory'
   | 'products'
   | 'labels'
   | 'features'

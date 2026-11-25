@@ -194,6 +194,12 @@ Rails.application.routes.draw do
                 post :enable
               end
             end
+            resources :staff, only: [:index, :show, :create, :update] do
+              member do
+                post :disable
+                post :enable
+              end
+            end
             resources :shifts, only: [:index, :show, :create]
             # Shift close, drawer cash, late-cash reconciliation, reports and exports.
             resources :shifts, only: [] do

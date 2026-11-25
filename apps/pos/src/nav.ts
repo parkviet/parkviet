@@ -13,6 +13,7 @@ import {
   Settings,
   Settings2,
   ShoppingCart,
+  UserCog,
   Users,
   UtensilsCrossed,
   Wallet,
@@ -143,6 +144,15 @@ const groups: { key: string; labelKey: string; icon: NavEntry['icon']; children:
     ],
   },
   {
+    key: 'staff',
+    labelKey: 'navStaff',
+    icon: UserCog,
+    children: [
+      { key: 'staff-directory', labelKey: 'staffDirectory.title', path: '/employees' },
+      { key: 'staff-roles', labelKey: 'staffRoles.title', path: '/staff-roles' },
+    ],
+  },
+  {
     key: 'reporting',
     labelKey: 'navReports',
     icon: ChartColumn,
@@ -186,7 +196,6 @@ const groups: { key: string; labelKey: string; icon: NavEntry['icon']; children:
       },
       { key: 'payment-methods', labelKey: 'paymentMethods.title', path: '/payment-methods' },
       { key: 'units', labelKey: 'units.title', path: '/units' },
-      { key: 'staff-roles', labelKey: 'staffRoles.title', path: '/staff-roles' },
       { key: 'labels', labelKey: 'labelFormatsTitle', path: '/scale-labels' },
       { key: 'devices', labelKey: 'devices.title', path: '/devices' },
     ],

@@ -26,6 +26,7 @@ import { Route as AuthenticatedStoreIdCreditApprovalsRouteImport } from './route
 import { Route as AuthenticatedStoreIdDeliveriesRouteImport } from './routes/_authenticated/$storeId/deliveries'
 import { Route as AuthenticatedStoreIdDevicesRouteImport } from './routes/_authenticated/$storeId/devices'
 import { Route as AuthenticatedStoreIdEinvoicesRouteImport } from './routes/_authenticated/$storeId/einvoices'
+import { Route as AuthenticatedStoreIdEmployeesRouteImport } from './routes/_authenticated/$storeId/employees'
 import { Route as AuthenticatedStoreIdFeaturesRouteImport } from './routes/_authenticated/$storeId/features'
 import { Route as AuthenticatedStoreIdFundsRouteImport } from './routes/_authenticated/$storeId/funds'
 import { Route as AuthenticatedStoreIdInventoryRouteImport } from './routes/_authenticated/$storeId/inventory'
@@ -235,6 +236,12 @@ const AuthenticatedStoreIdEinvoicesRoute =
   AuthenticatedStoreIdEinvoicesRouteImport.update({
     id: '/einvoices',
     path: '/einvoices',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdEmployeesRoute =
+  AuthenticatedStoreIdEmployeesRouteImport.update({
+    id: '/employees',
+    path: '/employees',
     getParentRoute: () => AuthenticatedStoreIdRoute,
   } as any)
 const AuthenticatedStoreIdFeaturesRoute =
@@ -962,6 +969,7 @@ export interface FileRoutesByFullPath {
   '/$storeId/deliveries': typeof AuthenticatedStoreIdDeliveriesRoute
   '/$storeId/devices': typeof AuthenticatedStoreIdDevicesRoute
   '/$storeId/einvoices': typeof AuthenticatedStoreIdEinvoicesRoute
+  '/$storeId/employees': typeof AuthenticatedStoreIdEmployeesRoute
   '/$storeId/features': typeof AuthenticatedStoreIdFeaturesRoute
   '/$storeId/funds': typeof AuthenticatedStoreIdFundsRouteWithChildren
   '/$storeId/inventory': typeof AuthenticatedStoreIdInventoryRouteWithChildren
@@ -1096,6 +1104,7 @@ export interface FileRoutesByTo {
   '/$storeId/deliveries': typeof AuthenticatedStoreIdDeliveriesRoute
   '/$storeId/devices': typeof AuthenticatedStoreIdDevicesRoute
   '/$storeId/einvoices': typeof AuthenticatedStoreIdEinvoicesRoute
+  '/$storeId/employees': typeof AuthenticatedStoreIdEmployeesRoute
   '/$storeId/features': typeof AuthenticatedStoreIdFeaturesRoute
   '/$storeId/kitchen': typeof AuthenticatedStoreIdKitchenRoute
   '/$storeId/label-formats': typeof AuthenticatedStoreIdLabelFormatsRoute
@@ -1224,6 +1233,7 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/deliveries': typeof AuthenticatedStoreIdDeliveriesRoute
   '/_authenticated/$storeId/devices': typeof AuthenticatedStoreIdDevicesRoute
   '/_authenticated/$storeId/einvoices': typeof AuthenticatedStoreIdEinvoicesRoute
+  '/_authenticated/$storeId/employees': typeof AuthenticatedStoreIdEmployeesRoute
   '/_authenticated/$storeId/features': typeof AuthenticatedStoreIdFeaturesRoute
   '/_authenticated/$storeId/funds': typeof AuthenticatedStoreIdFundsRouteWithChildren
   '/_authenticated/$storeId/inventory': typeof AuthenticatedStoreIdInventoryRouteWithChildren
@@ -1362,6 +1372,7 @@ export interface FileRouteTypes {
     | '/$storeId/deliveries'
     | '/$storeId/devices'
     | '/$storeId/einvoices'
+    | '/$storeId/employees'
     | '/$storeId/features'
     | '/$storeId/funds'
     | '/$storeId/inventory'
@@ -1496,6 +1507,7 @@ export interface FileRouteTypes {
     | '/$storeId/deliveries'
     | '/$storeId/devices'
     | '/$storeId/einvoices'
+    | '/$storeId/employees'
     | '/$storeId/features'
     | '/$storeId/kitchen'
     | '/$storeId/label-formats'
@@ -1623,6 +1635,7 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/deliveries'
     | '/_authenticated/$storeId/devices'
     | '/_authenticated/$storeId/einvoices'
+    | '/_authenticated/$storeId/employees'
     | '/_authenticated/$storeId/features'
     | '/_authenticated/$storeId/funds'
     | '/_authenticated/$storeId/inventory'
@@ -1871,6 +1884,13 @@ declare module '@tanstack/react-router' {
       path: '/einvoices'
       fullPath: '/$storeId/einvoices'
       preLoaderRoute: typeof AuthenticatedStoreIdEinvoicesRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/employees': {
+      id: '/_authenticated/$storeId/employees'
+      path: '/employees'
+      fullPath: '/$storeId/employees'
+      preLoaderRoute: typeof AuthenticatedStoreIdEmployeesRouteImport
       parentRoute: typeof AuthenticatedStoreIdRoute
     }
     '/_authenticated/$storeId/features': {
@@ -3055,6 +3075,7 @@ interface AuthenticatedStoreIdRouteChildren {
   AuthenticatedStoreIdDeliveriesRoute: typeof AuthenticatedStoreIdDeliveriesRoute
   AuthenticatedStoreIdDevicesRoute: typeof AuthenticatedStoreIdDevicesRoute
   AuthenticatedStoreIdEinvoicesRoute: typeof AuthenticatedStoreIdEinvoicesRoute
+  AuthenticatedStoreIdEmployeesRoute: typeof AuthenticatedStoreIdEmployeesRoute
   AuthenticatedStoreIdFeaturesRoute: typeof AuthenticatedStoreIdFeaturesRoute
   AuthenticatedStoreIdFundsRoute: typeof AuthenticatedStoreIdFundsRouteWithChildren
   AuthenticatedStoreIdInventoryRoute: typeof AuthenticatedStoreIdInventoryRouteWithChildren
@@ -3114,6 +3135,7 @@ const AuthenticatedStoreIdRouteChildren: AuthenticatedStoreIdRouteChildren = {
   AuthenticatedStoreIdDeliveriesRoute: AuthenticatedStoreIdDeliveriesRoute,
   AuthenticatedStoreIdDevicesRoute: AuthenticatedStoreIdDevicesRoute,
   AuthenticatedStoreIdEinvoicesRoute: AuthenticatedStoreIdEinvoicesRoute,
+  AuthenticatedStoreIdEmployeesRoute: AuthenticatedStoreIdEmployeesRoute,
   AuthenticatedStoreIdFeaturesRoute: AuthenticatedStoreIdFeaturesRoute,
   AuthenticatedStoreIdFundsRoute: AuthenticatedStoreIdFundsRouteWithChildren,
   AuthenticatedStoreIdInventoryRoute:
