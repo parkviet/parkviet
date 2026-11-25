@@ -5191,6 +5191,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_110000) do
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'revoked'::character varying::text])", name: "chk_pos_table_codes_status"
   end
 
+  create_table "spree_pos_tax_declarations", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.string "code", limit: 48, null: false
+    t.string "declaration_type", limit: 24, null: false
+    t.string "period_type", limit: 16, default: "quarter", null: false
+    t.integer "period_year", null: false
+    t.integer "period_number", null: false
+    t.date "from_date", null: false
+    t.date "to_date", null: false
+    t.string "status", limit: 24, default: "draft", null: false
+    t.jsonb "options", default: {}, null: false
+    t.jsonb "summary", default: {}, null: false
+    t.jsonb "taxpayer_snapshot", default: {}, null: false
+    t.text "note"
+    t.datetime "submitted_at"
+    t.datetime "accepted_at"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["store_id", "code"], name: "index_spree_pos_tax_declarations_on_store_id_and_code", unique: true
+    t.index ["store_id", "declaration_type", "period_year", "period_number"], name: "idx_pos_tax_declarations_store_type_period"
+    t.index ["store_id"], name: "index_spree_pos_tax_declarations_on_store_id"
+  end
+
   create_table "spree_pos_tax_profiles", force: :cascade do |t|
     t.bigint "store_id", null: false
     t.string "store_code", limit: 32

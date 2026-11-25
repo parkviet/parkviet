@@ -163,6 +163,12 @@ Rails.application.routes.draw do
               post :preview
             end
             get 'tax_options', to: 'tax_options#index'
+            resources :accounting_books, only: [:index, :show]
+            resources :tax_declarations, only: [:index, :show, :create, :update, :destroy] do
+              member do
+                post :recalculate
+              end
+            end
             post 'onboarding', to: 'onboarding#create'
             get 'operations/metrics', to: 'operational_metrics#show'
             get 'system_status', to: 'system_status#show'

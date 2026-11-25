@@ -2,6 +2,7 @@ import { type NavEntry, nav, settingsNav, usePermissions } from '@spree/dashboar
 import {
   Boxes,
   Bus,
+  Calculator,
   ChartColumn,
   ChefHat,
   HandCoins,
@@ -174,6 +175,29 @@ const groups: { key: string; labelKey: string; icon: NavEntry['icon']; children:
         path: '/reports/transaction',
       },
       { key: 'reports-history', labelKey: 'reports.historyTitle', path: '/reports/history' },
+    ],
+  },
+  {
+    key: 'accounting',
+    labelKey: 'navAccounting',
+    icon: Calculator,
+    children: [
+      { key: 'accounting-books', labelKey: 'accounting.booksNav', path: '/accounting/books' },
+      {
+        key: 'tax-declarations-cnkd',
+        labelKey: 'accounting.cnkdNav',
+        path: '/accounting/declarations/cnkd',
+      },
+      {
+        key: 'tax-declarations-vat',
+        labelKey: 'accounting.vatNav',
+        path: '/accounting/declarations/vat',
+      },
+      {
+        key: 'tax-declarations-pit',
+        labelKey: 'accounting.pitNav',
+        path: '/accounting/declarations/pit',
+      },
     ],
   },
   {

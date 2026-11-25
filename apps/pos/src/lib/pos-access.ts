@@ -35,6 +35,10 @@ export type PosPage =
   | 'reports-inventory-summary'
   | 'reports-transaction'
   | 'reports-history'
+  | 'accounting-books'
+  | 'tax-declarations-cnkd'
+  | 'tax-declarations-vat'
+  | 'tax-declarations-pit'
   | 'branches'
   | 'branch'
   | 'registers'
@@ -265,6 +269,13 @@ export function visibleNav(page: PosPage, access: PosAccess) {
     return canReadStockAlerts(access) || canOpenStock(access)
   if (page === 'partners-customers' || page === 'partners-suppliers')
     return canAdminister(access) || canReadOrders(access)
+  if (
+    page === 'accounting-books' ||
+    page === 'tax-declarations-cnkd' ||
+    page === 'tax-declarations-vat' ||
+    page === 'tax-declarations-pit'
+  )
+    return canAdminister(access)
   if (page === 'staff-shifts') return canAdminister(access) || canReadOrders(access)
   if (page === 'receivables') return canReadDebts(access)
   if (page === 'credit-accounts') return canManageCredit(access)

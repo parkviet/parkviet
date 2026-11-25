@@ -120,6 +120,11 @@ import { Route as AuthenticatedStoreIdStockImportsRouteImport } from './routes/_
 import { Route as AuthenticatedStoreIdStockLedgerRouteImport } from './routes/_authenticated/$storeId/stock/ledger'
 import { Route as AuthenticatedStoreIdStockOpeningRouteImport } from './routes/_authenticated/$storeId/stock/opening'
 import { Route as AuthenticatedStoreIdStockOverviewRouteImport } from './routes/_authenticated/$storeId/stock/overview'
+import { Route as AuthenticatedStoreIdAccountingBooksIndexRouteImport } from './routes/_authenticated/$storeId/accounting/books/index'
+import { Route as AuthenticatedStoreIdAccountingBooksBookCodeRouteImport } from './routes/_authenticated/$storeId/accounting/books/$bookCode'
+import { Route as AuthenticatedStoreIdAccountingDeclarationsCnkdRouteImport } from './routes/_authenticated/$storeId/accounting/declarations/cnkd'
+import { Route as AuthenticatedStoreIdAccountingDeclarationsPitRouteImport } from './routes/_authenticated/$storeId/accounting/declarations/pit'
+import { Route as AuthenticatedStoreIdAccountingDeclarationsVatRouteImport } from './routes/_authenticated/$storeId/accounting/declarations/vat'
 import { Route as AuthenticatedStoreIdBranchesBranchIdIndexRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/index'
 import { Route as AuthenticatedStoreIdBranchesBranchIdBusinessModelRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/business-model'
 import { Route as AuthenticatedStoreIdBranchesBranchIdEmenuRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/emenu'
@@ -805,6 +810,36 @@ const AuthenticatedStoreIdStockOverviewRoute =
     path: '/stock/overview',
     getParentRoute: () => AuthenticatedStoreIdRoute,
   } as any)
+const AuthenticatedStoreIdAccountingBooksIndexRoute =
+  AuthenticatedStoreIdAccountingBooksIndexRouteImport.update({
+    id: '/accounting/books/',
+    path: '/accounting/books/',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdAccountingBooksBookCodeRoute =
+  AuthenticatedStoreIdAccountingBooksBookCodeRouteImport.update({
+    id: '/accounting/books/$bookCode',
+    path: '/accounting/books/$bookCode',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdAccountingDeclarationsCnkdRoute =
+  AuthenticatedStoreIdAccountingDeclarationsCnkdRouteImport.update({
+    id: '/accounting/declarations/cnkd',
+    path: '/accounting/declarations/cnkd',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdAccountingDeclarationsPitRoute =
+  AuthenticatedStoreIdAccountingDeclarationsPitRouteImport.update({
+    id: '/accounting/declarations/pit',
+    path: '/accounting/declarations/pit',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdAccountingDeclarationsVatRoute =
+  AuthenticatedStoreIdAccountingDeclarationsVatRouteImport.update({
+    id: '/accounting/declarations/vat',
+    path: '/accounting/declarations/vat',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
 const AuthenticatedStoreIdBranchesBranchIdIndexRoute =
   AuthenticatedStoreIdBranchesBranchIdIndexRouteImport.update({
     id: '/',
@@ -1085,6 +1120,10 @@ export interface FileRoutesByFullPath {
   '/$storeId/sell/': typeof AuthenticatedStoreIdSellIndexRoute
   '/$storeId/settings/': typeof AuthenticatedStoreIdSettingsIndexRoute
   '/$storeId/shifts/': typeof AuthenticatedStoreIdShiftsIndexRoute
+  '/$storeId/accounting/books/$bookCode': typeof AuthenticatedStoreIdAccountingBooksBookCodeRoute
+  '/$storeId/accounting/declarations/cnkd': typeof AuthenticatedStoreIdAccountingDeclarationsCnkdRoute
+  '/$storeId/accounting/declarations/pit': typeof AuthenticatedStoreIdAccountingDeclarationsPitRoute
+  '/$storeId/accounting/declarations/vat': typeof AuthenticatedStoreIdAccountingDeclarationsVatRoute
   '/$storeId/branches/$branchId/business-model': typeof AuthenticatedStoreIdBranchesBranchIdBusinessModelRoute
   '/$storeId/branches/$branchId/emenu': typeof AuthenticatedStoreIdBranchesBranchIdEmenuRoute
   '/$storeId/branches/$branchId/features': typeof AuthenticatedStoreIdBranchesBranchIdFeaturesRoute
@@ -1104,6 +1143,7 @@ export interface FileRoutesByFullPath {
   '/$storeId/goods/products/$productId': typeof AuthenticatedStoreIdGoodsProductsProductIdRoute
   '/$storeId/goods/products/new': typeof AuthenticatedStoreIdGoodsProductsNewRoute
   '/$storeId/settings/receipt-templates/$templateId': typeof AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRoute
+  '/$storeId/accounting/books/': typeof AuthenticatedStoreIdAccountingBooksIndexRoute
   '/$storeId/branches/$branchId/': typeof AuthenticatedStoreIdBranchesBranchIdIndexRoute
   '/$storeId/goods/addons/': typeof AuthenticatedStoreIdGoodsAddonsIndexRoute
   '/$storeId/goods/barcode-labels/': typeof AuthenticatedStoreIdGoodsBarcodeLabelsIndexRoute
@@ -1213,6 +1253,10 @@ export interface FileRoutesByTo {
   '/$storeId/sell': typeof AuthenticatedStoreIdSellIndexRoute
   '/$storeId/settings': typeof AuthenticatedStoreIdSettingsIndexRoute
   '/$storeId/shifts': typeof AuthenticatedStoreIdShiftsIndexRoute
+  '/$storeId/accounting/books/$bookCode': typeof AuthenticatedStoreIdAccountingBooksBookCodeRoute
+  '/$storeId/accounting/declarations/cnkd': typeof AuthenticatedStoreIdAccountingDeclarationsCnkdRoute
+  '/$storeId/accounting/declarations/pit': typeof AuthenticatedStoreIdAccountingDeclarationsPitRoute
+  '/$storeId/accounting/declarations/vat': typeof AuthenticatedStoreIdAccountingDeclarationsVatRoute
   '/$storeId/branches/$branchId/business-model': typeof AuthenticatedStoreIdBranchesBranchIdBusinessModelRoute
   '/$storeId/branches/$branchId/emenu': typeof AuthenticatedStoreIdBranchesBranchIdEmenuRoute
   '/$storeId/branches/$branchId/features': typeof AuthenticatedStoreIdBranchesBranchIdFeaturesRoute
@@ -1232,6 +1276,7 @@ export interface FileRoutesByTo {
   '/$storeId/goods/products/$productId': typeof AuthenticatedStoreIdGoodsProductsProductIdRoute
   '/$storeId/goods/products/new': typeof AuthenticatedStoreIdGoodsProductsNewRoute
   '/$storeId/settings/receipt-templates/$templateId': typeof AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRoute
+  '/$storeId/accounting/books': typeof AuthenticatedStoreIdAccountingBooksIndexRoute
   '/$storeId/branches/$branchId': typeof AuthenticatedStoreIdBranchesBranchIdIndexRoute
   '/$storeId/goods/addons': typeof AuthenticatedStoreIdGoodsAddonsIndexRoute
   '/$storeId/goods/barcode-labels': typeof AuthenticatedStoreIdGoodsBarcodeLabelsIndexRoute
@@ -1355,6 +1400,10 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/sell/': typeof AuthenticatedStoreIdSellIndexRoute
   '/_authenticated/$storeId/settings/': typeof AuthenticatedStoreIdSettingsIndexRoute
   '/_authenticated/$storeId/shifts/': typeof AuthenticatedStoreIdShiftsIndexRoute
+  '/_authenticated/$storeId/accounting/books/$bookCode': typeof AuthenticatedStoreIdAccountingBooksBookCodeRoute
+  '/_authenticated/$storeId/accounting/declarations/cnkd': typeof AuthenticatedStoreIdAccountingDeclarationsCnkdRoute
+  '/_authenticated/$storeId/accounting/declarations/pit': typeof AuthenticatedStoreIdAccountingDeclarationsPitRoute
+  '/_authenticated/$storeId/accounting/declarations/vat': typeof AuthenticatedStoreIdAccountingDeclarationsVatRoute
   '/_authenticated/$storeId/branches/$branchId/business-model': typeof AuthenticatedStoreIdBranchesBranchIdBusinessModelRoute
   '/_authenticated/$storeId/branches/$branchId/emenu': typeof AuthenticatedStoreIdBranchesBranchIdEmenuRoute
   '/_authenticated/$storeId/branches/$branchId/features': typeof AuthenticatedStoreIdBranchesBranchIdFeaturesRoute
@@ -1374,6 +1423,7 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/goods/products/$productId': typeof AuthenticatedStoreIdGoodsProductsProductIdRoute
   '/_authenticated/$storeId/goods/products/new': typeof AuthenticatedStoreIdGoodsProductsNewRoute
   '/_authenticated/$storeId/settings/receipt-templates/$templateId': typeof AuthenticatedStoreIdSettingsReceiptTemplatesTemplateIdRoute
+  '/_authenticated/$storeId/accounting/books/': typeof AuthenticatedStoreIdAccountingBooksIndexRoute
   '/_authenticated/$storeId/branches/$branchId/': typeof AuthenticatedStoreIdBranchesBranchIdIndexRoute
   '/_authenticated/$storeId/goods/addons/': typeof AuthenticatedStoreIdGoodsAddonsIndexRoute
   '/_authenticated/$storeId/goods/barcode-labels/': typeof AuthenticatedStoreIdGoodsBarcodeLabelsIndexRoute
@@ -1497,6 +1547,10 @@ export interface FileRouteTypes {
     | '/$storeId/sell/'
     | '/$storeId/settings/'
     | '/$storeId/shifts/'
+    | '/$storeId/accounting/books/$bookCode'
+    | '/$storeId/accounting/declarations/cnkd'
+    | '/$storeId/accounting/declarations/pit'
+    | '/$storeId/accounting/declarations/vat'
     | '/$storeId/branches/$branchId/business-model'
     | '/$storeId/branches/$branchId/emenu'
     | '/$storeId/branches/$branchId/features'
@@ -1516,6 +1570,7 @@ export interface FileRouteTypes {
     | '/$storeId/goods/products/$productId'
     | '/$storeId/goods/products/new'
     | '/$storeId/settings/receipt-templates/$templateId'
+    | '/$storeId/accounting/books/'
     | '/$storeId/branches/$branchId/'
     | '/$storeId/goods/addons/'
     | '/$storeId/goods/barcode-labels/'
@@ -1625,6 +1680,10 @@ export interface FileRouteTypes {
     | '/$storeId/sell'
     | '/$storeId/settings'
     | '/$storeId/shifts'
+    | '/$storeId/accounting/books/$bookCode'
+    | '/$storeId/accounting/declarations/cnkd'
+    | '/$storeId/accounting/declarations/pit'
+    | '/$storeId/accounting/declarations/vat'
     | '/$storeId/branches/$branchId/business-model'
     | '/$storeId/branches/$branchId/emenu'
     | '/$storeId/branches/$branchId/features'
@@ -1644,6 +1703,7 @@ export interface FileRouteTypes {
     | '/$storeId/goods/products/$productId'
     | '/$storeId/goods/products/new'
     | '/$storeId/settings/receipt-templates/$templateId'
+    | '/$storeId/accounting/books'
     | '/$storeId/branches/$branchId'
     | '/$storeId/goods/addons'
     | '/$storeId/goods/barcode-labels'
@@ -1766,6 +1826,10 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/sell/'
     | '/_authenticated/$storeId/settings/'
     | '/_authenticated/$storeId/shifts/'
+    | '/_authenticated/$storeId/accounting/books/$bookCode'
+    | '/_authenticated/$storeId/accounting/declarations/cnkd'
+    | '/_authenticated/$storeId/accounting/declarations/pit'
+    | '/_authenticated/$storeId/accounting/declarations/vat'
     | '/_authenticated/$storeId/branches/$branchId/business-model'
     | '/_authenticated/$storeId/branches/$branchId/emenu'
     | '/_authenticated/$storeId/branches/$branchId/features'
@@ -1785,6 +1849,7 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/goods/products/$productId'
     | '/_authenticated/$storeId/goods/products/new'
     | '/_authenticated/$storeId/settings/receipt-templates/$templateId'
+    | '/_authenticated/$storeId/accounting/books/'
     | '/_authenticated/$storeId/branches/$branchId/'
     | '/_authenticated/$storeId/goods/addons/'
     | '/_authenticated/$storeId/goods/barcode-labels/'
@@ -2583,6 +2648,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoreIdStockOverviewRouteImport
       parentRoute: typeof AuthenticatedStoreIdRoute
     }
+    '/_authenticated/$storeId/accounting/books/': {
+      id: '/_authenticated/$storeId/accounting/books/'
+      path: '/accounting/books'
+      fullPath: '/$storeId/accounting/books/'
+      preLoaderRoute: typeof AuthenticatedStoreIdAccountingBooksIndexRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/accounting/books/$bookCode': {
+      id: '/_authenticated/$storeId/accounting/books/$bookCode'
+      path: '/accounting/books/$bookCode'
+      fullPath: '/$storeId/accounting/books/$bookCode'
+      preLoaderRoute: typeof AuthenticatedStoreIdAccountingBooksBookCodeRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/accounting/declarations/cnkd': {
+      id: '/_authenticated/$storeId/accounting/declarations/cnkd'
+      path: '/accounting/declarations/cnkd'
+      fullPath: '/$storeId/accounting/declarations/cnkd'
+      preLoaderRoute: typeof AuthenticatedStoreIdAccountingDeclarationsCnkdRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/accounting/declarations/pit': {
+      id: '/_authenticated/$storeId/accounting/declarations/pit'
+      path: '/accounting/declarations/pit'
+      fullPath: '/$storeId/accounting/declarations/pit'
+      preLoaderRoute: typeof AuthenticatedStoreIdAccountingDeclarationsPitRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/accounting/declarations/vat': {
+      id: '/_authenticated/$storeId/accounting/declarations/vat'
+      path: '/accounting/declarations/vat'
+      fullPath: '/$storeId/accounting/declarations/vat'
+      preLoaderRoute: typeof AuthenticatedStoreIdAccountingDeclarationsVatRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
     '/_authenticated/$storeId/branches/$branchId/': {
       id: '/_authenticated/$storeId/branches/$branchId/'
       path: '/'
@@ -3173,10 +3273,15 @@ interface AuthenticatedStoreIdRouteChildren {
   AuthenticatedStoreIdStockOpeningRoute: typeof AuthenticatedStoreIdStockOpeningRoute
   AuthenticatedStoreIdStockOverviewRoute: typeof AuthenticatedStoreIdStockOverviewRoute
   AuthenticatedStoreIdPayrollIndexRoute: typeof AuthenticatedStoreIdPayrollIndexRoute
+  AuthenticatedStoreIdAccountingBooksBookCodeRoute: typeof AuthenticatedStoreIdAccountingBooksBookCodeRoute
+  AuthenticatedStoreIdAccountingDeclarationsCnkdRoute: typeof AuthenticatedStoreIdAccountingDeclarationsCnkdRoute
+  AuthenticatedStoreIdAccountingDeclarationsPitRoute: typeof AuthenticatedStoreIdAccountingDeclarationsPitRoute
+  AuthenticatedStoreIdAccountingDeclarationsVatRoute: typeof AuthenticatedStoreIdAccountingDeclarationsVatRoute
   AuthenticatedStoreIdGoodsPriceListsPriceListIdRoute: typeof AuthenticatedStoreIdGoodsPriceListsPriceListIdRoute
   AuthenticatedStoreIdGoodsPriceListsNewRoute: typeof AuthenticatedStoreIdGoodsPriceListsNewRoute
   AuthenticatedStoreIdGoodsProductsProductIdRoute: typeof AuthenticatedStoreIdGoodsProductsProductIdRoute
   AuthenticatedStoreIdGoodsProductsNewRoute: typeof AuthenticatedStoreIdGoodsProductsNewRoute
+  AuthenticatedStoreIdAccountingBooksIndexRoute: typeof AuthenticatedStoreIdAccountingBooksIndexRoute
   AuthenticatedStoreIdGoodsAddonsIndexRoute: typeof AuthenticatedStoreIdGoodsAddonsIndexRoute
   AuthenticatedStoreIdGoodsBarcodeLabelsIndexRoute: typeof AuthenticatedStoreIdGoodsBarcodeLabelsIndexRoute
   AuthenticatedStoreIdGoodsCategoriesIndexRoute: typeof AuthenticatedStoreIdGoodsCategoriesIndexRoute
@@ -3247,6 +3352,14 @@ const AuthenticatedStoreIdRouteChildren: AuthenticatedStoreIdRouteChildren = {
   AuthenticatedStoreIdStockOverviewRoute:
     AuthenticatedStoreIdStockOverviewRoute,
   AuthenticatedStoreIdPayrollIndexRoute: AuthenticatedStoreIdPayrollIndexRoute,
+  AuthenticatedStoreIdAccountingBooksBookCodeRoute:
+    AuthenticatedStoreIdAccountingBooksBookCodeRoute,
+  AuthenticatedStoreIdAccountingDeclarationsCnkdRoute:
+    AuthenticatedStoreIdAccountingDeclarationsCnkdRoute,
+  AuthenticatedStoreIdAccountingDeclarationsPitRoute:
+    AuthenticatedStoreIdAccountingDeclarationsPitRoute,
+  AuthenticatedStoreIdAccountingDeclarationsVatRoute:
+    AuthenticatedStoreIdAccountingDeclarationsVatRoute,
   AuthenticatedStoreIdGoodsPriceListsPriceListIdRoute:
     AuthenticatedStoreIdGoodsPriceListsPriceListIdRoute,
   AuthenticatedStoreIdGoodsPriceListsNewRoute:
@@ -3255,6 +3368,8 @@ const AuthenticatedStoreIdRouteChildren: AuthenticatedStoreIdRouteChildren = {
     AuthenticatedStoreIdGoodsProductsProductIdRoute,
   AuthenticatedStoreIdGoodsProductsNewRoute:
     AuthenticatedStoreIdGoodsProductsNewRoute,
+  AuthenticatedStoreIdAccountingBooksIndexRoute:
+    AuthenticatedStoreIdAccountingBooksIndexRoute,
   AuthenticatedStoreIdGoodsAddonsIndexRoute:
     AuthenticatedStoreIdGoodsAddonsIndexRoute,
   AuthenticatedStoreIdGoodsBarcodeLabelsIndexRoute:
