@@ -7,7 +7,9 @@ import {
   Card,
   CardContent,
   Dialog,
+  DialogBody,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@spree/dashboard-ui'
@@ -428,11 +430,11 @@ export function StockDocumentsPage({ kind }: { kind: StockDocumentKind }) {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>{t(createLabelKey)}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <DialogBody className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               {kind === 'import' && (
                 <>
@@ -699,47 +701,50 @@ export function StockDocumentsPage({ kind }: { kind: StockDocumentKind }) {
               </div>
             )}
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
-              <div className="text-sm font-semibold tabular-nums">
-                {t('stock.colTotal')}: {fmtVnd(grandTotal)}
-              </div>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
-                  {t('adminCancel')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={lines.length === 0 || createDoc.isPending}
-                  onClick={() => void submit(false)}
-                >
-                  {t('stock.saveDraft')}
-                </Button>
-                <Button
-                  type="button"
-                  disabled={lines.length === 0 || createDoc.isPending}
-                  onClick={() => void submit(true)}
-                >
-                  {t('stock.saveAndComplete')}
-                </Button>
-              </div>
+          </DialogBody>
+          <DialogFooter className="sm:justify-between">
+            <div className="text-sm font-semibold tabular-nums">
+              {t('stock.colTotal')}: {fmtVnd(grandTotal)}
             </div>
-          </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                {t('adminCancel')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={lines.length === 0 || createDoc.isPending}
+                onClick={() => void submit(false)}
+              >
+                {t('stock.saveDraft')}
+              </Button>
+              <Button
+                type="button"
+                disabled={lines.length === 0 || createDoc.isPending}
+                onClick={() => void submit(true)}
+              >
+                {t('stock.saveAndComplete')}
+              </Button>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Detail Dialog */}
       <Dialog open={Boolean(detailId)} onOpenChange={(open) => !open && setDetailId(null)}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>
               {detail.data ? `${detail.data.code} · ${t(`stock.docStatus_${detail.data.status}`)}` : '...'}
             </DialogTitle>
           </DialogHeader>
           {detail.isPending ? (
-            <PageSkeleton />
+            <DialogBody>
+              <PageSkeleton />
+            </DialogBody>
           ) : detail.data ? (
-            <div className="space-y-4">
+            <>
+              <DialogBody className="space-y-4">
               <div className="grid gap-2 text-sm sm:grid-cols-2">
                 <div>
                   <span className="text-muted-foreground">{t('stock.colTime')}: </span>
@@ -825,7 +830,8 @@ export function StockDocumentsPage({ kind }: { kind: StockDocumentKind }) {
                   </div>
                 )}
 
-              <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
+              </DialogBody>
+              <DialogFooter>
                 <Button variant="outline" size="sm" onClick={() => window.print()}>
                   {t('stock.printDoc')}
                 </Button>
@@ -848,8 +854,8 @@ export function StockDocumentsPage({ kind }: { kind: StockDocumentKind }) {
                     {t('stock.cancelDoc')}
                   </Button>
                 )}
-              </div>
-            </div>
+              </DialogFooter>
+            </>
           ) : null}
         </DialogContent>
       </Dialog>

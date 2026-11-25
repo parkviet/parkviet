@@ -7,7 +7,9 @@ import {
   Card,
   CardContent,
   Dialog,
+  DialogBody,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@spree/dashboard-ui'
@@ -424,13 +426,13 @@ export function PartnersSuppliersPage() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {editing ? t('partners.editSupplier') : t('partners.createSupplier')}
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <DialogBody className="grid gap-4 sm:grid-cols-2">
             <TopologyField label={t('partners.colName')}>
               {(id) => <Input id={id} value={name} onChange={(e) => setName(e.target.value)} />}
             </TopologyField>
@@ -519,30 +521,31 @@ export function PartnersSuppliersPage() {
               />
               {t('partners.alsoCustomer')}
             </label>
-          </div>
-          <div className="flex justify-end gap-2 border-t pt-3">
+          </DialogBody>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>
               {t('adminCancel')}
             </Button>
             <Button disabled={!name.trim()} onClick={() => void saveSupplier()}>
               {t('save')}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Supplier Detail + Record Payment Dialog */}
       <Dialog open={Boolean(detailId)} onOpenChange={(open) => !open && setDetailId(null)}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>
               {detail.data ? `${detail.data.name} (${detail.data.code})` : '...'}
             </DialogTitle>
           </DialogHeader>
-          {detail.isPending ? (
-            <PageSkeleton />
-          ) : detail.data ? (
-            <div className="space-y-4 text-sm">
+          <DialogBody>
+            {detail.isPending ? (
+              <PageSkeleton />
+            ) : detail.data ? (
+              <div className="space-y-4 text-sm">
               <div className="grid gap-2 sm:grid-cols-3">
                 <div>
                   <span className="text-muted-foreground">{t('partners.colImported')}: </span>
@@ -648,8 +651,14 @@ export function PartnersSuppliersPage() {
                   </ul>
                 </div>
               )}
-            </div>
-          ) : null}
+              </div>
+            ) : null}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailId(null)}>
+              {t('adminClose')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

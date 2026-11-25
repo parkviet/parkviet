@@ -7,7 +7,9 @@ import {
   Card,
   CardContent,
   Dialog,
+  DialogBody,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@spree/dashboard-ui'
@@ -395,13 +397,13 @@ export function PartnersCustomersPage() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {editing ? t('partners.editCustomer') : t('partners.createCustomer')}
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <DialogBody className="grid gap-4 sm:grid-cols-2">
             <TopologyField label={t('partners.colName')}>
               {(id) => <Input id={id} value={name} onChange={(e) => setName(e.target.value)} />}
             </TopologyField>
@@ -464,8 +466,8 @@ export function PartnersCustomersPage() {
               />
               {t('partners.alsoSupplier')}
             </label>
-          </div>
-          <div className="flex justify-end gap-2 border-t pt-3">
+          </DialogBody>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>
               {t('adminCancel')}
             </Button>
@@ -475,53 +477,60 @@ export function PartnersCustomersPage() {
             >
               {t('save')}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Detail Dialog */}
       <Dialog open={Boolean(detailId)} onOpenChange={(open) => !open && setDetailId(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-h-[90dvh] sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{detail.data?.name ?? '...'}</DialogTitle>
           </DialogHeader>
-          {detail.isPending ? (
-            <PageSkeleton />
-          ) : detail.data ? (
-            <div className="space-y-4 text-sm">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div>
-                  <span className="text-muted-foreground">{t('partners.colCode')}: </span>
-                  {detail.data.code ?? '—'}
+          <DialogBody>
+            {detail.isPending ? (
+              <PageSkeleton />
+            ) : detail.data ? (
+              <div className="space-y-4 text-sm">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <span className="text-muted-foreground">{t('partners.colCode')}: </span>
+                    {detail.data.code ?? '—'}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">{t('partners.colPhone')}: </span>
+                    {detail.data.phone ?? '—'}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">{t('partners.taxCode')}: </span>
+                    {detail.data.tax_code ?? '—'}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">{t('partners.colReceivable')}: </span>
+                    <strong>{fmtVnd(detail.data.receivable_balance)}</strong>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">{t('partners.colPhone')}: </span>
-                  {detail.data.phone ?? '—'}
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{t('partners.taxCode')}: </span>
-                  {detail.data.tax_code ?? '—'}
-                </div>
-                <div>
-                  <span className="text-muted-foreground">{t('partners.colReceivable')}: </span>
-                  <strong>{fmtVnd(detail.data.receivable_balance)}</strong>
-                </div>
+                {detail.data.recent_receivables.length > 0 && (
+                  <div>
+                    <p className="mb-2 font-medium">{t('partners.recentDebtHistory')}</p>
+                    <ul className="divide-y rounded-md border">
+                      {detail.data.recent_receivables.map((e) => (
+                        <li key={e.id} className="flex justify-between px-3 py-2 text-xs">
+                          <span>{e.note || e.kind}</span>
+                          <span className="font-semibold tabular-nums">{fmtVnd(e.amount)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-              {detail.data.recent_receivables.length > 0 && (
-                <div>
-                  <p className="mb-2 font-medium">{t('partners.recentDebtHistory')}</p>
-                  <ul className="divide-y rounded-md border">
-                    {detail.data.recent_receivables.map((e) => (
-                      <li key={e.id} className="flex justify-between px-3 py-2 text-xs">
-                        <span>{e.note || e.kind}</span>
-                        <span className="font-semibold tabular-nums">{fmtVnd(e.amount)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ) : null}
+            ) : null}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailId(null)}>
+              {t('adminClose')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
