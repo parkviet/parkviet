@@ -104,14 +104,13 @@ Mỗi quầy có hiệu chỉnh máy quét riêng: ký tự kết thúc (Enter h
 
 ### Quản trị
 
-Cấu hình POS nằm ở [app quản trị POS](../pos-dashboard/README.md) (`apps/pos-dashboard`), không còn trong POS: chi nhánh, quầy, nhân viên & quyền, hàng bán tại chi nhánh kèm đơn vị và mã tem, mẫu tem cân, chức năng chi nhánh, mô hình kinh doanh, hồ sơ chính của cửa hàng, mẫu in hóa đơn và trang thiết lập lần đầu. POS dẫn sang app đó ở các chỗ sau, luôn mở trong tab mới để các hóa đơn đang mở và phiên bán hàng giữ nguyên:
+Các màn quản trị POS nằm chung trong cùng ứng dụng `apps/pos` tại `/$storeId/...`: chi nhánh, quầy, nhân viên & quyền, hàng bán tại chi nhánh kèm đơn vị và mã tem, mẫu tem cân, chức năng chi nhánh, mô hình kinh doanh, hồ sơ chính của cửa hàng, mẫu in hóa đơn và trang thiết lập lần đầu. Từ màn bán hàng (`/$storeId/sell`, alias `/pos`), người dùng có thể mở thẳng các màn quản trị trong tab mới để các hóa đơn đang mở và phiên bán hàng giữ nguyên:
 
 - Menu đầu trang, mục **Cấu hình** (người có quyền quản trị POS của cửa hàng) hoặc **Chức năng chi nhánh** (quản lý chi nhánh có quyền **Cấu hình** tại chi nhánh đang chọn).
 - Mục **Cấu hình** trên thanh điều hướng của các trang ngoài màn bán hàng.
-- Nút **Đăng nhập quản trị** ở màn đăng nhập. App quản trị đăng nhập riêng bằng tài khoản admin; POS không chuyển phiên qua link.
 - Thông báo "Cửa hàng chưa được thiết lập POS" kèm link **Mở trang thiết lập** (xem bước 0 bên dưới).
 
-Khi bản build production không đặt `VITE_POS_DASHBOARD_URL`, các link này bị ẩn.
+Quản trị và quầy bán hàng dùng chung một phiên đăng nhập (`@spree/dashboard-core`), không cần cấu hình URL riêng hay đăng nhập lại.
 
 Khi ngừng hoạt động một chi nhánh, quầy hoặc nhân viên, lịch sử không bị xóa. Muốn kích hoạt lại cần quyền **Khôi phục**. Trang **Tài khoản nợ** dùng để cấu hình công nợ.
 
@@ -228,40 +227,25 @@ Ngoài ra, giảm giá hoặc đổi giá vượt giới hạn cần **Mã duy�
 
 ## Dành cho developer
 
-### App quản trị POS riêng
+### Kiến trúc gộp (Quản trị + Quầy bán hàng)
 
-`apps/pos-dashboard` là app quản trị độc lập, chạy ở cổng **5176**. Khung app
-dùng `@spree/dashboard-core` và `@spree/dashboard-ui`; logic thuần dùng chung
-(bao gồm bộ dựng phiếu in) nằm trong `packages/pos-shared`. Thao tác in qua
-trình duyệt, lựa chọn máy in, ca bán hàng, kho, công nợ, máy quét và màn khách
-vẫn thuộc POS. Xem [hướng dẫn app quản trị](../pos-dashboard/README.md).
+`apps/pos` là một SPA duy nhất chạy ở cổng **5175** (production mount tại `/pos` trên Rails; các đường dẫn cũ `/pos-admin/*` tự chuyển hướng 301 sang `/pos/*`):
 
-Đặt `VITE_POS_DASHBOARD_URL` trong cấu hình build của POS để các link quản trị
-mở đúng app và đúng cửa hàng. Giá trị có thể bao gồm đường dẫn con nếu app quản
-trị không chạy ở gốc domain. Trong dev, mặc định là `http://localhost:5176`.
-Production không có giá trị mặc định localhost: phải đặt URL công khai và build
-lại POS. Không thêm token hay thông tin đăng nhập vào URL hoặc biến `VITE_*`.
-
-Khi gắn origin mới, thêm origin đó vào **Allowed Origins** của cửa hàng để
-`StaffSessionOriginGuard` cho phép refresh/logout. App quản trị đăng nhập bằng
-phiên admin riêng; không chuyển JWT của màn bán hàng qua link. Hạ tầng static
-phải trả `index.html` cho URL app khi tải lại trang và phục vụ API/cookie qua
-HTTPS phù hợp.
-
-POS không còn route `/settings*` hay `/setup`; mọi trang cấu hình và thiết lập
-lần đầu nằm trong app quản trị, cùng E2E của chúng (`apps/pos-dashboard/e2e`).
+- **Quản trị (`/$storeId/...`)**: dùng `@spree/dashboard-core`, `@spree/dashboard-ui` và Tailwind CSS v4.
+- **Quầy bán hàng (`/$storeId/sell/...`, alias `/pos` và `/sell`)**: nằm trong `src/counter/` với CSS cô lập trong `.pos-app` (`src/counter/styles.css`), kèm `/offline` và `/display` không cần đăng nhập.
+- **Logic POS dùng chung (`src/shared/`, alias `@shared/*`)**: tiền tệ, mẫu phiếu in, tem nhãn, lệnh in, module, tính năng, bản dịch.
 
 Chạy trong thư mục `apps/pos`:
 
-- `pnpm dev`: chạy Vite ở cổng `5175`, phục vụ ở gốc `/`. Chỉ khi cần gắn POS dưới một đường dẫn con mới đặt `VITE_BASE_PATH` (ví dụ `VITE_BASE_PATH=/pos/`). `spree dev` ở thư mục gốc đã tự chạy lệnh này và app quản trị POS (cổng 5176), không cần chạy thêm. Tắt cả hai bằng `SPREE_POS_DEV=0`. Proxy `/api` mặc định trỏ tới `http://localhost:3000`; có thể đổi bằng `VITE_API_PROXY_TARGET` trong `.env.local`. API chạy qua Spree CLI ở thư mục gốc.
+- `pnpm dev`: chạy Vite ở cổng `5175`, phục vụ ở gốc `/`. Chỉ khi cần gắn POS dưới một đường dẫn con mới đặt `VITE_BASE_PATH` (ví dụ `VITE_BASE_PATH=/pos/`). `spree dev` ở thư mục gốc đã tự chạy lệnh này, không cần chạy thêm. Tắt bằng `SPREE_POS_DEV=0`. Proxy `/api` mặc định trỏ tới `http://localhost:3000`; có thể đổi bằng `VITE_API_PROXY_TARGET` trong `.env.local`. API chạy qua Spree CLI ở thư mục gốc.
 - `pnpm lint`, `pnpm typecheck`, `pnpm test` (Vitest), `pnpm build`.
-- `pnpm test:e2e`: chạy Playwright trên ba viewport desktop, tablet, mobile với API giả lập. Cổng mặc định là `5174`, có thể đổi bằng `POS_TEST_PORT` (ví dụ `POS_TEST_PORT=5177` khi 5174 bận).
-- Test với API thật (nhóm `real API` trong `e2e/full-retail.spec.ts`, `e2e/concurrency-chaos.spec.ts`, `e2e/advanced-goods.spec.ts`) bị bỏ qua mặc định. Cần stack dev đang chạy, database đã migrate và một fixture tổng hợp mới:
-  1. Chép `e2e/support/pos-live-fixture.rb` vào `server/log/` (gitignore), chạy ở thư mục gốc `pnpm spree exec bin/rails runner log/pos-live-fixture.rb`. Script chỉ chạy với database cục bộ và chỉ tạo bản ghi mới có nhãn `POS Live <tag>`: chi nhánh có hạn trả hàng, quầy, ca đang mở, năm sản phẩm có tồn và hai nhân viên với quyền tối thiểu cho các journey: thu ngân (bán, trả hàng, chi hoàn tiền, đóng ca; không ghi nợ, thu/chi két hay sửa khách) và quản lý (duyệt, cấu hình đơn vị/tồn đầu kỳ, bật/tắt cờ cấp cửa hàng; không bán). Credential ghi vào `server/log/pos-live/fixture-<tag>.json` (gitignore, chỉ chủ sở hữu đọc được; `server/tmp` của container không gắn ra máy); xóa file sau đợt thử.
+- `pnpm test:e2e`: chạy Playwright (`e2e/admin/` và `e2e/counter/`) trên ba viewport desktop, tablet, mobile với API giả lập. Cổng mặc định là `5175`, có thể đổi bằng `POS_TEST_PORT` (ví dụ `POS_TEST_PORT=5177` khi 5175 bận).
+- Test với API thật (nhóm `real API` trong `e2e/counter/full-retail.spec.ts`, `e2e/counter/concurrency-chaos.spec.ts`, `e2e/counter/advanced-goods.spec.ts`) bị bỏ qua mặc định. Cần stack dev đang chạy, database đã migrate và một fixture tổng hợp mới:
+  1. Chép `e2e/counter/support/pos-live-fixture.rb` vào `server/log/` (gitignore), chạy ở thư mục gốc `pnpm spree exec bin/rails runner log/pos-live-fixture.rb`. Script chỉ chạy với database cục bộ và chỉ tạo bản ghi mới có nhãn `POS Live <tag>`: chi nhánh có hạn trả hàng, quầy, ca đang mở, năm sản phẩm có tồn và hai nhân viên với quyền tối thiểu cho các journey: thu ngân (bán, trả hàng, chi hoàn tiền, đóng ca; không ghi nợ, thu/chi két hay sửa khách) và quản lý (duyệt, cấu hình đơn vị/tồn đầu kỳ, bật/tắt cờ cấp cửa hàng; không bán). Credential ghi vào `server/log/pos-live/fixture-<tag>.json` (gitignore, chỉ chủ sở hữu đọc được; `server/tmp` của container không gắn ra máy); xóa file sau đợt thử.
   2. `POS_LIVE_REVIEW=1 POS_LIVE_FIXTURE=<đường dẫn JSON> POS_TEST_PORT=5177 pnpm exec playwright test <spec> -g "real API" --project=desktop`. Test bật cờ cần dùng qua `PUT /pos/feature_flags` bằng tài khoản quản lý (mặc định cấp cửa hàng của store dev) và trả lại trạng thái cũ sau mỗi test. Chạy `full-retail` sau cùng vì nó đóng ca của fixture; lượt chạy đầy đủ tiếp theo dùng fixture mới. Đăng nhập API bị giới hạn tần suất (429), test tự chờ. Khi `POS_LIVE_REVIEW=1`, Playwright mở POS ở `http://localhost:<cổng>` thay vì `127.0.0.1`: API chỉ cho làm mới phiên (`/auth/refresh`) từ origin được phép (store dev cho phép `http://localhost`), nên mở ở `127.0.0.1` thì lần tải lại trang đầu tiên sẽ bị 403 và POS quay về màn hình đăng nhập.
   3. Dọn sau khi thử: `pnpm spree exec bin/rails runner log/pos-live-fixture.rb cleanup` tắt lại các mặc định cửa hàng mà tài khoản fixture còn để bật (lượt chạy bị ngắt), hủy nháp chưa thu tiền, hoàn tất nháp đã thu đủ, hủy khoản thu đang chuẩn bị, đếm két đúng số cần có rồi đóng ca; sau đó mọi nhân viên `pos-live-*@example.test` bị tắt membership POS, gỡ vai trò admin, đổi mật khẩu ngẫu nhiên. Chỉ xóa liên kết vai trò của các tài khoản này. Thêm `store-flags-off=returns,refunds` để tắt cả các cờ đó dù ai đã bật.
-  4. `e2e/live-api.spec.ts` (cũ) vẫn đọc `server/pos-live-review-credentials.json`; tên file này đã nằm trong `server/.gitignore`.
-  5. Thiết lập cửa hàng với API thật nay chạy trong app quản trị: nhóm `real API onboarding` của `apps/pos-dashboard/e2e/setup.spec.ts`, vẫn dùng fixture `pnpm spree exec bin/rails runner log/pos-live-fixture.rb onboarding=2` và các biến `POS_LIVE_REVIEW=1`, `POS_LIVE_ONBOARDING_FIXTURE`. Dọn bằng `cleanup` như ở bước 3.
+  4. `e2e/counter/live-api.spec.ts` (cũ) vẫn đọc `server/pos-live-review-credentials.json`; tên file này đã nằm trong `server/.gitignore`.
+  5. Thiết lập cửa hàng với API thật: nhóm `real API onboarding` của `e2e/admin/setup.spec.ts`, vẫn dùng fixture `pnpm spree exec bin/rails runner log/pos-live-fixture.rb onboarding=2` và các biến `POS_LIVE_REVIEW=1`, `POS_LIVE_ONBOARDING_FIXTURE`. Dọn bằng `cleanup` như ở bước 3.
 - Hồi quy server khi tắt module (D5 của plan đa ngành): `pnpm spree rspec spec/requests/spree/pos/ --tag modules_off_rerun` chạy lại các spec bán / tồn kho có nhãn `modules_off_rerun` với shared context `with branch modules off` (`server/spec/support/pos_module_helpers.rb`): mọi chức năng tắt, trừ lúc chạy chính lệnh thiết lập. Hai example kiểm chính lệnh chặn thiết lập (`module_setup`) được bỏ qua ở lượt này.
 - `pnpm test:perf`: đo thời gian chuyển tab, tìm hàng, tạo nháp và xác nhận tiền mặt bằng Performance API của trình duyệt (config riêng `tests/performance/playwright.config.ts`, không chạy trong `test:e2e`). Mặc định API giả lập, chỉ đo phía trình duyệt; thêm `POS_PERF_LIVE=1` và biến fixture ở trên để đo với API thật. Kết quả JSON ở `test-results/perf/pos-scenarios.json` (đổi bằng `POS_PERF_OUT`). Số đo không phải năng lực hệ thống.
 - Nhãn giao diện nằm ở `src/locales/vi.json`; danh sách quyền nằm ở `src/lib/pos-capabilities.ts`.

@@ -92,8 +92,7 @@ for _ in $(seq 1 60); do
   if "${COMPOSE[@]}" exec -T web curl -fsS http://localhost:3000/up >/dev/null 2>&1; then
     url=$(grep '^POS_PUBLIC_BASE_URL=' "$ENV_FILE" | cut -d= -f2-)
     echo "ParkViet is running at ${url}"
-    echo "  counter:            ${url}/pos/"
-    echo "  POS administration: ${url}/pos-admin/"
+    echo "  POS (admin & sell): ${url}/pos/"
     echo "  Spree dashboard:    ${url}/dashboard"
     echo "First install: get the one-time admin setup link with"
     echo "  docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod exec web bin/rails spree:setup:token"

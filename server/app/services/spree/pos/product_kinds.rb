@@ -7,7 +7,7 @@ module Spree
     # fixed name the dashboard creates its type with, compared without case,
     # spacing or Vietnamese marks: "Sản phẩm chế biến" and "san pham che bien"
     # are the same kind, any other name is no kind. The same rule as
-    # `productKindOf` in `apps/pos-dashboard/src/hooks/use-goods-setup.ts`;
+    # `productKindOf` in `apps/pos/src/hooks/use-goods-setup.ts`;
     # change both together.
     module ProductKinds
       NAMES = {

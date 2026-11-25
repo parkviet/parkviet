@@ -4,7 +4,7 @@ module Spree
   module Pos
     # Builds PrintDocument v1, the neutral document a print station prints. It
     # is the same structure the TypeScript renderer in
-    # packages/pos-shared/src/receipt-template/render.ts produces, plus
+    # apps/pos/src/shared/receipt-template/render.ts produces, plus
     # `version` and `kind`. Golden files in spec/fixtures/print_documents are
     # asserted by both sides, so the two renderers cannot drift apart.
     # Documents that only exist on the server have no TypeScript counterpart.

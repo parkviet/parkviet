@@ -28,8 +28,7 @@ ParkViet giúp người bán quản lý việc bán tại quầy, bán online, k
 
 | Ứng dụng | Dành cho ai | Làm được gì |
 | --- | --- | --- |
-| **ParkViet POS** (`apps/pos`) | Thu ngân | Bán tại quầy, thu tiền, ghi nợ, trả hàng, đóng ca, in phiếu. Chạy trên trình duyệt, máy tính bảng hoặc máy POS. |
-| **Quản trị POS** (`apps/pos-dashboard`) | Chủ cửa hàng, quản lý | Thiết lập cửa hàng theo ngành, chi nhánh, quầy, nhân viên và quyền, thực đơn, máy in, thiết bị, mẫu phiếu, hóa đơn điện tử, báo cáo. |
+| **ParkViet POS** (`apps/pos`) | Chủ cửa hàng, quản lý, thu ngân | Ứng dụng POS gộp: vừa quản trị cửa hàng theo ngành (chi nhánh, quầy, nhân viên và quyền, thực đơn, máy in, thiết bị, mẫu phiếu, hóa đơn điện tử, báo cáo) vừa có màn bán tại quầy (`/pos` / `/$storeId/sell`) để thu tiền, ghi nợ, trả hàng, đóng ca, in phiếu. Chạy trên trình duyệt, máy tính bảng hoặc máy POS. |
 | **ParkViet Nhân viên** (`apps/pos-staff`) | Phục vụ, bếp, chủ quán | App di động (Flutter) với các chế độ máy phục vụ, màn bếp, trạm in, kiosk tự gọi món và app chủ quán (duyệt từ xa, cảnh báo, xem đơn đang mở). |
 | **Gọi món bằng QR** (`apps/table-order`) | Khách tại bàn | Khách quét mã QR trên bàn, xem thực đơn và gửi món xuống bếp, không cần cài app. |
 | **Website bán hàng** (`apps/storefront`) | Khách mua online | Cửa hàng trực tuyến cho người bán. |
@@ -222,13 +221,12 @@ Lần chạy đầu tự tải image, tạo dữ liệu ban đầu và cấu hì
 | Ứng dụng | Địa chỉ |
 | --- | --- |
 | Bảng quản trị | http://localhost:5173 (lần đầu mở liên kết thiết lập để tạo tài khoản quản trị) |
-| POS | http://localhost:5175 |
-| Quản trị POS | http://localhost:5176 |
+| POS (Quản trị & Quầy bán hàng) | http://localhost:5175 (quầy bán hàng tại http://localhost:5175/pos) |
 | Bảng người bán | http://localhost:5174 (`pnpm --dir apps/seller-dashboard run dev`) |
 | Website bán hàng | http://localhost:3001 (`pnpm --dir apps/storefront run dev`) |
 | API | http://localhost:3000/api/v3/store |
 
-POS và Quản trị POS khởi động cùng `spree dev`; tắt bằng `SPREE_POS_DEV=0`. App ParkViet Nhân viên chạy theo [README riêng](apps/pos-staff/README.md).
+POS khởi động cùng `spree dev`; tắt bằng `SPREE_POS_DEV=0`. App ParkViet Nhân viên chạy theo [README riêng](apps/pos-staff/README.md).
 
 ### Cấu trúc và quy ước
 

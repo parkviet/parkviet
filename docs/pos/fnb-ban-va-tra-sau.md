@@ -1,6 +1,6 @@
 # Bán tại bàn và trả tiền sau
 
-Hướng dẫn cho chủ quán dùng ba ngành phục vụ tại bàn: **Quán ăn** có bàn, **Nhà hàng** và **Bar, Pub & Club** (bán theo bàn). Mọi màn quản trị dưới đây nằm trong bảng quản trị POS (`apps/pos-dashboard`). Màn bán của thu ngân là `apps/pos`; máy phục vụ, màn bếp và trạm in là app ParkViet Nhân viên (`apps/pos-staff`).
+Hướng dẫn cho chủ quán dùng ba ngành phục vụ tại bàn: **Quán ăn** có bàn, **Nhà hàng** và **Bar, Pub & Club** (bán theo bàn). Cả màn quản trị lẫn màn bán hàng của thu ngân đều nằm chung trong ứng dụng ParkViet POS (`apps/pos`); máy phục vụ, màn bếp và trạm in là app ParkViet Nhân viên (`apps/pos-staff`).
 
 ## 1. Chọn ngành
 

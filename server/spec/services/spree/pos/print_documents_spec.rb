@@ -5,7 +5,7 @@ require 'json'
 require 'yaml'
 
 # The golden files hold each input with the document the server builds from
-# it. packages/pos-shared/src/receipt-template/server-contract.test.ts renders
+# it. apps/pos/src/shared/receipt-template/server-contract.test.ts renders
 # the same inputs through the TypeScript renderer and expects the same
 # document, so neither side can change alone. A missing file is written and
 # the example fails, so a new golden is always looked at before it counts.

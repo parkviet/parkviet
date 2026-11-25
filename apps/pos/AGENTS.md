@@ -33,8 +33,8 @@ The selling screen opens as one of four sample screens (`tables_first`, `quick`,
 `one_step`, `big_menu`) plus options on top: the catalogue side, how payment is
 shown (`popup`, `slide`, `below`, `column`) and the catalogue/payment splits.
 Pure rules (presets, `clampSplit`, which preset a branch may use) are in
-`packages/pos-shared/src/selling-layout.ts`; the frame is
-`src/components/selling-layout/`.
+`src/shared/selling-layout.ts`; the frame is
+`src/counter/components/selling-layout/`.
 
 - A sample is only a starting set of options. The base screen still comes from
   the branch's modules, and `tables_first` is locked unless the branch runs

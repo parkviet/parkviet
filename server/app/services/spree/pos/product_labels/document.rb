@@ -5,7 +5,7 @@ module Spree
     module ProductLabels
       # The document a print station prints product labels from: for each item
       # the rows its template shows (text, barcode, price) and how many copies,
-      # on a roll stock. It follows packages/pos-shared/src/product-label
+      # on a roll stock. It follows apps/pos/src/shared/product-label
       # (render.ts and document.ts), choosing the fields and formatting the
       # values the same way; both are checked against the shared fixtures in
       # spec/fixtures/product_labels.

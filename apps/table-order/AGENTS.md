@@ -13,9 +13,9 @@ uses VietQR on this page when the branch allows it.
 - It talks only to `/api/v3/pos_guest/*` (`server/openapi/pos-guest.yaml`)
   with `Authorization: Guest <token>`. The token and the table's code stay
   in `sessionStorage`; neither is ever put in a URL.
-- Keep the bundle small: no imports from `apps/pos` or `packages/pos-shared`,
+- Keep the bundle small: no imports from `apps/pos`,
   no router or query library. The option rules in `src/lib/modifiers.ts`
-  follow the counter's (`apps/pos/src/lib/menu-selection.ts`).
+  follow the counter's (`apps/pos/src/counter/lib/menu-selection.ts`).
 
 ## Run and verify
 

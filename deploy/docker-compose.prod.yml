@@ -37,7 +37,7 @@ services:
       timeout: 5s
       retries: 10
 
-  # API, /dashboard, /pos (counter) and /pos-admin (POS administration) in
+  # API, /dashboard, /pos (unified POS administration + counter) and /table in
   # one container; Solid Queue runs inside Puma. Migrations run on boot.
   web:
     image: ${PARKVIET_IMAGE:-parkviet-spree:latest}

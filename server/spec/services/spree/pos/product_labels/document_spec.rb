@@ -4,7 +4,7 @@ require 'rails_helper'
 require 'json'
 
 # Each fixture holds the inputs and the document built from them.
-# packages/pos-shared/src/product-label/server-contract.test.ts builds the
+# apps/pos/src/shared/product-label/server-contract.test.ts builds the
 # same documents with the TypeScript renderer, so neither side can change
 # alone.
 RSpec.describe Spree::Pos::ProductLabels::Document do
