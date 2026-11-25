@@ -179,7 +179,7 @@ Cập nhật 12/11/2026. Nhánh phát triển chính là `v2`.
 
 ## Tính năng kế thừa từ Spree Commerce
 
-ParkViet được xây trên [Spree Commerce](https://spreecommerce.org) **6.0.3**, một nền tảng thương mại điện tử mã nguồn mở. ParkViet bám theo các bản cập nhật của Spree để nhận cải tiến và bản vá bảo mật, và dành công sức cho những gì người bán Việt Nam cần. Các chức năng sau có sẵn từ nền tảng:
+ParkViet được xây trên [Spree Commerce](https://spreecommerce.org) **6.0.6**, một nền tảng thương mại điện tử mã nguồn mở. ParkViet bám theo các bản cập nhật của Spree để nhận cải tiến và bản vá bảo mật, và dành công sức cho những gì người bán Việt Nam cần. Các chức năng sau có sẵn từ nền tảng:
 
 | Nhóm tính năng | Có thể làm gì? |
 | --- | --- |
