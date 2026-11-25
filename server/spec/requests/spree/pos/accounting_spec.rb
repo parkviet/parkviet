@@ -6,6 +6,10 @@ RSpec.describe 'POS accounting books and tax declarations', type: :request do
   let(:store) { Spree::Store.default }
   let(:password) { 'secret123' }
 
+  before do
+    Spree::Pos::TaxRegime.for_store(store).delete_all
+  end
+
   def login_as(user)
     post '/api/v3/admin/auth/login', params: { email: user.email, password: password }, as: :json
     response.parsed_body.fetch('token')
