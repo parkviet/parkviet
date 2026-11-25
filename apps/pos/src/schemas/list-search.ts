@@ -1,3 +1,4 @@
+import { DEBTOR_SORTS, REMINDER_FILTERS } from '@shared/finance'
 import { RECEIPT_DOCUMENT_TYPES } from '@shared/receipt-template/types'
 import { resourceSearchSchema } from '@spree/dashboard-core'
 import { z } from 'zod'
@@ -20,9 +21,18 @@ export const deliverySearchSchema = resourceSearchSchema.extend({
 })
 export type DeliverySearch = z.infer<typeof deliverySearchSchema>
 
-// The received funds open in the detail sheet, so a shift-close checklist
-// or a shared link can point at one record.
-export const fundsSearchSchema = resourceSearchSchema.extend({ fundsId: id })
+// The received funds open in the detail sheet, plus voucher filters on the
+// Thu chi tab.
+export const fundsSearchSchema = resourceSearchSchema.extend({
+  fundsId: id,
+  voucherId: id,
+  kind: z.enum(['all', 'income', 'expense', 'transfer']).optional().catch(undefined),
+  accountId: id,
+  status: z.enum(['all', 'completed', 'voided']).optional().catch(undefined),
+  category: z.string().max(64).optional().catch(undefined),
+  from: z.string().max(16).optional().catch(undefined),
+  to: z.string().max(16).optional().catch(undefined),
+})
 export type FundsSearch = z.infer<typeof fundsSearchSchema>
 
 // The closed shift whose snapshot is open beside the closure history.
@@ -30,10 +40,12 @@ export const closureSearchSchema = resourceSearchSchema.extend({ shiftId: id })
 export type ClosureSearch = z.infer<typeof closureSearchSchema>
 
 // The receivables view: the customer whose debts are open beside the list,
-// and the order status of the debts list.
+// the order status of the debts list, reminder schedule filter and sort order.
 export const receivableSearchSchema = resourceSearchSchema.extend({
   accountId: id,
   status: z.enum(RECEIVABLE_STATUSES).optional().catch(undefined),
+  reminder: z.enum(REMINDER_FILTERS).optional().catch(undefined),
+  sort: z.enum(DEBTOR_SORTS).optional().catch(undefined),
 })
 export type ReceivableSearch = z.infer<typeof receivableSearchSchema>
 

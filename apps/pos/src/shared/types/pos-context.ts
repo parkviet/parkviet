@@ -631,10 +631,101 @@ export type PosReceivableAccount = {
   days_owed?: number;
   days_overdue?: number;
   last_reminded_at?: string | null;
+  promised_pay_on?: string | null;
+  last_activity_at?: string | null;
+  settled?: boolean;
   // At most 20; `orders` counts them all.
   open_orders?: PosReminderOrder[];
   // One pay-later VietQR for the whole balance (lib/pay-later).
   pay_later?: unknown;
+};
+
+export type PosReceivableLedgerEntry = {
+  id: string;
+  kind: 'debit' | 'credit_note' | 'collection' | 'collection_reversal';
+  amount: string;
+  signed_amount: string;
+  balance_after: string;
+  currency: string;
+  order_id: string | null;
+  order_number: string | null;
+  due_on: string | null;
+  actor_name: string | null;
+  created_at: string | null;
+};
+
+export type PosReceivableLedgerSummary = {
+  count: number;
+  currency: string;
+  total_debited: string;
+  total_credit_notes: string;
+  total_collected: string;
+  current_balance: string;
+};
+
+export type PosFundAccount = {
+  id: string;
+  branch_id: string;
+  name: string;
+  kind: 'cash' | 'bank' | 'ewallet';
+  bank_name: string | null;
+  account_number: string | null;
+  currency: string;
+  opening_balance: string;
+  inflow: string;
+  outflow: string;
+  current_balance: string;
+  status: 'active' | 'archived';
+  is_default: boolean;
+  updated_at: string | null;
+};
+
+export type PosFundVoucher = {
+  id: string;
+  code: string;
+  kind: 'income' | 'expense' | 'transfer';
+  status: 'completed' | 'voided';
+  branch_id: string;
+  fund_account_id: string;
+  fund_account_name: string;
+  fund_account_kind: 'cash' | 'bank' | 'ewallet';
+  target_fund_account_id: string | null;
+  target_fund_account_name: string | null;
+  amount: string;
+  currency: string;
+  category_code: string;
+  category_label: string | null;
+  tax_deductible: boolean;
+  counterparty_name: string | null;
+  customer_id: string | null;
+  reference: string | null;
+  note: string | null;
+  occurred_at: string | null;
+  actor_name: string | null;
+  voided_at: string | null;
+  void_reason: string | null;
+  created_at: string | null;
+};
+
+export type PosFundVoucherSummary = {
+  total_income: string;
+  total_expense: string;
+  net_change: string;
+  count: number;
+};
+
+export type PosQuickQrResult = {
+  available: boolean;
+  reason?: string;
+  amount?: string;
+  currency?: string;
+  transfer_content?: string;
+  bank_bin?: string;
+  bank_name?: string | null;
+  account_number?: string;
+  account_name?: string;
+  payload?: string;
+  image_url?: string | null;
 };
 
 export type PosCollection = {

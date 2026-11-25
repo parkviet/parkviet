@@ -65,6 +65,19 @@ Rails.application.routes.draw do
                 post 'payouts/:payout_id/resolve', to: 'received_funds#resolve_payout'
               end
             end
+            resources :fund_accounts, only: [:index, :create, :update] do
+              collection do
+                post :transfer
+              end
+            end
+            resources :fund_vouchers, only: [:index, :show, :create] do
+              collection do
+                post :quick_qr
+              end
+              member do
+                post :void
+              end
+            end
             resources :credit_accounts, only: [:index, :create, :update]
             resources :credit_requests, only: [:index] do
               member do
@@ -98,6 +111,8 @@ Rails.application.routes.draw do
             get 'receivables', to: 'receivables#index'
             get 'receivables/customers', to: 'receivables#customers'
             post 'receivables/customers/:id/remind', to: 'receivables#remind'
+            patch 'receivables/customers/:id/promised_pay_on', to: 'receivables#promised_pay_on'
+            get 'receivables/customers/:id/ledger', to: 'receivables#ledger'
             resources :collections, only: [:show, :create] do
               resources :allocations, only: [:create], controller: 'collections/allocations' do
                 member do

@@ -8,6 +8,9 @@ import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BranchPicker } from '../components/branch-picker'
+import { FundAccountsView } from '../components/finance/fund-accounts-view'
+import { FundVouchersView } from '../components/finance/fund-vouchers-view'
+import { QuickCollectView } from '../components/finance/quick-collect-view'
 import { FundsDetailSheet } from '../components/funds-detail-sheet'
 import { PillTabs } from '../components/pill-tabs'
 import { fetchFunds, fetchFundsAttention } from '../hooks/use-funds'
@@ -18,35 +21,61 @@ import { hasCapability } from '../lib/pos-access'
 import { fundsSearchSchema } from '../schemas/list-search'
 import { hiddenTimestamps } from '../tables/columns'
 
-// "Sổ tiền": money received at the selected branch, and the "Cần chú ý"
-// view of what is not fully applied or not yet identified. Resolvers open a
-// record to allocate it by hand at the counter or pay it back to a
-// beneficiary; collectors read the ledger only.
-export function FundsPage({ attention }: { attention: boolean }) {
+export type FundsView = 'ledger' | 'attention' | 'vouchers' | 'accounts' | 'quick-collect'
+
+// "Tiền": money received at the selected branch, "Cần chú ý" for unallocated/
+// unidentified receipts, plus back-office "Thu chi", "Quỹ tiền" and "Thu tiền nhanh".
+export function FundsPage({ attention = false, view }: { attention?: boolean; view?: FundsView }) {
   const { t } = useTranslation()
   const { storeId } = useSession()
   const { permissionKeys } = usePermissions()
   const { context } = usePosSession()
   const branchId = context.data?.selection.branch_id ?? null
   const resolver = hasCapability({ permissionKeys, context: context.data }, 'pos.payment.resolve')
+  const activeView: FundsView = view ?? (attention ? 'attention' : 'ledger')
   const base = `/${storeId}/funds`
   const tabs = [
     { key: 'ledger', label: t('fundsNav'), to: base },
-    { key: 'attention', label: t('attentionNav'), to: `${base}/attention` },
+    ...(resolver ? [{ key: 'attention', label: t('attentionNav'), to: `${base}/attention` }] : []),
+    { key: 'vouchers', label: t('fundsVouchersNav'), to: `${base}/vouchers` },
+    { key: 'accounts', label: t('fundsAccountsNav'), to: `${base}/accounts` },
+    { key: 'quick-collect', label: t('fundsQuickCollectNav'), to: `${base}/quick-collect` },
   ]
+  const titleKey =
+    activeView === 'attention'
+      ? 'fundsAttentionTitle'
+      : activeView === 'vouchers'
+        ? 'fundsVouchersTitle'
+        : activeView === 'accounts'
+          ? 'fundsAccountsTitle'
+          : activeView === 'quick-collect'
+            ? 'fundsQuickCollectTitle'
+            : 'fundsTitle'
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t(attention ? 'fundsAttentionTitle' : 'fundsTitle')}
-        actions={<BranchPicker />}
-      />
-      {resolver && <PillTabs tabs={tabs} />}
+      <PageHeader title={t(titleKey)} actions={<BranchPicker />} />
+      <PillTabs tabs={tabs} />
       {branchId ? (
-        <FundsTable key={`${branchId}:${attention}`} branchId={branchId} attention={attention} />
+        activeView === 'vouchers' ? (
+          <FundVouchersView key={`${branchId}:vouchers`} branchId={branchId} />
+        ) : activeView === 'accounts' ? (
+          <FundAccountsView key={`${branchId}:accounts`} branchId={branchId} />
+        ) : activeView === 'quick-collect' ? (
+          <QuickCollectView key={`${branchId}:quick-collect`} branchId={branchId} />
+        ) : (
+          <FundsTable
+            key={`${branchId}:${activeView}`}
+            branchId={branchId}
+            attention={activeView === 'attention'}
+          />
+        )
       ) : (
         <p className="text-muted-foreground">{t('pageChooseBranchHint')}</p>
       )}
-      <p className="text-sm text-muted-foreground">{t('fundsManualReconcile')}</p>
+      {(activeView === 'ledger' || activeView === 'attention') && (
+        <p className="text-sm text-muted-foreground">{t('fundsManualReconcile')}</p>
+      )}
     </div>
   )
 }

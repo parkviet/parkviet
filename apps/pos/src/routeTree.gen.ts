@@ -54,13 +54,17 @@ import { Route as AuthenticatedStoreIdVehicleCommissionRouteImport } from './rou
 import { Route as AuthenticatedStoreIdBranchesIndexRouteImport } from './routes/_authenticated/$storeId/branches/index'
 import { Route as AuthenticatedStoreIdBranchesBranchIdRouteImport } from './routes/_authenticated/$storeId/branches/$branchId'
 import { Route as AuthenticatedStoreIdFundsIndexRouteImport } from './routes/_authenticated/$storeId/funds/index'
+import { Route as AuthenticatedStoreIdFundsAccountsRouteImport } from './routes/_authenticated/$storeId/funds/accounts'
 import { Route as AuthenticatedStoreIdFundsAttentionRouteImport } from './routes/_authenticated/$storeId/funds/attention'
+import { Route as AuthenticatedStoreIdFundsQuickCollectRouteImport } from './routes/_authenticated/$storeId/funds/quick-collect'
+import { Route as AuthenticatedStoreIdFundsVouchersRouteImport } from './routes/_authenticated/$storeId/funds/vouchers'
 import { Route as AuthenticatedStoreIdInventoryIndexRouteImport } from './routes/_authenticated/$storeId/inventory/index'
 import { Route as AuthenticatedStoreIdInventoryTabRouteImport } from './routes/_authenticated/$storeId/inventory/$tab'
 import { Route as AuthenticatedStoreIdOrdersIndexRouteImport } from './routes/_authenticated/$storeId/orders/index'
 import { Route as AuthenticatedStoreIdOrdersOrderIdRouteImport } from './routes/_authenticated/$storeId/orders/$orderId'
 import { Route as AuthenticatedStoreIdReceivablesIndexRouteImport } from './routes/_authenticated/$storeId/receivables/index'
 import { Route as AuthenticatedStoreIdReceivablesOrdersRouteImport } from './routes/_authenticated/$storeId/receivables/orders'
+import { Route as AuthenticatedStoreIdReceivablesSettledRouteImport } from './routes/_authenticated/$storeId/receivables/settled'
 import { Route as AuthenticatedStoreIdReportsIndexRouteImport } from './routes/_authenticated/$storeId/reports/index'
 import { Route as AuthenticatedStoreIdReportsAttendantsRouteImport } from './routes/_authenticated/$storeId/reports/attendants'
 import { Route as AuthenticatedStoreIdReportsCashbookRouteImport } from './routes/_authenticated/$storeId/reports/cashbook'
@@ -387,10 +391,28 @@ const AuthenticatedStoreIdFundsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedStoreIdFundsRoute,
   } as any)
+const AuthenticatedStoreIdFundsAccountsRoute =
+  AuthenticatedStoreIdFundsAccountsRouteImport.update({
+    id: '/accounts',
+    path: '/accounts',
+    getParentRoute: () => AuthenticatedStoreIdFundsRoute,
+  } as any)
 const AuthenticatedStoreIdFundsAttentionRoute =
   AuthenticatedStoreIdFundsAttentionRouteImport.update({
     id: '/attention',
     path: '/attention',
+    getParentRoute: () => AuthenticatedStoreIdFundsRoute,
+  } as any)
+const AuthenticatedStoreIdFundsQuickCollectRoute =
+  AuthenticatedStoreIdFundsQuickCollectRouteImport.update({
+    id: '/quick-collect',
+    path: '/quick-collect',
+    getParentRoute: () => AuthenticatedStoreIdFundsRoute,
+  } as any)
+const AuthenticatedStoreIdFundsVouchersRoute =
+  AuthenticatedStoreIdFundsVouchersRouteImport.update({
+    id: '/vouchers',
+    path: '/vouchers',
     getParentRoute: () => AuthenticatedStoreIdFundsRoute,
   } as any)
 const AuthenticatedStoreIdInventoryIndexRoute =
@@ -427,6 +449,12 @@ const AuthenticatedStoreIdReceivablesOrdersRoute =
   AuthenticatedStoreIdReceivablesOrdersRouteImport.update({
     id: '/orders',
     path: '/orders',
+    getParentRoute: () => AuthenticatedStoreIdReceivablesRoute,
+  } as any)
+const AuthenticatedStoreIdReceivablesSettledRoute =
+  AuthenticatedStoreIdReceivablesSettledRouteImport.update({
+    id: '/settled',
+    path: '/settled',
     getParentRoute: () => AuthenticatedStoreIdReceivablesRoute,
   } as any)
 const AuthenticatedStoreIdReportsIndexRoute =
@@ -863,10 +891,14 @@ export interface FileRoutesByFullPath {
   '/$storeId/vehicle-commission': typeof AuthenticatedStoreIdVehicleCommissionRoute
   '/$storeId/': typeof AuthenticatedStoreIdIndexRoute
   '/$storeId/branches/$branchId': typeof AuthenticatedStoreIdBranchesBranchIdRouteWithChildren
+  '/$storeId/funds/accounts': typeof AuthenticatedStoreIdFundsAccountsRoute
   '/$storeId/funds/attention': typeof AuthenticatedStoreIdFundsAttentionRoute
+  '/$storeId/funds/quick-collect': typeof AuthenticatedStoreIdFundsQuickCollectRoute
+  '/$storeId/funds/vouchers': typeof AuthenticatedStoreIdFundsVouchersRoute
   '/$storeId/inventory/$tab': typeof AuthenticatedStoreIdInventoryTabRoute
   '/$storeId/orders/$orderId': typeof AuthenticatedStoreIdOrdersOrderIdRoute
   '/$storeId/receivables/orders': typeof AuthenticatedStoreIdReceivablesOrdersRoute
+  '/$storeId/receivables/settled': typeof AuthenticatedStoreIdReceivablesSettledRoute
   '/$storeId/reports/attendants': typeof AuthenticatedStoreIdReportsAttendantsRoute
   '/$storeId/reports/cashbook': typeof AuthenticatedStoreIdReportsCashbookRoute
   '/$storeId/reports/closures': typeof AuthenticatedStoreIdReportsClosuresRoute
@@ -970,10 +1002,14 @@ export interface FileRoutesByTo {
   '/$storeId/units': typeof AuthenticatedStoreIdUnitsRoute
   '/$storeId/vehicle-commission': typeof AuthenticatedStoreIdVehicleCommissionRoute
   '/$storeId': typeof AuthenticatedStoreIdIndexRoute
+  '/$storeId/funds/accounts': typeof AuthenticatedStoreIdFundsAccountsRoute
   '/$storeId/funds/attention': typeof AuthenticatedStoreIdFundsAttentionRoute
+  '/$storeId/funds/quick-collect': typeof AuthenticatedStoreIdFundsQuickCollectRoute
+  '/$storeId/funds/vouchers': typeof AuthenticatedStoreIdFundsVouchersRoute
   '/$storeId/inventory/$tab': typeof AuthenticatedStoreIdInventoryTabRoute
   '/$storeId/orders/$orderId': typeof AuthenticatedStoreIdOrdersOrderIdRoute
   '/$storeId/receivables/orders': typeof AuthenticatedStoreIdReceivablesOrdersRoute
+  '/$storeId/receivables/settled': typeof AuthenticatedStoreIdReceivablesSettledRoute
   '/$storeId/reports/attendants': typeof AuthenticatedStoreIdReportsAttendantsRoute
   '/$storeId/reports/cashbook': typeof AuthenticatedStoreIdReportsCashbookRoute
   '/$storeId/reports/closures': typeof AuthenticatedStoreIdReportsClosuresRoute
@@ -1089,10 +1125,14 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/vehicle-commission': typeof AuthenticatedStoreIdVehicleCommissionRoute
   '/_authenticated/$storeId/': typeof AuthenticatedStoreIdIndexRoute
   '/_authenticated/$storeId/branches/$branchId': typeof AuthenticatedStoreIdBranchesBranchIdRouteWithChildren
+  '/_authenticated/$storeId/funds/accounts': typeof AuthenticatedStoreIdFundsAccountsRoute
   '/_authenticated/$storeId/funds/attention': typeof AuthenticatedStoreIdFundsAttentionRoute
+  '/_authenticated/$storeId/funds/quick-collect': typeof AuthenticatedStoreIdFundsQuickCollectRoute
+  '/_authenticated/$storeId/funds/vouchers': typeof AuthenticatedStoreIdFundsVouchersRoute
   '/_authenticated/$storeId/inventory/$tab': typeof AuthenticatedStoreIdInventoryTabRoute
   '/_authenticated/$storeId/orders/$orderId': typeof AuthenticatedStoreIdOrdersOrderIdRoute
   '/_authenticated/$storeId/receivables/orders': typeof AuthenticatedStoreIdReceivablesOrdersRoute
+  '/_authenticated/$storeId/receivables/settled': typeof AuthenticatedStoreIdReceivablesSettledRoute
   '/_authenticated/$storeId/reports/attendants': typeof AuthenticatedStoreIdReportsAttendantsRoute
   '/_authenticated/$storeId/reports/cashbook': typeof AuthenticatedStoreIdReportsCashbookRoute
   '/_authenticated/$storeId/reports/closures': typeof AuthenticatedStoreIdReportsClosuresRoute
@@ -1209,10 +1249,14 @@ export interface FileRouteTypes {
     | '/$storeId/vehicle-commission'
     | '/$storeId/'
     | '/$storeId/branches/$branchId'
+    | '/$storeId/funds/accounts'
     | '/$storeId/funds/attention'
+    | '/$storeId/funds/quick-collect'
+    | '/$storeId/funds/vouchers'
     | '/$storeId/inventory/$tab'
     | '/$storeId/orders/$orderId'
     | '/$storeId/receivables/orders'
+    | '/$storeId/receivables/settled'
     | '/$storeId/reports/attendants'
     | '/$storeId/reports/cashbook'
     | '/$storeId/reports/closures'
@@ -1316,10 +1360,14 @@ export interface FileRouteTypes {
     | '/$storeId/units'
     | '/$storeId/vehicle-commission'
     | '/$storeId'
+    | '/$storeId/funds/accounts'
     | '/$storeId/funds/attention'
+    | '/$storeId/funds/quick-collect'
+    | '/$storeId/funds/vouchers'
     | '/$storeId/inventory/$tab'
     | '/$storeId/orders/$orderId'
     | '/$storeId/receivables/orders'
+    | '/$storeId/receivables/settled'
     | '/$storeId/reports/attendants'
     | '/$storeId/reports/cashbook'
     | '/$storeId/reports/closures'
@@ -1434,10 +1482,14 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/vehicle-commission'
     | '/_authenticated/$storeId/'
     | '/_authenticated/$storeId/branches/$branchId'
+    | '/_authenticated/$storeId/funds/accounts'
     | '/_authenticated/$storeId/funds/attention'
+    | '/_authenticated/$storeId/funds/quick-collect'
+    | '/_authenticated/$storeId/funds/vouchers'
     | '/_authenticated/$storeId/inventory/$tab'
     | '/_authenticated/$storeId/orders/$orderId'
     | '/_authenticated/$storeId/receivables/orders'
+    | '/_authenticated/$storeId/receivables/settled'
     | '/_authenticated/$storeId/reports/attendants'
     | '/_authenticated/$storeId/reports/cashbook'
     | '/_authenticated/$storeId/reports/closures'
@@ -1835,11 +1887,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoreIdFundsIndexRouteImport
       parentRoute: typeof AuthenticatedStoreIdFundsRoute
     }
+    '/_authenticated/$storeId/funds/accounts': {
+      id: '/_authenticated/$storeId/funds/accounts'
+      path: '/accounts'
+      fullPath: '/$storeId/funds/accounts'
+      preLoaderRoute: typeof AuthenticatedStoreIdFundsAccountsRouteImport
+      parentRoute: typeof AuthenticatedStoreIdFundsRoute
+    }
     '/_authenticated/$storeId/funds/attention': {
       id: '/_authenticated/$storeId/funds/attention'
       path: '/attention'
       fullPath: '/$storeId/funds/attention'
       preLoaderRoute: typeof AuthenticatedStoreIdFundsAttentionRouteImport
+      parentRoute: typeof AuthenticatedStoreIdFundsRoute
+    }
+    '/_authenticated/$storeId/funds/quick-collect': {
+      id: '/_authenticated/$storeId/funds/quick-collect'
+      path: '/quick-collect'
+      fullPath: '/$storeId/funds/quick-collect'
+      preLoaderRoute: typeof AuthenticatedStoreIdFundsQuickCollectRouteImport
+      parentRoute: typeof AuthenticatedStoreIdFundsRoute
+    }
+    '/_authenticated/$storeId/funds/vouchers': {
+      id: '/_authenticated/$storeId/funds/vouchers'
+      path: '/vouchers'
+      fullPath: '/$storeId/funds/vouchers'
+      preLoaderRoute: typeof AuthenticatedStoreIdFundsVouchersRouteImport
       parentRoute: typeof AuthenticatedStoreIdFundsRoute
     }
     '/_authenticated/$storeId/inventory/': {
@@ -1882,6 +1955,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/$storeId/receivables/orders'
       preLoaderRoute: typeof AuthenticatedStoreIdReceivablesOrdersRouteImport
+      parentRoute: typeof AuthenticatedStoreIdReceivablesRoute
+    }
+    '/_authenticated/$storeId/receivables/settled': {
+      id: '/_authenticated/$storeId/receivables/settled'
+      path: '/settled'
+      fullPath: '/$storeId/receivables/settled'
+      preLoaderRoute: typeof AuthenticatedStoreIdReceivablesSettledRouteImport
       parentRoute: typeof AuthenticatedStoreIdReceivablesRoute
     }
     '/_authenticated/$storeId/reports/': {
@@ -2418,14 +2498,23 @@ const AuthenticatedStoreIdBranchesRouteWithChildren =
   )
 
 interface AuthenticatedStoreIdFundsRouteChildren {
+  AuthenticatedStoreIdFundsAccountsRoute: typeof AuthenticatedStoreIdFundsAccountsRoute
   AuthenticatedStoreIdFundsAttentionRoute: typeof AuthenticatedStoreIdFundsAttentionRoute
+  AuthenticatedStoreIdFundsQuickCollectRoute: typeof AuthenticatedStoreIdFundsQuickCollectRoute
+  AuthenticatedStoreIdFundsVouchersRoute: typeof AuthenticatedStoreIdFundsVouchersRoute
   AuthenticatedStoreIdFundsIndexRoute: typeof AuthenticatedStoreIdFundsIndexRoute
 }
 
 const AuthenticatedStoreIdFundsRouteChildren: AuthenticatedStoreIdFundsRouteChildren =
   {
+    AuthenticatedStoreIdFundsAccountsRoute:
+      AuthenticatedStoreIdFundsAccountsRoute,
     AuthenticatedStoreIdFundsAttentionRoute:
       AuthenticatedStoreIdFundsAttentionRoute,
+    AuthenticatedStoreIdFundsQuickCollectRoute:
+      AuthenticatedStoreIdFundsQuickCollectRoute,
+    AuthenticatedStoreIdFundsVouchersRoute:
+      AuthenticatedStoreIdFundsVouchersRoute,
     AuthenticatedStoreIdFundsIndexRoute: AuthenticatedStoreIdFundsIndexRoute,
   }
 
@@ -2471,6 +2560,7 @@ const AuthenticatedStoreIdOrdersRouteWithChildren =
 
 interface AuthenticatedStoreIdReceivablesRouteChildren {
   AuthenticatedStoreIdReceivablesOrdersRoute: typeof AuthenticatedStoreIdReceivablesOrdersRoute
+  AuthenticatedStoreIdReceivablesSettledRoute: typeof AuthenticatedStoreIdReceivablesSettledRoute
   AuthenticatedStoreIdReceivablesIndexRoute: typeof AuthenticatedStoreIdReceivablesIndexRoute
 }
 
@@ -2478,6 +2568,8 @@ const AuthenticatedStoreIdReceivablesRouteChildren: AuthenticatedStoreIdReceivab
   {
     AuthenticatedStoreIdReceivablesOrdersRoute:
       AuthenticatedStoreIdReceivablesOrdersRoute,
+    AuthenticatedStoreIdReceivablesSettledRoute:
+      AuthenticatedStoreIdReceivablesSettledRoute,
     AuthenticatedStoreIdReceivablesIndexRoute:
       AuthenticatedStoreIdReceivablesIndexRoute,
   }

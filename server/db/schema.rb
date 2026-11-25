@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_012311) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -2796,6 +2796,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_012311) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "last_reminded_at"
+    t.date "promised_pay_on"
     t.index ["branch_id"], name: "index_spree_pos_credit_accounts_on_branch_id"
     t.index ["customer_profile_id"], name: "index_spree_pos_credit_accounts_on_customer_profile_id"
     t.index ["store_id", "customer_profile_id", "currency"], name: "idx_pos_credit_accounts_customer", unique: true
@@ -3209,6 +3210,55 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_012311) do
     t.index ["store_id"], name: "index_spree_pos_feature_flags_on_store_id"
     t.check_constraint "char_length(reason::text) >= 1 AND char_length(reason::text) <= 200", name: "chk_pos_feature_flags_reason"
     t.check_constraint "feature::text = ANY (ARRAY['credit'::character varying::text, 'returns'::character varying::text, 'refunds'::character varying::text, 'exchanges'::character varying::text, 'traceability'::character varying::text, 'customer_display'::character varying::text, 'cash_moves'::character varying::text, 'exports'::character varying::text, 'vietqr'::character varying::text, 'edit_lease'::character varying::text, 'quick_credit'::character varying::text, 'delivery'::character varying::text, 'qr_order'::character varying::text])", name: "chk_pos_feature_flags_feature"
+  end
+
+  create_table "spree_pos_fund_accounts", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.bigint "branch_id", null: false
+    t.string "name", limit: 120, null: false
+    t.string "kind", limit: 32, default: "cash", null: false
+    t.string "bank_name", limit: 120
+    t.string "account_number", limit: 64
+    t.string "currency", limit: 8, default: "VND", null: false
+    t.decimal "opening_balance", precision: 14, scale: 2, default: "0.0", null: false
+    t.string "status", limit: 32, default: "active", null: false
+    t.boolean "is_default", default: false, null: false
+    t.bigint "created_by_id", null: false
+    t.bigint "updated_by_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["branch_id", "name"], name: "index_spree_pos_fund_accounts_on_branch_id_and_name", unique: true
+    t.index ["store_id", "branch_id"], name: "index_spree_pos_fund_accounts_on_store_id_and_branch_id"
+  end
+
+  create_table "spree_pos_fund_vouchers", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.bigint "branch_id", null: false
+    t.bigint "fund_account_id", null: false
+    t.bigint "target_fund_account_id"
+    t.string "code", limit: 32, null: false
+    t.string "kind", limit: 32, null: false
+    t.string "status", limit: 32, default: "completed", null: false
+    t.decimal "amount", precision: 14, scale: 2, null: false
+    t.string "currency", limit: 8, default: "VND", null: false
+    t.string "category_code", limit: 64, default: "other_expense", null: false
+    t.string "category_label", limit: 120
+    t.boolean "tax_deductible", default: true, null: false
+    t.string "counterparty_name", limit: 120
+    t.bigint "customer_profile_id"
+    t.string "reference", limit: 120
+    t.text "note"
+    t.datetime "occurred_at", null: false
+    t.bigint "actor_id", null: false
+    t.bigint "voided_by_id"
+    t.datetime "voided_at"
+    t.string "void_reason", limit: 200
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fund_account_id"], name: "index_spree_pos_fund_vouchers_on_fund_account_id"
+    t.index ["store_id", "branch_id", "occurred_at"], name: "idx_pos_fund_vouchers_branch_occurred"
+    t.index ["store_id", "code"], name: "index_spree_pos_fund_vouchers_on_store_id_and_code", unique: true
+    t.index ["target_fund_account_id"], name: "index_spree_pos_fund_vouchers_on_target_fund_account_id"
   end
 
   create_table "spree_pos_funds_allocations", force: :cascade do |t|
@@ -4458,7 +4508,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_012311) do
     t.datetime "updated_at", null: false
     t.index ["reservation_id"], name: "index_spree_pos_reservation_resources_on_reservation_id"
     t.check_constraint "ends_at > starts_at", name: "chk_pos_reservation_resources_range"
-    t.exclusion_constraint "resource_id WITH =, tsrange(starts_at, ends_at) WITH &&", where: "ctiv", using: :gist, name: "excl_pos_reservation_resources_overlap"
+    t.exclusion_constraint "resource_id WITH =, tsrange(starts_at, ends_at) WITH &&", where: "active", using: :gist, name: "excl_pos_reservation_resources_overlap"
   end
 
   create_table "spree_pos_reservations", force: :cascade do |t|
@@ -7255,6 +7305,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_012311) do
   add_foreign_key "spree_pos_exchange_operations", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_feature_flags", "spree_pos_branches", column: "branch_id"
   add_foreign_key "spree_pos_feature_flags", "spree_stores", column: "store_id"
+  add_foreign_key "spree_pos_fund_accounts", "spree_pos_branches", column: "branch_id"
+  add_foreign_key "spree_pos_fund_accounts", "spree_stores", column: "store_id"
+  add_foreign_key "spree_pos_fund_vouchers", "spree_pos_branches", column: "branch_id"
+  add_foreign_key "spree_pos_fund_vouchers", "spree_pos_customers", column: "customer_profile_id"
+  add_foreign_key "spree_pos_fund_vouchers", "spree_pos_fund_accounts", column: "fund_account_id"
+  add_foreign_key "spree_pos_fund_vouchers", "spree_pos_fund_accounts", column: "target_fund_account_id"
+  add_foreign_key "spree_pos_fund_vouchers", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_funds_allocations", "spree_orders", column: "order_id"
   add_foreign_key "spree_pos_funds_allocations", "spree_payments", column: "payment_id"
   add_foreign_key "spree_pos_funds_allocations", "spree_pos_collections", column: "collection_id"

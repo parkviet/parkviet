@@ -40,6 +40,32 @@ async function install(page: Page, capabilities: string[]) {
       payouts[0] = { ...payouts[0], status: 'confirmed' };
       return route.fulfill({ json: { data: payouts[0] } });
     }
+    if (path === '/pos/fund_accounts' && request.method() === 'GET') {
+      return route.fulfill({
+        json: {
+          data: [
+            { id: 'posfundacc_1', branch_id: 'branch_main', name: 'Tiền mặt', kind: 'cash', bank_name: null, account_number: null, currency: 'VND', opening_balance: '1000000.0', inflow: '500000.0', outflow: '120000.0', current_balance: '1380000.0', status: 'active', is_default: true, updated_at: null },
+            { id: 'posfundacc_2', branch_id: 'branch_main', name: 'VIB **96', kind: 'bank', bank_name: 'VIB', account_number: '0389450596', currency: 'VND', opening_balance: '500000.0', inflow: '0.0', outflow: '0.0', current_balance: '500000.0', status: 'active', is_default: false, updated_at: null },
+          ],
+          meta: { count: 2, total_balance: '1880000.0', currency: 'VND' },
+        },
+      });
+    }
+    if (path === '/pos/fund_vouchers' && request.method() === 'GET') {
+      return route.fulfill({
+        json: {
+          data: [
+            { id: 'posvouch_1', code: 'PC00001', kind: 'expense', status: 'completed', branch_id: 'branch_main', fund_account_id: 'posfundacc_1', fund_account_name: 'Tiền mặt', fund_account_kind: 'cash', target_fund_account_id: null, target_fund_account_name: null, amount: '120000.0', currency: 'VND', category_code: 'electricity', category_label: null, tax_deductible: false, counterparty_name: 'EVN', customer_id: null, reference: null, note: 'Tiền điện', occurred_at: '2026-11-10T02:00:00Z', actor_name: 'admin@example.com', voided_at: null, void_reason: null, created_at: '2026-11-10T02:00:00Z' },
+          ],
+          meta: { ...pageMeta(1, 1, 25), summary: { total_income: '500000.0', total_expense: '120000.0', net_change: '380000.0', count: 1 } },
+        },
+      });
+    }
+    if (path === '/pos/fund_vouchers/quick_qr' && request.method() === 'POST') {
+      return route.fulfill({
+        json: { data: { available: false, reason: 'vietqr_not_configured' } },
+      });
+    }
     if (path.startsWith('/pos/')) return route.fulfill({ json: { data: [], meta: pageMeta(0) } });
     return route.fallback();
   });
@@ -91,4 +117,21 @@ test('a collector reads the ledger without the attention view or payout actions'
   await expect(sheet.getByRole('button', { name: 'Giữ tiền để hoàn' })).toHaveCount(0);
   await page.goto('/store_1/funds/attention');
   await expect(page.getByRole('alert')).toContainText('Không có quyền truy cập');
+});
+
+test('a resolver navigates Thu chi, Quỹ tiền, and Thu tiền nhanh tabs', async ({ page }) => {
+  await install(page, ['pos.payment.resolve', 'pos.payment.collect']);
+  await page.goto('/store_1/funds/vouchers');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sổ thu chi');
+  await expect(page.getByText('PC00001')).toBeVisible();
+  await expect(page.getByText('Không tính thuế')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Quỹ tiền' }).click();
+  await expect(page).toHaveURL(/\/store_1\/funds\/accounts/);
+  await expect(page.getByText('VIB **96')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Thu tiền nhanh' }).click();
+  await expect(page).toHaveURL(/\/store_1\/funds\/quick-collect/);
+  await page.getByRole('button', { name: 'Tạo mã VietQR' }).click();
+  await expect(page.getByRole('status')).toContainText('Chi nhánh chưa bật VietQR');
 });

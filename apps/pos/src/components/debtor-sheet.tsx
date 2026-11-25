@@ -1,4 +1,5 @@
 import { debtReminderMessage } from '@shared/debt-reminder'
+import { downloadCsv } from '@shared/finance'
 import { formatMoney } from '@shared/money'
 import { payLaterQr } from '@shared/pay-later'
 import { amountSign, formatDueDate } from '@shared/receivables'
@@ -7,15 +8,23 @@ import type { PosReceivable, PosReceivableAccount } from '@shared/types/pos-cont
 import {
   Badge,
   Button,
+  Input,
+  Label,
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
 } from '@spree/dashboard-ui'
+import { DownloadIcon, PrinterIcon } from '@spree/dashboard-ui/icons'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCustomerReceivables, useRemindDebt } from '../hooks/use-debts'
+import {
+  useCustomerReceivables,
+  useReceivableLedger,
+  useRemindDebt,
+  useSetPromisedPayOn,
+} from '../hooks/use-debts'
 import { usePosSession } from '../hooks/use-pos-session'
 import { branchTimeZone, formatInstant } from '../lib/format-time'
 import { canSendReminders } from '../lib/pos-access'
@@ -91,14 +100,257 @@ export function DebtorSheet({
                 </div>
               </dl>
               {canSendReminders({ permissionKeys: [], context: context.data }) && (
-                <ReminderActions account={account} branchId={branchId} />
+                <>
+                  {!account.settled && <PromisedDateEditor account={account} branchId={branchId} />}
+                  {!account.settled && <ReminderActions account={account} branchId={branchId} />}
+                </>
               )}
-              <CustomerDebts branchId={branchId} customerId={account.customer.id} />
+              <DebtorTabs branchId={branchId} account={account} />
             </>
           )}
         </div>
       </SheetContent>
     </Sheet>
+  )
+}
+
+function PromisedDateEditor({
+  account,
+  branchId,
+}: {
+  account: PosReceivableAccount
+  branchId: string
+}) {
+  const { t } = useTranslation()
+  const setPromised = useSetPromisedPayOn()
+  const [date, setDate] = useState(account.promised_pay_on ?? '')
+  const [statusMsg, setStatusMsg] = useState('')
+  const [error, setError] = useState('')
+
+  async function save(next: string | null) {
+    setError('')
+    setStatusMsg('')
+    try {
+      await setPromised.mutateAsync({
+        branchId,
+        creditAccountId: account.credit_account_id,
+        promisedPayOn: next,
+      })
+      setDate(next ?? '')
+      setStatusMsg(t('receivablesPromisedSaved'))
+    } catch (failure) {
+      setError(describeFailure(failure, t))
+    }
+  }
+
+  return (
+    <section className="space-y-2 rounded-md border p-3" aria-label={t('receivablesPromisedPayOn')}>
+      <Label htmlFor={`promised-${account.credit_account_id}`}>
+        {t('receivablesPromisedPayOn')}
+      </Label>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          id={`promised-${account.credit_account_id}`}
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          disabled={setPromised.isPending}
+          className="h-9 w-auto"
+        />
+        <Button
+          type="button"
+          size="sm"
+          disabled={setPromised.isPending || !date}
+          onClick={() => void save(date)}
+        >
+          {t('financeSave')}
+        </Button>
+        {(date || account.promised_pay_on) && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={setPromised.isPending}
+            onClick={() => void save(null)}
+          >
+            {t('receivablesPromisedClear')}
+          </Button>
+        )}
+      </div>
+      {statusMsg && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {statusMsg}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
+    </section>
+  )
+}
+
+function DebtorTabs({ branchId, account }: { branchId: string; account: PosReceivableAccount }) {
+  const { t } = useTranslation()
+  const [tab, setTab] = useState<'orders' | 'ledger'>(account.settled ? 'ledger' : 'orders')
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 border-b pb-2" role="tablist">
+        <Button
+          type="button"
+          size="sm"
+          role="tab"
+          aria-selected={tab === 'orders'}
+          variant={tab === 'orders' ? 'default' : 'ghost'}
+          onClick={() => setTab('orders')}
+        >
+          {t('receivablesOpenOrdersTab')}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          role="tab"
+          aria-selected={tab === 'ledger'}
+          variant={tab === 'ledger' ? 'default' : 'ghost'}
+          onClick={() => setTab('ledger')}
+        >
+          {t('receivablesLedgerTab')}
+        </Button>
+      </div>
+      {tab === 'orders' ? (
+        <CustomerDebts branchId={branchId} customerId={account.customer.id} />
+      ) : (
+        <CustomerLedger branchId={branchId} account={account} />
+      )}
+    </div>
+  )
+}
+
+function CustomerLedger({
+  branchId,
+  account,
+}: {
+  branchId: string
+  account: PosReceivableAccount
+}) {
+  const { t, i18n } = useTranslation()
+  const { context } = usePosSession()
+  const timeZone = branchTimeZone(context.data)
+  const ledger = useReceivableLedger(branchId, account.credit_account_id)
+  const summary = ledger.data?.meta
+  const entries = ledger.data?.data ?? []
+
+  const exportStatement = () => {
+    downloadCsv(
+      `doi-chieu-cong-no-${account.customer.name.replace(/\s+/g, '-')}.csv`,
+      [
+        t('financeVoucherOccurredAt'),
+        t('financeKind'),
+        t('receivablesOrders'),
+        t('financeVoucherAmount'),
+        t('receivablesBalanceAfter'),
+      ],
+      entries.map((entry) => [
+        formatInstant(entry.created_at, i18n.language, timeZone),
+        t(`receivablesEntry_${entry.kind}`),
+        entry.order_number ?? '',
+        entry.signed_amount,
+        entry.balance_after,
+      ]),
+    )
+  }
+
+  return (
+    <section className="space-y-3" aria-label={t('receivablesLedgerTab')}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-medium">{t('receivablesLedgerTab')}</h3>
+        <div className="flex gap-2">
+          <Button type="button" size="sm" variant="outline" onClick={exportStatement}>
+            <DownloadIcon className="size-4" />
+            {t('receivablesLedgerExport')}
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => window.print()}>
+            <PrinterIcon className="size-4" />
+            {t('receivablesLedgerPrint')}
+          </Button>
+        </div>
+      </div>
+
+      {summary && (
+        <dl className="grid grid-cols-2 gap-2 rounded-lg border p-3 text-sm">
+          <div>
+            <dt className="text-xs text-muted-foreground">{t('receivablesLedgerDebited')}</dt>
+            <dd className="font-medium tabular-nums">
+              {formatMoney(summary.total_debited, summary.currency)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">{t('receivablesLedgerCollected')}</dt>
+            <dd className="font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
+              {formatMoney(summary.total_collected, summary.currency)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">{t('receivablesLedgerCreditNotes')}</dt>
+            <dd className="font-medium tabular-nums">
+              {formatMoney(summary.total_credit_notes, summary.currency)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">{t('receivablesLedgerBalance')}</dt>
+            <dd className="font-semibold tabular-nums">
+              {formatMoney(summary.current_balance, summary.currency)}
+            </dd>
+          </div>
+        </dl>
+      )}
+
+      {ledger.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {describeFailure(ledger.error, t)}
+        </p>
+      ) : ledger.isPending ? (
+        <p role="status">{t('waiting')}</p>
+      ) : entries.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t('receivablesLedgerEmpty')}</p>
+      ) : (
+        <ul className="divide-y rounded-md border text-sm">
+          {entries.map((entry) => {
+            const positive = Number(entry.signed_amount) >= 0
+            return (
+              <li key={entry.id} className="flex items-start justify-between gap-3 p-3">
+                <div className="space-y-0.5">
+                  <div className="font-medium">
+                    {t(`receivablesEntry_${entry.kind}`)}
+                    {entry.order_number ? ` · ${entry.order_number}` : ''}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatInstant(entry.created_at, i18n.language, timeZone)}
+                  </div>
+                </div>
+                <div className="text-right tabular-nums">
+                  <div
+                    className={
+                      positive
+                        ? 'font-medium text-destructive'
+                        : 'font-medium text-emerald-600 dark:text-emerald-400'
+                    }
+                  >
+                    {positive ? '+' : ''}
+                    {formatMoney(entry.signed_amount, entry.currency)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {t('receivablesBalanceAfter')}:{' '}
+                    {formatMoney(entry.balance_after, entry.currency)}
+                  </div>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </section>
   )
 }
 

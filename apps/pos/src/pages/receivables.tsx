@@ -1,10 +1,20 @@
 import { shortDate } from '@shared/debt-reminder'
+import {
+  DEBTOR_SORTS,
+  type DebtorSort,
+  downloadCsv,
+  matchesReminderFilter,
+  REMINDER_FILTERS,
+  type ReminderFilter,
+  sortDebtors,
+} from '@shared/finance'
 import { formatMoney } from '@shared/money'
+import { formatDueDate } from '@shared/receivables'
 import { describeFailure } from '@shared/request-failure'
 import type { PosReceivable, PosReceivableAccount } from '@shared/types/pos-context'
 import { defineTable, PageHeader, ResourceTable } from '@spree/dashboard-core'
-import { Button, ResourceNameCell, RowActions, useRowClickBridge } from '@spree/dashboard-ui'
-import { HandCoinsIcon, RotateCcwIcon } from '@spree/dashboard-ui/icons'
+import { Badge, Button, ResourceNameCell, RowActions, useRowClickBridge } from '@spree/dashboard-ui'
+import { DownloadIcon, HandCoinsIcon, RotateCcwIcon } from '@spree/dashboard-ui/icons'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useCallback } from 'react'
@@ -30,29 +40,22 @@ import { receivableSearchSchema } from '../schemas/list-search'
 import { hiddenTimestamps } from '../tables/columns'
 
 const AGING = ['current', 'days_1_30', 'days_31_60', 'days_61_90', 'days_over_90'] as const
-type View = 'customers' | 'orders'
+type View = 'customers' | 'orders' | 'settled'
 
-// "Công nợ phải thu": who owes the selected branch and for which sales, with
-// the aging of the total. A customer opens beside the list with their open
-// debts and the reminder that can be shared or copied. Collecting money
-// stays at the counter, where it lands in the collector's own shift.
+// "Công nợ phải thu": who owes the selected branch, their orders, and
+// settled customers, with aging totals, promised payment dates, reminder
+// filters and a per-customer running ledger.
 export function ReceivablesPage({ view }: { view: View }) {
   const { t } = useTranslation()
   const { storeId } = useSession()
   const { context } = usePosSession()
   const branchId = context.data?.selection.branch_id ?? null
   const base = `/${storeId}/receivables`
-  const tabs = [
-    { key: 'customers', label: t('receivablesCustomers'), to: base },
-    { key: 'orders', label: t('receivablesOrders'), to: `${base}/orders` },
-  ]
   return (
     <div className="space-y-6">
       <PageHeader title={t('receivablesTitle')} actions={<BranchPicker />} />
       {branchId ? (
-        <Receivables key={`${branchId}:${view}`} branchId={branchId} view={view}>
-          <PillTabs tabs={tabs} />
-        </Receivables>
+        <Receivables key={`${branchId}:${view}`} branchId={branchId} view={view} base={base} />
       ) : (
         <p className="text-muted-foreground">{t('pageChooseBranchHint')}</p>
       )}
@@ -60,24 +63,30 @@ export function ReceivablesPage({ view }: { view: View }) {
   )
 }
 
-function Receivables({
-  branchId,
-  view,
-  children,
-}: {
-  branchId: string
-  view: View
-  children: React.ReactNode
-}) {
+function Receivables({ branchId, view, base }: { branchId: string; view: View; base: string }) {
   const { t } = useTranslation()
   const { storeId } = useSession()
   const { context } = usePosSession()
   const client = useQueryClient()
   const navigate = useNavigate()
   const search = receivableSearchSchema.parse(useSearch({ strict: false }))
-  const accounts = useReceivableAccounts(branchId)
+  const customerStatus = view === 'settled' ? 'settled' : 'open'
+  const accounts = useReceivableAccounts(branchId, customerStatus)
   const currency = context.data?.store.currency ?? 'VND'
   const totals = accounts.data?.meta.totals
+  const settledCount = accounts.data?.meta.settled_count
+  const tabs = [
+    { key: 'customers', label: t('receivablesCustomers'), to: base },
+    { key: 'orders', label: t('receivablesOrders'), to: `${base}/orders` },
+    {
+      key: 'settled',
+      label:
+        settledCount != null && settledCount > 0
+          ? `${t('receivablesSettledTab')} (${settledCount})`
+          : t('receivablesSettledTab'),
+      to: `${base}/settled`,
+    },
+  ]
   const open = useCallback(
     (id: string) =>
       void navigate({
@@ -124,9 +133,23 @@ function Receivables({
           </dl>
         </ModelCard>
       ) : null}
-      {children}
+      <PillTabs tabs={tabs} />
       {view === 'customers' ? (
-        <DebtorsTable branchId={branchId} accounts={accounts.data} actions={refresh} open={open} />
+        <DebtorsTable
+          branchId={branchId}
+          accounts={accounts.data}
+          actions={refresh}
+          open={open}
+          settled={false}
+        />
+      ) : view === 'settled' ? (
+        <DebtorsTable
+          branchId={branchId}
+          accounts={accounts.data}
+          actions={refresh}
+          open={open}
+          settled
+        />
       ) : (
         <DebtsTable branchId={branchId} actions={refresh} />
       )}
@@ -151,28 +174,86 @@ function Receivables({
   )
 }
 
+function PromisedBadge({ date, todayIso }: { date?: string | null; todayIso: string }) {
+  const { t } = useTranslation()
+  if (!date) return <span className="text-muted-foreground">—</span>
+  if (date < todayIso) {
+    return (
+      <Badge variant="warning">
+        {t('receivablesPromisedOverdue')} · {formatDueDate(date)}
+      </Badge>
+    )
+  }
+  if (date === todayIso) {
+    return <Badge variant="secondary">{t('receivablesPromisedToday')}</Badge>
+  }
+  return <span className="whitespace-nowrap">{formatDueDate(date)}</span>
+}
+
 function DebtorsTable({
   branchId,
   accounts,
   actions,
   open,
+  settled,
 }: {
   branchId: string
   accounts: ReceivableAccounts | undefined
   actions: React.ReactNode
   open: (id: string) => void
+  settled: boolean
 }) {
   const { t, i18n } = useTranslation()
   const { storeId } = useSession()
   const { context } = usePosSession()
   const client = useQueryClient()
+  const navigate = useNavigate()
   const search = receivableSearchSchema.parse(useSearch({ strict: false }))
   const timeZone = branchTimeZone(context.data)
-  const tableKey = 'pos-debtors'
+  const todayIso = new Date().toISOString().slice(0, 10)
+  const reminderFilter: ReminderFilter = search.reminder ?? 'all'
+  const sortKey: DebtorSort = search.sort ?? 'overdue'
+  const tableKey = settled ? 'pos-debtors-settled' : 'pos-debtors'
+
+  const patchSearch = (patch: Record<string, unknown>) =>
+    void navigate({
+      to: '.',
+      search: (previous: Record<string, unknown>) => ({ ...previous, ...patch, page: undefined }),
+    })
+
+  const exportCsv = () => {
+    const rows = accounts?.data ?? []
+    downloadCsv(
+      `cong-no-${settled ? 'da-tat-toan' : 'dang-no'}-${todayIso}.csv`,
+      [
+        t('receivablesCustomers'),
+        t('customerPhone'),
+        t('receivablesBalance'),
+        t('receivablesOverdue'),
+        t('receivablesPromisedPayOn'),
+        t('debtorsLastRemindedLabel'),
+      ],
+      rows.map((acc) => [
+        acc.customer.name,
+        acc.customer.phone ?? '',
+        acc.balance,
+        acc.overdue,
+        acc.promised_pay_on ?? '',
+        acc.last_reminded_at ? formatInstant(acc.last_reminded_at, i18n.language, timeZone) : '',
+      ]),
+    )
+  }
+
   defineTable<PosReceivableAccount>(tableKey, {
     searchParam: 'search',
     searchPlaceholder: t('debtorsSearch'),
-    emptyMessage: t(accounts && accounts.data.length > 0 ? 'debtorsNoMatch' : 'receivablesEmpty'),
+    emptyMessage: t(
+      settled
+        ? 'receivablesSettledEmpty'
+        : accounts && accounts.data.length > 0
+          ? 'debtorsNoMatch'
+          : 'receivablesEmpty',
+    ),
     columns: [
       {
         key: 'customer',
@@ -187,7 +268,7 @@ function DebtorsTable({
             secondary={[
               account.customer.phone,
               t('receivablesOrderCount', { count: account.orders }),
-              account.oldest_placed_at
+              !settled && account.oldest_placed_at
                 ? t('debtorsSince', {
                     date: shortDate(account.oldest_placed_at),
                     count: account.days_owed ?? 0,
@@ -199,13 +280,34 @@ function DebtorsTable({
           />
         ),
       },
-      {
-        key: 'overdue',
-        label: t('receivablesOverdue'),
-        default: true,
-        sortable: false,
-        render: (account) => <OverdueBadge account={account} />,
-      },
+      settled
+        ? {
+            key: 'status',
+            label: t('receivablesStatus'),
+            default: true,
+            sortable: false,
+            render: () => <Badge variant="secondary">{t('receivablesSettledBadge')}</Badge>,
+          }
+        : {
+            key: 'overdue',
+            label: t('receivablesOverdue'),
+            default: true,
+            sortable: false,
+            render: (account) => <OverdueBadge account={account} />,
+          },
+      ...(!settled
+        ? [
+            {
+              key: 'promised_pay_on',
+              label: t('receivablesPromisedPayOn'),
+              default: true,
+              sortable: false,
+              render: (account: PosReceivableAccount) => (
+                <PromisedBadge date={account.promised_pay_on} todayIso={todayIso} />
+              ),
+            },
+          ]
+        : []),
       {
         key: 'last_reminded_at',
         label: t('debtorsLastRemindedLabel'),
@@ -232,12 +334,59 @@ function DebtorsTable({
     <ResourceTable<PosReceivableAccount>
       tableKey={tableKey}
       hideHeader
-      queryKey={['pos', 'receivables', branchId, 'accounts', 'table']}
-      queryFn={async (params: Record<string, unknown>) =>
-        debtorList(await client.fetchQuery(receivableAccountsQuery(storeId, branchId)), params)
-      }
+      queryKey={[
+        'pos',
+        'receivables',
+        branchId,
+        'accounts',
+        settled ? 'settled' : 'open',
+        reminderFilter,
+        sortKey,
+      ]}
+      queryFn={async (params: Record<string, unknown>) => {
+        const fetched = await client.fetchQuery(
+          receivableAccountsQuery(storeId, branchId, settled ? 'settled' : 'open'),
+        )
+        const filtered = settled
+          ? fetched.data
+          : sortDebtors(
+              fetched.data.filter((row) => matchesReminderFilter(row, reminderFilter, todayIso)),
+              sortKey,
+            )
+        return debtorList({ ...fetched, data: filtered }, params)
+      }}
       searchParams={search}
-      actions={actions}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          {!settled && (
+            <>
+              <FilterSelect
+                label={t('receivablesReminderFilter')}
+                value={reminderFilter}
+                options={REMINDER_FILTERS.map((value) => ({
+                  value,
+                  label: t(`receivablesReminder_${value}`),
+                }))}
+                onChange={(value) => patchSearch({ reminder: value === 'all' ? undefined : value })}
+              />
+              <FilterSelect
+                label={t('receivablesSortLabel')}
+                value={sortKey}
+                options={DEBTOR_SORTS.map((value) => ({
+                  value,
+                  label: t(`receivablesSort_${value}`),
+                }))}
+                onChange={(value) => patchSearch({ sort: value === 'overdue' ? undefined : value })}
+              />
+            </>
+          )}
+          <Button type="button" variant="outline" onClick={exportCsv}>
+            <DownloadIcon className="size-4" />
+            {t('financeExportCsv')}
+          </Button>
+          {actions}
+        </div>
+      }
       rowActions={(account) => (
         <RowActions
           actions={[

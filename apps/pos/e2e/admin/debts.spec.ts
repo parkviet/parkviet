@@ -48,7 +48,25 @@ async function install(page: Page, capabilities: string[], features: Record<stri
     if (request.method() !== 'GET') state.writes.push({ path, method: request.method(), body: request.postDataJSON() ?? {}, key: request.headers()['idempotency-key'] ?? null });
     if (path === '/pos/context') return route.fulfill({ json: posContext(url, { capabilities, features }) });
     if (path === '/pos/receivables/customers') {
-      return route.fulfill({ json: { data: [account, masked], meta: { count: 2, totals: { balance: '1400000.0', overdue: '200000.0', current: '1200000.0', days_1_30: '200000.0', days_31_60: '0.0', days_61_90: '0.0', days_over_90: '0.0' } } } });
+      const settled = params.status === 'settled';
+      const settledAcc = { ...account, credit_account_id: 'ca_settled', customer: { id: 'cus_s', name: 'Cô Lan', phone: '0909 111 222', address: null }, balance: '0.0', overdue: '0.0', days_overdue: 0, settled: true, promised_pay_on: null };
+      return route.fulfill({
+        json: {
+          data: settled ? [settledAcc] : [account, masked],
+          meta: { count: settled ? 1 : 2, open_count: 2, settled_count: 1, totals: { balance: '1400000.0', overdue: '200000.0', current: '1200000.0', days_1_30: '200000.0', days_31_60: '0.0', days_61_90: '0.0', days_over_90: '0.0' } },
+        },
+      });
+    }
+    if (path === '/pos/receivables/customers/ca_1/promised_pay_on') {
+      return route.fulfill({ json: { data: { credit_account_id: 'ca_1', promised_pay_on: '2026-12-10' } } });
+    }
+    if (path === '/pos/receivables/customers/ca_1/ledger') {
+      return route.fulfill({
+        json: {
+          data: [{ id: 'posrecv_1', kind: 'debit', amount: '350000.0', signed_amount: '350000.0', balance_after: '350000.0', currency: 'VND', order_id: 'ord_1', order_number: 'R100', due_on: '2026-10-31', actor_name: 'admin@example.com', created_at: '2026-10-01T03:00:00Z' }],
+          meta: { count: 1, currency: 'VND', total_debited: '350000.0', total_credit_notes: '0.0', total_collected: '0.0', current_balance: '350000.0' },
+        },
+      });
     }
     if (path === '/pos/receivables') {
       state.lists.push({ path, params });
@@ -150,4 +168,25 @@ test('cashiers cannot open credit accounts or approvals', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('Không có quyền truy cập');
   await page.goto('/store_1/credit-approvals');
   await expect(page.getByRole('alert')).toContainText('Không có quyền truy cập');
+});
+
+test('a collector sets a promised pay date, views the debt ledger, and checks settled debtors', async ({ page }) => {
+  const state = await install(page, ['pos.payment.collect']);
+  await page.goto('/store_1/receivables');
+  await page.getByRole('tab', { name: /Đã tất toán/ }).click();
+  await expect(page).toHaveURL(/\/store_1\/receivables\/settled/);
+  await expect(page.getByRole('table')).toContainText('Cô Lan');
+
+  await page.goto('/store_1/receivables?accountId=ca_1');
+  const sheet = page.getByRole('dialog');
+  await sheet.locator('input[type="date"]').fill('2026-12-10');
+  await sheet.getByRole('button', { name: 'Lưu phiếu' }).click();
+  expect(state.writes.at(-1)).toMatchObject({
+    path: '/pos/receivables/customers/ca_1/promised_pay_on',
+    method: 'PATCH',
+    body: { branch_id: 'branch_main', promised_pay_on: '2026-12-10' },
+  });
+
+  await sheet.getByRole('tab', { name: 'Sổ chi tiết nợ' }).click();
+  await expect(sheet).toContainText('Ghi nợ bán hàng · R100');
 });

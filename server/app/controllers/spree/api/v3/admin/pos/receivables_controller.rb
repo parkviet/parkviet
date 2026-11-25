@@ -10,6 +10,11 @@ module Spree
           # reader collects, approves or manages credit there.
           class ReceivablesController < BaseController
             scoped_resource :pos_orders
+            pos_permissions index: %w[read_pos_orders write_pos_orders],
+                            customers: %w[read_pos_orders write_pos_orders],
+                            ledger: %w[read_pos_orders write_pos_orders],
+                            remind: %w[write_pos_orders],
+                            promised_pay_on: %w[write_pos_orders]
 
             STATUSES = %w[open overdue settled all].freeze
             UNMASKED = [Spree::Pos::Capabilities::PAYMENT, Spree::Pos::Capabilities::APPROVE,
@@ -28,26 +33,56 @@ module Spree
               render json: { data: serialize(projection, records, mask?(branch), branch), meta: meta }
             end
 
-            # "Khách nợ": one row per customer who owes at the branch, with
-            # balance, overdue and aging, how long the oldest debt has been
-            # open, when they were last reminded, and what a reminder lists
-            # (open orders oldest due first, one pay-later QR for the total).
-            # Most overdue first, then the largest debt.
+            # "Khách nợ": one row per customer who owes at the branch (or settled
+            # all debts when `status=settled`), with balance, overdue, aging,
+            # promised pay date, how long the oldest debt has been open, when
+            # they were last reminded, and what a reminder lists.
             def customers
               return if channel_rejected?
 
               branch = readable_branch!
               projection = projection_for(branch)
-              rows = projection.order_rows(status: 'open').to_a
-              accounts = Spree::Pos::CreditAccount.where(id: rows.map(&:credit_account_id).uniq).includes(:customer_profile).index_by(&:id)
-              orders = Spree::Order.where(id: rows.map(&:order_id)).index_by(&:id)
+              filter = params[:status].to_s.presence || 'open'
+              raise Spree::Pos::Conflict, 'Status filter is invalid.' unless %w[open settled all].include?(filter)
+
+              open_rows = projection.order_rows(status: 'open').to_a
+              settled_rows = projection.order_rows(status: 'settled').to_a
+              open_by_account = open_rows.group_by(&:credit_account_id)
+              settled_only_by_account = settled_rows.group_by(&:credit_account_id).reject { |aid, _| open_by_account.key?(aid) }
+
+              target_groups = case filter
+                              when 'settled' then settled_only_by_account
+                              when 'all' then open_by_account.merge(settled_only_by_account)
+                              else open_by_account
+                              end
+
+              account_ids = target_groups.keys
+              order_ids = target_groups.values.flatten.map(&:order_id).uniq
+              accounts = Spree::Pos::CreditAccount.where(id: account_ids).includes(:customer_profile).index_by(&:id)
+              orders = Spree::Order.where(id: order_ids).index_by(&:id)
+              last_entries = Spree::Pos::ReceivableEntry.for_store(current_store).
+                             where(branch_id: branch.id, credit_account_id: account_ids).
+                             group(:credit_account_id).maximum(:created_at)
               context = { projection: projection, orders: orders, mask: mask?(branch), branch: branch,
+                          last_entries: last_entries,
                           receiving: Spree::Pos::PayLater.receiving_account(current_store, branch) }
-              data = rows.group_by(&:credit_account_id).map do |account_id, account_rows|
-                customer_row(accounts.fetch(account_id), account_rows, context)
+              data = target_groups.map do |account_id, account_rows|
+                if open_by_account.key?(account_id)
+                  customer_row(accounts.fetch(account_id), account_rows, context)
+                else
+                  settled_customer_row(accounts.fetch(account_id), account_rows, context)
+                end
               end
-              data.sort_by! { |row| [-row['days_overdue'], -BigDecimal(row['balance'])] }
-              render json: { data: data, meta: { count: data.length, totals: projection.summary(rows) } }
+              data.sort_by! { |row| [-row['days_overdue'].to_i, -BigDecimal(row['balance']), row['customer'][:name].to_s] }
+              render json: {
+                data: data,
+                meta: {
+                  count: data.length,
+                  open_count: open_by_account.length,
+                  settled_count: settled_only_by_account.length,
+                  totals: projection.summary(open_rows)
+                }
+              }
             end
 
             # Records that a debt reminder was just shared or copied.
@@ -60,6 +95,84 @@ module Spree
               result = Spree::Pos::Credit::Remind.call(store: current_store, staff: current_user, key: key, branch_id: params[:branch_id],
                                                        account_id: params[:id], via: params[:via])
               render json: { data: result }
+            end
+
+            # Sets or clears the customer's promised payment date ("Ngày hẹn trả").
+            def promised_pay_on
+              return if channel_rejected?
+
+              key = idempotency_key
+              return if key.nil?
+
+              branch = branch!(params[:branch_id])
+              account = Spree::Pos::CreditAccount.locate(Spree::Pos::CreditAccount.for_store(current_store), params[:id])
+              raise ActiveRecord::RecordNotFound if account.nil?
+
+              raw_date = params[:promised_pay_on].to_s.strip.presence
+              parsed_date = raw_date ? Date.iso8601(raw_date) : nil
+
+              payload = { 'command' => 'credit.promised_pay_on', 'branch_id' => branch.prefixed_id,
+                          'credit_account_id' => account.prefixed_id, 'promised_pay_on' => parsed_date&.iso8601 }
+              authorize = lambda do
+                raise CanCan::AccessDenied if branch.disabled? || UNMASKED.none? { |cap| policy.allows?(branch, cap) }
+              end
+              result = Spree::Pos::CommandExecutor.call(store: current_store, actor: current_user, key: key, payload: payload,
+                                                        authorize: authorize) do
+                account.lock!
+                account.update_columns(promised_pay_on: parsed_date)
+                audit!('credit.promised_pay_on', account, { branch_id: branch.prefixed_id, promised_pay_on: parsed_date&.iso8601 })
+                { 'credit_account_id' => account.prefixed_id, 'promised_pay_on' => account.promised_pay_on&.iso8601 }
+              end
+              render json: { data: result }
+            rescue Date::Error
+              raise Spree::Pos::Conflict, 'Ngày hẹn thanh toán không hợp lệ.'
+            end
+
+            # Chronological running-balance ledger of one debtor at this branch.
+            def ledger
+              return if channel_rejected?
+
+              branch = readable_branch!
+              account = Spree::Pos::CreditAccount.locate(Spree::Pos::CreditAccount.for_store(current_store), params[:id])
+              raise ActiveRecord::RecordNotFound if account.nil?
+
+              entries = Spree::Pos::ReceivableEntry.for_store(current_store).
+                        where(branch_id: branch.id, credit_account_id: account.id).
+                        includes(:order, :actor).order(created_at: :asc, id: :asc).to_a
+
+              running = BigDecimal('0')
+              totals = Hash.new { |h, k| h[k] = BigDecimal('0') }
+              rows = entries.map do |entry|
+                amt = BigDecimal(entry.amount.to_s)
+                signed = Spree::Pos::ReceivableEntry::RAISING.include?(entry.kind) ? amt : -amt
+                running += signed
+                totals[entry.kind] += amt
+                {
+                  id: entry.prefixed_id,
+                  kind: entry.kind,
+                  amount: amt.to_s('F'),
+                  signed_amount: signed.to_s('F'),
+                  balance_after: running.to_s('F'),
+                  currency: entry.currency,
+                  order_id: entry.order&.prefixed_id,
+                  order_number: entry.order&.number,
+                  due_on: entry.due_on&.iso8601,
+                  actor_name: entry.actor&.email,
+                  created_at: entry.created_at&.iso8601
+                }
+              end
+
+              render json: {
+                data: rows.reverse,
+                meta: {
+                  count: rows.length,
+                  currency: account.currency,
+                  total_debited: (totals['debit'] + totals['collection_reversal']).to_s('F'),
+                  total_credit_notes: totals['credit_note'].to_s('F'),
+                  total_collected: totals['collection'].to_s('F'),
+                  current_balance: running.to_s('F')
+                }
+              }
             end
 
             private
@@ -84,10 +197,32 @@ module Spree
                 'days_owed' => placed ? [(projection.today - placed.in_time_zone(context[:branch].timezone).to_date).to_i, 0].max : 0,
                 'days_overdue' => ordered.map { |row| projection.days_overdue(row) }.max,
                 'last_reminded_at' => account.last_reminded_at&.iso8601,
+                'promised_pay_on' => account.promised_pay_on&.iso8601,
+                'last_activity_at' => context[:last_entries]&.[](account.id)&.iso8601,
+                'settled' => false,
                 'open_orders' => ordered.first(REMINDER_ORDERS).map { |row| reminder_order(row, context[:orders]) },
                 'pay_later' => Spree::Pos::PayLater.details(order: context[:orders].fetch(ordered.first.order_id),
                                                             amount: summary['balance'], account: context[:receiving])
               )
+            end
+
+            def settled_customer_row(account, rows, context)
+              profile = account.customer_profile
+              customer = Spree::Pos::ReceivableProjection.customer(profile, context[:mask])
+              zero = '0.0'
+              {
+                'balance' => zero, 'overdue' => zero, 'current' => zero, 'days_1_30' => zero,
+                'days_31_60' => zero, 'days_61_90' => zero, 'days_over_90' => zero,
+                'credit_account_id' => account.prefixed_id, 'currency' => account.currency,
+                'customer' => customer.merge(address: context[:mask] ? nil : profile.address.presence),
+                'orders' => rows.length, 'credit_limit' => account.credit_limit.to_s('F'), 'account_status' => account.status,
+                'oldest_due_on' => nil, 'oldest_placed_at' => nil, 'days_owed' => 0, 'days_overdue' => 0,
+                'last_reminded_at' => account.last_reminded_at&.iso8601,
+                'promised_pay_on' => nil,
+                'last_activity_at' => context[:last_entries]&.[](account.id)&.iso8601,
+                'settled' => true,
+                'open_orders' => [], 'pay_later' => nil
+              }
             end
 
             def reminder_order(row, orders)

@@ -6,6 +6,8 @@ import type {
   PosCustomerProfile,
   PosReceivable,
   PosReceivableAccount,
+  PosReceivableLedgerEntry,
+  PosReceivableLedgerSummary,
 } from '@shared/types/pos-context'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { runMoneyCommand } from '../lib/money-command'
@@ -20,8 +22,15 @@ export type ReceivableStatus = (typeof RECEIVABLE_STATUSES)[number]
 
 export type ReceivableAccounts = {
   data: PosReceivableAccount[]
-  meta: { count: number; totals: Record<string, string> }
+  meta: {
+    count: number
+    open_count?: number
+    settled_count?: number
+    totals: Record<string, string>
+  }
 }
+
+export type ReceivableCustomerStatus = 'open' | 'settled' | 'all'
 
 // Non-money writes carry one idempotency key per user action.
 async function write<T>(method: 'POST' | 'PATCH', path: string, body: Record<string, unknown>) {
@@ -33,22 +42,65 @@ async function write<T>(method: 'POST' | 'PATCH', path: string, body: Record<str
   return result.data
 }
 
-// Customers who owe at the branch with the aging totals; contacts come back
-// masked for readers who may not see them.
-export const receivableAccountsQuery = (storeId: string, branchId: string) => ({
-  queryKey: posKey(storeId, 'receivables', branchId, 'accounts'),
+// Customers who owe (or settled all debts) at the branch with the aging totals;
+// contacts come back masked for readers who may not see them.
+export const receivableAccountsQuery = (
+  storeId: string,
+  branchId: string,
+  status: ReceivableCustomerStatus = 'open',
+) => ({
+  queryKey: posKey(storeId, 'receivables', branchId, 'accounts', status),
   queryFn: () =>
     request<ReceivableAccounts>('GET', '/pos/receivables/customers', {
-      params: { branch_id: branchId },
+      params: { branch_id: branchId, ...(status === 'open' ? {} : { status }) },
     }),
   staleTime: 5_000,
 })
 
-export function useReceivableAccounts(branchId: string) {
+export function useReceivableAccounts(branchId: string, status: ReceivableCustomerStatus = 'open') {
+  const { storeId, status: auth } = useSession()
+  return useQuery({
+    ...receivableAccountsQuery(storeId, branchId, status),
+    enabled: auth === 'authenticated',
+  })
+}
+
+export function useSetPromisedPayOn() {
+  const { storeId } = useSession()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: {
+      branchId: string
+      creditAccountId: string
+      promisedPayOn: string | null
+    }) =>
+      write<{ credit_account_id: string; promised_pay_on: string | null }>(
+        'PATCH',
+        `/pos/receivables/customers/${input.creditAccountId}/promised_pay_on`,
+        { branch_id: input.branchId, promised_pay_on: input.promisedPayOn ?? '' },
+      ),
+    onSettled: () => client.invalidateQueries({ queryKey: ['pos', storeId, 'receivables'] }),
+  })
+}
+
+export type ReceivableLedgerResponse = {
+  data: PosReceivableLedgerEntry[]
+  meta: PosReceivableLedgerSummary
+}
+
+export function useReceivableLedger(branchId: string | null, creditAccountId: string | null) {
   const { storeId, status } = useSession()
   return useQuery({
-    ...receivableAccountsQuery(storeId, branchId),
-    enabled: status === 'authenticated',
+    queryKey: posKey(storeId, 'receivables', branchId, 'ledger', creditAccountId),
+    enabled: status === 'authenticated' && Boolean(branchId && creditAccountId),
+    queryFn: () =>
+      request<ReceivableLedgerResponse>(
+        'GET',
+        `/pos/receivables/customers/${creditAccountId}/ledger`,
+        {
+          params: { branch_id: branchId ?? undefined },
+        },
+      ),
   })
 }
 
