@@ -20,6 +20,14 @@ export type PosPage =
   | 'credit-accounts'
   | 'credit-approvals'
   | 'inventory'
+  | 'stock-overview'
+  | 'stock-ledger'
+  | 'stock-imports'
+  | 'stock-exports'
+  | 'stock-counts'
+  | 'stock-opening'
+  | 'partners-customers'
+  | 'partners-suppliers'
   | 'reports'
   | 'branches'
   | 'branch'
@@ -237,6 +245,17 @@ export function visibleNav(page: PosPage, access: PosAccess) {
   // The hardware checklist reads printers, devices and server health.
   if (page === 'branch-hardware') return canAdminister(access) || canManageBranch(access)
   if (page === 'stock-alerts') return runsRecipes(access) && canReadStockAlerts(access)
+  if (
+    page === 'stock-overview' ||
+    page === 'stock-ledger' ||
+    page === 'stock-imports' ||
+    page === 'stock-exports' ||
+    page === 'stock-counts' ||
+    page === 'stock-opening'
+  )
+    return canReadStockAlerts(access) || canOpenStock(access)
+  if (page === 'partners-customers' || page === 'partners-suppliers')
+    return canAdminister(access) || canReadOrders(access)
   if (page === 'receivables') return canReadDebts(access)
   if (page === 'credit-accounts') return canManageCredit(access)
   if (page === 'credit-approvals') return canApproveSales(access)

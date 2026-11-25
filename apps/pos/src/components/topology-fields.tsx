@@ -4,13 +4,13 @@ import {
   FieldError,
   FieldLabel,
   Input,
-  Select,
+  Select as UiSelect,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@spree/dashboard-ui'
-import { type ReactNode, useId } from 'react'
+import { type ComponentPropsWithoutRef, type ReactNode, useId } from 'react'
 
 export function TopologyField({
   label,
@@ -56,7 +56,7 @@ export function TopologySelect({
   const keyOf = (itemValue: string) => itemValue || '__blank__'
   const selected = options.find((option) => keyOf(option.value) === keyOf(value))
   return (
-    <Select
+    <UiSelect
       value={value || '__blank__'}
       onValueChange={(v) => onChange(v === '__blank__' ? '' : v)}
       disabled={disabled}
@@ -75,7 +75,16 @@ export function TopologySelect({
           </SelectItem>
         ))}
       </SelectContent>
-    </Select>
+    </UiSelect>
+  )
+}
+
+export function Select({ className = '', ...props }: ComponentPropsWithoutRef<'select'>) {
+  return (
+    <select
+      {...props}
+      className={`h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 ${className}`.trim()}
+    />
   )
 }
 export { Input }

@@ -62,6 +62,8 @@ import { Route as AuthenticatedStoreIdInventoryIndexRouteImport } from './routes
 import { Route as AuthenticatedStoreIdInventoryTabRouteImport } from './routes/_authenticated/$storeId/inventory/$tab'
 import { Route as AuthenticatedStoreIdOrdersIndexRouteImport } from './routes/_authenticated/$storeId/orders/index'
 import { Route as AuthenticatedStoreIdOrdersOrderIdRouteImport } from './routes/_authenticated/$storeId/orders/$orderId'
+import { Route as AuthenticatedStoreIdPartnersCustomersRouteImport } from './routes/_authenticated/$storeId/partners/customers'
+import { Route as AuthenticatedStoreIdPartnersSuppliersRouteImport } from './routes/_authenticated/$storeId/partners/suppliers'
 import { Route as AuthenticatedStoreIdReceivablesIndexRouteImport } from './routes/_authenticated/$storeId/receivables/index'
 import { Route as AuthenticatedStoreIdReceivablesOrdersRouteImport } from './routes/_authenticated/$storeId/receivables/orders'
 import { Route as AuthenticatedStoreIdReceivablesSettledRouteImport } from './routes/_authenticated/$storeId/receivables/settled'
@@ -102,6 +104,12 @@ import { Route as AuthenticatedStoreIdSettingsTaxInfoRouteImport } from './route
 import { Route as AuthenticatedStoreIdShiftsIndexRouteImport } from './routes/_authenticated/$storeId/shifts/index'
 import { Route as AuthenticatedStoreIdShiftsClosuresRouteImport } from './routes/_authenticated/$storeId/shifts/closures'
 import { Route as AuthenticatedStoreIdShiftsLateCashRouteImport } from './routes/_authenticated/$storeId/shifts/late-cash'
+import { Route as AuthenticatedStoreIdStockCountsRouteImport } from './routes/_authenticated/$storeId/stock/counts'
+import { Route as AuthenticatedStoreIdStockExportsRouteImport } from './routes/_authenticated/$storeId/stock/exports'
+import { Route as AuthenticatedStoreIdStockImportsRouteImport } from './routes/_authenticated/$storeId/stock/imports'
+import { Route as AuthenticatedStoreIdStockLedgerRouteImport } from './routes/_authenticated/$storeId/stock/ledger'
+import { Route as AuthenticatedStoreIdStockOpeningRouteImport } from './routes/_authenticated/$storeId/stock/opening'
+import { Route as AuthenticatedStoreIdStockOverviewRouteImport } from './routes/_authenticated/$storeId/stock/overview'
 import { Route as AuthenticatedStoreIdBranchesBranchIdIndexRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/index'
 import { Route as AuthenticatedStoreIdBranchesBranchIdBusinessModelRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/business-model'
 import { Route as AuthenticatedStoreIdBranchesBranchIdEmenuRouteImport } from './routes/_authenticated/$storeId/branches/$branchId/emenu'
@@ -439,6 +447,18 @@ const AuthenticatedStoreIdOrdersOrderIdRoute =
     path: '/$orderId',
     getParentRoute: () => AuthenticatedStoreIdOrdersRoute,
   } as any)
+const AuthenticatedStoreIdPartnersCustomersRoute =
+  AuthenticatedStoreIdPartnersCustomersRouteImport.update({
+    id: '/partners/customers',
+    path: '/partners/customers',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdPartnersSuppliersRoute =
+  AuthenticatedStoreIdPartnersSuppliersRouteImport.update({
+    id: '/partners/suppliers',
+    path: '/partners/suppliers',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
 const AuthenticatedStoreIdReceivablesIndexRoute =
   AuthenticatedStoreIdReceivablesIndexRouteImport.update({
     id: '/',
@@ -679,6 +699,42 @@ const AuthenticatedStoreIdShiftsLateCashRoute =
     path: '/late-cash',
     getParentRoute: () => AuthenticatedStoreIdShiftsRoute,
   } as any)
+const AuthenticatedStoreIdStockCountsRoute =
+  AuthenticatedStoreIdStockCountsRouteImport.update({
+    id: '/stock/counts',
+    path: '/stock/counts',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdStockExportsRoute =
+  AuthenticatedStoreIdStockExportsRouteImport.update({
+    id: '/stock/exports',
+    path: '/stock/exports',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdStockImportsRoute =
+  AuthenticatedStoreIdStockImportsRouteImport.update({
+    id: '/stock/imports',
+    path: '/stock/imports',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdStockLedgerRoute =
+  AuthenticatedStoreIdStockLedgerRouteImport.update({
+    id: '/stock/ledger',
+    path: '/stock/ledger',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdStockOpeningRoute =
+  AuthenticatedStoreIdStockOpeningRouteImport.update({
+    id: '/stock/opening',
+    path: '/stock/opening',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
+const AuthenticatedStoreIdStockOverviewRoute =
+  AuthenticatedStoreIdStockOverviewRouteImport.update({
+    id: '/stock/overview',
+    path: '/stock/overview',
+    getParentRoute: () => AuthenticatedStoreIdRoute,
+  } as any)
 const AuthenticatedStoreIdBranchesBranchIdIndexRoute =
   AuthenticatedStoreIdBranchesBranchIdIndexRouteImport.update({
     id: '/',
@@ -897,6 +953,8 @@ export interface FileRoutesByFullPath {
   '/$storeId/funds/vouchers': typeof AuthenticatedStoreIdFundsVouchersRoute
   '/$storeId/inventory/$tab': typeof AuthenticatedStoreIdInventoryTabRoute
   '/$storeId/orders/$orderId': typeof AuthenticatedStoreIdOrdersOrderIdRoute
+  '/$storeId/partners/customers': typeof AuthenticatedStoreIdPartnersCustomersRoute
+  '/$storeId/partners/suppliers': typeof AuthenticatedStoreIdPartnersSuppliersRoute
   '/$storeId/receivables/orders': typeof AuthenticatedStoreIdReceivablesOrdersRoute
   '/$storeId/receivables/settled': typeof AuthenticatedStoreIdReceivablesSettledRoute
   '/$storeId/reports/attendants': typeof AuthenticatedStoreIdReportsAttendantsRoute
@@ -932,6 +990,12 @@ export interface FileRoutesByFullPath {
   '/$storeId/settings/tax-info': typeof AuthenticatedStoreIdSettingsTaxInfoRoute
   '/$storeId/shifts/closures': typeof AuthenticatedStoreIdShiftsClosuresRoute
   '/$storeId/shifts/late-cash': typeof AuthenticatedStoreIdShiftsLateCashRoute
+  '/$storeId/stock/counts': typeof AuthenticatedStoreIdStockCountsRoute
+  '/$storeId/stock/exports': typeof AuthenticatedStoreIdStockExportsRoute
+  '/$storeId/stock/imports': typeof AuthenticatedStoreIdStockImportsRoute
+  '/$storeId/stock/ledger': typeof AuthenticatedStoreIdStockLedgerRoute
+  '/$storeId/stock/opening': typeof AuthenticatedStoreIdStockOpeningRoute
+  '/$storeId/stock/overview': typeof AuthenticatedStoreIdStockOverviewRoute
   '/$storeId/branches/': typeof AuthenticatedStoreIdBranchesIndexRoute
   '/$storeId/funds/': typeof AuthenticatedStoreIdFundsIndexRoute
   '/$storeId/inventory/': typeof AuthenticatedStoreIdInventoryIndexRoute
@@ -1008,6 +1072,8 @@ export interface FileRoutesByTo {
   '/$storeId/funds/vouchers': typeof AuthenticatedStoreIdFundsVouchersRoute
   '/$storeId/inventory/$tab': typeof AuthenticatedStoreIdInventoryTabRoute
   '/$storeId/orders/$orderId': typeof AuthenticatedStoreIdOrdersOrderIdRoute
+  '/$storeId/partners/customers': typeof AuthenticatedStoreIdPartnersCustomersRoute
+  '/$storeId/partners/suppliers': typeof AuthenticatedStoreIdPartnersSuppliersRoute
   '/$storeId/receivables/orders': typeof AuthenticatedStoreIdReceivablesOrdersRoute
   '/$storeId/receivables/settled': typeof AuthenticatedStoreIdReceivablesSettledRoute
   '/$storeId/reports/attendants': typeof AuthenticatedStoreIdReportsAttendantsRoute
@@ -1042,6 +1108,12 @@ export interface FileRoutesByTo {
   '/$storeId/settings/tax-info': typeof AuthenticatedStoreIdSettingsTaxInfoRoute
   '/$storeId/shifts/closures': typeof AuthenticatedStoreIdShiftsClosuresRoute
   '/$storeId/shifts/late-cash': typeof AuthenticatedStoreIdShiftsLateCashRoute
+  '/$storeId/stock/counts': typeof AuthenticatedStoreIdStockCountsRoute
+  '/$storeId/stock/exports': typeof AuthenticatedStoreIdStockExportsRoute
+  '/$storeId/stock/imports': typeof AuthenticatedStoreIdStockImportsRoute
+  '/$storeId/stock/ledger': typeof AuthenticatedStoreIdStockLedgerRoute
+  '/$storeId/stock/opening': typeof AuthenticatedStoreIdStockOpeningRoute
+  '/$storeId/stock/overview': typeof AuthenticatedStoreIdStockOverviewRoute
   '/$storeId/branches': typeof AuthenticatedStoreIdBranchesIndexRoute
   '/$storeId/funds': typeof AuthenticatedStoreIdFundsIndexRoute
   '/$storeId/inventory': typeof AuthenticatedStoreIdInventoryIndexRoute
@@ -1131,6 +1203,8 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/funds/vouchers': typeof AuthenticatedStoreIdFundsVouchersRoute
   '/_authenticated/$storeId/inventory/$tab': typeof AuthenticatedStoreIdInventoryTabRoute
   '/_authenticated/$storeId/orders/$orderId': typeof AuthenticatedStoreIdOrdersOrderIdRoute
+  '/_authenticated/$storeId/partners/customers': typeof AuthenticatedStoreIdPartnersCustomersRoute
+  '/_authenticated/$storeId/partners/suppliers': typeof AuthenticatedStoreIdPartnersSuppliersRoute
   '/_authenticated/$storeId/receivables/orders': typeof AuthenticatedStoreIdReceivablesOrdersRoute
   '/_authenticated/$storeId/receivables/settled': typeof AuthenticatedStoreIdReceivablesSettledRoute
   '/_authenticated/$storeId/reports/attendants': typeof AuthenticatedStoreIdReportsAttendantsRoute
@@ -1166,6 +1240,12 @@ export interface FileRoutesById {
   '/_authenticated/$storeId/settings/tax-info': typeof AuthenticatedStoreIdSettingsTaxInfoRoute
   '/_authenticated/$storeId/shifts/closures': typeof AuthenticatedStoreIdShiftsClosuresRoute
   '/_authenticated/$storeId/shifts/late-cash': typeof AuthenticatedStoreIdShiftsLateCashRoute
+  '/_authenticated/$storeId/stock/counts': typeof AuthenticatedStoreIdStockCountsRoute
+  '/_authenticated/$storeId/stock/exports': typeof AuthenticatedStoreIdStockExportsRoute
+  '/_authenticated/$storeId/stock/imports': typeof AuthenticatedStoreIdStockImportsRoute
+  '/_authenticated/$storeId/stock/ledger': typeof AuthenticatedStoreIdStockLedgerRoute
+  '/_authenticated/$storeId/stock/opening': typeof AuthenticatedStoreIdStockOpeningRoute
+  '/_authenticated/$storeId/stock/overview': typeof AuthenticatedStoreIdStockOverviewRoute
   '/_authenticated/$storeId/branches/': typeof AuthenticatedStoreIdBranchesIndexRoute
   '/_authenticated/$storeId/funds/': typeof AuthenticatedStoreIdFundsIndexRoute
   '/_authenticated/$storeId/inventory/': typeof AuthenticatedStoreIdInventoryIndexRoute
@@ -1255,6 +1335,8 @@ export interface FileRouteTypes {
     | '/$storeId/funds/vouchers'
     | '/$storeId/inventory/$tab'
     | '/$storeId/orders/$orderId'
+    | '/$storeId/partners/customers'
+    | '/$storeId/partners/suppliers'
     | '/$storeId/receivables/orders'
     | '/$storeId/receivables/settled'
     | '/$storeId/reports/attendants'
@@ -1290,6 +1372,12 @@ export interface FileRouteTypes {
     | '/$storeId/settings/tax-info'
     | '/$storeId/shifts/closures'
     | '/$storeId/shifts/late-cash'
+    | '/$storeId/stock/counts'
+    | '/$storeId/stock/exports'
+    | '/$storeId/stock/imports'
+    | '/$storeId/stock/ledger'
+    | '/$storeId/stock/opening'
+    | '/$storeId/stock/overview'
     | '/$storeId/branches/'
     | '/$storeId/funds/'
     | '/$storeId/inventory/'
@@ -1366,6 +1454,8 @@ export interface FileRouteTypes {
     | '/$storeId/funds/vouchers'
     | '/$storeId/inventory/$tab'
     | '/$storeId/orders/$orderId'
+    | '/$storeId/partners/customers'
+    | '/$storeId/partners/suppliers'
     | '/$storeId/receivables/orders'
     | '/$storeId/receivables/settled'
     | '/$storeId/reports/attendants'
@@ -1400,6 +1490,12 @@ export interface FileRouteTypes {
     | '/$storeId/settings/tax-info'
     | '/$storeId/shifts/closures'
     | '/$storeId/shifts/late-cash'
+    | '/$storeId/stock/counts'
+    | '/$storeId/stock/exports'
+    | '/$storeId/stock/imports'
+    | '/$storeId/stock/ledger'
+    | '/$storeId/stock/opening'
+    | '/$storeId/stock/overview'
     | '/$storeId/branches'
     | '/$storeId/funds'
     | '/$storeId/inventory'
@@ -1488,6 +1584,8 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/funds/vouchers'
     | '/_authenticated/$storeId/inventory/$tab'
     | '/_authenticated/$storeId/orders/$orderId'
+    | '/_authenticated/$storeId/partners/customers'
+    | '/_authenticated/$storeId/partners/suppliers'
     | '/_authenticated/$storeId/receivables/orders'
     | '/_authenticated/$storeId/receivables/settled'
     | '/_authenticated/$storeId/reports/attendants'
@@ -1523,6 +1621,12 @@ export interface FileRouteTypes {
     | '/_authenticated/$storeId/settings/tax-info'
     | '/_authenticated/$storeId/shifts/closures'
     | '/_authenticated/$storeId/shifts/late-cash'
+    | '/_authenticated/$storeId/stock/counts'
+    | '/_authenticated/$storeId/stock/exports'
+    | '/_authenticated/$storeId/stock/imports'
+    | '/_authenticated/$storeId/stock/ledger'
+    | '/_authenticated/$storeId/stock/opening'
+    | '/_authenticated/$storeId/stock/overview'
     | '/_authenticated/$storeId/branches/'
     | '/_authenticated/$storeId/funds/'
     | '/_authenticated/$storeId/inventory/'
@@ -1943,6 +2047,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStoreIdOrdersOrderIdRouteImport
       parentRoute: typeof AuthenticatedStoreIdOrdersRoute
     }
+    '/_authenticated/$storeId/partners/customers': {
+      id: '/_authenticated/$storeId/partners/customers'
+      path: '/partners/customers'
+      fullPath: '/$storeId/partners/customers'
+      preLoaderRoute: typeof AuthenticatedStoreIdPartnersCustomersRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/partners/suppliers': {
+      id: '/_authenticated/$storeId/partners/suppliers'
+      path: '/partners/suppliers'
+      fullPath: '/$storeId/partners/suppliers'
+      preLoaderRoute: typeof AuthenticatedStoreIdPartnersSuppliersRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
     '/_authenticated/$storeId/receivables/': {
       id: '/_authenticated/$storeId/receivables/'
       path: '/'
@@ -2222,6 +2340,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/$storeId/shifts/late-cash'
       preLoaderRoute: typeof AuthenticatedStoreIdShiftsLateCashRouteImport
       parentRoute: typeof AuthenticatedStoreIdShiftsRoute
+    }
+    '/_authenticated/$storeId/stock/counts': {
+      id: '/_authenticated/$storeId/stock/counts'
+      path: '/stock/counts'
+      fullPath: '/$storeId/stock/counts'
+      preLoaderRoute: typeof AuthenticatedStoreIdStockCountsRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/stock/exports': {
+      id: '/_authenticated/$storeId/stock/exports'
+      path: '/stock/exports'
+      fullPath: '/$storeId/stock/exports'
+      preLoaderRoute: typeof AuthenticatedStoreIdStockExportsRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/stock/imports': {
+      id: '/_authenticated/$storeId/stock/imports'
+      path: '/stock/imports'
+      fullPath: '/$storeId/stock/imports'
+      preLoaderRoute: typeof AuthenticatedStoreIdStockImportsRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/stock/ledger': {
+      id: '/_authenticated/$storeId/stock/ledger'
+      path: '/stock/ledger'
+      fullPath: '/$storeId/stock/ledger'
+      preLoaderRoute: typeof AuthenticatedStoreIdStockLedgerRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/stock/opening': {
+      id: '/_authenticated/$storeId/stock/opening'
+      path: '/stock/opening'
+      fullPath: '/$storeId/stock/opening'
+      preLoaderRoute: typeof AuthenticatedStoreIdStockOpeningRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
+    }
+    '/_authenticated/$storeId/stock/overview': {
+      id: '/_authenticated/$storeId/stock/overview'
+      path: '/stock/overview'
+      fullPath: '/$storeId/stock/overview'
+      preLoaderRoute: typeof AuthenticatedStoreIdStockOverviewRouteImport
+      parentRoute: typeof AuthenticatedStoreIdRoute
     }
     '/_authenticated/$storeId/branches/$branchId/': {
       id: '/_authenticated/$storeId/branches/$branchId/'
@@ -2783,6 +2943,14 @@ interface AuthenticatedStoreIdRouteChildren {
   AuthenticatedStoreIdUnitsRoute: typeof AuthenticatedStoreIdUnitsRoute
   AuthenticatedStoreIdVehicleCommissionRoute: typeof AuthenticatedStoreIdVehicleCommissionRoute
   AuthenticatedStoreIdIndexRoute: typeof AuthenticatedStoreIdIndexRoute
+  AuthenticatedStoreIdPartnersCustomersRoute: typeof AuthenticatedStoreIdPartnersCustomersRoute
+  AuthenticatedStoreIdPartnersSuppliersRoute: typeof AuthenticatedStoreIdPartnersSuppliersRoute
+  AuthenticatedStoreIdStockCountsRoute: typeof AuthenticatedStoreIdStockCountsRoute
+  AuthenticatedStoreIdStockExportsRoute: typeof AuthenticatedStoreIdStockExportsRoute
+  AuthenticatedStoreIdStockImportsRoute: typeof AuthenticatedStoreIdStockImportsRoute
+  AuthenticatedStoreIdStockLedgerRoute: typeof AuthenticatedStoreIdStockLedgerRoute
+  AuthenticatedStoreIdStockOpeningRoute: typeof AuthenticatedStoreIdStockOpeningRoute
+  AuthenticatedStoreIdStockOverviewRoute: typeof AuthenticatedStoreIdStockOverviewRoute
   AuthenticatedStoreIdGoodsPriceListsPriceListIdRoute: typeof AuthenticatedStoreIdGoodsPriceListsPriceListIdRoute
   AuthenticatedStoreIdGoodsPriceListsNewRoute: typeof AuthenticatedStoreIdGoodsPriceListsNewRoute
   AuthenticatedStoreIdGoodsProductsProductIdRoute: typeof AuthenticatedStoreIdGoodsProductsProductIdRoute
@@ -2841,6 +3009,17 @@ const AuthenticatedStoreIdRouteChildren: AuthenticatedStoreIdRouteChildren = {
   AuthenticatedStoreIdVehicleCommissionRoute:
     AuthenticatedStoreIdVehicleCommissionRoute,
   AuthenticatedStoreIdIndexRoute: AuthenticatedStoreIdIndexRoute,
+  AuthenticatedStoreIdPartnersCustomersRoute:
+    AuthenticatedStoreIdPartnersCustomersRoute,
+  AuthenticatedStoreIdPartnersSuppliersRoute:
+    AuthenticatedStoreIdPartnersSuppliersRoute,
+  AuthenticatedStoreIdStockCountsRoute: AuthenticatedStoreIdStockCountsRoute,
+  AuthenticatedStoreIdStockExportsRoute: AuthenticatedStoreIdStockExportsRoute,
+  AuthenticatedStoreIdStockImportsRoute: AuthenticatedStoreIdStockImportsRoute,
+  AuthenticatedStoreIdStockLedgerRoute: AuthenticatedStoreIdStockLedgerRoute,
+  AuthenticatedStoreIdStockOpeningRoute: AuthenticatedStoreIdStockOpeningRoute,
+  AuthenticatedStoreIdStockOverviewRoute:
+    AuthenticatedStoreIdStockOverviewRoute,
   AuthenticatedStoreIdGoodsPriceListsPriceListIdRoute:
     AuthenticatedStoreIdGoodsPriceListsPriceListIdRoute,
   AuthenticatedStoreIdGoodsPriceListsNewRoute:

@@ -253,6 +253,22 @@ Rails.application.routes.draw do
             put 'recipes', to: 'recipes#update'
             get 'stock_alerts', to: 'stock_alerts#index'
             put 'stock_alerts', to: 'stock_alerts#update'
+            # General stock management: overview, ledger, imports, exports, counts, opening balances.
+            get 'stock/overview', to: 'stock_overview#overview'
+            get 'stock/ledger', to: 'stock_overview#ledger'
+            resources :stock_documents, path: 'stock/documents', only: [:index, :show, :create, :update] do
+              member do
+                post :complete
+                post :cancel
+                post :pay
+              end
+            end
+            # Partners: customer & supplier directories and groups.
+            resources :partner_groups, only: [:index, :create, :update, :destroy]
+            resources :suppliers, only: [:index, :show, :create, :update] do
+              post :payments, on: :member, action: :record_payment
+            end
+            resources :partner_customers, only: [:index, :show, :create, :update]
             # Kitchen and bar: a branch's stations, routes and send trigger,
             # and the board people work from.
             resources :kitchen_stations, only: [:index, :create, :update, :destroy]

@@ -13,6 +13,7 @@ import {
   Settings,
   Settings2,
   ShoppingCart,
+  Users,
   UtensilsCrossed,
   Wallet,
 } from 'lucide-react'
@@ -122,8 +123,23 @@ const groups: { key: string; labelKey: string; icon: NavEntry['icon']; children:
     labelKey: 'navStock',
     icon: Package,
     children: [
-      { key: 'inventory', labelKey: 'inventoryTitle', path: '/inventory' },
+      { key: 'stock-overview', labelKey: 'stock.overviewTitle', path: '/stock/overview' },
+      { key: 'stock-ledger', labelKey: 'stock.ledgerTitle', path: '/stock/ledger' },
+      { key: 'stock-imports', labelKey: 'stock.importsTitle', path: '/stock/imports' },
+      { key: 'stock-exports', labelKey: 'stock.exportsTitle', path: '/stock/exports' },
+      { key: 'stock-counts', labelKey: 'stock.countsTitle', path: '/stock/counts' },
+      { key: 'stock-opening', labelKey: 'stock.openingTitle', path: '/stock/opening' },
       { key: 'stock-alerts', labelKey: 'stockAlerts.title', path: '/stock-alerts' },
+      { key: 'inventory', labelKey: 'inventoryTitle', path: '/inventory' },
+    ],
+  },
+  {
+    key: 'partners',
+    labelKey: 'navPartners',
+    icon: Users,
+    children: [
+      { key: 'partners-customers', labelKey: 'partners.customersTitle', path: '/partners/customers' },
+      { key: 'partners-suppliers', labelKey: 'partners.suppliersTitle', path: '/partners/suppliers' },
     ],
   },
   {

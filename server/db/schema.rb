@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -2872,7 +2872,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "address", limit: 255
+    t.string "code", limit: 32
+    t.bigint "partner_group_id"
+    t.jsonb "tags", default: [], null: false
+    t.string "status", limit: 16, default: "active", null: false
+    t.string "tax_code", limit: 40
+    t.string "invoice_company", limit: 160
+    t.string "invoice_address", limit: 255
+    t.string "gender", limit: 16
+    t.date "birthday"
+    t.boolean "also_supplier", default: false, null: false
+    t.text "note"
     t.index ["customer_id"], name: "index_spree_pos_customers_on_customer_id"
+    t.index ["partner_group_id"], name: "index_spree_pos_customers_on_partner_group_id"
+    t.index ["store_id", "code"], name: "idx_pos_customers_store_code", unique: true, where: "(code IS NOT NULL)"
     t.index ["store_id", "email"], name: "idx_pos_customers_store_email"
     t.index ["store_id", "normalized_phone"], name: "idx_pos_customers_store_phone"
     t.index ["store_id"], name: "index_spree_pos_customers_on_store_id"
@@ -3893,6 +3906,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
     t.check_constraint "kind::text = ANY (ARRAY['kitchen_late'::character varying::text, 'shift_variance'::character varying::text, 'void_burst'::character varying::text, 'revenue_milestone'::character varying::text, 'print_failed'::character varying::text, 'einvoice_failed'::character varying::text])", name: "chk_pos_owner_alerts_kind"
   end
 
+  create_table "spree_pos_partner_groups", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.string "kind", limit: 16, null: false
+    t.string "name", limit: 120, null: false
+    t.text "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["store_id", "kind", "name"], name: "idx_pos_partner_groups_unique", unique: true
+    t.index ["store_id"], name: "index_spree_pos_partner_groups_on_store_id"
+  end
+
   create_table "spree_pos_payment_methods", force: :cascade do |t|
     t.bigint "store_id", null: false
     t.string "code", limit: 32, null: false
@@ -4901,6 +4925,63 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
     t.check_constraint "status::text = ANY (ARRAY['open'::character varying::text, 'resolved'::character varying::text])", name: "chk_pos_stock_discrepancies_status"
   end
 
+  create_table "spree_pos_stock_document_lines", force: :cascade do |t|
+    t.bigint "stock_document_id", null: false
+    t.bigint "variant_id", null: false
+    t.string "item_kind", limit: 16, default: "product", null: false
+    t.integer "quantity", default: 0, null: false
+    t.integer "system_quantity"
+    t.integer "actual_quantity"
+    t.decimal "unit_cost", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "line_total", precision: 19, scale: 4, default: "0.0", null: false
+    t.string "note", limit: 255
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["stock_document_id"], name: "index_spree_pos_stock_document_lines_on_stock_document_id"
+    t.index ["variant_id"], name: "index_spree_pos_stock_document_lines_on_variant_id"
+  end
+
+  create_table "spree_pos_stock_documents", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.bigint "branch_id", null: false
+    t.bigint "supplier_id"
+    t.bigint "customer_profile_id"
+    t.bigint "actor_id", null: false
+    t.bigint "completed_by_id"
+    t.bigint "canceled_by_id"
+    t.string "code", limit: 32, null: false
+    t.string "kind", limit: 16, null: false
+    t.string "status", limit: 16, default: "draft", null: false
+    t.string "invoice_type", limit: 32
+    t.string "invoice_number", limit: 64
+    t.string "export_reason", limit: 32
+    t.string "counterparty_name", limit: 120
+    t.datetime "occurred_at", null: false
+    t.decimal "subtotal", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "discount_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "extra_cost", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "tax_rate", precision: 5, scale: 2, default: "0.0", null: false
+    t.decimal "tax_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "total_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "paid_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.string "payment_status", limit: 16, default: "unpaid", null: false
+    t.text "note"
+    t.datetime "completed_at"
+    t.datetime "canceled_at"
+    t.text "cancel_reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_spree_pos_stock_documents_on_actor_id"
+    t.index ["branch_id", "kind", "occurred_at"], name: "idx_pos_stock_docs_branch_kind_time"
+    t.index ["branch_id"], name: "index_spree_pos_stock_documents_on_branch_id"
+    t.index ["canceled_by_id"], name: "index_spree_pos_stock_documents_on_canceled_by_id"
+    t.index ["completed_by_id"], name: "index_spree_pos_stock_documents_on_completed_by_id"
+    t.index ["customer_profile_id"], name: "index_spree_pos_stock_documents_on_customer_profile_id"
+    t.index ["store_id", "code"], name: "idx_pos_stock_docs_store_code", unique: true
+    t.index ["store_id"], name: "index_spree_pos_stock_documents_on_store_id"
+    t.index ["supplier_id"], name: "index_spree_pos_stock_documents_on_supplier_id"
+  end
+
   create_table "spree_pos_store_infos", force: :cascade do |t|
     t.bigint "store_id", null: false
     t.string "name", limit: 120, null: false
@@ -4977,6 +5058,57 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
     t.index ["stored_value_account_id", "id"], name: "idx_pos_stored_value_entries_account"
     t.index ["workspace_id"], name: "index_spree_pos_stored_value_entries_on_workspace_id"
     t.check_constraint "kind::text = 'top_up'::text AND amount > 0::numeric AND received_funds_id IS NOT NULL AND (minutes IS NULL OR minutes > 0) OR kind::text = 'spend'::text AND amount < 0::numeric AND funds_allocation_id IS NOT NULL AND (minutes IS NULL OR minutes < 0) OR kind::text = 'refund'::text AND amount < 0::numeric AND liability_payout_id IS NOT NULL AND (minutes IS NULL OR minutes <= 0) OR kind::text = 'adjust'::text AND (amount <> 0::numeric OR minutes IS NOT NULL AND minutes <> 0 AND received_funds_id IS NOT NULL)", name: "chk_pos_stored_value_entries_kind"
+  end
+
+  create_table "spree_pos_supplier_payments", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.bigint "branch_id", null: false
+    t.bigint "supplier_id", null: false
+    t.bigint "stock_document_id"
+    t.bigint "actor_id", null: false
+    t.decimal "amount", precision: 19, scale: 4, null: false
+    t.string "payment_method", limit: 16, default: "cash", null: false
+    t.datetime "occurred_at", null: false
+    t.text "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id"], name: "index_spree_pos_supplier_payments_on_actor_id"
+    t.index ["branch_id"], name: "index_spree_pos_supplier_payments_on_branch_id"
+    t.index ["stock_document_id"], name: "index_spree_pos_supplier_payments_on_stock_document_id"
+    t.index ["store_id"], name: "index_spree_pos_supplier_payments_on_store_id"
+    t.index ["supplier_id", "occurred_at"], name: "idx_pos_supplier_payments_time"
+    t.index ["supplier_id"], name: "index_spree_pos_supplier_payments_on_supplier_id"
+  end
+
+  create_table "spree_pos_suppliers", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.bigint "partner_group_id"
+    t.bigint "created_by_id", null: false
+    t.bigint "customer_profile_id"
+    t.string "code", limit: 32, null: false
+    t.string "name", limit: 120, null: false
+    t.string "phone", limit: 32
+    t.string "normalized_phone", limit: 32
+    t.string "email", limit: 254
+    t.string "address", limit: 255
+    t.string "tax_code", limit: 40
+    t.string "invoice_company", limit: 160
+    t.string "invoice_address", limit: 255
+    t.string "bank_name", limit: 120
+    t.string "bank_account", limit: 64
+    t.jsonb "tags", default: [], null: false
+    t.string "status", limit: 16, default: "active", null: false
+    t.decimal "opening_payable", precision: 19, scale: 4, default: "0.0", null: false
+    t.boolean "also_customer", default: false, null: false
+    t.text "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_spree_pos_suppliers_on_created_by_id"
+    t.index ["customer_profile_id"], name: "index_spree_pos_suppliers_on_customer_profile_id"
+    t.index ["partner_group_id"], name: "index_spree_pos_suppliers_on_partner_group_id"
+    t.index ["store_id", "code"], name: "idx_pos_suppliers_store_code", unique: true
+    t.index ["store_id", "normalized_phone"], name: "idx_pos_suppliers_store_phone"
+    t.index ["store_id"], name: "index_spree_pos_suppliers_on_store_id"
   end
 
   create_table "spree_pos_table_codes", force: :cascade do |t|
@@ -7253,6 +7385,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
   add_foreign_key "spree_pos_credit_reservations", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_customers", "spree_admin_users", column: "created_by_id"
   add_foreign_key "spree_pos_customers", "spree_customers", column: "customer_id"
+  add_foreign_key "spree_pos_customers", "spree_pos_partner_groups", column: "partner_group_id"
   add_foreign_key "spree_pos_customers", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_dashboard_layouts", "spree_admin_users", column: "user_id", on_delete: :cascade
   add_foreign_key "spree_pos_dashboard_layouts", "spree_stores", column: "store_id", on_delete: :cascade
@@ -7425,6 +7558,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
   add_foreign_key "spree_pos_outbox_entries", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_owner_alerts", "spree_pos_branches", column: "branch_id"
   add_foreign_key "spree_pos_owner_alerts", "spree_stores", column: "store_id"
+  add_foreign_key "spree_pos_partner_groups", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_payment_methods", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_payment_requests", "spree_admin_users", column: "requested_by_id"
   add_foreign_key "spree_pos_payment_requests", "spree_admin_users", column: "resolved_by_id"
@@ -7593,6 +7727,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
   add_foreign_key "spree_pos_stock_discrepancies", "spree_stock_locations", column: "stock_location_id"
   add_foreign_key "spree_pos_stock_discrepancies", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_stock_discrepancies", "spree_variants", column: "variant_id"
+  add_foreign_key "spree_pos_stock_document_lines", "spree_pos_stock_documents", column: "stock_document_id"
+  add_foreign_key "spree_pos_stock_document_lines", "spree_variants", column: "variant_id"
+  add_foreign_key "spree_pos_stock_documents", "spree_admin_users", column: "actor_id"
+  add_foreign_key "spree_pos_stock_documents", "spree_admin_users", column: "canceled_by_id"
+  add_foreign_key "spree_pos_stock_documents", "spree_admin_users", column: "completed_by_id"
+  add_foreign_key "spree_pos_stock_documents", "spree_pos_branches", column: "branch_id"
+  add_foreign_key "spree_pos_stock_documents", "spree_pos_customers", column: "customer_profile_id"
+  add_foreign_key "spree_pos_stock_documents", "spree_pos_suppliers", column: "supplier_id"
+  add_foreign_key "spree_pos_stock_documents", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_store_infos", "spree_admin_users", column: "changed_by_id"
   add_foreign_key "spree_pos_store_infos", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_store_profiles", "spree_admin_users", column: "changed_by_id"
@@ -7606,6 +7749,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
   add_foreign_key "spree_pos_stored_value_entries", "spree_pos_received_funds", column: "received_funds_id"
   add_foreign_key "spree_pos_stored_value_entries", "spree_pos_stored_value_accounts", column: "stored_value_account_id"
   add_foreign_key "spree_pos_stored_value_entries", "spree_pos_workspaces", column: "workspace_id"
+  add_foreign_key "spree_pos_supplier_payments", "spree_admin_users", column: "actor_id"
+  add_foreign_key "spree_pos_supplier_payments", "spree_pos_branches", column: "branch_id"
+  add_foreign_key "spree_pos_supplier_payments", "spree_pos_stock_documents", column: "stock_document_id"
+  add_foreign_key "spree_pos_supplier_payments", "spree_pos_suppliers", column: "supplier_id"
+  add_foreign_key "spree_pos_supplier_payments", "spree_stores", column: "store_id"
+  add_foreign_key "spree_pos_suppliers", "spree_admin_users", column: "created_by_id"
+  add_foreign_key "spree_pos_suppliers", "spree_pos_customers", column: "customer_profile_id"
+  add_foreign_key "spree_pos_suppliers", "spree_pos_partner_groups", column: "partner_group_id"
+  add_foreign_key "spree_pos_suppliers", "spree_stores", column: "store_id"
   add_foreign_key "spree_pos_table_codes", "spree_admin_users", column: "created_by_id"
   add_foreign_key "spree_pos_table_codes", "spree_pos_branches", column: "branch_id"
   add_foreign_key "spree_pos_table_codes", "spree_pos_resources", column: "resource_id"
