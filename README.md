@@ -87,14 +87,25 @@ POS phục vụ nhiều chi nhánh, nhiều quầy, và mở được nhiều đ
   - **Nguồn đơn:** mỗi đơn gắn nguồn Tại quầy / Facebook / Zalo / Khác.
 - [Thanh toán](apps/pos/README.md#thanh-toán): tiền mặt, chuyển khoản, VietQR tự đối soát qua SePay / PayOS, chia nhiều phương thức.
   - **VietQR trả sau:** đơn ghi nợ in kèm mã VietQR cho đúng số tiền còn nợ. Khách chuyển khoản thì khoản thu được ghi tự động. Nút **Gửi Zalo** gửi ảnh mã QR cho khách.
-- [Bán chịu và thu nợ](apps/pos/README.md#bán-chịu-và-thu-nợ): hạn mức, duyệt ghi nợ, ghi nợ nhanh, tuổi nợ, thu nợ cho nhiều đơn, **nhắc nợ qua Zalo** kèm một mã QR cho cả số nợ.
+- [Tài chính — Quỹ tiền, thu chi & công nợ](apps/pos/README.md#bán-chịu-và-thu-nợ):
+  - **Quỹ tiền & Sổ thu chi:** quản lý nhiều quỹ (tiền mặt, ngân hàng, ví), lập phiếu thu / phiếu chi phân loại theo TT152/2025/TT-BTC (đánh dấu chi phí được trừ thuế), chuyển quỹ nội bộ, và **Thu tiền nhanh bằng VietQR**.
+  - **Bán chịu & Công nợ:** hạn mức, duyệt ghi nợ, ghi nợ nhanh, ngày hẹn trả, tab Đã tất toán, sổ cái công nợ, tuổi nợ, thu nợ cho nhiều đơn, **nhắc nợ qua Zalo** kèm một mã QR cho cả số nợ.
 - [Trả hàng, hoàn tiền, đổi hàng](apps/pos/README.md#trả-hàng-hoàn-tiền-đổi-hàng).
-- [Tồn kho truy xuất](apps/pos/README.md#tồn-kho-truy-xuất-serial--lô--hạn-dùng): serial, lô, hạn dùng (xuất hàng gần hết hạn trước), nhập, chuyển, kiểm kê, thu hồi.
-- [Ca và sổ quỹ](apps/pos/README.md#ca-và-sổ-quỹ): mở / đóng ca, đếm tiền không xem trước số liệu, thu chi két có người xác nhận.
-- [Báo cáo](apps/pos/README.md#báo-cáo): doanh số (theo cả nguồn đơn), thực thu, tiền mặt, công nợ, đóng ca, xuất CSV.
+- [Quản lý kho & Đối tác](apps/pos/README.md#tồn-kho-truy-xuất-serial--lô--hạn-dùng):
+  - **Kho toàn diện:** Tồn kho, Sổ kho, Nhập hàng, Xuất hàng, Kiểm kho (có duyệt chênh lệch), Tồn kho đầu kỳ — song song với truy xuất serial, lô và hạn dùng (FEFO), chuyển kho và thu hồi lô.
+  - **Đối tác:** quản lý **Khách hàng** (phân nhóm, lịch sử mua, công nợ) và **Nhà cung cấp** (lịch sử nhập hàng, công nợ phải trả và thanh toán nhà cung cấp).
+- [Nhân viên, ca làm việc & bảng lương](apps/pos/README.md#ca-và-sổ-quỹ):
+  - **Danh sách nhân viên toàn cửa hàng:** tạo nhân viên trước rồi phân bổ linh hoạt vào một hoặc nhiều chi nhánh (từ cả menu Nhân viên lẫn tab chi nhánh), tạo nhanh vai trò từ mẫu phân quyền và nhân bản vai trò.
+  - **Ca làm việc & Sổ quỹ:** mở / đóng ca đếm mù, máy tính đếm mệnh giá tiền VND, lịch sử ca toàn cửa hàng, thu chi két có người xác nhận.
+  - **Bảng lương:** lập bảng lương theo kỳ / chi nhánh (lương cơ bản, phụ cấp, thưởng, tăng ca, BHXH/BHYT/BHTN, thuế TNCN, thực lĩnh), chốt / mở lại bảng lương và xuất CSV.
+- [Báo cáo phân tích (7 nhóm)](apps/pos/README.md#báo-cáo): Doanh thu (gồm theo nguồn đơn), Sản phẩm bán chạy, Lợi nhuận (doanh thu – giá vốn – chi phí), Hóa đơn, Xuất nhập tồn, Tồn kho và Đóng ca / Tài chính; lọc theo chi nhánh, kỳ và xuất CSV an toàn.
+- **Kế toán & Thuế (Thông tư 152/2025/TT-BTC):**
+  - **6 sổ kế toán hộ kinh doanh (`S1a-HKD` đến `S2e-HKD`):** tự động tổng hợp từ đơn bán hàng, nhập/xuất kho, phiếu thu/chi (tự phân loại chi phí được trừ `a–e`) và bảng lương, kèm chữ ký theo mẫu quy định và xuất CSV.
+  - **Tờ khai thuế:** lập, tự động tính số liệu, theo dõi trạng thái nộp CQT (Nháp → Đã ký → Đã nộp → Chấp nhận/Từ chối) và xuất CSV cho **01/CNKD**, **04/GTGT & 01/GTGT** (khấu trừ thuế GTGT đầu vào từ phiếu nhập có hóa đơn GTGT) và **05/KK-TNCN** (từ bảng lương).
+  - **Thông tin kê khai thuế & cấu hình thuế:** kiểm tra mức độ sẵn sàng hồ sơ kê khai, phương pháp tính thuế và nhóm doanh thu.
 - [Biên nhận và in](apps/pos/README.md#biên-nhận-và-in), [màn hình khách](apps/pos/README.md#màn-hình-khách), [máy quét](apps/pos/README.md#máy-quét).
 - **Hóa đơn điện tử:** mỗi món lên hóa đơn với thuế suất riêng. Xem [nhà cung cấp hóa đơn điện tử](docs/einvoice-providers.md).
-- [Quản trị](apps/pos/README.md#quản-trị) và [phân quyền](apps/pos/README.md#quyền) theo chi nhánh.
+- [Quản trị, phân quyền & Vùng nguy hiểm](apps/pos/README.md#quản-trị): phân quyền theo chi nhánh; mục **Vùng nguy hiểm** trong Cài đặt cửa hàng cho phép xóa trắng dữ liệu theo **toàn bộ cửa hàng** hoặc **riêng từng chi nhánh** (luôn giữ nguyên nhân viên), xóa riêng từng chi nhánh hoặc xóa cửa hàng với bước nhập tên xác nhận và ghi nhật ký.
 
 Các tính năng có rủi ro (bán chịu, ghi nợ nhanh, giao hàng…) mặc định tắt. Chủ cửa hàng bật cho cả cửa hàng và tắt riêng được ở từng chi nhánh. Những gì POS chưa làm được nằm ở mục [Giới hạn hiện tại](apps/pos/README.md#giới-hạn-hiện-tại).
 
@@ -156,14 +167,19 @@ Chuyển khoản VietQR có qua gem [`spree_vietqr`](https://github.com/compasif
 
 ## Tiến độ
 
-Cập nhật 12/11/2026. Nhánh phát triển chính là `v2`.
+Cập nhật 25/11/2026. Nhánh phát triển chính là `v2`.
 
 | Hạng mục | Trạng thái |
 | --- | --- |
 | **POS bán lẻ**: 13 ngành | Đã xong, sẵn sàng triển khai. Thử thiết bị và quy trình tại cửa hàng làm khi vận hành. [Kế hoạch](plans/261101-1649-retail-pos-multi-store-multi-order/plan.md) |
 | **POS ăn uống & giải trí**: 6 ngành | Đã có đủ chức năng. Còn cần chạy thử tại quán với thiết bị thật, thông báo đẩy cho app chủ quán và xác nhận cách hạch toán thuế với kế toán. [Kế hoạch](plans/261109-1812-pos-fnb-giai-tri/plan.md) |
-| **Chuyển khoản VietQR** | Đã có trên POS và trang quản trị. [Kế hoạch](plans/261108-0934-vietqr-spree6-pos/plan.md) |
+| **Chuyển khoản VietQR** | Đã có trên POS và trang quản trị (bao gồm Thu tiền nhanh VietQR và VietQR trả sau). [Kế hoạch](plans/261108-0934-vietqr-spree6-pos/plan.md) |
 | **Tách gói hàng cùng mã khác giá / lô** | Đã có trên POS, còn chờ thử với hàng mẫu tại cửa hàng. [Kế hoạch](plans/261103-pos-goi-hang-truy-xuat/plan.md) |
+| **Tài chính, Kho & Đối tác** | Đã có: Quỹ tiền & Thu chi (TT152), Công nợ tách riêng (ngày hẹn trả, đã tất toán, sổ cái), 6 màn hình quản lý kho, Khách hàng & Nhà cung cấp. |
+| **Nhân viên, Ca làm việc & Bảng lương** | Đã có: danh mục nhân viên toàn cửa hàng phân bổ đa chi nhánh, mẫu vai trò, lịch sử ca + máy tính tiền mặt VND, bảng lương kế toán Việt Nam (BHXH/TNCN/CSV). |
+| **Báo cáo phân tích (7 nhóm)** | Đã có: Doanh thu, Sản phẩm, Lợi nhuận, Hóa đơn, Xuất nhập tồn, Tồn kho và Đóng ca / Tài chính. |
+| **Kế toán & Thuế (TT152/2025/TT-BTC)** | Đã có: 6 sổ kế toán (`S1a-HKD`–`S2e-HKD`) và tờ khai thuế `01/CNKD`, `04/GTGT` & `01/GTGT`, `05/KK-TNCN` tổng hợp từ dữ liệu POS thực. |
+| **Vùng nguy hiểm (Cài đặt cửa hàng)** | Đã có: xóa trắng dữ liệu toàn cửa hàng hoặc riêng từng chi nhánh (giữ nguyên nhân viên), xóa riêng từng chi nhánh và xóa cửa hàng. |
 
 ### Đang hướng tới
 

@@ -74,21 +74,23 @@
 
 Trang **Truy xuất tồn kho** có các tab: **Mặt hàng theo dõi** (khai báo tồn đầu kỳ, đối chiếu khớp tồn), **Lô hàng** (hạn dùng, **Cách ly** / **Giải phóng**), **Tra serial**, **Nhập hàng**, **Chuyển kho**, **Kiểm kê / điều chỉnh** (có duyệt) và **Thu hồi** (tìm lô hoặc serial đã bán cho đơn nào). Hàng theo dõi chỉ bán được khi đã khai báo tồn đầu kỳ và tồn theo lô/serial khớp với tồn kho.
 
-### Ca và sổ quỹ
+### Ca, nhân viên và sổ quỹ
 
-Trang **Ca & két** có các chức năng sau:
+- **Danh sách nhân viên toàn cửa hàng (`/employees`)**: tạo nhân viên ở cấp cửa hàng rồi phân bổ linh hoạt vào một hoặc nhiều chi nhánh (từ cả menu Nhân viên lẫn tab chi nhánh). Hỗ trợ tạo nhanh vai trò từ mẫu phân quyền (Quản lý, Thu ngân, Phục vụ, Thủ kho, Kế toán…) và nhân bản vai trò.
+- **Quỹ tiền & Sổ thu chi (`/funds`)**: tách riêng với Công nợ; quản lý nhiều quỹ tiền (tiền mặt, ngân hàng, ví), lập phiếu thu / phiếu chi theo nhóm chi phí TT152/2025/TT-BTC, chuyển quỹ và **Thu tiền nhanh VietQR**.
+- **Ca & két**:
+  - **Thu/chi tiền mặt tại két**: nộp vào két ghi ngay; lấy ra khỏi két và nộp két sắt cần số chứng từ và người thứ hai xác nhận.
+  - **Đóng ca đếm mù** theo ba bước (**Kiểm tra** → **Đếm két** kèm máy tính mệnh giá VND → **Đối chiếu**). Chênh lệch vượt ngưỡng cần lý do và người duyệt khác.
+  - **Lịch sử ca toàn cửa hàng**, đóng ca hộ thu ngân vắng mặt, và đối soát tiền mặt đến muộn.
+- **Bảng lương**: lập bảng lương theo kỳ / chi nhánh (lương cơ bản, phụ cấp, thưởng, tăng ca, BHXH/BHYT/BHTN, thuế TNCN, thực lĩnh), chốt / mở lại bảng lương và xuất CSV.
 
-- **Thu/chi tiền mặt**:
-  - **Nộp vào két**: ghi ngay.
-  - **Lấy ra khỏi két** và **Nộp két sắt**: cần số chứng từ và một người khác xác nhận.
-- **Đóng ca** theo ba bước: **1. Kiểm tra** (các việc chặn đóng ca), **2. Đếm két**, **3. Đối chiếu**.
-- **Đếm mù**: thu ngân chỉ thấy số **Két cần có** và **Chênh lệch** sau khi đã nhập số tiền đếm được. Chênh lệch vượt ngưỡng của chi nhánh cần lý do và người duyệt khác.
-- **Ca đang mở khác**: đóng ca giúp thu ngân vắng mặt.
-- **Đối soát tiền mặt đến muộn**: dùng cho tiền phát hiện sau khi đã đóng ca. Ca đã đóng không bị sửa.
+### Báo cáo và Kế toán – Thuế
 
-### Báo cáo
-
-Trang **Báo cáo** có năm tab: **Doanh số**, **Thực thu**, **Tiền mặt trong két**, **Công nợ**, **Đóng ca**. Có thể lọc theo ngày, quầy và ca, theo múi giờ của chi nhánh. Không có quyền "Xem báo cáo cả chi nhánh" thì chỉ xem được các ca của chính mình. **Xuất CSV** chạy nền: chỉ người tạo tải được file, và file tự xóa sau 24 giờ.
+- **Báo cáo phân tích (7 nhóm)** trực tiếp trên menu: **Doanh thu** (gồm theo nguồn đơn), **Sản phẩm**, **Lợi nhuận**, **Hóa đơn**, **Xuất nhập tồn**, **Tồn kho** và **Đóng ca / Tài chính**. Lọc theo chi nhánh, ngày, quầy, ca và xuất CSV chống CSV injection (tự xóa sau 24 giờ).
+- **Kế toán & Thuế (Thông tư 152/2025/TT-BTC)**:
+  - **6 sổ kế toán (`S1a-HKD` đến `S2e-HKD`)**: tổng hợp tự động từ đơn hàng, kho, phiếu thu/chi và bảng lương, có chữ ký theo mẫu và xuất CSV.
+  - **Tờ khai thuế**: lập và theo dõi tờ khai **01/CNKD**, **04/GTGT & 01/GTGT** (có khấu trừ GTGT đầu vào từ phiếu nhập có hóa đơn GTGT) và **05/KK-TNCN**.
+- **Vùng nguy hiểm (Cài đặt → Thông tin cửa hàng)**: cho phép **xóa trắng dữ liệu** theo toàn bộ cửa hàng hoặc riêng từng chi nhánh (giữ nguyên dữ liệu nhân viên), **xóa riêng từng chi nhánh**, và **xóa cửa hàng** (yêu cầu nhập chính xác tên để xác nhận).
 
 ### Biên nhận và in
 
