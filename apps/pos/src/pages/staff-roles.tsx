@@ -19,7 +19,7 @@ import {
   useConfirm,
   useRowClickBridge,
 } from '@spree/dashboard-ui'
-import { BanIcon, RotateCcwIcon, TrashIcon } from '@spree/dashboard-ui/icons'
+import { BanIcon, CopyIcon, RotateCcwIcon, TrashIcon } from '@spree/dashboard-ui/icons'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSearch } from '@tanstack/react-router'
 import { useCallback, useRef, useState } from 'react'
@@ -45,6 +45,50 @@ import { localList } from '../tables/local-list'
 
 const ROW_ATTRIBUTE = 'data-pos-staff-role-id' as const
 
+// Quick-start F&B / retail role templates (Tendoo-inspired)
+const ROLE_TEMPLATES: { key: string; capabilities: string[] }[] = [
+  {
+    key: 'cashier',
+    capabilities: [
+      'pos.shift.open',
+      'pos.payment.collect',
+      'pos.customer.write',
+      'pos.discount.apply',
+      'pos.return.process',
+    ],
+  },
+  {
+    key: 'server',
+    capabilities: ['pos.table.serve', 'pos.reservation.manage', 'pos.guest_order.decide'],
+  },
+  {
+    key: 'chef',
+    capabilities: ['pos.kitchen.operate', 'pos.kitchen.manage', 'pos.expo.operate', 'pos.menu.sold_out'],
+  },
+  {
+    key: 'stock',
+    capabilities: ['pos.inventory.manage', 'pos.inventory.trace', 'pos.report.read'],
+  },
+  {
+    key: 'manager',
+    capabilities: [
+      'pos.shift.open',
+      'pos.payment.collect',
+      'pos.payment.resolve',
+      'pos.cash.move',
+      'pos.discount.apply',
+      'pos.price.override',
+      'pos.return.process',
+      'pos.approval.grant',
+      'pos.workspace.takeover',
+      'pos.topology.manage',
+      'pos.report.read',
+      'pos.report.export',
+      'pos.inventory.manage',
+    ],
+  },
+]
+
 // Named capability sets that memberships take instead of their own list. A
 // change reaches every member at once; a role in use cannot be disabled or
 // deleted.
@@ -57,7 +101,7 @@ export function StaffRolesPage() {
   const searchParams = resourceSearchSchema.parse(useSearch({ strict: false }))
   const access = context.data?.administration ?? { read: false, write: false }
   const write = useStoreWrite()
-  const [editor, setEditor] = useState<{ role?: StaffRole } | null>(null)
+  const [editor, setEditor] = useState<{ role?: StaffRole; cloneFrom?: StaffRole } | null>(null)
   const [notice, setNotice] = useState<{ text: string; failed: boolean } | null>(null)
   async function run(
     request: { method: string; path: string; body?: unknown },
@@ -105,9 +149,9 @@ export function StaffRolesPage() {
         destructive: true,
       },
     )
-  function edit(role?: StaffRole) {
+  function edit(role?: StaffRole, cloneFrom?: StaffRole) {
     setNotice(null)
-    setEditor({ role })
+    setEditor({ role, cloneFrom })
   }
   const rows = useRef<StaffRole[]>([])
   const openRole = useRef<(id: string) => void>(() => {})
@@ -230,6 +274,14 @@ export function StaffRolesPage() {
                   onSelect: () => edit(role),
                 },
                 {
+                  key: 'duplicate',
+                  label: t('staffRoles.duplicate'),
+                  icon: <CopyIcon className="size-4" />,
+                  visible: access.write,
+                  disabled: write.isPending,
+                  onSelect: () => edit(undefined, role),
+                },
+                {
                   key: role.status === 'active' ? 'disable' : 'enable',
                   label: t(role.status === 'active' ? 'adminDisable' : 'adminEnable'),
                   icon:
@@ -260,6 +312,7 @@ export function StaffRolesPage() {
       {editor && access.write && (
         <StaffRoleDialog
           role={editor.role}
+          cloneFrom={editor.cloneFrom}
           onSave={async (body) => {
             await write.mutateAsync({
               method: editor.role ? 'PATCH' : 'POST',
@@ -277,22 +330,27 @@ export function StaffRolesPage() {
 
 function StaffRoleDialog({
   role,
+  cloneFrom,
   onSave,
   onClose,
 }: {
   role?: StaffRole
+  cloneFrom?: StaffRole
   onSave: (body: StaffRoleFormValues) => Promise<void>
   onClose: () => void
 }) {
   const { t } = useTranslation()
   const form = useForm<StaffRoleFormValues>({
-    defaultValues: { name: role?.name ?? '', capabilities: role?.capabilities ?? [] },
+    defaultValues: {
+      name: role?.name ?? (cloneFrom ? `${cloneFrom.name} (${t('staffRoles.copySuffix')})` : ''),
+      capabilities: role?.capabilities ?? cloneFrom?.capabilities ?? [],
+    },
   })
   const draft = form.watch()
   const [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState('')
   const busy = form.formState.isSubmitting
-  const dirty = form.formState.isDirty
+  const dirty = form.formState.isDirty || Boolean(cloneFrom)
   // Members of the role get the change at once, so sensitive grants are confirmed.
   const sensitive = changesSensitive(role?.capabilities ?? [], draft.capabilities)
   async function submit(values: StaffRoleFormValues) {
@@ -344,6 +402,35 @@ function StaffRoleDialog({
                   />
                 )}
               </TopologyField>
+              {!role && (
+                <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {t('staffRoles.quickStartHint')}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ROLE_TEMPLATES.map((tpl) => (
+                      <Button
+                        key={tpl.key}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          if (!draft.name.trim()) {
+                            form.setValue('name', t(`staffRoles.template_${tpl.key}`), {
+                              shouldDirty: true,
+                            })
+                          }
+                          form.setValue('capabilities', tpl.capabilities, { shouldDirty: true })
+                          setConfirmed(false)
+                        }}
+                      >
+                        {t(`staffRoles.template_${tpl.key}`)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <fieldset aria-label={t('membership')}>
                 <CapabilityChecklist
                   value={draft.capabilities}

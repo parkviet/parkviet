@@ -200,6 +200,13 @@ Rails.application.routes.draw do
                 post :enable
               end
             end
+            resources :payrolls, only: [:index, :show, :create, :update, :destroy] do
+              member do
+                post :finalize
+                post :reopen
+              end
+            end
+            get 'staff_shifts', to: 'staff_shifts#index'
             resources :shifts, only: [:index, :show, :create]
             # Shift close, drawer cash, late-cash reconciliation, reports and exports.
             resources :shifts, only: [] do

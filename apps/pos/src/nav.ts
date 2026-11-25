@@ -149,6 +149,8 @@ const groups: { key: string; labelKey: string; icon: NavEntry['icon']; children:
     icon: UserCog,
     children: [
       { key: 'staff-directory', labelKey: 'staffDirectory.title', path: '/employees' },
+      { key: 'staff-shifts', labelKey: 'staffShifts.title', path: '/staff-shifts' },
+      { key: 'payroll', labelKey: 'payroll.title', path: '/payroll' },
       { key: 'staff-roles', labelKey: 'staffRoles.title', path: '/staff-roles' },
     ],
   },

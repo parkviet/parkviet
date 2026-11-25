@@ -3974,6 +3974,68 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_110000) do
     t.check_constraint "kind::text = ANY (ARRAY['cash_count'::character varying::text, 'bank_manual'::character varying::text, 'failed_no_effect'::character varying::text])", name: "chk_pos_payout_evidences_kind"
   end
 
+  create_table "spree_pos_payroll_lines", force: :cascade do |t|
+    t.bigint "payroll_id", null: false
+    t.bigint "staff_id", null: false
+    t.integer "position", default: 0, null: false
+    t.decimal "piece_quantity", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "piece_amount", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "work_days", precision: 8, scale: 2, default: "0.0", null: false
+    t.decimal "time_amount", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "paid_leave_days", precision: 8, scale: 2, default: "0.0", null: false
+    t.decimal "paid_leave_amount", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "payroll_allowance", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "other_allowance", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "bonus", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "gross_amount", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "employee_bhxh", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "employee_bhyt", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "employee_bhtn", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "other_deduction", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "pit_tax", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "total_deductions", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "net_amount", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "employer_bhxh", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "employer_bhyt", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "employer_bhtn", precision: 14, scale: 2, default: "0.0", null: false
+    t.string "note", limit: 255
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["payroll_id", "staff_id"], name: "index_spree_pos_payroll_lines_on_payroll_id_and_staff_id", unique: true
+    t.index ["payroll_id"], name: "index_spree_pos_payroll_lines_on_payroll_id"
+    t.index ["staff_id"], name: "index_spree_pos_payroll_lines_on_staff_id"
+  end
+
+  create_table "spree_pos_payrolls", force: :cascade do |t|
+    t.bigint "store_id", null: false
+    t.bigint "branch_id"
+    t.bigint "created_by_id"
+    t.string "code", limit: 32, null: false
+    t.string "name", limit: 255, null: false
+    t.string "period_label", limit: 80
+    t.date "period_start", null: false
+    t.date "period_end", null: false
+    t.date "payroll_date", null: false
+    t.string "status", limit: 20, default: "draft", null: false
+    t.text "note"
+    t.decimal "total_gross", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "total_deductions", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "total_net", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "total_pit", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "total_bhxh", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "total_bhyt", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "total_bhtn", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "total_employer_cost", precision: 14, scale: 2, default: "0.0", null: false
+    t.datetime "finalized_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["branch_id"], name: "index_spree_pos_payrolls_on_branch_id"
+    t.index ["created_by_id"], name: "index_spree_pos_payrolls_on_created_by_id"
+    t.index ["store_id", "code"], name: "index_spree_pos_payrolls_on_store_id_and_code", unique: true
+    t.index ["store_id"], name: "index_spree_pos_payrolls_on_store_id"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'finalized'::character varying]::text[])", name: "chk_spree_pos_payrolls_status"
+  end
+
   create_table "spree_pos_platform_orders", force: :cascade do |t|
     t.bigint "store_id", null: false
     t.bigint "branch_id", null: false
@@ -4532,7 +4594,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_110000) do
     t.datetime "updated_at", null: false
     t.index ["reservation_id"], name: "index_spree_pos_reservation_resources_on_reservation_id"
     t.check_constraint "ends_at > starts_at", name: "chk_pos_reservation_resources_range"
-    t.exclusion_constraint "resource_id WITH =, tsrange(starts_at, ends_at) WITH &&", where: "active", using: :gist, name: "excl_pos_reservation_resources_overlap"
+    t.exclusion_constraint "resource_id WITH =, tsrange(starts_at, ends_at) WITH &&", where: "ctiv", using: :gist, name: "excl_pos_reservation_resources_overlap"
   end
 
   create_table "spree_pos_reservations", force: :cascade do |t|
@@ -7568,6 +7630,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_110000) do
   add_foreign_key "spree_pos_payout_evidences", "spree_pos_liability_payouts", column: "liability_payout_id"
   add_foreign_key "spree_pos_payout_evidences", "spree_pos_refund_requests", column: "refund_request_id"
   add_foreign_key "spree_pos_payout_evidences", "spree_stores", column: "store_id"
+  add_foreign_key "spree_pos_payroll_lines", "spree_pos_payrolls", column: "payroll_id", on_delete: :cascade
   add_foreign_key "spree_pos_platform_orders", "spree_admin_users", column: "entered_by_id"
   add_foreign_key "spree_pos_platform_orders", "spree_admin_users", column: "settled_by_id"
   add_foreign_key "spree_pos_platform_orders", "spree_pos_branches", column: "branch_id"

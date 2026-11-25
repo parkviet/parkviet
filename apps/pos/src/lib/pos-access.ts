@@ -40,6 +40,8 @@ export type PosPage =
   | 'registers'
   | 'staff'
   | 'staff-directory'
+  | 'staff-shifts'
+  | 'payroll'
   | 'products'
   | 'labels'
   | 'features'
@@ -263,6 +265,7 @@ export function visibleNav(page: PosPage, access: PosAccess) {
     return canReadStockAlerts(access) || canOpenStock(access)
   if (page === 'partners-customers' || page === 'partners-suppliers')
     return canAdminister(access) || canReadOrders(access)
+  if (page === 'staff-shifts') return canAdminister(access) || canReadOrders(access)
   if (page === 'receivables') return canReadDebts(access)
   if (page === 'credit-accounts') return canManageCredit(access)
   if (page === 'credit-approvals') return canApproveSales(access)
