@@ -1,5 +1,8 @@
 # ParkViet
 
+> [!NOTE]
+> **Lưu ý về tình trạng dự án:** Hiện tại ParkViet chưa được đưa vào sử dụng thực tế, nhưng được phát triển bởi lập trình viên có 15 năm kinh nghiệm làm web trong lĩnh vực thương mại điện tử (e-commerce) và POD. Nếu cửa hàng/shop nào muốn áp dụng, mình **CAM KẾT hỗ trợ miễn phí 100%** — từ tư vấn, cài đặt cho đến cập nhật, chỉnh sửa — cho tới khi phần mềm chạy ổn định và dùng được thực tế thì thôi.
+
 **Phần mềm bán hàng cho cửa hàng, quán ăn và doanh nghiệp Việt Nam.** Website: [parkviet.com](https://parkviet.com)
 
 ParkViet giúp người bán quản lý việc bán tại quầy, bán online, kho hàng, công nợ và báo cáo trên cùng một hệ thống. Hệ thống được làm theo cách kinh doanh của người Việt: thu tiền bằng mã VietQR, ghi nợ cho khách quen, nhận đơn qua Facebook và Zalo, giao hàng cho cư dân, in hóa đơn điện tử, bán theo bàn, theo giờ và theo suất ăn.
