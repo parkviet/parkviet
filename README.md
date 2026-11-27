@@ -1,7 +1,7 @@
 # ParkViet
 
 > [!NOTE]
-> **Lưu ý về tình trạng dự án:** Hiện tại ParkViet chưa được đưa vào sử dụng thực tế, nhưng được phát triển bởi lập trình viên có 15 năm kinh nghiệm làm web trong lĩnh vực thương mại điện tử (e-commerce) và POD. Nếu cửa hàng/shop nào muốn áp dụng, mình **CAM KẾT hỗ trợ miễn phí 100%** — từ tư vấn, cài đặt cho đến cập nhật, chỉnh sửa — cho tới khi phần mềm chạy ổn định và dùng được thực tế thì thôi.
+> **Lưu ý về tình trạng dự án:** Hiện tại phần **POS** của ParkViet chưa được đưa vào sử dụng thực tế (còn phần website bán hàng online và mô hình sàn đã chạy thực tế rất nhiều). Dự án được phát triển bởi lập trình viên có 15 năm kinh nghiệm làm web trong lĩnh vực thương mại điện tử (e-commerce) và POD. Nếu cửa hàng/shop nào muốn áp dụng, mình **CAM KẾT hỗ trợ miễn phí 100%** — từ tư vấn, cài đặt cho đến cập nhật, chỉnh sửa — cho tới khi phần mềm chạy ổn định và dùng được thực tế thì thôi.
 
 **Phần mềm bán hàng cho cửa hàng, quán ăn và doanh nghiệp Việt Nam.** Website: [parkviet.com](https://parkviet.com)
 
