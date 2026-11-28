@@ -1,0 +1,86 @@
+# Production Docker Compose — ParkViet (Spree 6 + Storefront + POS)
+#
+# Usage:
+#   1. First boot (DB + Spree API/Admin/Seller):
+#        docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build postgres web
+#   2. Get one-time admin setup link:
+#        docker compose -f docker-compose.prod.yml --env-file .env.production exec web bin/rails spree:setup:token
+#   3. Fill SPREE_PUBLISHABLE_KEY in .env.production, then build & start Storefront (+ POS):
+#        docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build storefront pos
+#
+# All ports bind to 127.0.0.1 so they are only exposed through cloudflared.
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-spree}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-spree_production}
+      PGDATA: /var/lib/postgresql/18/docker
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-spree} -d ${POSTGRES_DB:-spree_production}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env.production
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-spree}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-spree_production}
+      RAILS_LOG_LEVEL: ${RAILS_LOG_LEVEL:-info}
+      SOLID_QUEUE_IN_PUMA: ${SOLID_QUEUE_IN_PUMA:-true}
+    volumes:
+      - storage_prod_data:/rails/storage
+    ports:
+      - "127.0.0.1:${SPREE_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  storefront:
+    build:
+      context: ./apps/storefront
+      dockerfile: Dockerfile
+      network: host
+      args:
+        SPREE_API_URL: http://127.0.0.1:${SPREE_PORT:-8091}
+        SPREE_PUBLISHABLE_KEY: ${SPREE_PUBLISHABLE_KEY:-}
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    env_file: .env.production
+    environment:
+      SPREE_API_URL: http://web:3000
+      SPREE_PUBLISHABLE_KEY: ${SPREE_PUBLISHABLE_KEY:-}
+    ports:
+      - "127.0.0.1:${STOREFRONT_PORT:-3001}:3001"
+
+  pos:
+    build:
+      context: ./apps/pos
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${POS_PORT:-3002}:3002"
+
+volumes:
+  postgres_prod_data:
+  storage_prod_data:
