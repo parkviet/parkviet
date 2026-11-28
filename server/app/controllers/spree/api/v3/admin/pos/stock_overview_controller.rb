@@ -99,14 +99,16 @@ module Spree
               opening_qty = 0
               opening_scope.find_each do |mv|
                 cost = movement_cost(mv)
-                opening_qty += mv.quantity
-                opening_value += cost * mv.quantity
+                qty = signed_quantity(mv)
+                opening_qty += qty
+                opening_value += cost * qty
               end
 
               movements = period_scope.order(created_at: :desc, id: :desc).limit(300).to_a
               rows = movements.map do |mv|
                 variant = mv.stock_level&.variant
                 cost = movement_cost(mv)
+                qty = signed_quantity(mv)
                 kind = variant && ingredient_variant?(variant, ingredient_ids) ? 'ingredient' : 'product'
                 doc_code = mv.originator.respond_to?(:code) ? mv.originator.code : nil
                 {
@@ -117,10 +119,10 @@ module Spree
                   name: variant&.product&.name || variant&.sku || '—',
                   item_kind: kind,
                   base_unit: variant ? Spree::Pos::StockIntegration.base_unit_code(variant) : 'cái',
-                  movement_kind: mv.action.presence || mv.kind.presence || (mv.quantity >= 0 ? 'inflow' : 'outflow'),
-                  quantity: mv.quantity,
+                  movement_kind: mv.action.presence || mv.kind.presence || (qty >= 0 ? 'inflow' : 'outflow'),
+                  quantity: qty,
                   unit_cost: cost.to_s('F'),
-                  value: (cost * mv.quantity).to_s('F'),
+                  value: (cost * qty).to_s('F'),
                   reference_code: doc_code,
                   reason: mv.reason.presence
                 }
@@ -164,6 +166,16 @@ module Spree
             end
 
             private
+
+            OUTFLOW_MOVEMENT_KINDS = %w[allocated sold picked shipped consumed pos_export].freeze
+
+            def signed_quantity(mv)
+              kind = (mv.action.presence || mv.kind.presence).to_s
+              qty = mv.quantity.to_i
+              return -qty.abs if OUTFLOW_MOVEMENT_KINDS.include?(kind) && qty.positive?
+
+              qty
+            end
 
             def authorize_stock_read!(branch)
               return if policy.permission?('read_pos_topology') || policy.permission?('write_pos_topology')

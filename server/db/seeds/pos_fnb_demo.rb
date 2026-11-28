@@ -74,8 +74,8 @@ else
     prepared = Spree::ProductType.where(store_id: store.id).to_a.find { |type| Spree::Pos::ProductKinds.kind_of(type.name) == 'prepared' } ||
       Spree::ProductType.create!(store: store, name: prepared_name)
 
-    food_tax = Spree::TaxCategory.find_by!(store_id: store.id, tax_code: 'deduction.vat_8')
-    drink_tax = Spree::TaxCategory.find_by!(store_id: store.id, tax_code: 'deduction.vat_10')
+    food_tax = Spree::TaxCategory.find_by(store_id: store.id, tax_code: 'deduction.vat_8')
+    drink_tax = Spree::TaxCategory.find_by(store_id: store.id, tax_code: 'deduction.vat_10')
     top_level = Spree::Category.where(store_id: store.id, parent_id: nil).to_a
     categories = %w[Khai\ vị Món\ chính Lẩu Đồ\ uống].to_h do |name|
       [name, top_level.find { |row| row.name == name } || Spree::Category.create!(store: store, name: name)]

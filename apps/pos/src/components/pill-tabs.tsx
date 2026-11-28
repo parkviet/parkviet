@@ -24,6 +24,7 @@ export function PillTabs({ tabs }: { tabs: PillTab[] }) {
             <TabsTrigger
               key={tab.key}
               value={tab.key}
+              nativeButton={false}
               render={
                 tab.search ? (
                   <Link to={tab.to as never} search={tab.search as never} />

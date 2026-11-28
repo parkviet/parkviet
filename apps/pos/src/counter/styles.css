@@ -212,7 +212,7 @@ kbd { padding: var(--pos-s1); border: 1px solid var(--pos-border); border-radius
 .pos-layout .catalog-product:disabled { opacity: 1; color: var(--pos-ink); background: var(--pos-tint); }
 .catalog-image { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 44px; border-radius: var(--pos-radius); background: #e8eff4; color: #607d91; }
 .catalog-product-info { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 2px; }
-.catalog-product-info strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; font-weight: 600; overflow-wrap: anywhere; padding-right: var(--pos-s4); line-height: 1.35; }
+.catalog-product-info strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; font-weight: 600; overflow-wrap: anywhere; padding-right: calc(var(--pos-target) - 4px); line-height: 1.35; }
 .catalog-product-info > span, .catalog-meta > span { font-size: var(--pos-small); color: var(--pos-muted); }
 .catalog-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--pos-s1); line-height: 1.35; }
 .catalog-product-info .catalog-price { font-weight: 700; color: var(--pos-blue); font-size: var(--pos-body); font-variant-numeric: tabular-nums; }
@@ -411,13 +411,13 @@ kbd { padding: var(--pos-s1); border: 1px solid var(--pos-border); border-radius
 /* One column: the preview sits below the evidence. Two columns only when the
    card itself is wide enough for both, so the preview can never overlap. */
 .payment-invoice-body { display: grid; grid-template-columns: minmax(0,1fr); gap: var(--pos-s4); align-items: start; }
-@container (min-width: 760px) { .payment-invoice-body { grid-template-columns: minmax(0,1fr) minmax(0,max-content); } }
+@container (min-width: 760px) { .payment-invoice-body { grid-template-columns: minmax(0,1.15fr) minmax(280px,360px); } }
 .payment-invoice-main { display: grid; gap: var(--pos-s3); min-width: 0; }
 .payment-invoice-main .invoice-items-scroll { overflow-x: auto; }
-.payment-invoice-preview { display: grid; gap: var(--pos-s2); align-content: start; min-width: 0; }
+.payment-invoice-preview { display: grid; gap: var(--pos-s2); align-content: start; min-width: 0; overflow: hidden; }
 /* `safe` keeps a sheet wider than the box scrollable instead of cut off on the left. */
-.payment-invoice-preview .receipt-preview { display: flex; justify-content: safe center; min-width: 0; }
-.payment-invoice-preview-head { display: flex; justify-content: space-between; align-items: center; gap: var(--pos-s2); font-size: var(--pos-small); }
+.payment-invoice-preview .receipt-preview { display: flex; justify-content: safe center; min-width: 0; overflow: auto; }
+.payment-invoice-preview-head { display: flex; flex-direction: column; align-items: stretch; gap: var(--pos-s2); font-size: var(--pos-small); }
 .payment-invoice-preview .ticket-paper { gap: var(--pos-s1); margin: 0; padding: 0; border: 0; min-width: 0; }
 .pos-layout .payment-invoice-preview .segmented button { min-height: 32px; padding: 0 var(--pos-s2); font-size: var(--pos-small); }
 .payment-invoice-preview .receipt-preview { max-height: min(60dvh, 560px); border-radius: var(--pos-radius); border: 1px solid var(--pos-border); }

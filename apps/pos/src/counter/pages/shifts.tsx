@@ -101,6 +101,7 @@ function Shifts() {
                     <button
                       type="button"
                       className="checkout-submit"
+                      style={{ width: 'auto', minWidth: '9rem' }}
                       disabled={locked}
                       onClick={() => setClosingId(shift.id)}
                     >

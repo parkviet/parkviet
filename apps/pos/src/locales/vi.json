@@ -1012,7 +1012,7 @@
     "street": "Số nhà, đường",
     "description": "Mô tả",
     "logoCustom": "Logo POS của cửa hàng",
-    "logoDefault": "Đang dùng logo cửa hàng trên Spree",
+    "logoDefault": "Đang dùng logo mặc định của cửa hàng",
     "chooseLogo": "Chọn ảnh",
     "logoReset": "Dùng logo mặc định",
     "revert": "Hoàn tác",
