@@ -16,11 +16,31 @@ import {
   ShieldCheckIcon,
   UsersIcon,
 } from '@spree/dashboard-ui/icons'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useRouter, useSearch } from '@tanstack/react-router'
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import posAppIcon from '../assets/brand/parkviet-pos-app-icon.svg'
 import { safeRedirect } from '../lib/safe-redirect'
+
+function usePublicRegistrationEnabled() {
+  return useQuery({
+    queryKey: ['pos', 'public-registration'],
+    queryFn: async () => {
+      try {
+        const res = await adminClient.request<{ data?: { enabled?: boolean } }>(
+          'GET',
+          '/pos/registration',
+        )
+        return Boolean(res?.data?.enabled)
+      } catch {
+        return false
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
+}
 
 // What an administrator does in this app, shown beside the sign-in form.
 // Each task gets its own soft tint so the panel reads at a glance.
@@ -151,6 +171,7 @@ export function LoginPage() {
   const target = safeRedirect(useSearch({ from: '/login' }).redirect) ?? '/'
   const [error, setError] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const registration = usePublicRegistrationEnabled()
   // One path for both cases: an already signed-in visit and a fresh sign-in.
   // `href` keeps the remembered search string intact.
   useEffect(() => {
@@ -234,6 +255,209 @@ export function LoginPage() {
           {t('posDashboard.signIn')}
         </Button>
       </form>
+      {registration.data && (
+        <p className="text-center text-sm text-muted-foreground">
+          {t('posDashboard.noAccountYet')}{' '}
+          <Link
+            to="/register"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {t('posDashboard.createAccountLink')}
+          </Link>
+        </p>
+      )}
+    </AuthShell>
+  )
+}
+
+function registrationErrorMessage(err: unknown, t: (key: string) => string): string {
+  const code =
+    typeof err === 'object' && err !== null && 'code' in err && typeof err.code === 'string'
+      ? err.code
+      : undefined
+  if (code === 'email_taken') return t('posDashboard.registerEmailTaken')
+  if (code === 'registration_disabled') return t('posDashboard.registerDisabled')
+  if (code === 'registration_rate_limited') return t('posDashboard.registerRateLimited')
+  return t('posDashboard.registerFailed')
+}
+
+export function RegisterPage() {
+  const { t } = useTranslation()
+  const auth = useAuth()
+  const router = useRouter()
+  const registration = usePublicRegistrationEnabled()
+  const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+
+  useEffect(() => {
+    if (auth.isAuthenticated) void router.navigate({ to: '/', replace: true })
+  }, [auth.isAuthenticated, router])
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const storeName = String(form.get('store_name') ?? '').trim()
+    const fullName = String(form.get('full_name') ?? '').trim()
+    const email = String(form.get('email') ?? '').trim()
+    const password = String(form.get('password') ?? '')
+
+    if (password.length < 6) {
+      setError(t('posDashboard.registerPasswordTooShort'))
+      return
+    }
+
+    setError(null)
+    setPending(true)
+    try {
+      await adminClient.request('POST', '/pos/registration', {
+        body: {
+          store_name: storeName,
+          full_name: fullName,
+          email,
+          password,
+          country_code: 'VN',
+        },
+      })
+      await auth.login(email, password)
+    } catch (err) {
+      setError(registrationErrorMessage(err, t))
+      setPending(false)
+    }
+  }
+
+  if (auth.isAuthenticated) return null
+  const busy = pending || auth.isLoading || auth.isInitializing
+
+  return (
+    <AuthShell>
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold tracking-tight">{t('posDashboard.registerTitle')}</h2>
+        <p className="text-sm text-muted-foreground">{t('posDashboard.registerIntro')}</p>
+      </div>
+      {registration.isLoading ? (
+        <div className="flex justify-center py-8 text-muted-foreground">
+          <Loader2Icon className="size-5 animate-spin" />
+        </div>
+      ) : !registration.data ? (
+        <div className="space-y-5">
+          <Notice tone="error">{t('posDashboard.registerDisabled')}</Notice>
+          <Link
+            to="/login"
+            className="block text-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {t('posDashboard.backToLogin')}
+          </Link>
+        </div>
+      ) : (
+        <>
+          <form className="space-y-4" onSubmit={submit}>
+            <div className="space-y-2">
+              <Label htmlFor="store_name">{t('posDashboard.storeName')}</Label>
+              <div className="relative">
+                <FieldIcon>
+                  <Building2Icon />
+                </FieldIcon>
+                <Input
+                  id="store_name"
+                  name="store_name"
+                  type="text"
+                  autoComplete="organization"
+                  placeholder={t('posDashboard.storeNamePlaceholder')}
+                  className="h-11 pl-9"
+                  maxLength={120}
+                  required
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="full_name">{t('posDashboard.fullName')}</Label>
+              <div className="relative">
+                <FieldIcon>
+                  <UsersIcon />
+                </FieldIcon>
+                <Input
+                  id="full_name"
+                  name="full_name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder={t('posDashboard.fullNamePlaceholder')}
+                  className="h-11 pl-9"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">{t('posDashboard.email')}</Label>
+              <div className="relative">
+                <FieldIcon>
+                  <MailIcon />
+                </FieldIcon>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="name@company.vn"
+                  className="h-11 pl-9"
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">{t('posDashboard.password')}</Label>
+                <span className="text-xs text-muted-foreground">
+                  {t('posDashboard.passwordHint')}
+                </span>
+              </div>
+              <div className="relative">
+                <FieldIcon>
+                  <LockIcon />
+                </FieldIcon>
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  minLength={6}
+                  className="h-11 px-9"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={t(
+                    showPassword ? 'posDashboard.hidePassword' : 'posDashboard.showPassword',
+                  )}
+                  aria-pressed={showPassword}
+                  className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {showPassword ? (
+                    <EyeOffIcon className="size-4" />
+                  ) : (
+                    <EyeIcon className="size-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+            {error && <Notice tone="error">{error}</Notice>}
+            <Button type="submit" className="h-11 w-full text-base" disabled={busy}>
+              {busy && <Loader2Icon className="size-4 animate-spin" />}
+              {t('posDashboard.registerSubmit')}
+            </Button>
+          </form>
+          <p className="text-center text-sm text-muted-foreground">
+            {t('posDashboard.alreadyHaveAccount')}{' '}
+            <Link
+              to="/login"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {t('posDashboard.signIn')}
+            </Link>
+          </p>
+        </>
+      )}
     </AuthShell>
   )
 }

@@ -14,6 +14,7 @@ import { Route as DisplayRouteImport } from './routes/display'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OfflineRouteImport } from './routes/offline'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedStoreIdRouteImport } from './routes/_authenticated/$storeId'
 import { Route as AuthenticatedPosRouteImport } from './routes/_authenticated/pos'
@@ -176,6 +177,11 @@ const LoginRoute = LoginRouteImport.update({
 const OfflineRoute = OfflineRouteImport.update({
   id: '/offline',
   path: '/offline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
@@ -1015,6 +1021,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/offline': typeof OfflineRoute
+  '/register': typeof RegisterRoute
   '/$storeId': typeof AuthenticatedStoreIdRouteWithChildren
   '/pos': typeof AuthenticatedPosRoute
   '/sell': typeof AuthenticatedSellRoute
@@ -1159,6 +1166,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/offline': typeof OfflineRoute
+  '/register': typeof RegisterRoute
   '/pos': typeof AuthenticatedPosRoute
   '/sell': typeof AuthenticatedSellRoute
   '/': typeof AuthenticatedIndexRoute
@@ -1294,6 +1302,7 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/offline': typeof OfflineRoute
+  '/register': typeof RegisterRoute
   '/_authenticated/$storeId': typeof AuthenticatedStoreIdRouteWithChildren
   '/_authenticated/pos': typeof AuthenticatedPosRoute
   '/_authenticated/sell': typeof AuthenticatedSellRoute
@@ -1442,6 +1451,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/offline'
+    | '/register'
     | '/$storeId'
     | '/pos'
     | '/sell'
@@ -1586,6 +1596,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/offline'
+    | '/register'
     | '/pos'
     | '/sell'
     | '/'
@@ -1720,6 +1731,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/offline'
+    | '/register'
     | '/_authenticated/$storeId'
     | '/_authenticated/pos'
     | '/_authenticated/sell'
@@ -1867,6 +1879,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   OfflineRoute: typeof OfflineRoute
+  RegisterRoute: typeof RegisterRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1904,6 +1917,13 @@ declare module '@tanstack/react-router' {
       path: '/offline'
       fullPath: '/offline'
       preLoaderRoute: typeof OfflineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/': {
@@ -3413,6 +3433,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   OfflineRoute: OfflineRoute,
+  RegisterRoute: RegisterRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

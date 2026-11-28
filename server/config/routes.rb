@@ -10,6 +10,7 @@ Rails.application.routes.draw do
           resources :stores, only: [:create]
 
           namespace :pos do
+            resource :registration, only: [:show, :create], controller: 'registrations'
             get 'configuration/staff', to: 'configuration_options#staff'
             get 'configuration/locations', to: 'configuration_options#locations'
             get 'catalog', to: 'catalog#index'

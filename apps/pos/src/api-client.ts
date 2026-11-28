@@ -63,7 +63,11 @@ const auth = {
     return ensureUser(res)
   },
   refresh: async () => {
-    if (typeof window !== 'undefined' && window.location.pathname.endsWith('/login')) {
+    if (
+      typeof window !== 'undefined' &&
+      (window.location.pathname.endsWith('/login') ||
+        window.location.pathname.endsWith('/register'))
+    ) {
       let authed = false
       try {
         authed = sessionStorage.getItem(LEGACY_AUTH_KEY) === '1'
