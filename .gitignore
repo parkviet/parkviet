@@ -3,6 +3,7 @@ node_modules/
 external/
 .env
 .env.local
+.env.production
 .DS_Store
 # Local Admin API credentials minted by `spree api` / `spree auth`
 .spree/
